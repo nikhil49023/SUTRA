@@ -1,34 +1,158 @@
 #!/usr/bin/env python3
 """
-SUTRA Subsystem B: Swarm Mesh & Deep JSCC Neural Encoder Node
-Lead Engineer: Nikhil
+SUTRA Subsystem B: Swarm 802.11s Mesh Routing & Deep JSCC Neural Link Node
+Lead Engineer: Nikhil (Tech Architect & Subsystem B Lead)
+
+Features:
+- Free Space Path Loss (FSPL) and Signal-to-Noise Ratio (SNR) modeling for 2.4GHz / 5.8GHz ad-hoc mesh.
+- Peer distance matrix tracking & link quality evaluation for dynamic swarm topologies.
+- Deep JSCC (Joint Source-Channel Coding) neural image encoder simulation for low SNR image transmission.
+- Packet loss estimation and latency metric monitoring (Verification Gate G2).
 """
 
 import math
+import time
+import json
+from typing import Dict, Tuple, List
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
 
 
 class SutraMeshNode(Node):
+    """
+    SUTRA Swarm Mesh & Deep JSCC Neural Link Controller.
+    Manages peer-to-peer 802.11s routing and adaptive neural channel coding.
+    """
+
     def __init__(self):
         super().__init__('sutra_mesh_node')
-        self.publisher_mesh = self.create_publisher(String, '/sutra/swarm/mesh_status', 10)
+        
+        # Publishers
+        self.publisher_mesh_status = self.create_publisher(String, '/sutra/swarm/mesh_status', 10)
+        self.publisher_telemetry_link = self.create_publisher(String, '/sutra/swarm/link_quality', 10)
+        
+        # Swarm Peer Positions (x, y, z in meters)
+        self.peer_positions: Dict[str, Tuple[float, float, float]] = {
+            'uav_alpha': (0.0, 0.0, 15.0),
+            'uav_beta': (15.0, 20.0, 18.0),
+            'uav_gamma': (-25.0, 30.0, 12.0),
+            'uav_delta': (40.0, -10.0, 20.0),
+        }
+        
+        # Timer for 1Hz status broadcast
         self.timer = self.create_timer(1.0, self.publish_mesh_status)
-        self.get_logger().info('SUTRA Swarm Mesh Node Initialized.')
+        self.get_logger().info('📡 SUTRA Swarm 802.11s Mesh & Deep JSCC Neural Node Initialized.')
+
+    def calculate_distance(self, pos1: Tuple[float, float, float], pos2: Tuple[float, float, float]) -> float:
+        """Calculate 3D Euclidean distance between two UAV positions in meters."""
+        return math.sqrt(sum((a - b) ** 2 for a, b in zip(pos1, pos2)))
 
     def calculate_fspl(self, distance_m: float, freq_mhz: float = 2400.0) -> float:
-        if distance_m <= 0:
+        """
+        Calculate Free Space Path Loss (FSPL) in dB.
+        FSPL = 20 * log10(d_km) + 20 * log10(f_MHz) + 32.44
+        """
+        if distance_m <= 0.1:
             return 0.0
-        return 20.0 * math.log10(distance_m / 1000.0) + 20.0 * math.log10(freq_mhz) + 32.44
+        dist_km = distance_m / 1000.0
+        return round(20.0 * math.log10(dist_km) + 20.0 * math.log10(freq_mhz) + 32.44, 2)
+
+    def calculate_snr(self, tx_power_dbm: float, fspl_db: float, noise_floor_dbm: float = -95.0) -> float:
+        """Calculate Signal-to-Noise Ratio (SNR) in dB."""
+        rx_power = tx_power_dbm - fspl_db
+        snr = rx_power - noise_floor_dbm
+        return round(snr, 2)
+
+    def calculate_packet_loss(self, snr_db: float) -> float:
+        """
+        Estimate 802.11s packet loss percentage based on SNR.
+        Gate G2 Target: Packet Loss < 2.0% for SNR >= 15 dB.
+        """
+        if snr_db >= 25.0:
+            return 0.05  # 0.05% nominal loss
+        elif snr_db >= 15.0:
+            return round(0.05 + (25.0 - snr_db) * 0.1, 2)  # Max 1.05%
+        elif snr_db >= 5.0:
+            return round(1.05 + (15.0 - snr_db) * 1.5, 2)  # Up to 16.05%
+        else:
+            return 85.0  # Heavy link degradation
+
+    def deep_jscc_encode(self, image_size_kb: float, snr_db: float) -> Dict[str, float]:
+        """
+        Simulate Deep JSCC (Joint Source-Channel Coding) Neural Image Encoding.
+        Returns compression ratio, output PSNR, and transmission latency (ms).
+        """
+        # Deep JSCC adapts compression dynamically to channel SNR
+        base_psnr = 28.0  # dB
+        adaptive_psnr = round(base_psnr + max(0.0, snr_db * 0.35), 2)
+        compression_ratio = 0.04  # 96% payload reduction for compressed neural latent feature maps
+        compressed_size_kb = image_size_kb * compression_ratio
+        
+        # 802.11s Wi-Fi mesh bandwidth in Mbps based on SNR
+        throughput_mbps = max(10.0, min(150.0, snr_db * 3.5))
+        transmission_latency_ms = round((compressed_size_kb * 8.0 / 1000.0) / throughput_mbps * 1000.0 + 1.8, 2)
+        
+        return {
+            'original_size_kb': image_size_kb,
+            'compressed_size_kb': round(compressed_size_kb, 2),
+            'compression_ratio': compression_ratio,
+            'psnr_db': adaptive_psnr,
+            'latency_ms': transmission_latency_ms
+        }
+
+    def compute_peer_link_matrix(self) -> Dict[str, dict]:
+        """Generate full link metrics matrix across all UAV peer pairs."""
+        peers = list(self.peer_positions.keys())
+        matrix = {}
+        for i in range(len(peers)):
+            for j in range(i + 1, len(peers)):
+                p1, p2 = peers[i], peers[j]
+                dist = self.calculate_distance(self.peer_positions[p1], self.peer_positions[p2])
+                fspl = self.calculate_fspl(dist)
+                snr = self.calculate_snr(tx_power_dbm=20.0, fspl_db=fspl)
+                pkt_loss = self.calculate_packet_loss(snr)
+                jscc_stats = self.deep_jscc_encode(image_size_kb=512.0, snr_db=snr)
+                
+                link_key = f"{p1}<->{p2}"
+                matrix[link_key] = {
+                    'distance_m': round(dist, 2),
+                    'fspl_db': fspl,
+                    'snr_db': snr,
+                    'packet_loss_pct': pkt_loss,
+                    'jscc_psnr_db': jscc_stats['psnr_db'],
+                    'latency_ms': jscc_stats['latency_ms']
+                }
+        return matrix
 
     def publish_mesh_status(self):
-        dist = 25.0
-        fspl = self.calculate_fspl(dist)
-        rx_power = round(20.0 - fspl, 2)
+        """Broadcast 1Hz telemetry status payload to /sutra/swarm/mesh_status."""
+        link_matrix = self.compute_peer_link_matrix()
+        
+        # Gate G2 Audit Check
+        max_latency = max(info['latency_ms'] for info in link_matrix.values())
+        max_loss = max(info['packet_loss_pct'] for info in link_matrix.values())
+        gate_g2_passed = (max_latency < 12.0) and (max_loss < 2.0)
+        
+        payload = {
+            'timestamp': time.time(),
+            'subsystem': 'Subsystem B (Comms & Sim)',
+            'lead': 'Nikhil',
+            'mesh_topology': '802.11s Ad-Hoc Peer-to-Peer',
+            'peer_links': link_matrix,
+            'gate_g2_audit': {
+                'target_latency_ms': '< 12.0',
+                'max_measured_latency_ms': max_latency,
+                'target_packet_loss_pct': '< 2.0',
+                'max_measured_packet_loss_pct': max_loss,
+                'status': 'PASSED' if gate_g2_passed else 'DEGRADED'
+            }
+        }
+        
         msg = String()
-        msg.data = f"Mesh Active | UAV Distance: {dist}m | FSPL: {round(fspl,2)}dB | RX Power: {rx_power}dBm"
-        self.publisher_mesh.publish(msg)
+        msg.data = json.dumps(payload, indent=2)
+        self.publisher_mesh_status.publish(msg)
+        self.get_logger().info(f"📡 Mesh Status Broadcasted | Links: {len(link_matrix)} | Max Latency: {max_latency}ms | Gate G2: {'✓ PASS' if gate_g2_passed else '❌ FAIL'}")
 
 
 def main(args=None):
