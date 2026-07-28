@@ -99,3 +99,15 @@ def test_swarm_raft_consensus(ros_context):
         assert solo_engine.role == "LEADER"
     finally:
         node.destroy_node()
+
+
+def test_perceptron_semantic_jscc(ros_context):
+    from sutra_comms.perceptron_jscc import PerceptronSemanticCommsPipeline
+    pipeline = PerceptronSemanticCommsPipeline()
+    res = pipeline.process_semantic_transmission(image_size_kb=512.0, distance_m=20.0)
+    
+    assert res['compression_ratio'] < 0.05  # > 95% payload compression
+    assert res['psnr_db'] >= 28.0  # High visual quality under noise
+    assert res['latency_ms'] < 12.0  # Gate G2 compliant latency (< 12ms)
+    assert res['graceful_degradation'] is True
+

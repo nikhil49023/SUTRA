@@ -106,6 +106,10 @@ class SutraMeshNode(Node):
             'uav_delta': (40.0, -10.0, 20.0),
         }
         
+        # Initialize Perceptron-Powered Semantic JSCC Communication Engine
+        from sutra_comms.perceptron_jscc import PerceptronSemanticCommsPipeline
+        self.perceptron_pipeline = PerceptronSemanticCommsPipeline()
+        
         # Initialize SwarmRaft Engine for uav_alpha
         self.raft_engine = SwarmRaftConsensusEngine(
             node_id='uav_alpha',
@@ -116,7 +120,7 @@ class SutraMeshNode(Node):
         
         # Timer for 1Hz status broadcast
         self.timer = self.create_timer(1.0, self.publish_mesh_status)
-        self.get_logger().info('📡 SUTRA Swarm 802.11s Mesh + SwarmRAFT Consensus Node Initialized.')
+        self.get_logger().info('📡 SUTRA Swarm 802.11s Mesh + Perceptron Deep JSCC & SwarmRAFT Node Initialized.')
 
     def calculate_distance(self, pos1: Tuple[float, float, float], pos2: Tuple[float, float, float]) -> float:
         """Calculate 3D Euclidean distance between two UAV positions in meters."""
@@ -153,27 +157,8 @@ class SutraMeshNode(Node):
             return 85.0  # Heavy link degradation
 
     def deep_jscc_encode(self, image_size_kb: float, snr_db: float) -> Dict[str, float]:
-        """
-        Simulate Deep JSCC (Joint Source-Channel Coding) Neural Image Encoding.
-        Returns compression ratio, output PSNR, and transmission latency (ms).
-        """
-        # Deep JSCC adapts compression dynamically to channel SNR
-        base_psnr = 28.0  # dB
-        adaptive_psnr = round(base_psnr + max(0.0, snr_db * 0.35), 2)
-        compression_ratio = 0.04  # 96% payload reduction for compressed neural latent feature maps
-        compressed_size_kb = image_size_kb * compression_ratio
-        
-        # 802.11s Wi-Fi mesh bandwidth in Mbps based on SNR
-        throughput_mbps = max(10.0, min(150.0, snr_db * 3.5))
-        transmission_latency_ms = round((compressed_size_kb * 8.0 / 1000.0) / throughput_mbps * 1000.0 + 1.8, 2)
-        
-        return {
-            'original_size_kb': image_size_kb,
-            'compressed_size_kb': round(compressed_size_kb, 2),
-            'compression_ratio': compression_ratio,
-            'psnr_db': adaptive_psnr,
-            'latency_ms': transmission_latency_ms
-        }
+        """Delegates semantic transmission to PerceptronSemanticCommsPipeline."""
+        return self.perceptron_pipeline.process_semantic_transmission(image_size_kb, distance_m=25.0)
 
     def compute_peer_link_matrix(self) -> Dict[str, dict]:
         """Generate full link metrics matrix across all UAV peer pairs."""
