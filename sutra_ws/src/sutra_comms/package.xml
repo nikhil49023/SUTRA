@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>sutra_comms</name>
+  <version>1.0.0</version>
+  <description>Subsystem B: Swarm Communication Mesh &amp; Deep JSCC Neural Encoders</description>
+  <maintainer email="nikhil@sutra.ai">Nikhil</maintainer>
+  <license>MIT</license>
+
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+
+  <test_depend>pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

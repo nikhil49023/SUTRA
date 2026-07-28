@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>PROJECT SUTRA — Simple Beginner Master Blueprint (Team Offgrid)</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+    @page {
+      size: A4 portrait;
+      margin: 8mm 8mm 10mm 8mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #F8FAFC;
+      color: #0F172A;
+      line-height: 1.38;
+      font-size: 10.5px;
+    }
+
+    .page {
+      page-break-after: always;
+      position: relative;
+      height: 277mm;
+      max-height: 277mm;
+      overflow: hidden;
+      padding-bottom: 12px;
+    }
+
+    .page:last-child {
+      page-break-after: avoid;
+    }
+
+    /* HEADER BANNER */
+    .header-banner {
+      background: linear-gradient(135deg, #FFFFFF 0%, #EFF6FF 100%);
+      border: 2px solid #CBD5E1;
+      border-left: 6px solid #2563EB;
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      color: #1E3A8A;
+    }
+
+    .brand-subtitle {
+      font-size: 9.5px;
+      color: #475569;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .meta-badge {
+      background: #DBEAFE;
+      border: 1px solid #93C5FD;
+      border-radius: 6px;
+      padding: 4px 10px;
+      text-align: right;
+    }
+
+    .meta-badge .team {
+      font-family: 'Outfit', sans-serif;
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #1E40AF;
+    }
+
+    /* SECTION TITLES */
+    .section-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #0F172A;
+      margin-bottom: 7px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-bottom: 2px solid #E2E8F0;
+      padding-bottom: 3px;
+    }
+
+    .section-title span.num {
+      background: #2563EB;
+      color: #FFF;
+      font-size: 9.5px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    /* INFOGRAPHIC IMAGE GRID */
+    .img-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .img-card {
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.04);
+    }
+
+    .img-card img {
+      width: 100%;
+      height: 108px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .img-card-caption {
+      padding: 5px 8px;
+      font-size: 9.5px;
+      font-weight: 700;
+      color: #1E293B;
+      background: #F1F5F9;
+      border-top: 1px solid #E2E8F0;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* SIMPLE ROLE CARDS */
+    .role-card-simple {
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      border-radius: 7px;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+    }
+
+    .role-card-simple.c-purple { border-left: 4px solid #7C3AED; }
+    .role-card-simple.c-blue { border-left: 4px solid #2563EB; }
+    .role-card-simple.c-emerald { border-left: 4px solid #059669; }
+    .role-card-simple.c-amber { border-left: 4px solid #D97706; }
+    .role-card-simple.c-rose { border-left: 4px solid #DC2626; }
+
+    .role-title-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .role-person {
+      font-family: 'Outfit', sans-serif;
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #0F172A;
+    }
+
+    .badge-tag {
+      font-size: 8.5px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 6px;
+      text-transform: uppercase;
+    }
+
+    .bt-purple { background: #EDE9FE; color: #5B21B6; }
+    .bt-blue { background: #DBEAFE; color: #1E40AF; }
+    .bt-emerald { background: #D1FAE5; color: #065F46; }
+    .bt-amber { background: #FEF3C7; color: #92400E; }
+    .bt-rose { background: #FEE2E2; color: #991B1B; }
+
+    .simple-explain {
+      font-size: 9.5px;
+      color: #475569;
+    }
+
+    .simple-explain strong {
+      color: #0F172A;
+    }
+
+    .task-bullets {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .task-bullets ul {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    .task-bullets li {
+      padding-left: 10px;
+      position: relative;
+      margin-bottom: 1px;
+      color: #334155;
+    }
+
+    .task-bullets li::before {
+      content: '👉';
+      position: absolute;
+      left: 0;
+      font-size: 7px;
+    }
+
+    /* TABLES */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 8px;
+      font-size: 9.5px;
+    }
+
+    th {
+      background: #F1F5F9;
+      color: #1E3A8A;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      text-align: left;
+      padding: 5px 7px;
+      border-bottom: 2px solid #CBD5E1;
+    }
+
+    td {
+      padding: 4.5px 7px;
+      border-bottom: 1px solid #E2E8F0;
+      color: #334155;
+    }
+
+    tr:nth-child(even) {
+      background: #FFFFFF;
+    }
+
+    .pass-tag {
+      color: #059669;
+      font-weight: 700;
+      background: #ECFDF5;
+      padding: 1px 4px;
+      border-radius: 3px;
+      border: 1px solid #A7F3D0;
+    }
+
+    .footer {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      font-size: 8px;
+      color: #64748B;
+      border-top: 1px solid #E2E8F0;
+      padding-top: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PAGE 1: SIMPLE TEAM ROLES & GEMINI VISUAL ASSETS -->
+  <div class="page">
+    <div class="header-banner">
+      <div>
+        <div class="brand-title">PROJECT SUTRA</div>
+        <div class="brand-subtitle">Simple Beginner Master Guide — Team Offgrid (Zero Empty Pages)</div>
+      </div>
+      <div class="meta-badge">
+        <div class="team">TEAM OFFGRID</div>
+        <div>Finals: Sept 3, 2026</div>
+      </div>
+    </div>
+
+    <!-- GEMINI GENERATED INFOGRAPHIC ASSETS -->
+    <div class="img-grid-2">
+      <div class="img-card">
+        <img src="sutra_gnc_flight_concept.jpg" alt="Drone Autopilot Flight Path Illustration" />
+        <div class="img-card-caption">
+          <span>🛸 Subsystem A (Rohith): Flight Path &amp; Obstacles</span>
+          <span style="color:#7C3AED;">PX4 Offboard Control</span>
+        </div>
+      </div>
+      <div class="img-card">
+        <img src="sutra_swarm_comms_concept.jpg" alt="Swarm Wireless Mesh & Neural Compression Illustration" />
+        <div class="img-card-caption">
+          <span>🌐 Subsystem B (Nikhil): Mesh &amp; Neural Comms</span>
+          <span style="color:#2563EB;">Leader Failover &amp; JSCC</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">
+      <span class="num">01</span> Simplified Role Breakdown (What Each Member Builds)
+    </div>
+
+    <!-- ROHITH KUMAR -->
+    <div class="role-card-simple c-purple">
+      <div class="role-title-bar">
+        <div class="role-person">🛸 ROHITH KUMAR — Subsystem A (Flight Control &amp; Pilot)</div>
+        <span class="badge-tag bt-purple">FLIGHT PILOT</span>
+      </div>
+      <div class="simple-explain">
+        <strong>Analogy:</strong> Rohith is the "Steering Wheel &amp; Brakes". He makes sure drones take off safely, follow 3D waypoints, and never crash into buildings.
+      </div>
+      <div class="task-bullets">
+        <ul>
+          <li><strong>What to build:</strong> C++ node <code>px4_offboard_node.cpp</code>.</li>
+          <li><strong>Day 1 Goal:</strong> Install PX4 SITL &amp; spawn drone.</li>
+        </ul>
+        <ul>
+          <li><strong>How it works:</strong> Sends 3D velocity vectors to PX4.</li>
+          <li><strong>Success Check:</strong> Flies square circuit without crashing.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- NIKHIL -->
+    <div class="role-card-simple c-blue">
+      <div class="role-title-bar">
+        <div class="role-person">🌐 NIKHIL — Subsystem B (Swarm Network &amp; Tech Lead)</div>
+        <span class="badge-tag bt-blue">NETWORK ARCHITECT</span>
+      </div>
+      <div class="simple-explain">
+        <strong>Analogy:</strong> Nikhil is the "Walkie-Talkie &amp; Brain". He connects all drones via Wi-Fi mesh so if 1 drone dies, another automatically takes over leadership.
+      </div>
+      <div class="task-bullets">
+        <ul>
+          <li><strong>What to build:</strong> Python <code>mesh_socket.py</code> &amp; Gazebo Sim ops.</li>
+          <li><strong>Day 1 Goal:</strong> Setup Git repo, branches, and ROS 2 bridge.</li>
+        </ul>
+        <ul>
+          <li><strong>How it works:</strong> Wi-Fi mesh + Deep JSCC image compression.</li>
+          <li><strong>Success Check:</strong> Zero signal drop under 60% loss.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- VEDANTH SAI RAM -->
+    <div class="role-card-simple c-emerald">
+      <div class="role-title-bar">
+        <div class="role-person">👁️ VEDANTH SAI RAM — Subsystem C (AI Vision &amp; Target Detector)</div>
+        <span class="badge-tag bt-emerald">AI VISION DETECTOR</span>
+      </div>
+      <div class="simple-explain">
+        <strong>Analogy:</strong> Vedanth is the "Drone's Eyes". He feeds camera images to YOLOv8 AI to spot disaster victims and pin their exact GPS coordinates.
+      </div>
+      <div class="task-bullets">
+        <ul>
+          <li><strong>What to build:</strong> Python <code>yolo_tensorrt_node.py</code>.</li>
+          <li><strong>Day 1 Goal:</strong> Set up PyTorch, CUDA &amp; TensorRT model.</li>
+        </ul>
+        <ul>
+          <li><strong>How it works:</strong> Detects targets at 30+ FPS and outputs GPS pins.</li>
+          <li><strong>Success Check:</strong> Target detection accuracy &gt; 85%.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer">
+      <span>Project SUTRA — Simple Beginner Master Guide (Team Offgrid)</span>
+      <span>Page 1 of 2</span>
+    </div>
+  </div>
+
+  <!-- PAGE 2: SIVA KESAVA, HARIKA, 7-DAY TIMELINE & VERIFICATION GATES -->
+  <div class="page">
+    <div class="section-title">
+      <span class="num">02</span> Simplified Role Breakdown (Siva Kesava &amp; Harika)
+    </div>
+
+    <!-- GEMINI GENERATED IMAGE GRID 2 -->
+    <div class="img-grid-2">
+      <div class="img-card">
+        <img src="sutra_gcs_dashboard_preview.jpg" alt="3D GIS Ground Control Station Dashboard" />
+        <div class="img-card-caption">
+          <span>🗺️ Subsystem D (Siva Kesava): 3D Mapbox UI</span>
+          <span style="color:#D97706;">Live WebGL Telemetry</span>
+        </div>
+      </div>
+      <div class="img-card">
+        <img src="sutra_swarm_hero.jpg" alt="Swarm Digital Twin Simulation Overview" />
+        <div class="img-card-caption">
+          <span>📝 Subsystem E (Harika): Audit &amp; Verification</span>
+          <span style="color:#DC2626;">Gate G1-G6 Audits</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIVA KESAVA -->
+    <div class="role-card-simple c-amber">
+      <div class="role-title-bar">
+        <div class="role-person">🗺️ SIVA KESAVA — Subsystem D (3D GIS Dashboard &amp; UI)</div>
+        <span class="badge-tag bt-amber">UI / UX ARCHITECT</span>
+      </div>
+      <div class="simple-explain">
+        <strong>Analogy:</strong> Siva is the "Mission Control Screen". He builds the visual 3D satellite map on laptop screens so operators can watch drones in real-time.
+      </div>
+      <div class="task-bullets">
+        <ul>
+          <li><strong>What to build:</strong> React component <code>Mapbox3D.jsx</code>.</li>
+          <li><strong>Day 1 Goal:</strong> Create React app &amp; Mapbox token.</li>
+        </ul>
+        <ul>
+          <li><strong>How it works:</strong> Receives ROS 2 WebSockets &amp; draws 3D markers.</li>
+          <li><strong>Success Check:</strong> Smooth 3D drone tracking on browser.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- HARIKA -->
+    <div class="role-card-simple c-rose">
+      <div class="role-title-bar">
+        <div class="role-person">📝 HARIKA — Subsystem E (Research, Documentation &amp; Audit Lead)</div>
+        <span class="badge-tag bt-rose">DOCUMENTATION &amp; AUDIT LEAD</span>
+      </div>
+      <div class="simple-explain">
+        <strong>Analogy:</strong> Harika is the "Project Manager &amp; Quality Auditor". She handles documentation, logs flight test scores, and creates pitch decks for judges.
+      </div>
+      <div class="task-bullets">
+        <ul>
+          <li><strong>What to build:</strong> SUTRA Encyclopedia &amp; Gate Logs.</li>
+          <li><strong>Day 1 Goal:</strong> Init <code>docs/SUTRA_Encyclopedia.md</code>.</li>
+        </ul>
+        <ul>
+          <li><strong>How it works:</strong> Tracks test errors and builds presentation slides.</li>
+          <li><strong>Success Check:</strong> 100% complete docs &amp; pitch materials.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section-title">
+      <span class="num">03</span> 7-Day Simple Sprint Timeline (Starting Tomorrow, July 28)
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Day</th>
+          <th>Primary Goal</th>
+          <th>What Each Member Does</th>
+          <th>Milestone Check</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Day 1 (Tomorrow)</strong></td>
+          <td>Repo &amp; Toolchain Setup</td>
+          <td>Nikhil inits repo. Rohith sets up PX4 SITL. Vedanth installs TensorRT. Siva sets up React. Harika inits docs.</td>
+          <td>Clean Build Baseline</td>
+        </tr>
+        <tr>
+          <td><strong>Day 2</strong></td>
+          <td>AI Node Generation</td>
+          <td>Rohith builds <code>px4_offboard_node.cpp</code>. Nikhil builds <code>mesh_socket.py</code>. Siva builds Mapbox 3D map.</td>
+          <td>Unit Tests Pass</td>
+        </tr>
+        <tr>
+          <td><strong>Day 3</strong></td>
+          <td>Digital Twin Sim</td>
+          <td>Launch <code>real_world_digital_twin_swarm.sdf</code> in Gazebo Sim 8. Merge first PR into <code>dev</code> (v0.1-alpha).</td>
+          <td>Gate G1 Passed <span class="pass-tag">✓</span></td>
+        </tr>
+        <tr>
+          <td><strong>Day 4</strong></td>
+          <td>Pairwise Integration</td>
+          <td>Pair 1: Rohith &amp; Nikhil (Flight + Mesh). Pair 2: Vedanth &amp; Siva (Vision + 3D GCS).</td>
+          <td>Gate G2 Passed <span class="pass-tag">✓</span></td>
+        </tr>
+        <tr>
+          <td><strong>Day 5</strong></td>
+          <td>Full 5-Subsystem Loop</td>
+          <td>Run <code>SUTRA_48Hr_Hackathon_Master_Suite.py</code>. Full end-to-end takeoff to victim detection mission flight.</td>
+          <td>Gates G3-G4 Passed <span class="pass-tag">✓</span></td>
+        </tr>
+        <tr>
+          <td><strong>Day 6</strong></td>
+          <td>Stress &amp; Failover Test</td>
+          <td>Inject 60% RF loss, 3.5m/s wind shear, and 30s GPS blackout. Confirm VIO position hold works.</td>
+          <td>Gates G5-G6 Passed <span class="pass-tag">✓</span></td>
+        </tr>
+        <tr>
+          <td><strong>Day 7</strong></td>
+          <td>Baseline Freeze &amp; Lock</td>
+          <td>Merge <code>dev</code> -&gt; <code>main</code> (v1.0-release). Record 2-minute demo video (<code>Sutra_Rescue_Mission.mp4</code>).</td>
+          <td>100% Locked <span class="pass-tag">✓</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="footer">
+      <span>Project SUTRA — Simple Beginner Master Guide (Team Offgrid)</span>
+      <span>Page 2 of 2</span>
+    </div>
+  </div>
+
+</body>
+</html>
