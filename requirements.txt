@@ -1,0 +1,18 @@
+# SUTRA Monorepo Multi-Subsystem Python Dependencies
+
+# Core Math & Flight Computation
+numpy>=1.24.0
+scipy>=1.10.0
+pytest>=7.4.0
+ruff>=0.1.0
+
+# Subsystem B: Deep JSCC Neural Swarm Comms
+torch>=2.0.0
+torchvision>=0.15.0
+
+# Subsystem C: Tri-Modal AI Perception
+opencv-python>=4.8.0
+pyyaml>=6.0
+
+# ROS 2 & Gazebo Client Libraries
+transforms3d>=0.4.1
