@@ -1,38 +1,24 @@
 # Project SUTRA — Enforced Agent Rules & Learned User Directives
 
-### 🛡️ Rule 001: Team Member Role Clarifications & Scope
-- **Harika**: Assigned exclusively to Subsystem E (Research Synthesis, Technical Documentation, Verification Gate Metric Audits G1-G6, Presentation Decks & Flight Logs). DO NOT assign complex low-level C++/ROS2 coding or Gazebo plugin writing to Harika.
-- **Nikhil**: Tech Architect & Subsystem B Lead (Swarm Comms Mesh, Deep JSCC Neural Coding, Gazebo Sim Ops).
-- **Rohith Kumar**: Subsystem A Lead (Autonomous Navigation, GNC, PX4 Offboard Mode, ORCA Avoidance).
-- **Vedanth Sai Ram**: Subsystem C Lead (Tri-Modal AI Perception, YOLOv8 TensorRT, Target Geolocation).
-- **Siva Kesava**: Subsystem D Lead (3D GIS Dashboard, React + Mapbox GL JS, WebGPU HUD, Emergency RTL).
+### 👤 Instant Teammate Name Activation Rule
+When a user introduces themselves by name, align with their subsystem immediately:
+- **Rohith / Rohith Kumar** -> Subsystem A Lead (GNC, PX4, VIO, ORCA). Branch: `feature/subsystem-a-gnc`, Dir: `sutra_ws/src/sutra_gnc/`
+- **Nikhil** -> Tech Architect & Subsystem B Lead (Comms Mesh, Deep JSCC, Sim). Branch: `feature/subsystem-b-comms`, Dir: `sutra_ws/src/sutra_comms/` & `sutra_ws/src/sutra_sim/`
+- **Vedanth / Vedanth Sai Ram** -> Subsystem C Lead (Tri-Modal Perception, YOLOv8 TensorRT). Branch: `feature/subsystem-c-perception`, Dir: `sutra_ws/src/sutra_perception/`
+- **Siva / Siva Kesava** -> Subsystem D Lead (3D GIS Dashboard, WebGPU HUD). Branch: `feature/subsystem-d-gcs`, Dir: `sutra_ws/src/sutra_gcs/`
+- **Harika** -> Subsystem E Lead (Docs, Verification Gates G1-G6, Audits). Branch: `feature/subsystem-e-docs`, Dir: `docs/` & `scripts/`
+
+### 🌿 3-Tier Branch & Buffer Integration Rule
+1. **Individual Role Branches**: `feature/subsystem-<letter>-<name>` for feature development.
+2. **Buffer Integration Branch**: `dev` (or `buffer-integration`) for merging all features and running end-to-end integration tests (`python3 scripts/SUTRA_48Hr_Hackathon_Master_Suite.py`).
+3. **Main Production Branch**: `main` reserved for clean, fully-audited final presentation releases.
+
+### 🛡️ Rule 001: Subsystem Isolation
+- Do not modify code outside your assigned subsystem folder unless explicitly requested by the user.
 
 ### 🛡️ Rule 002: Simulation Engine & Active Hardware Fleet
-- **Primary Standalone Simulator Machine**: **ASUS TUF A15 (RTX 3050 4GB VRAM)**. Works 100% standalone! Gazebo Sim 8 (Jazzy) + Ogre2 PBR footprint is < 350 MB VRAM, leaving > 3.7 GB free VRAM for 60 FPS flight. No borrowing needed for daily work.
-- **Optional Temporary Hardware Borrowing**: ASUS ROG Strix (8GB VRAM) / HP Victus (6GB VRAM) can be borrowed temporarily on final presentation day if heavy Unreal Engine cinematics are requested.
-- **Ground Control & Telemetry Node**: **MacBook**. Runs React + Mapbox GL JS 3D GCS dashboard, QGroundControl, and Foxglove Studio telemetry.
+- Simulator Machine: ASUS TUF A15 (RTX 3050 4GB VRAM) running Gazebo Sim 8 (Jazzy).
+- Ground Control Node: MacBook running React + Mapbox GL JS 3D GCS dashboard.
 
 ### 🛡️ Rule 003: Document Formatting & PDF Generation
-- **Theme Preference**: Light theme by default for team execution documents with clear daily goals and milestones.
-- **Visuals**: Always include high-resolution generated visual assets (Gemini images), SVG flowcharts, and clear color-coded role badges.
-- **Page Budget**: Always budget page heights cleanly (`height: 277mm`) to ensure EXACT page counts with ZERO trailing blank pages.
-
-### 🛡️ Rule 004: Token-Efficient MCP Building Super-Stack & Memory Policy
-- **Memory Persistence Policy**: **AVOID `agentmemory` MCP tool.** Use `contextm` / file-backed persistent rules (`.cursorrules`, `SKILL.md`, `docs/`) for persistent context memory across turns.
-- **Code Graphing & AST Queries**: Always use `code-review-graph` MCP server tools (`get_minimal_context_tool`, `semantic_search_nodes_tool`, `get_impact_radius_tool`) for minimal context token usage.
-- **Task Offloading**: Use `opencode-offloader` MCP server tools (`opencode_quick_edit`, `opencode_run_task`) to offload routine refactoring, boilerplate code generation, and unit test scaffolding to background fast models.
-- **Targeted File Inspection**: Always specify exact `StartLine` / `EndLine` ranges when calling `view_file` to keep context windows minimal.
-
-### 🛡️ Rule 005: GitHub Monorepo Architecture Standard
-- **Single Repository**: The entire team MUST work within a single GitHub monorepo (`https://github.com/Team-Offgrid/SUTRA.git`).
-- **Workspace Layout**:
-  ```
-  SUTRA/
-  ├── sutra_ws/src/sutra_gnc/          # Subsystem A (Rohith)
-  ├── sutra_ws/src/sutra_comms/        # Subsystem B (Nikhil)
-  ├── sutra_ws/src/sutra_perception/   # Subsystem C (Vedanth)
-  ├── sutra_ws/src/sutra_gcs/          # Subsystem D (Siva Kesava)
-  ├── sutra_ws/src/sutra_sim/          # Subsystem B & E (Sim / Harika)
-  └── docs/                            # Subsystem E (Harika)
-  ```
-- **Branch Strategy**: Protected `main`, integration `dev`, and individual feature branches (`feature/subsystem-a-gnc`, `feature/subsystem-b-comms`, `feature/subsystem-c-perception`, `feature/subsystem-d-gcs`, `feature/subsystem-e-docs`).
+- Theme: Light theme by default with visual flowcharts and clear role badges.
