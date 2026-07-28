@@ -1,0 +1,11 @@
+[tool.pytest.ini_options]
+pythonpath = [
+  "sutra_ws/src/sutra_gnc",
+  "sutra_ws/src/sutra_comms",
+  "sutra_ws/src/sutra_perception"
+]
+testpaths = [
+  "sutra_ws/src/sutra_gnc/test",
+  "sutra_ws/src/sutra_comms/test",
+  "sutra_ws/src/sutra_perception/test"
+]
