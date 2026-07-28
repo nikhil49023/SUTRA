@@ -51,12 +51,22 @@ class SwarmRaftConsensusEngine:
         self.role = "CANDIDATE"
         self.current_term += 1
         self.voted_for = self.node_id
+        self._granted_votes = {self.node_id}
         self.last_heartbeat_time = time.time()
-        # Vote tally (self vote = 1)
-        votes = 1
-        needed_votes = (len(self.peers) // 2) + 1
-        if votes >= needed_votes:
+        
+        majority = (len(self.peers) // 2) + 1
+        if len(self._granted_votes) >= majority:
             self.become_leader()
+
+    def receive_vote(self, voter_id: str):
+        """Record granted vote from peer and check quorum for LEADER transition."""
+        if self.role == "CANDIDATE":
+            if not hasattr(self, '_granted_votes'):
+                self._granted_votes = {self.node_id}
+            self._granted_votes.add(voter_id)
+            majority = (len(self.peers) // 2) + 1
+            if len(self._granted_votes) >= majority:
+                self.become_leader()
 
     def receive_heartbeat(self, leader_id: str, term: int, leader_commit: int):
         """Process leader heartbeat and update local raft state machine."""
