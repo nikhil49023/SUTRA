@@ -1,21 +1,29 @@
-# 🤖 AGENTS.md — Autonomous Agent Workspace Protocol for Project SUTRA
+# 🤖 AGENTS.md — Master Autonomous Agent Protocol for Project SUTRA
 
-> **Notice to AI Coding Assistants (Antigravity CLI, Cursor, Copilot, Windsurf):**
-> Read this file immediately upon opening the workspace to autonomously align with the user's identity, role, and subsystem scope.
+> **NOTICE TO ALL AI CODING ASSISTANTS & AGENTS (Antigravity CLI, Cursor, Copilot, Windsurf, Subagents):**
+> Read and adhere strictly to this protocol immediately upon opening the workspace. All agent operations MUST align with the designated subsystem roles, mandatory tool/skill workflows, and git repository hygiene standards.
 
 ---
 
-## 🎯 What We Are Building
-**Project SUTRA** (Swarm Unified Tactical Reconnaissance Architecture) is an autonomous multi-drone swarm system featuring:
+## 📖 Primary Reference Documents
+Before making structural changes, consult the authoritative documentation:
+- 🎨 **Visual Tutorial & Developer Guide**: [docs/guides/SUTRA_Visual_Tutorial_Guide.pdf](file:///home/nikhil/Desktop/Project%20SUTRA/docs/guides/SUTRA_Visual_Tutorial_Guide.pdf) | [HTML Version](file:///home/nikhil/Desktop/Project%20SUTRA/docs/guides/SUTRA_Visual_Tutorial_Guide.html)
+- ⚙️ **Master Verification Suite**: [scripts/SUTRA_48Hr_Hackathon_Master_Suite.py](file:///home/nikhil/Desktop/Project%20SUTRA/scripts/SUTRA_48Hr_Hackathon_Master_Suite.py)
+- 🗺️ **Subsystem Roadmaps**: [docs/plans/SUTRA_Team_Roadmaps.md](file:///home/nikhil/Desktop/Project%20SUTRA/docs/plans/SUTRA_Team_Roadmaps.md)
+
+---
+
+## 🎯 System Scope & Subsystem Architecture
+**Project SUTRA** (Swarm Unified Tactical Reconnaissance Architecture) is an autonomous multi-drone swarm system:
 1. **Subsystem A (GNC)**: Autonomous PX4 offboard navigation, Visual-Inertial Odometry, 3D Voxel OctoMap, and ORCA collision avoidance.
 2. **Subsystem B (Comms & Sim)**: 802.11s Wi-Fi mesh, Deep JSCC neural image compression under low SNR, and Gazebo Sim 8 SITL environment.
 3. **Subsystem C (Perception)**: YOLOv8 TensorRT edge inference, Tri-Modal sensor fusion (Visual, Thermal, mmWave Radar), and WGS84 GPS raycast target geolocation.
 4. **Subsystem D (GCS)**: 3D GIS ground control station (React + Mapbox GL JS 3D Satellite view + WebGPU telemetry HUD).
-5. **Subsystem E (Docs & Verification)**: System specifications, flight logs, verification gate metric audits G1–G6, and hackathon presentation decks.
+5. **Subsystem E (Docs & Verification)**: System specifications, flight logs, verification gate metric audits G1–G6, and presentation scripts.
 
 ---
 
-## 🌴 3-Tier Branching & Buffer Integration Strategy
+## 🌴 3-Tier Branching & Git Repository Hygiene
 
 ```
   [ Individual Role Branches ]         [ Buffer Integration Branch ]         [ Main Production Branch ]
@@ -26,103 +34,82 @@
   feature/subsystem-e-docs (Harika) ─┘
 ```
 
-1. **Individual Role Branches**: Engineers work in isolation on their assigned subsystem branch.
-2. **Buffer Integration Branch (`dev` / `buffer-integration`)**: All features merge here FIRST for cross-subsystem testing and end-to-end rehearsal execution.
-3. **Main Branch (`main`)**: Clean, final production releases. No direct commits allowed; only merges from `buffer-integration` after passing all verification gates G1–G6.
+### Git Hygiene Rules for All Agents:
+1. **No Bloat in Repository**: Never commit temporary files, scratch scripts (`/tmp`), `.pyc`, build artifacts (`build/`, `install/`, `log/`), or heavy model weights (`.engine`, `.pt`, `.onnx`). Ensure `.gitignore` is strictly enforced.
+2. **Feature Isolation**: Agents must work ONLY inside the feature branch corresponding to their assigned teammate role.
+3. **Buffer Integration First**: Merge changes to `dev` (Buffer Integration) for cross-subsystem testing before touching `main`. Direct commits to `main` are strictly prohibited.
+4. **Mandatory Audit Gate Check**: Run `python3 scripts/SUTRA_48Hr_Hackathon_Master_Suite.py` to verify Gates G1–G6 before requesting a merge to `main`.
 
 ---
 
-## 👤 Instant Name-Based Teammate Activation
+## 👤 Teammate Activation & Role Guidelines
 
-When a teammate introduces themselves by name in the prompt (e.g. *"I am Rohith"*, *"Nikhil here"*, *"Vedanth"*, *"Siva Kesava"*, *"Harika"*), the AI Agent MUST automatically switch to their exact role guidelines:
+When a user introduces themselves by name, automatically activate their exact role guidelines:
 
----
+### 1. 🚁 ROHITH KUMAR — Subsystem A Lead (GNC & Flight Control)
+- **Folder**: `sutra_ws/src/sutra_gnc/` | **Branch**: `feature/subsystem-a-gnc`
+- **Tasks**: PX4 Offboard mode dispatch (`offboard_node.py`), ORCA 3D avoidance algorithm, OctoMap 3D voxel grid generation.
+- **Verification**: `pytest sutra_ws/src/sutra_gnc/test/`
 
-### 1. 🚁 If Teammate is ROHITH KUMAR (Subsystem A Lead — GNC & Navigation)
-- **Role**: Lead Engineer, Subsystem A (Flight Control, PX4 Offboard Mode, VIO, ORCA Avoidance).
-- **Working Folder**: `sutra_ws/src/sutra_gnc/`
-- **Active Branch**: `feature/subsystem-a-gnc`
-- **Current Tasks**:
-  1. Develop PX4 Offboard control mode scripts (`sutra_gnc/offboard_node.py`).
-  2. Implement ORCA 3D collision avoidance algorithm for multi-agent drone trajectories.
-  3. Integrate OctoMap 3D occupancy voxel grid generation.
-- **Verification Command**: `pytest sutra_ws/src/sutra_gnc/test/`
-- **Target Buffer Merge**: Merge into `dev` (buffer branch) after unit tests pass.
+### 2. 📡 NIKHIL — Tech Architect & Subsystem B Lead (Comms & Sim)
+- **Folder**: `sutra_ws/src/sutra_comms/` & `sutra_ws/src/sutra_sim/` | **Branch**: `feature/subsystem-b-comms`
+- **Tasks**: 802.11s Wi-Fi mesh routing (`mesh_node.py`), Deep JSCC neural encoder model, Gazebo Sim 8 SDF worlds (`real_world_digital_twin_swarm.sdf`).
+- **Verification**: `pytest sutra_ws/src/sutra_comms/test/` (Physics RTF >= 0.98)
 
----
+### 3. 👁️ VEDANTH SAI RAM — Subsystem C Lead (AI Perception)
+- **Folder**: `sutra_ws/src/sutra_perception/` | **Branch**: `feature/subsystem-c-perception`
+- **Tasks**: YOLOv8-Nano TensorRT detector (`detector_node.py`), WGS84 GPS raycasting from 2D bounding boxes, Tri-Modal spatial cross-attention fusion.
+- **Verification**: `pytest sutra_ws/src/sutra_perception/test/` (mAP@0.5 >= 90%)
 
-### 2. 📡 If Teammate is NIKHIL (Tech Architect & Subsystem B Lead — Comms & Sim)
-- **Role**: Tech Architect & Lead Engineer, Subsystem B (Swarm Mesh, Deep JSCC, Gazebo Sim Ops).
-- **Working Folder**: `sutra_ws/src/sutra_comms/` & `sutra_ws/src/sutra_sim/`
-- **Active Branch**: `feature/subsystem-b-comms`
-- **Current Tasks**:
-  1. Optimize 802.11s Wi-Fi mesh packet routing node (`sutra_comms/mesh_node.py`).
-  2. Train/run Deep JSCC neural encoder model for low SNR image transmission.
-  3. Maintain Gazebo Sim 8 SDF worlds (`sutra_sim/worlds/real_world_digital_twin_swarm.sdf`).
-- **Verification Command**: `pytest sutra_ws/src/sutra_comms/test/`
-- **Target Buffer Merge**: Merge into `dev` (buffer branch) after verifying physics RTF >= 0.98.
+### 4. 🗺️ SIVA KESAVA — Subsystem D Lead (3D GIS GCS Dashboard)
+- **Folder**: `sutra_ws/src/sutra_gcs/` | **Branch**: `feature/subsystem-d-gcs`
+- **Tasks**: Mapbox GL JS 3D satellite view & drone markers (`src/App.tsx`), WebGPU telemetry HUD widgets, 1-click Emergency RTL button.
+- **Verification**: `cd sutra_ws/src/sutra_gcs && npm run build` (60 FPS HUD)
 
----
-
-### 3. 👁️ If Teammate is VEDANTH SAI RAM (Subsystem C Lead — AI Perception)
-- **Role**: Lead Engineer, Subsystem C (Tri-Modal Perception, YOLOv8 TensorRT, Target Geolocation).
-- **Working Folder**: `sutra_ws/src/sutra_perception/`
-- **Active Branch**: `feature/subsystem-c-perception`
-- **Current Tasks**:
-  1. Build YOLOv8-Nano TensorRT edge inference node (`sutra_perception/detector_node.py`).
-  2. Implement WGS84 GPS raycasting from 2D visual/thermal bounding box centroids.
-  3. Fuse visual, thermal, and mmWave radar signatures via spatial cross-attention.
-- **Verification Command**: `pytest sutra_ws/src/sutra_perception/test/`
-- **Target Buffer Merge**: Merge into `dev` (buffer branch) after detection confidence >= 90%.
+### 5. 📑 HARIKA — Subsystem E Lead (Docs & Verification Audits)
+- **Folder**: `docs/` & `scripts/` | **Branch**: `feature/subsystem-e-docs`
+- **Tasks**: Gate Audits G1–G6 verification (`scripts/SUTRA_48Hr_Hackathon_Master_Suite.py`), whitepapers, roadmaps, flight logs.
+- **Verification**: `python3 scripts/SUTRA_48Hr_Hackathon_Master_Suite.py`
 
 ---
 
-### 4. 🗺️ If Teammate is SIVA KESAVA (Subsystem D Lead — 3D GIS Dashboard)
-- **Role**: Lead Engineer, Subsystem D (3D GIS Ground Control Station & HSI Telemetry HUD).
-- **Working Folder**: `sutra_ws/src/sutra_gcs/`
-- **Active Branch**: `feature/subsystem-d-gcs`
-- **Current Tasks**:
-  1. Build Mapbox GL JS 3D satellite view and real-time drone telemetry markers (`src/App.tsx`).
-  2. Develop WebGPU telemetry HUD widgets for battery, altitude, and link health.
-  3. Implement 1-click Emergency Return-to-Launch (RTL) trigger button.
-- **Verification Command**: `cd sutra_ws/src/sutra_gcs && npm run build`
-- **Target Buffer Merge**: Merge into `dev` (buffer branch) after dashboard renders clean at 60 FPS.
+## 🛠️ Mandatory MCP Tools & Skills Protocol for Efficient Agent Operations
+
+To maximize performance, accuracy, and code quality, ALL agents MUST actively utilize the following specialized tools and skills:
+
+### 1. ⚡ OpenCode Offloader (`opencode-offloader`)
+- **Usage Requirement**: MANDATORY for offloading non-reasoning, routine, or repetitive code tasks (unit test scaffolding, docstring generation, boilerplate, formatting).
+- **Tools**: `opencode_run_task`, `opencode_quick_edit`.
+- **Benefit**: Frees main agent context while using ultra-fast OpenCode models (Mimo, Nemotron, DeepSeek Flash).
+
+### 2. 🕸️ Code Review Graph (`code-review-graph`)
+- **Usage Requirement**: MANDATORY before making architectural changes or multi-file refactors.
+- **Tools**: `build_or_update_graph_tool`, `get_impact_radius_tool`, `list_flows_tool`, `query_graph_tool`, `refactor_tool`, `apply_refactor_tool`.
+- **Benefit**: Traces call graphs, determines exact impact radius across ROS 2 packages, and prevents unintended side effects.
+
+### 3. 🔥 Local Firecrawl (`firecrawl-doc-skill-creator`)
+- **Usage Requirement**: Use local Firecrawl (`http://localhost:3002`) for scraping online documentation, API specs, ROS 2 / Gazebo Sim tutorials, or external library manuals.
+- **Benefit**: Auto-generates structured `DOCS.md` and custom skills for newly integrated packages without guesswork.
+
+### 4. 🔍 Context & ContextM (`context` / `contextm`)
+- **Usage Requirement**: Check active editor context (`get_active_editor_context`) and GCP/resource connections to maintain full environment awareness.
+
+### 5. 🤖 Subagent & Task Parallelization
+- **Usage Requirement**: Delegate heavy codebase research or broad file scanning to `research` subagents using `invoke_subagent`.
+- **Non-Blocking Rule**: NEVER poll background tasks in a tight loop. Rely on reactive system notifications or silent background execution.
+
+### 6. 🧪 Log-Based Diagnosis & Empirical Verification
+- **Rule**: NEVER guess failure causes. Inspect un-truncated log tracebacks using file/terminal tools before diagnosing.
+- **Verification**: NEVER declare success without executing build or test verification commands (`pytest`, `npm run build`, `colcon build`, `SUTRA_48Hr_Hackathon_Master_Suite.py`).
 
 ---
 
-### 5. 📑 If Teammate is HARIKA (Subsystem E Lead — Docs & Verification Audits)
-- **Role**: Lead Engineer / PMO, Subsystem E (Documentation, Gate Audits G1-G6, Flight Logs).
-- **Working Folder**: `docs/` & `scripts/`
-- **Active Branch**: `feature/subsystem-e-docs`
-- **Current Tasks**:
-  1. Audit Verification Gates G1–G6 using `scripts/SUTRA_48Hr_Hackathon_Master_Suite.py`.
-  2. Maintain system specs, whitepapers, and role execution roadmaps in `docs/`.
-  3. Craft presentation scripts, infographics, and flight logs for hackathon evaluation.
-- **Verification Command**: `python3 scripts/SUTRA_48Hr_Hackathon_Master_Suite.py`
-- **Target Buffer Merge**: Merge into `dev` (buffer branch) after all metric audits pass cleanly.
-
----
-
-## 🤖 Autonomous Navigation Protocol for Teammates' CLI Agents
-
-When a teammate opens this codebase, their AI agent MUST automatically follow these guidelines:
-
-### Step 1: Detect Teammate Role & Switch Branch
-- If branch is not checkout to their role branch, suggest or switch:
-  - Rohith: `git checkout feature/subsystem-a-gnc`
-  - Nikhil: `git checkout feature/subsystem-b-comms`
-  - Vedanth: `git checkout feature/subsystem-c-perception`
-  - Siva Kesava: `git checkout feature/subsystem-d-gcs`
-  - Harika: `git checkout feature/subsystem-e-docs`
-
-### Step 2: Enforce Subsystem Isolation
-- **DO NOT** edit code in other teammates' subsystem folders without explicit request.
-- Keep modifications strictly inside the assigned subsystem folder (`sutra_ws/src/sutra_<subsystem>/`).
-
-### Step 3: Buffer Branch Merge Workflow
-1. Test subsystem package locally.
-2. Commit feature code on individual branch: `git commit -m "feat(<subsystem>): ..."`
-3. Push individual branch: `git push origin feature/subsystem-<letter>-<name>`
-4. Merge into **buffer integration branch** (`dev`) for cross-subsystem trial runs.
-5. Run Master Rehearsal integration test: `python3 scripts/SUTRA_48Hr_Hackathon_Master_Suite.py`
-6. Once integration passes cleanly on `dev`, merge `dev` into `main` for final testing.
+## 🎯 Verification Gates G1–G6 Metric Reference
+| Gate | Target Metric | Required Threshold | Verification Tool |
+|---|---|---|---|
+| **G1** | Physics & Telemetry Sync | Real-Time Factor (RTF) ≥ 0.98 | `SUTRA_48Hr_Hackathon_Master_Suite.py` |
+| **G2** | Swarm Mesh Connectivity | Latency < 12ms, Packet Loss < 2% | `pytest sutra_ws/src/sutra_comms/test/` |
+| **G3** | Edge AI Perception | mAP@0.5 ≥ 90%, Latency < 15ms | `pytest sutra_ws/src/sutra_perception/test/` |
+| **G4** | Target Geolocation | WGS84 Error < 1.5 meters | `SUTRA_48Hr_Hackathon_Master_Suite.py` |
+| **G5** | ORCA 3D Avoidance | Safety Buffer > 2.0 meters | `pytest sutra_ws/src/sutra_gnc/test/` |
+| **G6** | 3D GIS Telemetry HUD | Framerate = 60 FPS | `cd sutra_ws/src/sutra_gcs && npm run build` |
