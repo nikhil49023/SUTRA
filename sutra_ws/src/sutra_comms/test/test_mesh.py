@@ -77,3 +77,25 @@ def test_gate_g2_metric_audit(ros_context):
             assert metrics['packet_loss_pct'] < 2.0, f"Gate G2 Fail on link {link_name}: Loss {metrics['packet_loss_pct']}% >= 2%"
     finally:
         node.destroy_node()
+
+
+def test_swarm_raft_consensus(ros_context):
+    node = SutraMeshNode()
+    try:
+        engine = node.raft_engine
+        assert engine.role == "LEADER"
+        assert engine.node_id == "uav_alpha"
+        assert len(engine.log) >= 1
+        
+        # Test candidate election timeout logic (peer count = 3 requires quorum of 2 votes)
+        follower_engine = node.raft_engine.__class__(node_id="uav_beta", peers=["uav_alpha", "uav_beta", "uav_gamma"])
+        assert follower_engine.role == "FOLLOWER"
+        follower_engine.start_election()
+        assert follower_engine.role == "CANDIDATE"  # Needs majority vote from peers
+        
+        # When quorum of 1 is needed (solo peer), immediately becomes leader
+        solo_engine = node.raft_engine.__class__(node_id="uav_solo", peers=["uav_solo"])
+        solo_engine.start_election()
+        assert solo_engine.role == "LEADER"
+    finally:
+        node.destroy_node()
