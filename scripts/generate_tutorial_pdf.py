@@ -30,7 +30,7 @@ def create_tutorial_guide():
         size: A4;
         margin: 12mm 12mm 14mm 12mm;
         @bottom-left {{
-            content: "PROJECT SUTRA — Swarm Unified Tactical Reconnaissance Architecture";
+            content: "PROJECT SUTRA — Autonomous Multi-Drone Search & Rescue Swarm System";
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             font-size: 7.5pt;
             color: #64748B;

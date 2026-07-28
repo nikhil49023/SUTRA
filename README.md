@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI Build Status](https://github.com/Team-Offgrid/SUTRA/actions/workflows/ros2-ci.yml/badge.svg)](https://github.com/Team-Offgrid/SUTRA/actions)
 
-> **Team Offgrid**: Autonomous Multi-Drone Swarm System featuring Deep JSCC Neural Swarm Mesh, Tri-Modal AI Perception, PX4 GNC Offboard Control, and 3D GIS Ground Control Station.
+> **Team Offgrid**: Autonomous Multi-Drone Swarm System for Collaborative Search-and-Rescue (SAR), Survivor Detection, Threat Identification & Tactical Reconnaissance in Disaster-Hit, Forested, and GPS-Denied Environments.
 
 ---
 

@@ -13,13 +13,20 @@ Before making structural changes, consult the authoritative documentation:
 
 ---
 
-## 🎯 System Scope & Subsystem Architecture
-**Project SUTRA** (Swarm Unified Tactical Reconnaissance Architecture) is an autonomous multi-drone swarm system:
-1. **Subsystem A (GNC)**: Autonomous PX4 offboard navigation, Visual-Inertial Odometry, 3D Voxel OctoMap, and ORCA collision avoidance.
-2. **Subsystem B (Comms & Sim)**: 802.11s Wi-Fi mesh, Deep JSCC neural image compression under low SNR, and Gazebo Sim 8 SITL environment.
-3. **Subsystem C (Perception)**: YOLOv8 TensorRT edge inference, Tri-Modal sensor fusion (Visual, Thermal, mmWave Radar), and WGS84 GPS raycast target geolocation.
-4. **Subsystem D (GCS)**: 3D GIS ground control station (React + Mapbox GL JS 3D Satellite view + WebGPU telemetry HUD).
-5. **Subsystem E (Docs & Verification)**: System specifications, flight logs, verification gate metric audits G1–G6, and presentation scripts.
+## 🎯 System Scope & Ultimate Mission Statement
+
+### Problem Statement & Challenge:
+Manual search and rescue operations in disaster-hit, forested, or conflict-prone environments are slow, hazardous, and severely limited in situational awareness. Traditional single-drone operations lack coverage, endurance, and fault-tolerance. 
+
+### Ultimate Solution Objective:
+**Project SUTRA** (Swarm Unified Tactical Reconnaissance Architecture) is an **Autonomous Multi-Drone Swarm System** engineered for collaborative search, rescue, survivor detection, and tactical reconnaissance with minimal human intervention in **GPS-denied and communication-challenged environments**.
+
+### 5 Core Interconnected Subsystems:
+1. **Subsystem A (GNC & Flight Control)**: Autonomous PX4 offboard navigation, Visual-Inertial Odometry (VIO) for GPS-denied localization, 3D Voxel OctoMap occupancy grid generation, and ORCA 3D reciprocal collision avoidance.
+2. **Subsystem B (Comms & Simulation)**: 802.11s Wi-Fi mesh routing, SwarmRAFT distributed consensus engine (< 500ms leader failover), Deep JSCC neural thermal/visual image compression under low SNR, and Gazebo Sim 8 SITL disaster digital twin.
+3. **Subsystem C (AI Edge Perception)**: YOLOv8-Nano TensorRT edge detector, Tri-Modal sensor fusion (Visual, Thermal, mmWave Radar), survivor/threat identification, and WGS84 GPS raycast target geolocation.
+4. **Subsystem D (3D GIS GCS)**: React 18 + Mapbox GL JS 3D Satellite view, WebGPU real-time telemetry HUD, survivor alert stream, and 1-click Emergency Return-to-Launch (RTL).
+5. **Subsystem E (Docs & Verification Audits)**: Automated verification gate metric audits G1–G6, system whitepapers, flight logs, and presentation scripts.
 
 ---
 
@@ -48,22 +55,22 @@ When a user introduces themselves by name, automatically activate their exact ro
 
 ### 1. 🚁 ROHITH KUMAR — Subsystem A Lead (GNC & Flight Control)
 - **Folder**: `sutra_ws/src/sutra_gnc/` | **Branch**: `feature/subsystem-a-gnc`
-- **Tasks**: PX4 Offboard mode dispatch (`offboard_node.py`), ORCA 3D avoidance algorithm, OctoMap 3D voxel grid generation.
+- **Tasks**: PX4 Offboard trajectory mode dispatch (`offboard_node.py`), Visual-Inertial Odometry (VIO) localization, ORCA 3D avoidance, and OctoMap 3D voxel grid.
 - **Verification**: `pytest sutra_ws/src/sutra_gnc/test/`
 
 ### 2. 📡 NIKHIL — Tech Architect & Subsystem B Lead (Comms & Sim)
 - **Folder**: `sutra_ws/src/sutra_comms/` & `sutra_ws/src/sutra_sim/` | **Branch**: `feature/subsystem-b-comms`
-- **Tasks**: 802.11s Wi-Fi mesh routing (`mesh_node.py`), Deep JSCC neural encoder model, Gazebo Sim 8 SDF worlds (`real_world_digital_twin_swarm.sdf`).
+- **Tasks**: 802.11s Wi-Fi mesh routing (`mesh_node.py`), SwarmRAFT consensus engine (< 500ms failover), Deep JSCC neural encoder model, and Gazebo Sim 8 SDF worlds (`real_world_digital_twin_swarm.sdf`).
 - **Verification**: `pytest sutra_ws/src/sutra_comms/test/` (Physics RTF >= 0.98)
 
 ### 3. 👁️ VEDANTH SAI RAM — Subsystem C Lead (AI Perception)
 - **Folder**: `sutra_ws/src/sutra_perception/` | **Branch**: `feature/subsystem-c-perception`
-- **Tasks**: YOLOv8-Nano TensorRT detector (`detector_node.py`), WGS84 GPS raycasting from 2D bounding boxes, Tri-Modal spatial cross-attention fusion.
+- **Tasks**: YOLOv8-Nano TensorRT survivor/threat detector (`detector_node.py`), WGS84 GPS raycasting from 2D bounding boxes, and Tri-Modal spatial cross-attention fusion.
 - **Verification**: `pytest sutra_ws/src/sutra_perception/test/` (mAP@0.5 >= 90%)
 
 ### 4. 🗺️ SIVA KESAVA — Subsystem D Lead (3D GIS GCS Dashboard)
 - **Folder**: `sutra_ws/src/sutra_gcs/` | **Branch**: `feature/subsystem-d-gcs`
-- **Tasks**: Mapbox GL JS 3D satellite view & drone markers (`src/App.tsx`), WebGPU telemetry HUD widgets, 1-click Emergency RTL button.
+- **Tasks**: Mapbox GL JS 3D satellite view & drone markers (`src/App.tsx`), WebGPU telemetry HUD widgets, survivor alert stream, and 1-click Emergency RTL button.
 - **Verification**: `cd sutra_ws/src/sutra_gcs && npm run build` (60 FPS HUD)
 
 ### 5. 📑 HARIKA — Subsystem E Lead (Docs & Verification Audits)
@@ -108,8 +115,8 @@ To maximize performance, accuracy, and code quality, ALL agents MUST actively ut
 | Gate | Target Metric | Required Threshold | Verification Tool |
 |---|---|---|---|
 | **G1** | Physics & Telemetry Sync | Real-Time Factor (RTF) ≥ 0.98 | `SUTRA_48Hr_Hackathon_Master_Suite.py` |
-| **G2** | Swarm Mesh Connectivity | Latency < 12ms, Packet Loss < 2% | `pytest sutra_ws/src/sutra_comms/test/` |
-| **G3** | Edge AI Perception | mAP@0.5 ≥ 90%, Latency < 15ms | `pytest sutra_ws/src/sutra_perception/test/` |
+| **G2** | Swarm Mesh & Raft Consensus | Latency < 12ms, Packet Loss < 2%, Failover < 500ms | `pytest sutra_ws/src/sutra_comms/test/` |
+| **G3** | Edge AI Survivor Perception | mAP@0.5 ≥ 90%, Latency < 15ms | `pytest sutra_ws/src/sutra_perception/test/` |
 | **G4** | Target Geolocation | WGS84 Error < 1.5 meters | `SUTRA_48Hr_Hackathon_Master_Suite.py` |
 | **G5** | ORCA 3D Avoidance | Safety Buffer > 2.0 meters | `pytest sutra_ws/src/sutra_gnc/test/` |
 | **G6** | 3D GIS Telemetry HUD | Framerate = 60 FPS | `cd sutra_ws/src/sutra_gcs && npm run build` |
