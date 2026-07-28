@@ -108,12 +108,13 @@ class SutraMeshNode(Node):
         self.publisher_mesh_status = self.create_publisher(String, '/sutra/swarm/mesh_status', 10)
         self.publisher_raft_state = self.create_publisher(String, '/sutra/swarm/raft_consensus', 10)
         
-        # Swarm Peer Positions (x, y, z in meters)
+        # Swarm Peer Positions (x, y, z in meters matching high_quality_disaster_swarm_world.sdf)
         self.peer_positions: Dict[str, Tuple[float, float, float]] = {
             'uav_alpha': (0.0, 0.0, 15.0),
-            'uav_beta': (15.0, 20.0, 18.0),
-            'uav_gamma': (-25.0, 30.0, 12.0),
-            'uav_delta': (40.0, -10.0, 20.0),
+            'uav_beta': (25.0, 30.0, 18.0),
+            'uav_gamma': (-40.0, 45.0, 14.0),
+            'uav_delta': (60.0, -20.0, 20.0),
+            'uav_epsilon': (120.0, 10.0, 16.0),
         }
         
         # Initialize Perceptron-Powered Semantic JSCC Communication Engine
