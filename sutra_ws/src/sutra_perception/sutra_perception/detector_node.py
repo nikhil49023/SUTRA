@@ -36,6 +36,7 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import Image, LaserScan
 from std_msgs.msg import String
+from geometry_msgs.msg import PoseStamped
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Gracefully handle optional ROS cv_bridge (not needed in unit-test context)
@@ -316,8 +317,13 @@ class SutraDetectorNode(Node):
         self.create_subscription(
             LaserScan, "/radar/scan",         self._radar_callback,   sensor_qos
         )
+        # JSON String pose (sim mode / fallback)
         self.create_subscription(
             String,    "/sutra/gnc/pose",     self._pose_callback,    10
+        )
+        # PoseStamped from Subsystem A (geometry_msgs — real hardware/ROS integration)
+        self.create_subscription(
+            PoseStamped, "/sutra/gnc/pose_stamped", self._pose_stamped_callback, 10
         )
 
         # ── Publishers ────────────────────────────────────────────────────────
@@ -345,7 +351,7 @@ class SutraDetectorNode(Node):
     # ──────────────────────────────────────────────────────────────────────────
 
     def _pose_callback(self, msg: String) -> None:
-        """Receive drone telemetry JSON from Subsystem A."""
+        """Receive drone telemetry JSON from Subsystem A (sim/fallback mode)."""
         try:
             data = json.loads(msg.data)
             self._drone_lat = float(data.get("lat", self._drone_lat))
@@ -354,6 +360,26 @@ class SutraDetectorNode(Node):
             self._drone_yaw = float(data.get("yaw", self._drone_yaw))
         except (json.JSONDecodeError, KeyError, TypeError):
             pass  # keep previous values
+
+    def _pose_stamped_callback(self, msg: PoseStamped) -> None:
+        """Receive drone pose from Subsystem A via geometry_msgs/PoseStamped.
+
+        Subsystem A (Rohith) publishes PoseStamped on /sutra/gnc/pose_stamped.
+        Position: x=East(m), y=North(m), z=Alt(m) in local NED frame.
+        We convert to GPS using to_gps() with the SITL origin.
+        """
+        x = msg.pose.position.x
+        y = msg.pose.position.y
+        z = msg.pose.position.z
+        # Convert NED position → GPS
+        lat, lon, alt = to_gps(x, y, z)
+        self._drone_lat = lat
+        self._drone_lon = lon
+        self._drone_alt = alt
+        # Extract yaw from quaternion (simplified — z component only)
+        qz = msg.pose.orientation.z
+        qw = msg.pose.orientation.w
+        self._drone_yaw = 2.0 * math.atan2(qz, qw)
 
     def _rgb_callback(self, msg: Image) -> None:
         """Process RGB camera frame — run YOLOv8-Nano detection."""
