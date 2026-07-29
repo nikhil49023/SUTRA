@@ -1,0 +1,25 @@
+sutra_detector_node:
+  ros__parameters:
+    # ── Model ──────────────────────────────────────────────────────────────────
+    # yolov8n.pt   → CPU-friendly, auto-downloads if missing (~6 MB)
+    # yolov8n.onnx → ONNX runtime (cross-platform)
+    # yolov8n.engine → TensorRT (Jetson Nano/Orin, fastest)
+    yolo_model: "yolov8n.pt"
+
+    # ── Camera ─────────────────────────────────────────────────────────────────
+    # Horizontal field-of-view of the RGB camera in degrees.
+    # Common values: 90° (wide-angle), 60° (standard), 120° (ultra-wide)
+    camera_hfov_deg: 90.0
+
+    # ── Drone telemetry ────────────────────────────────────────────────────────
+    # Fallback altitude used when no pose message has arrived yet.
+    drone_alt_m: 30.0
+
+    # ── Fusion ─────────────────────────────────────────────────────────────────
+    # Rate at which the tri-modal fusion engine runs (Hz).
+    fusion_hz: 10.0
+
+    # ── Simulation mode ────────────────────────────────────────────────────────
+    # true  → inject deterministic mock sensor data (Gazebo SITL / CI testing)
+    # false → rely entirely on real ROS 2 sensor topics
+    sim_mode: true

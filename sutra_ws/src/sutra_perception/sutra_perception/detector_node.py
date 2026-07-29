@@ -1,54 +1,668 @@
 #!/usr/bin/env python3
 """
-SUTRA Subsystem C: Tri-Modal Target Geolocation & Detection Node
-Lead Engineer: Vedanth Sai Ram
+SUTRA Subsystem C: Tri-Modal AI Perception & Sensor Fusion Node
+================================================================
+Lead Engineer : Vedanth Sai Ram
+Branch        : feature/subsystem-c-perception
+Package       : sutra_perception
+
+Architecture:
+  Three independent sensor subscribers feed into a shared fusion engine
+  that runs on a fixed 10 Hz timer. Fused detections are published as
+  JSON strings to /sutra/perception/targets for Subsystem D (GCS).
+
+Sensor Modalities:
+  1. Visual  – YOLOv8-Nano on /camera/image_raw  (RGB)
+  2. Thermal – OpenCV blob on /thermal/image_raw  (16-bit thermal)
+  3. Radar   – Cluster analysis on /radar/scan    (simple 2-D range data)
+
+GPS Raycast:
+  Converts drone-relative XY offsets (metres) → WGS84 GPS coordinates
+  using drone telemetry from /sutra/gnc/pose.
 """
 
+from __future__ import annotations
+
+import json
 import math
+import time
+from dataclasses import dataclass, field
+from typing import List, Optional, Tuple
+
+import cv2
+import numpy as np
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, ReliabilityPolicy
+from sensor_msgs.msg import Image, LaserScan
 from std_msgs.msg import String
 
-ORIGIN_LAT = 37.774929
-ORIGIN_LON = -122.419416
-ORIGIN_ALT = 15.0
+# ──────────────────────────────────────────────────────────────────────────────
+# Gracefully handle optional ROS cv_bridge (not needed in unit-test context)
+# ──────────────────────────────────────────────────────────────────────────────
+try:
+    from cv_bridge import CvBridge
+    CV_BRIDGE_AVAILABLE = True
+except ImportError:
+    CV_BRIDGE_AVAILABLE = False
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Gracefully handle optional ultralytics (not needed in unit-test context)
+# ──────────────────────────────────────────────────────────────────────────────
+try:
+    from ultralytics import YOLO
+    YOLO_AVAILABLE = True
+except ImportError:
+    YOLO_AVAILABLE = False
+
+# ──────────────────────────────────────────────────────────────────────────────
+# WGS-84 Origin — San Francisco Digital Twin (matches Gazebo SITL world)
+# ──────────────────────────────────────────────────────────────────────────────
+ORIGIN_LAT: float = 37.774929
+ORIGIN_LON: float = -122.419416
+ORIGIN_ALT: float = 15.0          # metres ASL
+
+# Fusion confidence weights (must sum to 1.0)
+W_VISUAL:  float = 0.50
+W_THERMAL: float = 0.35
+W_RADAR:   float = 0.15
+
+# Detection thresholds
+YOLO_CONF_THRESHOLD:    float = 0.45   # minimum YOLO confidence to keep
+THERMAL_BLOB_MIN_AREA:  int   = 100    # pixels² — ignore tiny blobs
+RADAR_CLUSTER_RADIUS_M: float = 1.0   # metres — cluster merge radius
+FUSION_CONFIRM_THRESH:  float = 0.60  # fused score to publish as SURVIVOR
+FUSION_POSSIBLE_THRESH: float = 0.30  # fused score to publish as POSSIBLE
+
+# YOLO COCO class IDs relevant to SAR
+SAR_CLASS_IDS = {0: "person", 26: "backpack", 28: "suitcase"}
 
 
-def to_gps(x: float, y: float, z: float):
-    d_lat = y / 6378137.0
-    d_lon = x / (6378137.0 * math.cos(math.radians(ORIGIN_LAT)))
-    return (
-        round(ORIGIN_LAT + math.degrees(d_lat), 6),
-        round(ORIGIN_LON + math.degrees(d_lon), 6),
-        round(ORIGIN_ALT + z, 2),
-    )
+# ──────────────────────────────────────────────────────────────────────────────
+# Pure-Python helper — NO ROS dependency (importable in pytest without ROS)
+# ──────────────────────────────────────────────────────────────────────────────
 
+def to_gps(
+    x: float,
+    y: float,
+    z: float,
+    origin_lat: float = ORIGIN_LAT,
+    origin_lon: float = ORIGIN_LON,
+    origin_alt: float = ORIGIN_ALT,
+) -> Tuple[float, float, float]:
+    """Convert local NED offset (metres) → WGS-84 GPS coordinates.
+
+    Parameters
+    ----------
+    x : float
+        East offset in metres from origin.
+    y : float
+        North offset in metres from origin.
+    z : float
+        Altitude offset in metres (positive = up).
+    origin_lat / origin_lon / origin_alt : float
+        WGS-84 origin of the local coordinate frame.
+
+    Returns
+    -------
+    (lat, lon, alt) : Tuple[float, float, float]
+        GPS latitude (°), longitude (°), altitude (m ASL).
+    """
+    earth_radius_m: float = 6_378_137.0
+    d_lat = y / earth_radius_m
+    d_lon = x / (earth_radius_m * math.cos(math.radians(origin_lat)))
+    lat = round(origin_lat + math.degrees(d_lat), 6)
+    lon = round(origin_lon + math.degrees(d_lon), 6)
+    alt = round(origin_alt + z, 2)
+    return lat, lon, alt
+
+
+def pixel_to_ned(
+    px: float,
+    py: float,
+    img_w: int,
+    img_h: int,
+    drone_alt_m: float,
+    camera_hfov_deg: float = 90.0,
+) -> Tuple[float, float]:
+    """Project image pixel (px, py) onto ground plane → NED (east, north) offset.
+
+    Uses pinhole camera model. Assumes nadir-pointing camera.
+
+    Parameters
+    ----------
+    px, py        : Pixel coordinates (0,0 = top-left).
+    img_w, img_h  : Image dimensions in pixels.
+    drone_alt_m   : Drone altitude above ground in metres.
+    camera_hfov_deg : Horizontal field-of-view in degrees.
+
+    Returns
+    -------
+    (east_m, north_m) : Ground-plane offset in metres.
+    """
+    hfov_rad = math.radians(camera_hfov_deg)
+    vfov_rad = hfov_rad * (img_h / img_w)
+    # Normalised image coordinates in range [-0.5, +0.5]
+    norm_x = (px / img_w) - 0.5
+    norm_y = (py / img_h) - 0.5
+    east_m  =  norm_x * 2.0 * drone_alt_m * math.tan(hfov_rad / 2.0)
+    north_m = -norm_y * 2.0 * drone_alt_m * math.tan(vfov_rad / 2.0)
+    return east_m, north_m
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Data classes
+# ──────────────────────────────────────────────────────────────────────────────
+
+@dataclass
+class BBox:
+    """Bounding box in pixel space."""
+    x1: float
+    y1: float
+    x2: float
+    y2: float
+
+    @property
+    def cx(self) -> float:
+        return (self.x1 + self.x2) / 2.0
+
+    @property
+    def cy(self) -> float:
+        return (self.y1 + self.y2) / 2.0
+
+    @property
+    def area(self) -> float:
+        return max(0.0, self.x2 - self.x1) * max(0.0, self.y2 - self.y1)
+
+    def iou(self, other: "BBox") -> float:
+        """Intersection-over-Union with another BBox."""
+        ix1 = max(self.x1, other.x1)
+        iy1 = max(self.y1, other.y1)
+        ix2 = min(self.x2, other.x2)
+        iy2 = min(self.y2, other.y2)
+        inter = max(0.0, ix2 - ix1) * max(0.0, iy2 - iy1)
+        union = self.area + other.area - inter
+        return inter / union if union > 0 else 0.0
+
+
+@dataclass
+class VisualDetection:
+    """Single YOLO detection result."""
+    bbox: BBox
+    confidence: float
+    class_id: int
+    label: str
+    gps: Optional[Tuple[float, float, float]] = None
+
+
+@dataclass
+class ThermalBlob:
+    """Hot-spot detected in thermal image."""
+    bbox: BBox
+    mean_intensity: float           # 0–255 normalised
+
+
+@dataclass
+class RadarTarget:
+    """Clustered radar return."""
+    range_m: float
+    angle_rad: float
+    east_m: float
+    north_m: float
+
+
+@dataclass
+class FusedTarget:
+    """Final fused detection output."""
+    target_id: int
+    label: str                       # SURVIVOR | POSSIBLE_SURVIVOR | THREAT | UNKNOWN
+    confidence: float
+    gps: Tuple[float, float, float]
+    modalities: List[str] = field(default_factory=list)
+    timestamp: float = field(default_factory=time.time)
+
+    def to_dict(self) -> dict:
+        lat, lon, alt = self.gps
+        return {
+            "id":         self.target_id,
+            "label":      self.label,
+            "confidence": round(self.confidence, 3),
+            "lat":        lat,
+            "lon":        lon,
+            "alt":        alt,
+            "modalities": self.modalities,
+            "ts":         round(self.timestamp, 3),
+        }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Main ROS 2 Node
+# ──────────────────────────────────────────────────────────────────────────────
 
 class SutraDetectorNode(Node):
-    def __init__(self):
-        super().__init__('sutra_detector_node')
-        self.publisher_detections = self.create_publisher(
-            String, '/sutra/perception/detections', 10
+    """SUTRA Subsystem C — Tri-Modal AI Perception & Sensor Fusion Node.
+
+    Subscribes
+    ----------
+    /camera/image_raw    sensor_msgs/Image    RGB camera (YOLOv8 detection)
+    /thermal/image_raw   sensor_msgs/Image    Thermal camera (blob detection)
+    /radar/scan          sensor_msgs/LaserScan  2-D radar sweep
+    /sutra/gnc/pose      std_msgs/String      JSON drone telemetry from Sub-A
+
+    Publishes
+    ---------
+    /sutra/perception/detections   std_msgs/String   Raw per-frame detections (JSON)
+    /sutra/perception/targets      std_msgs/String   Fused confirmed targets  (JSON)
+    """
+
+    def __init__(self) -> None:
+        super().__init__("sutra_detector_node")
+
+        # ── Parameters ────────────────────────────────────────────────────────
+        self.declare_parameter("yolo_model",       "yolov8n.pt")
+        self.declare_parameter("camera_hfov_deg",  90.0)
+        self.declare_parameter("drone_alt_m",      30.0)   # fallback altitude
+        self.declare_parameter("fusion_hz",        10.0)
+        self.declare_parameter("sim_mode",         True)   # use mock data in sim
+
+        self._yolo_model_path  = self.get_parameter("yolo_model").value
+        self._camera_hfov_deg  = self.get_parameter("camera_hfov_deg").value
+        self._drone_alt_m      = self.get_parameter("drone_alt_m").value
+        self._sim_mode         = self.get_parameter("sim_mode").value
+
+        # ── State ─────────────────────────────────────────────────────────────
+        self._drone_lat: float = ORIGIN_LAT
+        self._drone_lon: float = ORIGIN_LON
+        self._drone_alt: float = ORIGIN_ALT
+        self._drone_yaw: float = 0.0        # radians
+
+        self._visual_detections:  List[VisualDetection] = []
+        self._thermal_blobs:      List[ThermalBlob]     = []
+        self._radar_targets:      List[RadarTarget]     = []
+        self._target_counter:     int                   = 0
+        self._img_w: int = 640
+        self._img_h: int = 480
+
+        # ── Optional bridges / models ──────────────────────────────────────────
+        self._bridge: Optional[object] = CvBridge() if CV_BRIDGE_AVAILABLE else None
+        self._yolo:   Optional[object] = None
+
+        if YOLO_AVAILABLE:
+            try:
+                self._yolo = YOLO(self._yolo_model_path)
+                self.get_logger().info(
+                    f"✅ YOLOv8-Nano loaded: {self._yolo_model_path}"
+                )
+            except Exception as exc:
+                self.get_logger().warn(f"YOLO load failed ({exc}). Running in mock mode.")
+        else:
+            self.get_logger().warn(
+                "ultralytics not installed — running YOLO in mock mode."
+            )
+
+        # ── QoS ───────────────────────────────────────────────────────────────
+        sensor_qos = QoSProfile(
+            depth=1,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
         )
-        self.timer = self.create_timer(2.0, self.detect_and_raycast)
-        self.get_logger().info('SUTRA Tri-Modal Detector Node Initialized.')
 
-    def detect_and_raycast(self):
-        lat, lon, alt = to_gps(18.5, -22.0, 0.0)
-        msg = String()
-        msg.data = f"Victim Identified | Conf: 94.2% | Target GPS: Lat {lat}°, Lon {lon}°, Alt {alt}m"
-        self.publisher_detections.publish(msg)
+        # ── Subscribers ───────────────────────────────────────────────────────
+        self.create_subscription(
+            Image,     "/camera/image_raw",   self._rgb_callback,     sensor_qos
+        )
+        self.create_subscription(
+            Image,     "/thermal/image_raw",  self._thermal_callback, sensor_qos
+        )
+        self.create_subscription(
+            LaserScan, "/radar/scan",         self._radar_callback,   sensor_qos
+        )
+        self.create_subscription(
+            String,    "/sutra/gnc/pose",     self._pose_callback,    10
+        )
+
+        # ── Publishers ────────────────────────────────────────────────────────
+        self._pub_detections = self.create_publisher(
+            String, "/sutra/perception/detections", 10
+        )
+        self._pub_targets = self.create_publisher(
+            String, "/sutra/perception/targets", 10
+        )
+
+        # ── Fusion timer (10 Hz) ──────────────────────────────────────────────
+        fusion_hz = self.get_parameter("fusion_hz").value
+        self.create_timer(1.0 / fusion_hz, self._fusion_tick)
+
+        # ── Sim mode: inject mock detections so pipeline can be tested ────────
+        if self._sim_mode:
+            self.create_timer(2.0, self._inject_sim_data)
+
+        self.get_logger().info(
+            "🚁 SUTRA Subsystem C — Tri-Modal Detector Node ONLINE"
+        )
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Subscriber callbacks
+    # ──────────────────────────────────────────────────────────────────────────
+
+    def _pose_callback(self, msg: String) -> None:
+        """Receive drone telemetry JSON from Subsystem A."""
+        try:
+            data = json.loads(msg.data)
+            self._drone_lat = float(data.get("lat", self._drone_lat))
+            self._drone_lon = float(data.get("lon", self._drone_lon))
+            self._drone_alt = float(data.get("alt", self._drone_alt))
+            self._drone_yaw = float(data.get("yaw", self._drone_yaw))
+        except (json.JSONDecodeError, KeyError, TypeError):
+            pass  # keep previous values
+
+    def _rgb_callback(self, msg: Image) -> None:
+        """Process RGB camera frame — run YOLOv8-Nano detection."""
+        if self._bridge is None:
+            return
+        try:
+            frame = self._bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+        except Exception:
+            return
+
+        self._img_h, self._img_w = frame.shape[:2]
+        self._visual_detections = self._run_yolo(frame)
+
+    def _thermal_callback(self, msg: Image) -> None:
+        """Process thermal camera frame — detect hot-spot blobs."""
+        if self._bridge is None:
+            return
+        try:
+            # Accept 16-bit mono or 8-bit mono
+            raw = self._bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
+        except Exception:
+            return
+
+        self._thermal_blobs = self._detect_thermal_blobs(raw)
+
+    def _radar_callback(self, msg: LaserScan) -> None:
+        """Process 2-D radar sweep — cluster returns into targets."""
+        self._radar_targets = self._cluster_radar(msg)
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Sensor processing helpers
+    # ──────────────────────────────────────────────────────────────────────────
+
+    def _run_yolo(self, frame: np.ndarray) -> List[VisualDetection]:
+        """Run YOLOv8-Nano on frame and return filtered detections."""
+        detections: List[VisualDetection] = []
+
+        if self._yolo is None:
+            return detections
+
+        try:
+            results = self._yolo(frame, conf=YOLO_CONF_THRESHOLD, verbose=False)
+        except Exception as exc:
+            self.get_logger().warn(f"YOLO inference error: {exc}")
+            return detections
+
+        for result in results:
+            if result.boxes is None:
+                continue
+            for box in result.boxes:
+                cls_id = int(box.cls[0])
+                if cls_id not in SAR_CLASS_IDS:
+                    continue
+                x1, y1, x2, y2 = box.xyxy[0].tolist()
+                conf = float(box.conf[0])
+                bbox = BBox(x1, y1, x2, y2)
+                # GPS raycast from pixel centre
+                ex, ny = pixel_to_ned(
+                    bbox.cx, bbox.cy,
+                    self._img_w, self._img_h,
+                    self._drone_alt,
+                    self._camera_hfov_deg,
+                )
+                gps = to_gps(ex, ny, 0.0, self._drone_lat, self._drone_lon, 0.0)
+                detections.append(VisualDetection(
+                    bbox=bbox,
+                    confidence=conf,
+                    class_id=cls_id,
+                    label=SAR_CLASS_IDS[cls_id],
+                    gps=gps,
+                ))
+        return detections
+
+    def _detect_thermal_blobs(self, raw: np.ndarray) -> List[ThermalBlob]:
+        """Detect human-temperature hot-spots in thermal image.
+
+        Strategy:
+          - Normalise 16-bit → 8-bit (or use 8-bit directly)
+          - Otsu threshold to isolate warm regions
+          - Filter blobs by minimum area
+        """
+        blobs: List[ThermalBlob] = []
+
+        # Normalise to 8-bit
+        if raw.dtype == np.uint16:
+            norm = cv2.normalize(raw, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+        else:
+            norm = raw.astype(np.uint8)
+
+        # Keep top 30 % of intensity values (hot areas)
+        _, mask = cv2.threshold(norm, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+        contours, _ = cv2.findContours(
+            mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            if area < THERMAL_BLOB_MIN_AREA:
+                continue
+            rx, ry, rw, rh = cv2.boundingRect(cnt)
+            roi = norm[ry:ry+rh, rx:rx+rw]
+            mean_intensity = float(roi.mean()) / 255.0
+            blobs.append(ThermalBlob(
+                bbox=BBox(rx, ry, rx + rw, ry + rh),
+                mean_intensity=mean_intensity,
+            ))
+        return blobs
+
+    def _cluster_radar(self, msg: LaserScan) -> List[RadarTarget]:
+        """Convert LaserScan ranges into clustered radar targets."""
+        targets: List[RadarTarget] = []
+        raw_points: List[Tuple[float, float, float]] = []  # (range, angle, east, north)
+
+        angle = msg.angle_min
+        for r in msg.ranges:
+            if msg.range_min < r < msg.range_max and not math.isinf(r) and not math.isnan(r):
+                east_m  =  r * math.sin(angle)
+                north_m =  r * math.cos(angle)
+                raw_points.append((r, angle, east_m, north_m))
+            angle += msg.angle_increment
+
+        if not raw_points:
+            return targets
+
+        # Simple greedy clustering
+        used = [False] * len(raw_points)
+        for i, (ri, ai, ei, ni) in enumerate(raw_points):
+            if used[i]:
+                continue
+            cluster_e = [ei]
+            cluster_n = [ni]
+            used[i] = True
+            for j, (rj, aj, ej, nj) in enumerate(raw_points):
+                if used[j]:
+                    continue
+                dist = math.hypot(ei - ej, ni - nj)
+                if dist < RADAR_CLUSTER_RADIUS_M:
+                    cluster_e.append(ej)
+                    cluster_n.append(nj)
+                    used[j] = True
+            mean_e = sum(cluster_e) / len(cluster_e)
+            mean_n = sum(cluster_n) / len(cluster_n)
+            mean_r = math.hypot(mean_e, mean_n)
+            targets.append(RadarTarget(
+                range_m=mean_r,
+                angle_rad=ai,
+                east_m=mean_e,
+                north_m=mean_n,
+            ))
+        return targets
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Tri-Modal Fusion Engine  (10 Hz timer)
+    # ──────────────────────────────────────────────────────────────────────────
+
+    def _fusion_tick(self) -> None:
+        """Merge visual, thermal, radar detections → publish fused targets."""
+        fused: List[FusedTarget] = []
+
+        # ── Step 1: seed with visual detections (highest information) ─────────
+        for vdet in self._visual_detections:
+            if vdet.gps is None:
+                continue
+            score = vdet.confidence * W_VISUAL
+            modalities = ["visual"]
+            ev, nv = pixel_to_ned(
+                vdet.bbox.cx, vdet.bbox.cy,
+                self._img_w, self._img_h,
+                self._drone_alt, self._camera_hfov_deg,
+            )
+
+            # ── Step 2: thermal confirmation ──────────────────────────────────
+            for tblob in self._thermal_blobs:
+                iou = vdet.bbox.iou(tblob.bbox)
+                if iou > 0.15:
+                    score += tblob.mean_intensity * W_THERMAL
+                    modalities.append("thermal")
+                    break  # one confirmation per visual detection
+
+            # ── Step 3: radar confirmation ────────────────────────────────────
+            for rtgt in self._radar_targets:
+                dist_m = math.hypot(ev - rtgt.east_m, nv - rtgt.north_m)
+                if dist_m < 3.0:   # within 3 m ground radius
+                    score += W_RADAR
+                    modalities.append("radar")
+                    break
+
+            score = min(score, 1.0)
+            label = self._classify(vdet.label, score)
+            self._target_counter += 1
+            fused.append(FusedTarget(
+                target_id=self._target_counter,
+                label=label,
+                confidence=score,
+                gps=vdet.gps,
+                modalities=modalities,
+            ))
+
+        # ── Step 4: thermal-only detections (smoke / rubble scenarios) ────────
+        for tblob in self._thermal_blobs:
+            already_fused = any(
+                tblob.bbox.iou(BBox(
+                    d.bbox.x1, d.bbox.y1, d.bbox.x2, d.bbox.y2
+                )) > 0.15
+                for d in self._visual_detections
+            )
+            if already_fused:
+                continue
+            score = tblob.mean_intensity * W_THERMAL
+            if score < FUSION_POSSIBLE_THRESH:
+                continue
+            ex, ny = pixel_to_ned(
+                tblob.bbox.cx, tblob.bbox.cy,
+                self._img_w, self._img_h,
+                self._drone_alt, self._camera_hfov_deg,
+            )
+            gps = to_gps(ex, ny, 0.0, self._drone_lat, self._drone_lon, 0.0)
+            self._target_counter += 1
+            fused.append(FusedTarget(
+                target_id=self._target_counter,
+                label="POSSIBLE_SURVIVOR",
+                confidence=score,
+                gps=gps,
+                modalities=["thermal"],
+            ))
+
+        # ── Publish raw detection stream ───────────────────────────────────────
+        raw_msg = String()
+        raw_msg.data = json.dumps({
+            "visual":  len(self._visual_detections),
+            "thermal": len(self._thermal_blobs),
+            "radar":   len(self._radar_targets),
+        })
+        self._pub_detections.publish(raw_msg)
+
+        # ── Publish fused targets ──────────────────────────────────────────────
+        if fused:
+            payload = json.dumps({"targets": [t.to_dict() for t in fused]})
+            tgt_msg = String()
+            tgt_msg.data = payload
+            self._pub_targets.publish(tgt_msg)
+            for t in fused:
+                self.get_logger().info(
+                    f"🎯 [{t.label}] conf={t.confidence:.2f} "
+                    f"GPS=({t.gps[0]:.6f}, {t.gps[1]:.6f}) "
+                    f"src={'+'.join(t.modalities)}"
+                )
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Helpers
+    # ──────────────────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _classify(yolo_label: str, score: float) -> str:
+        if yolo_label == "person":
+            if score >= FUSION_CONFIRM_THRESH:
+                return "SURVIVOR"
+            elif score >= FUSION_POSSIBLE_THRESH:
+                return "POSSIBLE_SURVIVOR"
+            else:
+                return "UNKNOWN"
+        else:
+            return "THREAT"
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Simulation mode — inject deterministic mock data
+    # ──────────────────────────────────────────────────────────────────────────
+
+    def _inject_sim_data(self) -> None:
+        """In simulation, inject mock sensor data so the fusion pipeline runs."""
+        # Mock: one visual person detection at image centre
+        bbox = BBox(280, 210, 360, 270)
+        ex, ny = pixel_to_ned(
+            bbox.cx, bbox.cy,
+            self._img_w, self._img_h,
+            self._drone_alt, self._camera_hfov_deg,
+        )
+        gps = to_gps(ex, ny, 0.0, self._drone_lat, self._drone_lon, 0.0)
+        self._visual_detections = [
+            VisualDetection(
+                bbox=bbox, confidence=0.91,
+                class_id=0, label="person", gps=gps,
+            )
+        ]
+        # Mock: one thermal blob overlapping the visual detection
+        self._thermal_blobs = [
+            ThermalBlob(bbox=BBox(270, 205, 370, 280), mean_intensity=0.82)
+        ]
+        # Mock: one radar return at ~5 m ahead
+        self._radar_targets = [
+            RadarTarget(range_m=5.1, angle_rad=0.0, east_m=ex, north_m=ny + 0.5)
+        ]
 
 
-def main(args=None):
+# ──────────────────────────────────────────────────────────────────────────────
+# Entry point
+# ──────────────────────────────────────────────────────────────────────────────
+
+def main(args=None) -> None:
     rclpy.init(args=args)
     node = SutraDetectorNode()
     try:
-        rclpy.spin_once(node, timeout_sec=0.1)
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
     finally:
         node.destroy_node()
         rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
