@@ -2,38 +2,181 @@
 """
 SUTRA Subsystem A: Autonomous Navigation & PX4 Offboard Mode Control Node
 Lead Engineer: Rohith Kumar
+
+Integration update by Vedanth (Subsystem C):
+  - Added /sutra/gnc/pose_stamped publisher (PoseStamped)
+  - Added /sutra/gnc/pose publisher (JSON String fallback)
+  - These are consumed by Subsystem C (detector_node.py) for GPS raycast
+  - Added basic waypoint mission planner (3-point patrol)
 """
 
+import math
+import json
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import TwistStamped, PoseStamped
+from std_msgs.msg import String
+
+
+# ── Simple waypoint mission ───────────────────────────────────────────────────
+WAYPOINTS = [
+    # (x_ned_m, y_ned_m, z_alt_m)  — local NED from SITL origin
+    (  0.0,   0.0, 15.0),   # takeoff / home
+    ( 20.0,   0.0, 20.0),   # north search leg
+    ( 20.0,  20.0, 20.0),   # east search leg
+    (  0.0,  20.0, 20.0),   # south search leg
+    (  0.0,   0.0, 15.0),   # return to home
+]
+
+# ── Drone pose (simulated, updated by timer) ──────────────────────────────────
+class DroneState:
+    def __init__(self):
+        self.x   = 0.0   # East  (m NED)
+        self.y   = 0.0   # North (m NED)
+        self.z   = 0.0   # Up    (m)
+        self.yaw = 0.0   # radians
 
 
 class SutraOffboardControlNode(Node):
     def __init__(self):
         super().__init__('sutra_offboard_control')
+
+        # ── Velocity command publisher (Gazebo twist) ─────────────────────────
         self.publisher_vel = self.create_publisher(
             TwistStamped, '/uav_alpha/gazebo/command/twist', 10
         )
-        self.timer = self.create_timer(0.1, self.publish_offboard_heartbeat)
-        self.get_logger().info('SUTRA PX4 Offboard Control Node Initialized.')
 
-    def publish_offboard_heartbeat(self):
-        msg = TwistStamped()
-        msg.header.stamp = self.get_clock().now().to_msg()
-        msg.header.frame_id = 'base_link'
-        msg.twist.linear.x = 2.0
-        msg.twist.linear.y = 1.2
-        msg.twist.linear.z = 0.5
-        msg.twist.angular.z = 0.1
-        self.publisher_vel.publish(msg)
+        # ── Pose publisher for Subsystem C (GPS Raycast) ──────────────────────
+        # PoseStamped — consumed by detector_node._pose_stamped_callback()
+        self.publisher_pose_stamped = self.create_publisher(
+            PoseStamped, '/sutra/gnc/pose_stamped', 10
+        )
+        # JSON String — fallback for sim mode
+        self.publisher_pose_json = self.create_publisher(
+            String, '/sutra/gnc/pose', 10
+        )
+
+        # ── State ─────────────────────────────────────────────────────────────
+        self.state        = DroneState()
+        self.wp_index     = 0
+        self.wp_list      = WAYPOINTS
+        self.cruise_speed = 2.0   # m/s
+
+        # ── Timers ────────────────────────────────────────────────────────────
+        # 10 Hz control + pose broadcast
+        self.timer = self.create_timer(0.1, self.control_loop)
+
+        self.get_logger().info(
+            '🚁 SUTRA PX4 Offboard Control Node Initialized. '
+            'Publishing pose on /sutra/gnc/pose_stamped'
+        )
+
+    # ── Helpers ───────────────────────────────────────────────────────────────
+
+    def _distance_to_wp(self, wp):
+        return math.sqrt(
+            (wp[0] - self.state.x)**2 +
+            (wp[1] - self.state.y)**2
+        )
+
+    def _yaw_to_wp(self, wp):
+        dx = wp[0] - self.state.x
+        dy = wp[1] - self.state.y
+        return math.atan2(dx, dy)   # NED yaw
+
+    def _euler_to_quaternion(self, yaw):
+        """Convert yaw angle to quaternion (roll=0, pitch=0)."""
+        cy = math.cos(yaw * 0.5)
+        sy = math.sin(yaw * 0.5)
+        return (0.0, 0.0, sy, cy)   # (qx, qy, qz, qw)
+
+    # ── Main control loop ─────────────────────────────────────────────────────
+
+    def control_loop(self):
+        """10 Hz: navigate to next waypoint + publish pose for Subsystem C."""
+
+        wp = self.wp_list[self.wp_index]
+
+        # ── Simple proportional navigation ────────────────────────────────────
+        dist = self._distance_to_wp(wp)
+        yaw  = self._yaw_to_wp(wp)
+
+        if dist < 1.5:
+            # Reached waypoint — advance to next
+            self.wp_index = (self.wp_index + 1) % len(self.wp_list)
+            self.get_logger().info(
+                f'✅ Waypoint {self.wp_index} reached → next: {self.wp_list[self.wp_index]}'
+            )
+            vx, vy, vz = 0.0, 0.0, 0.0
+        else:
+            # Fly toward waypoint at cruise speed
+            vx = self.cruise_speed * math.sin(yaw)
+            vy = self.cruise_speed * math.cos(yaw)
+            vz = (wp[2] - self.state.z) * 0.5  # altitude proportional
+
+        # Update simulated position (dead reckoning for SITL)
+        dt = 0.1
+        self.state.x   += vx * dt
+        self.state.y   += vy * dt
+        self.state.z   += vz * dt
+        self.state.yaw  = yaw
+
+        # ── Publish velocity command to Gazebo ────────────────────────────────
+        vel_msg = TwistStamped()
+        vel_msg.header.stamp    = self.get_clock().now().to_msg()
+        vel_msg.header.frame_id = 'base_link'
+        vel_msg.twist.linear.x  = vx
+        vel_msg.twist.linear.y  = vy
+        vel_msg.twist.linear.z  = vz
+        vel_msg.twist.angular.z = 0.0
+        self.publisher_vel.publish(vel_msg)
+
+        # ── Publish PoseStamped for Subsystem C ───────────────────────────────
+        pose_msg = PoseStamped()
+        pose_msg.header.stamp    = self.get_clock().now().to_msg()
+        pose_msg.header.frame_id = 'world'
+
+        # NED position (x=East, y=North, z=Up)
+        pose_msg.pose.position.x = self.state.x
+        pose_msg.pose.position.y = self.state.y
+        pose_msg.pose.position.z = self.state.z
+
+        # Yaw as quaternion
+        qx, qy, qz, qw = self._euler_to_quaternion(self.state.yaw)
+        pose_msg.pose.orientation.x = qx
+        pose_msg.pose.orientation.y = qy
+        pose_msg.pose.orientation.z = qz
+        pose_msg.pose.orientation.w = qw
+
+        self.publisher_pose_stamped.publish(pose_msg)
+
+        # ── Publish JSON fallback for Subsystem C sim mode ───────────────────
+        # WGS84 origin: San Francisco SITL
+        ORIGIN_LAT = 37.774929
+        ORIGIN_LON = -122.419416
+        ORIGIN_ALT = 15.0
+        R = 6_378_137.0
+        lat = ORIGIN_LAT + math.degrees(self.state.y / R)
+        lon = ORIGIN_LON + math.degrees(
+            self.state.x / (R * math.cos(math.radians(ORIGIN_LAT)))
+        )
+        alt = ORIGIN_ALT + self.state.z
+
+        json_msg      = String()
+        json_msg.data = json.dumps({
+            "lat": round(lat, 6),
+            "lon": round(lon, 6),
+            "alt": round(alt, 2),
+            "yaw": round(self.state.yaw, 4),
+        })
+        self.publisher_pose_json.publish(json_msg)
 
 
 def main(args=None):
     rclpy.init(args=args)
     node = SutraOffboardControlNode()
     try:
-        rclpy.spin_once(node, timeout_sec=0.1)
+        rclpy.spin(node)
     finally:
         node.destroy_node()
         rclpy.shutdown()
