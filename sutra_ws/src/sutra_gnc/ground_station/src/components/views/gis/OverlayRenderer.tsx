@@ -24,20 +24,33 @@ export const OverlayRenderer: React.FC<OverlayRendererProps> = ({
   const isDraggingVertexRef = useRef<boolean>(false);
 
   useEffect(() => {
-    if (!map || !showGeofence) return;
-
-    // Remove existing vertex and drawing markers
-    vertexMarkersRef.current.forEach((m) => m.remove());
-    vertexMarkersRef.current = [];
-
-    drawingMarkersRef.current.forEach((m) => m.remove());
-    drawingMarkersRef.current = [];
+    if (!map) return;
 
     const sourceId = 'geofence-polygons-source';
     const fillLayerId = 'geofence-polygons-fill';
     const lineLayerId = 'geofence-polygons-line';
     const previewSourceId = 'geofence-preview-source';
     const previewLayerId = 'geofence-preview-layer';
+
+    // Always clear vertex and drawing markers first
+    vertexMarkersRef.current.forEach((m) => m.remove());
+    vertexMarkersRef.current = [];
+
+    drawingMarkersRef.current.forEach((m) => m.remove());
+    drawingMarkersRef.current = [];
+
+    // Empty GeoJSON collection for toggled-off or empty state
+    const emptyGeoJSON: GeoJSON.FeatureCollection<GeoJSON.Polygon> = {
+      type: 'FeatureCollection',
+      features: []
+    };
+
+    if (!showGeofence) {
+      if (map.getSource(sourceId)) {
+        (map.getSource(sourceId) as maplibregl.GeoJSONSource).setData(emptyGeoJSON);
+      }
+      return;
+    }
 
     // 1. Render vertex markers for existing geofences
     const polygonFeatures: GeoJSON.Feature<GeoJSON.Polygon>[] = geofences.map((poly, polyIdx) => {
@@ -121,13 +134,13 @@ export const OverlayRenderer: React.FC<OverlayRendererProps> = ({
           id: fillLayerId,
           type: 'fill',
           source: sourceId,
-          paint: { 'fill-color': '#ff3b30', 'fill-opacity': 0.15 }
+          paint: { 'fill-color': '#ff3b30', 'fill-opacity': 0.25 }
         });
         map.addLayer({
           id: lineLayerId,
           type: 'line',
           source: sourceId,
-          paint: { 'line-color': '#ff3b30', 'line-width': 2, 'line-dasharray': [2, 2] }
+          paint: { 'line-color': '#ff3b30', 'line-width': 2.5, 'line-dasharray': [2, 2] }
         });
       }
 
