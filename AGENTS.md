@@ -35,7 +35,7 @@ Manual search and rescue operations in disaster-hit, forested, or conflict-prone
 ```
   [ Individual Role Branches ]         [ Buffer Integration Branch ]         [ Main Production Branch ]
   feature/subsystem-a-gnc (Rohith) ──┐
-  feature/subsystem-b-comms (Nikhil) ┼──► buffer-integration / dev ────────► main (Final Releases)
+  feature/subsystem-b-comms (Nikhil) ┼──► dev (Buffer Integration) ────────► main (Final Releases)
   feature/subsystem-c-perception ────┤   (Full 5-Subsystem Integration
   feature/subsystem-d-gcs (Siva) ────┤    Suite & Gate G1-G6 Audits)
   feature/subsystem-e-docs (Harika) ─┘
