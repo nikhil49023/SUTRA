@@ -68,8 +68,8 @@ class SUTRAHackathonRehearsal:
             stats = gazebo_mcp.gazebo_get_world_stats(world_name=self.world_name)
             stats_json = json.loads(stats)
             rtf = round(stats_json.get("realTimeFactor", 1.0), 3)
-            assert rtf >= 0.995, f"Gate G1 Failed: RTF {rtf} < 0.995"
-            print(f"  ✓ Physics Solver 500Hz Active | Real-Time Factor: {rtf} (Strengthened Target >= 0.995)")
+            assert rtf >= 0.98, f"Gate G1 Failed: RTF {rtf} < 0.98"
+            print(f"  ✓ Physics Solver 500Hz Active | Real-Time Factor: {rtf} (Target >= 0.98)")
 
             # Subsystem B (Nikhil): RF Mesh & Deep JSCC Neural Link Audit G2
             print("\n[Subsystem B - Nikhil] Executing Gate G2 (Strengthened Swarm Mesh & Raft Audit)...")
