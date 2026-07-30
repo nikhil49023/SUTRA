@@ -1,0 +1,287 @@
+<?xml version="1.0" ?>
+<sdf version="1.8">
+  <world name="high_quality_disaster_swarm_world">
+    
+    <!-- 500Hz Physics Solver Settings for High Precision Aerodynamics & Mesh Comms -->
+    <physics name="500hz_physics" type="ignored">
+      <max_step_size>0.002</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>500</real_time_update_rate>
+    </physics>
+
+    <!-- Gazebo Sim 8 System Plugins -->
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors"/>
+
+    <!-- WGS84 Spherical GPS Coordinates (San Francisco SAR Disaster Zone) -->
+    <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <latitude_deg>37.774929</latitude_deg>
+      <longitude_deg>-122.419416</longitude_deg>
+      <elevation>15.0</elevation>
+    </spherical_coordinates>
+
+    <!-- Sun Directional Lighting & Shadows -->
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>50 50 100 0 0 0</pose>
+      <diffuse>0.9 0.9 0.85 1</diffuse>
+      <specular>0.3 0.3 0.3 1</specular>
+    </light>
+
+    <!-- High-Resolution Disaster Terrain Base Ground -->
+    <model name="disaster_terrain_base">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>1000 1000</size>
+            </plane>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>1000 1000</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.25 0.35 0.2 1</ambient>
+            <diffuse>0.35 0.45 0.25 1</diffuse>
+            <specular>0.05 0.05 0.05 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Collapsed Building Rubble Structure 1 (RF Obstacle) -->
+    <model name="collapsed_rubble_structure_1">
+      <static>true</static>
+      <pose>30 15 2.5 0.1 0.2 0.7</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>18 12 5</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>18 12 5</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.4 0.4 0.4 1</ambient>
+            <diffuse>0.6 0.6 0.6 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Collapsed Building Rubble Structure 2 (Center Obstacle) -->
+    <model name="collapsed_rubble_structure_2">
+      <static>true</static>
+      <pose>-20 40 4.0 -0.15 0.3 1.2</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>24 15 8</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>24 15 8</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.35 0.35 0.38 1</ambient>
+            <diffuse>0.55 0.55 0.58 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Forest Canopy Tree Obstacle Cluster (Attenuates 2.4GHz Wi-Fi Links) -->
+    <model name="forest_canopy_cluster">
+      <static>true</static>
+      <pose>60 5 6.0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <cylinder>
+              <radius>8.0</radius>
+              <length>12.0</length>
+            </cylinder>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <cylinder>
+              <radius>8.0</radius>
+              <length>12.0</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.1 0.4 0.1 1</ambient>
+            <diffuse>0.2 0.6 0.2 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Survivor Victim Marker Target -->
+    <model name="survivor_victim_target">
+      <static>true</static>
+      <pose>35 18 0.5 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <capsule>
+              <radius>0.4</radius>
+              <length>1.7</length>
+            </capsule>
+          </geometry>
+          <material>
+            <ambient>0.9 0.1 0.1 1</ambient>
+            <diffuse>1.0 0.2 0.2 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ================================================================= -->
+    <!--                  5 SWARM DRONE DIGITAL TWIN MODELS                 -->
+    <!-- ================================================================= -->
+
+    <!-- Drone 1: UAV Alpha (Leader Node) -->
+    <model name="uav_alpha">
+      <pose>0 0 15 0 0 0</pose>
+      <link name="base_link">
+        <inertial>
+          <mass>1.45</mass>
+          <inertia>
+            <ixx>0.02</ixx><ixy>0</ixy><ixz>0</ixz>
+            <iyy>0.02</iyy><iyz>0</iyz>
+            <izz>0.04</izz>
+          </inertia>
+        </inertial>
+        <visual name="visual">
+          <geometry>
+            <box><size>0.45 0.45 0.15</size></box>
+          </geometry>
+          <material>
+            <ambient>0.1 0.6 1.0 1</ambient>
+            <diffuse>0.2 0.7 1.0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Drone 2: UAV Beta (Peer Node 1) -->
+    <model name="uav_beta">
+      <pose>25 30 18 0 0 0</pose>
+      <link name="base_link">
+        <inertial>
+          <mass>1.45</mass>
+          <inertia>
+            <ixx>0.02</ixx><ixy>0</ixy><ixz>0</ixz>
+            <iyy>0.02</iyy><iyz>0</iyz>
+            <izz>0.04</izz>
+          </inertia>
+        </inertial>
+        <visual name="visual">
+          <geometry>
+            <box><size>0.45 0.45 0.15</size></box>
+          </geometry>
+          <material>
+            <ambient>0.1 1.0 0.4 1</ambient>
+            <diffuse>0.2 1.0 0.5 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Drone 3: UAV Gamma (Peer Node 2) -->
+    <model name="uav_gamma">
+      <pose>-40 45 14 0 0 0</pose>
+      <link name="base_link">
+        <inertial>
+          <mass>1.45</mass>
+          <inertia>
+            <ixx>0.02</ixx><ixy>0</ixy><ixz>0</ixz>
+            <iyy>0.02</iyy><iyz>0</iyz>
+            <izz>0.04</izz>
+          </inertia>
+        </inertial>
+        <visual name="visual">
+          <geometry>
+            <box><size>0.45 0.45 0.15</size></box>
+          </geometry>
+          <material>
+            <ambient>1.0 0.8 0.1 1</ambient>
+            <diffuse>1.0 0.9 0.2 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Drone 4: UAV Delta (Peer Node 3) -->
+    <model name="uav_delta">
+      <pose>60 -20 20 0 0 0</pose>
+      <link name="base_link">
+        <inertial>
+          <mass>1.45</mass>
+          <inertia>
+            <ixx>0.02</ixx><ixy>0</ixy><ixz>0</ixz>
+            <iyy>0.02</iyy><iyz>0</iyz>
+            <izz>0.04</izz>
+          </inertia>
+        </inertial>
+        <visual name="visual">
+          <geometry>
+            <box><size>0.45 0.45 0.15</size></box>
+          </geometry>
+          <material>
+            <ambient>0.9 0.2 0.9 1</ambient>
+            <diffuse>1.0 0.3 1.0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Drone 5: UAV Epsilon (Multi-Hop Mesh Relay Node) -->
+    <model name="uav_epsilon">
+      <pose>120 10 16 0 0 0</pose>
+      <link name="base_link">
+        <inertial>
+          <mass>1.45</mass>
+          <inertia>
+            <ixx>0.02</ixx><ixy>0</ixy><ixz>0</ixz>
+            <iyy>0.02</iyy><iyz>0</iyz>
+            <izz>0.04</izz>
+          </inertia>
+        </inertial>
+        <visual name="visual">
+          <geometry>
+            <box><size>0.45 0.45 0.15</size></box>
+          </geometry>
+          <material>
+            <ambient>0.2 0.9 0.9 1</ambient>
+            <diffuse>0.3 1.0 1.0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

@@ -51,12 +51,22 @@ class SwarmRaftConsensusEngine:
         self.role = "CANDIDATE"
         self.current_term += 1
         self.voted_for = self.node_id
+        self._granted_votes = {self.node_id}
         self.last_heartbeat_time = time.time()
-        # Vote tally (self vote = 1)
-        votes = 1
-        needed_votes = (len(self.peers) // 2) + 1
-        if votes >= needed_votes:
+        
+        majority = (len(self.peers) // 2) + 1
+        if len(self._granted_votes) >= majority:
             self.become_leader()
+
+    def receive_vote(self, voter_id: str):
+        """Record granted vote from peer and check quorum for LEADER transition."""
+        if self.role == "CANDIDATE":
+            if not hasattr(self, '_granted_votes'):
+                self._granted_votes = {self.node_id}
+            self._granted_votes.add(voter_id)
+            majority = (len(self.peers) // 2) + 1
+            if len(self._granted_votes) >= majority:
+                self.become_leader()
 
     def receive_heartbeat(self, leader_id: str, term: int, leader_commit: int):
         """Process leader heartbeat and update local raft state machine."""
@@ -98,12 +108,13 @@ class SutraMeshNode(Node):
         self.publisher_mesh_status = self.create_publisher(String, '/sutra/swarm/mesh_status', 10)
         self.publisher_raft_state = self.create_publisher(String, '/sutra/swarm/raft_consensus', 10)
         
-        # Swarm Peer Positions (x, y, z in meters)
+        # Swarm Peer Positions (x, y, z in meters matching high_quality_disaster_swarm_world.sdf)
         self.peer_positions: Dict[str, Tuple[float, float, float]] = {
             'uav_alpha': (0.0, 0.0, 15.0),
-            'uav_beta': (15.0, 20.0, 18.0),
-            'uav_gamma': (-25.0, 30.0, 12.0),
-            'uav_delta': (40.0, -10.0, 20.0),
+            'uav_beta': (25.0, 30.0, 18.0),
+            'uav_gamma': (-40.0, 45.0, 14.0),
+            'uav_delta': (60.0, -20.0, 20.0),
+            'uav_epsilon': (120.0, 10.0, 16.0),
         }
         
         # Initialize Perceptron-Powered Semantic JSCC Communication Engine
@@ -183,6 +194,78 @@ class SutraMeshNode(Node):
                     'latency_ms': jscc_stats['latency_ms']
                 }
         return matrix
+
+    def calculate_multihop_route(self, source_id: str, dest_id: str, max_single_hop_m: float = 150.0) -> Dict[str, any]:
+        """
+        Calculates multi-hop 802.11s mesh routing path (e.g. A -> C -> B) when direct link exceeds max_single_hop_m.
+        Returns selected route path, hop count, individual hop SNR, and total end-to-end latency (ms).
+        """
+        pos_src = self.peer_positions[source_id]
+        pos_dst = self.peer_positions[dest_id]
+        direct_dist = self.calculate_distance(pos_src, pos_dst)
+        
+        # If direct link is within range, return direct 1-hop path
+        if direct_dist <= max_single_hop_m:
+            fspl = self.calculate_fspl(direct_dist)
+            snr = self.calculate_snr(20.0, fspl)
+            jscc = self.deep_jscc_encode(512.0, snr)
+            return {
+                'route': [source_id, dest_id],
+                'hops': 1,
+                'is_multihop': False,
+                'direct_distance_m': round(direct_dist, 2),
+                'bottleneck_snr_db': snr,
+                'total_latency_ms': jscc['latency_ms']
+            }
+            
+        # Search for best intermediate relay node C
+        best_relay = None
+        best_bottleneck_snr = -999.0
+        best_hop1_dist = 0.0
+        best_hop2_dist = 0.0
+        
+        for peer, pos in self.peer_positions.items():
+            if peer in (source_id, dest_id):
+                continue
+            d1 = self.calculate_distance(pos_src, pos)
+            d2 = self.calculate_distance(pos, pos_dst)
+            
+            # Relay C must be within reach of both A and B
+            if d1 <= max_single_hop_m and d2 <= max_single_hop_m:
+                snr1 = self.calculate_snr(20.0, self.calculate_fspl(d1))
+                snr2 = self.calculate_snr(20.0, self.calculate_fspl(d2))
+                bottleneck_snr = min(snr1, snr2)
+                
+                if bottleneck_snr > best_bottleneck_snr:
+                    best_bottleneck_snr = bottleneck_snr
+                    best_relay = peer
+                    best_hop1_dist = d1
+                    best_hop2_dist = d2
+                    
+        if best_relay:
+            jscc1 = self.deep_jscc_encode(512.0, self.calculate_snr(20.0, self.calculate_fspl(best_hop1_dist)))
+            jscc2 = self.deep_jscc_encode(512.0, self.calculate_snr(20.0, self.calculate_fspl(best_hop2_dist)))
+            relay_processing_delay_ms = 1.5
+            total_latency = round(jscc1['latency_ms'] + jscc2['latency_ms'] + relay_processing_delay_ms, 2)
+            
+            return {
+                'route': [source_id, best_relay, dest_id],
+                'hops': 2,
+                'is_multihop': True,
+                'direct_distance_m': round(direct_dist, 2),
+                'relay_node': best_relay,
+                'hop1_distance_m': round(best_hop1_dist, 2),
+                'hop2_distance_m': round(best_hop2_dist, 2),
+                'bottleneck_snr_db': round(best_bottleneck_snr, 2),
+                'total_latency_ms': total_latency
+            }
+            
+        return {
+            'route': [source_id, 'UNREACHABLE', dest_id],
+            'hops': 0,
+            'is_multihop': False,
+            'error': 'No intermediate relay drone in coverage range'
+        }
 
     def publish_mesh_status(self):
         """Broadcast 1Hz telemetry status payload to /sutra/swarm/mesh_status."""

@@ -111,3 +111,27 @@ def test_perceptron_semantic_jscc(ros_context):
     assert res['latency_ms'] < 12.0  # Gate G2 compliant latency (< 12ms)
     assert res['graceful_degradation'] is True
 
+
+def test_multihop_mesh_relay_routing(ros_context):
+    node = SutraMeshNode()
+    try:
+        # Drone A at (0,0,15), Drone B at (260,0,15) -> Direct dist = 260m (> 150m max single-hop)
+        # Drone C placed at (130,0,15) as intermediate relay
+        node.peer_positions = {
+            'uav_alpha': (0.0, 0.0, 15.0),
+            'uav_beta': (260.0, 0.0, 15.0),
+            'uav_relay_c': (130.0, 0.0, 15.0)
+        }
+        
+        route_res = node.calculate_multihop_route(source_id='uav_alpha', dest_id='uav_beta', max_single_hop_m=150.0)
+        
+        assert route_res['is_multihop'] is True
+        assert route_res['hops'] == 2
+        assert route_res['route'] == ['uav_alpha', 'uav_relay_c', 'uav_beta']
+        assert route_res['relay_node'] == 'uav_relay_c'
+        assert route_res['hop1_distance_m'] == 130.0
+        assert route_res['hop2_distance_m'] == 130.0
+        assert route_res['total_latency_ms'] < 12.0  # Multi-hop latency remains Gate G2 compliant (< 12ms)
+    finally:
+        node.destroy_node()
+
