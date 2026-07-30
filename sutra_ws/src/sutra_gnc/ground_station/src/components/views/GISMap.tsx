@@ -169,36 +169,49 @@ export const GISMap: React.FC<GISMapProps> = ({
     setMeasuredArea(null);
   };
 
-  // Simulation Controls
-  const handleToggleSimulation = () => {
-    if (!simulationRef.current) return;
-
-    if (!simState.isRunning) {
-      simulationRef.current.setWaypoints(waypoints);
-      simulationRef.current.start((dronePos, telData, updatedState) => {
-        onUpdateDronePos(dronePos, telData);
-        setSimState(updatedState);
+  // Simulation Controls via MissionExecutionEngine
+  useEffect(() => {
+    import('../../engine/missionExecutionEngine').then(({ missionExecutionEngine }) => {
+      missionExecutionEngine.setDroneUpdateCallback((pos) => {
+        onUpdateDronePos(pos, {
+          pitch: pos.status === 'IN_FLIGHT' ? 2.5 : 0,
+          roll: pos.status === 'IN_FLIGHT' ? 1.2 : 0,
+          yaw: pos.heading || 0,
+          altitudeAGL: pos.altitude || 0,
+          altitudeMSL: (pos.altitude || 0) + 350,
+          groundSpeed: pos.groundSpeed || 0
+        });
       });
-    } else if (simState.isPaused) {
-      simulationRef.current.resume();
-      setSimState((prev) => ({ ...prev, isPaused: false }));
-    } else {
-      simulationRef.current.pause();
+    });
+  }, [onUpdateDronePos]);
+
+  const handleToggleSimulation = async () => {
+    const { missionExecutionEngine } = await import('../../engine/missionExecutionEngine');
+    const state = missionExecutionEngine.getState();
+
+    if (state === 'IDLE' || state === 'COMPLETED' || state === 'ABORTED') {
+      missionExecutionEngine.loadMission(waypoints);
+      missionExecutionEngine.start();
+      setSimState({ isRunning: true, isPaused: false, currentWaypointIndex: 0, progressPercent: 0, multiplier: 1 });
+    } else if (state === 'RUNNING') {
+      missionExecutionEngine.pause();
       setSimState((prev) => ({ ...prev, isPaused: true }));
+    } else if (state === 'PAUSED') {
+      missionExecutionEngine.resume();
+      setSimState((prev) => ({ ...prev, isPaused: false }));
     }
   };
 
-  const handleResetSimulation = () => {
-    if (simulationRef.current) {
-      simulationRef.current.stop();
-      setSimState({
-        isRunning: false,
-        isPaused: false,
-        currentWaypointIndex: 0,
-        progressPercent: 0,
-        multiplier: 1
-      });
-    }
+  const handleResetSimulation = async () => {
+    const { missionExecutionEngine } = await import('../../engine/missionExecutionEngine');
+    missionExecutionEngine.stop();
+    setSimState({
+      isRunning: false,
+      isPaused: false,
+      currentWaypointIndex: 0,
+      progressPercent: 0,
+      multiplier: 1
+    });
   };
 
   const handleChangeSimSpeed = (mult: number) => {

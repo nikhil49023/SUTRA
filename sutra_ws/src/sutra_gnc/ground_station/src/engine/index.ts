@@ -5,3 +5,4 @@ export * from './routeOptimizer';
 export * from './riskEngine';
 export * from './missionTemplateManager';
 export * from './missionEngine';
+export * from './missionExecutionEngine';
