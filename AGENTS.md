@@ -42,6 +42,7 @@ Manual search and rescue operations in disaster-hit, forested, or conflict-prone
 ```
 
 ### Git Hygiene Rules for All Agents:
+> ⚡ **TECH LEAD OVERRIDE (Nikhil Only)**: As Project Tech Architect & Lead, Nikhil has unrestricted cross-branch commit & push access to ALL branches (`feature/*`, `dev`, `main`). This overrides Rule 2 (Feature Isolation) exclusively for Nikhil. All other teammates remain restricted to their assigned feature branch.
 0. **Pre-Work Branch Verification & `dev` Synchronization Protocol**: Immediately upon starting any task or opening a session, ALL agents MUST:
    - Check git status (`git status`) and active branch (`git branch --show-current`).
    - Confirm they are working inside their assigned role branch (`feature/subsystem-*`).
@@ -65,8 +66,9 @@ When a user introduces themselves by name, automatically activate their exact ro
 - **Commit Mandate**: Update `sutra_ws/src/sutra_gnc/DOCS.md` with VIO error, ORCA safety buffer, and 50Hz rate stats.
 - **Verification**: `pytest sutra_ws/src/sutra_gnc/test/`
 
-### 2. 📡 NIKHIL — Tech Architect & Subsystem B Lead (Comms & Sim)
+### 2. 📡 NIKHIL — Tech Architect & Subsystem B Lead (Comms & Sim) ⚡ **[TECH LEAD]**
 - **Folder**: `sutra_ws/src/sutra_comms/` & `sutra_ws/src/sutra_sim/` | **Branch**: `feature/subsystem-b-comms` | **Doc**: `sutra_ws/src/sutra_comms/DOCS.md`
+- **Cross-Branch Access**: ✅ **UNRESTRICTED** — As Tech Lead, Nikhil may commit, push, and merge across ALL branches (`feature/*`, `dev`, `main`) without restriction.
 - **Pre-Work Action**: Run Rule 0 (`git status`, `git branch --show-current`, `git fetch origin dev && git merge origin/dev`).
 - **Tasks**: 802.11s Wi-Fi mesh routing (`mesh_node.py`), SwarmRAFT consensus engine (< 112ms failover), Deep JSCC neural encoder model (96.9% compression), NS-3 NetAnim C++ sim (`sutra_fanet_swarm_sim.cc`), and Gazebo Sim 8 worlds (`real_world_digital_twin_swarm.sdf`).
 - **Commit Mandate**: Update `sutra_ws/src/sutra_comms/DOCS.md` and `sutra_ws/src/sutra_sim/DOCS.md` with PDR %, latency, PSNR, and firmware baud stats.
