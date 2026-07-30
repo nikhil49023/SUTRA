@@ -20,6 +20,7 @@ export const OverlayRenderer: React.FC<OverlayRendererProps> = ({
   onUpdateGeofenceVertex
 }) => {
   const vertexMarkersRef = useRef<maplibregl.Marker[]>([]);
+  const isDraggingVertexRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (!map || !showGeofence) return;
@@ -44,17 +45,22 @@ export const OverlayRenderer: React.FC<OverlayRendererProps> = ({
       if (onUpdateGeofenceVertex) {
         poly.forEach(([lat, lng], vIdx) => {
           const el = document.createElement('div');
-          el.className = 'vertex-handle w-3 h-3 bg-rose-500 border border-white rounded-full cursor-grab active:cursor-grabbing shadow-lg';
+          el.className = 'vertex-handle w-3.5 h-3.5 bg-rose-500 border-2 border-white rounded-full cursor-grab active:cursor-grabbing shadow-lg select-none';
 
           const marker = new maplibregl.Marker({ element: el, draggable: true })
             .setLngLat([lng, lat])
             .addTo(map);
 
-          marker.on('dragstart', () => map.dragPan.disable());
+          marker.on('dragstart', () => {
+            isDraggingVertexRef.current = true;
+            map.dragPan.disable();
+          });
+
           marker.on('dragend', () => {
             map.dragPan.enable();
+            isDraggingVertexRef.current = false;
             const newPos = marker.getLngLat();
-            onUpdateGeofenceVertex(polyIdx, vIdx, [newPos.lat, newPos.lng]);
+            onUpdateGeofenceVertex(polyIdx, vIdx, [+newPos.lat.toFixed(5), +newPos.lng.toFixed(5)]);
           });
 
           vertexMarkersRef.current.push(marker);
