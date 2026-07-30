@@ -27,6 +27,12 @@ export const MapRenderer: React.FC<MapRendererProps> = ({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null);
+  const onMapClickRef = useRef(onMapClick);
+
+  // Keep latest onMapClick callback in ref to prevent stale closures
+  useEffect(() => {
+    onMapClickRef.current = onMapClick;
+  }, [onMapClick]);
 
   // Initialize MapLibre GL Map
   useEffect(() => {
@@ -43,8 +49,8 @@ export const MapRenderer: React.FC<MapRendererProps> = ({
     });
 
     map.on('click', (e: maplibregl.MapMouseEvent) => {
-      if (onMapClick) {
-        onMapClick({ lat: +e.lngLat.lat.toFixed(5), lng: +e.lngLat.lng.toFixed(5) });
+      if (onMapClickRef.current) {
+        onMapClickRef.current({ lat: +e.lngLat.lat.toFixed(5), lng: +e.lngLat.lng.toFixed(5) });
       }
     });
 
