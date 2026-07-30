@@ -68,6 +68,22 @@ python3 scripts/SUTRA_48Hr_Hackathon_Master_Suite.py
 
 ---
 
+## 📚 Subsystem Role Documentation
+
+Each subsystem maintains a dedicated, statistically detailed `DOCS.md` file authored and kept up-to-date by its lead engineer. These files contain benchmark tables, latency/memory figures, dependency trees, and Gate verification status.
+
+| Subsystem | Lead | Dedicated DOCS |
+|:---|:---|:---|
+| **A — GNC & Flight Control** | Rohith Kumar | [SUBSYSTEM_A_GNC.md](docs/subsystems/SUBSYSTEM_A_GNC.md) |
+| **B — Comms & Simulation** | Nikhil | [SUBSYSTEM_B_COMMS.md](docs/subsystems/SUBSYSTEM_B_COMMS.md) |
+| **C — AI Edge Perception** | Vedanth Sai Ram | [SUBSYSTEM_C_PERCEPTION.md](docs/subsystems/SUBSYSTEM_C_PERCEPTION.md) |
+| **D — 3D GIS GCS Dashboard** | Siva Kesava | [SUBSYSTEM_D_GCS.md](docs/subsystems/SUBSYSTEM_D_GCS.md) |
+| **E — Docs & Verification Audits** | Harika | [SUBSYSTEM_E_SIM.md](docs/subsystems/SUBSYSTEM_E_SIM.md) |
+
+> 📌 **Agent Protocol**: See [AGENTS.md](AGENTS.md) for the full autonomous agent operating rules, branching hygiene, and Gate G1–G6 verification targets that all teammates must follow.
+
+---
+
 ## 🤝 Collaboration & Branching Strategy
 
 - `main`: Protected branch. Requires at least 1 review approval and passing CI checks.
