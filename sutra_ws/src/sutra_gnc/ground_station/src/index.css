@@ -1,0 +1,106 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+@layer base {
+  :root {
+    --bg-dark: #07090e;
+    --card-bg: #0d121d;
+    --card-border: #1a2336;
+    --accent-cyan: #00f0ff;
+    --accent-green: #00e676;
+    --accent-amber: #ffb700;
+    --accent-red: #ff3b30;
+  }
+
+  body {
+    background-color: var(--bg-dark);
+    color: #94a3b8;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow: hidden;
+    user-select: none;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  #root {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+/* Tactical HUD grid lines background */
+.hud-grid {
+  background-image: 
+    linear-gradient(to right, rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(13, 18, 29, 0.8);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00f0ff;
+}
+
+/* Tactical glowing animations */
+@keyframes tactical-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.05); }
+}
+
+.animate-tactical-pulse {
+  animation: tactical-pulse 2s infinite ease-in-out;
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(1000%); }
+}
+
+.scanline-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.scanline-effect::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 4px;
+  background: linear-gradient(to bottom, rgba(0, 240, 255, 0), rgba(0, 240, 255, 0.4), rgba(0, 240, 255, 0));
+  animation: scanline 8s linear infinite;
+  pointer-events: none;
+}
+
+/* Map custom dark tiles styling */
+.leaflet-container {
+  background: #080b12 !important;
+  font-family: inherit;
+}
+
+.dark-tiles .leaflet-tile {
+  filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3);
+}
+
+.satellite-tiles .leaflet-tile {
+  filter: brightness(0.85) contrast(1.1) saturate(1.1);
+}
