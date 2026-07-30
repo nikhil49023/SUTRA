@@ -19,6 +19,7 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
+          cache-dependency-path: 'sutra_ws/src/sutra_gnc/ground_station/package-lock.json'
 
       - name: Install Dependencies
         run: |

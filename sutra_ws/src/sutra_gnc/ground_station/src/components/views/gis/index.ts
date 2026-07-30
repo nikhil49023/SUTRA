@@ -9,3 +9,4 @@ export * from './OverlayRenderer';
 export * from './LayerController';
 export * from './MapControls';
 export * from './MissionControlConsole';
+export * from './GeofenceManagerPanel';
