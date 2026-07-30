@@ -46,8 +46,8 @@ void setupEspNow();
 void transmitLoRaPacket(double lat, double lon, float alt, uint16_t conf);
 
 void setup() {
-    Serial.begin(115200);
-    Serial2.begin(115200, SERIAL_8N1, 16, 17); // UART2 connection to ESP32-S3 CAM
+    Serial.begin(921600);
+    Serial2.begin(921600, SERIAL_8N1, 16, 17); // High-Speed UART2 connection to ESP32-S3 CAM (921.6 Kbps)
     Serial.println(F("[SUTRA] Initializing Node 1 Swarm Drone Firmware (uav_alpha)..."));
 
     // 1. Initialize ESP-NOW 2.4GHz Mesh

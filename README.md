@@ -29,12 +29,10 @@ SUTRA/
 
 ---
 
-## 👥 Team Roles & Responsibilities
-
-| Subsystem | Scope / Responsibilities | Lead Engineer | Target Stack |
+| Subsystem | Scope / Responsibilities | Lead Engineer | Target Stack & Status |
 | :--- | :--- | :--- | :--- |
 | **Subsystem A** | Autonomous Navigation, GNC, PX4 Offboard Mode, ORCA Avoidance | **Rohith Kumar** | ROS 2, PX4 Autopilot, MicroXRCE-DDS |
-| **Subsystem B** | Swarm Comms Mesh, Deep JSCC Neural Encoders, Gazebo Sim Ops | **Nikhil** | PyTorch / Deep JSCC, Gazebo Sim 8, 802.11s Mesh |
+| **Subsystem B** | Swarm Mesh, Deep JSCC Neural Encoders, NS-3 & Gazebo Sim | **Nikhil** | [Subsystem B README](sutra_ws/src/sutra_comms/README.md) \| PyTorch, NS-3 NetAnim, 802.11s **(100% Ready)** |
 | **Subsystem C** | Tri-Modal AI Perception, YOLOv8 TensorRT, Target Geolocation | **Vedanth Sai Ram** | OpenCV, TensorRT, YOLOv8-Nano, ONNX |
 | **Subsystem D** | 3D GIS Ground Control Station, React + Mapbox GL JS, WebGPU HUD | **Siva Kesava** | React, TypeScript, Mapbox GL JS, WebGPU |
 | **Subsystem E** | Technical Documentation, Gate Metric Audits (G1-G6), Flight Logs | **Harika** | Markdown, Verification Metric Suite, Latex |

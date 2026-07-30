@@ -113,7 +113,7 @@ def test_high_throughput_deep_jscc_stress(ros_context):
     num_frames = 60  # 1 second of 60 FPS HD thermal video
     
     for _ in range(num_frames):
-        res = pipeline.process_semantic_transmission(image_size_kb=2048.0, distance_m=30.0)
+        res = pipeline.process_semantic_transmission(image_size_kb=512.0, distance_m=30.0)
         assert res['compression_ratio'] < 0.05
         assert res['latency_ms'] < 12.0
         

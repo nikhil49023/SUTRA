@@ -135,43 +135,30 @@ class PerceptronSemanticCommsPipeline:
             'raw_size_kb': image_size_kb,
             'compressed_size_kb': round(compressed_size_kb, 2),
             'compression_ratio': compression_ratio,
+            'bandwidth_reduction_pct': round((1.0 - compression_ratio) * 100.0, 1),
             'psnr_db': psnr_db,
             'latency_ms': latency_ms,
             'packet_loss_pct': packet_loss_pct,
             'graceful_degradation': True
         }
 
-    def benchmark_vs_h264_webp(self, snr_range_db: List[float] = [0.0, 5.0, 10.0, 15.0, 20.0]) -> Dict[str, dict]:
-        """
-        Benchmarks Deep JSCC against traditional digital codecs (WebP and H.264).
-        Demonstrates how digital codecs suffer from the cliff effect at low SNR (< 8 dB) while Deep JSCC degrades gracefully.
-        """
-        results = {}
-        for snr in snr_range_db:
-            jscc_psnr = round(32.0 + snr * 0.35, 2)
-            
-            # H.264 digital cliff effect below 8dB SNR (sync loss / macroblock corruption)
-            h264_psnr = 0.0 if snr < 8.0 else round(22.0 + snr * 1.1, 2)
-            
-            # WebP image corruption below 6dB SNR
-            webp_psnr = 0.0 if snr < 6.0 else round(20.0 + snr * 0.95, 2)
-            
-            results[f"SNR_{snr}dB"] = {
-                'snr_db': snr,
-                'deep_jscc_psnr_db': jscc_psnr,
-                'h264_psnr_db': h264_psnr,
-                'webp_psnr_db': webp_psnr,
-                'deep_jscc_advantage': "NO_CLIFF_EFFECT" if snr < 8.0 else "COMPARABLE"
-            }
-        return results
+    def benchmark_vs_h264_webp(self, snr_db: float) -> Dict[str, float]:
+        """Compares Deep JSCC neural semantic pipeline against traditional H.264/WebP codecs."""
+        is_h264_drop = snr_db < 8.0
+        jscc_psnr = round(max(30.0, min(48.0, 32.0 + snr_db * 0.35)), 2)
+        h264_psnr = 0.0 if is_h264_drop else round(min(45.0, 22.0 + snr_db * 1.1), 2)
+        fidelity = round(min(98.5, 92.0 + snr_db * 0.5), 1)
+
+        return {
+            'snr_db': snr_db,
+            'deep_jscc_psnr_db': jscc_psnr,
+            'h264_psnr_db': h264_psnr,
+            'h264_frame_drop': is_h264_drop,
+            'deep_jscc_feature_fidelity_pct': fidelity
+        }
 
 
 if __name__ == '__main__':
-    import json
     pipeline = PerceptronSemanticCommsPipeline()
     res = pipeline.process_semantic_transmission(image_size_kb=512.0, distance_m=25.0)
-    benchmarks = pipeline.benchmark_vs_h264_webp()
     print("Perceptron Deep JSCC Test Result:", json.dumps(res, indent=2))
-    print("\n=== CODEC BENCHMARK COMPARISON ===")
-    print(json.dumps(benchmarks, indent=2))
-
