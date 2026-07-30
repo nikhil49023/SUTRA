@@ -74,9 +74,14 @@ Thumbs.db
 *.lib
 *.dylib
 
-# Datasets & Weights (large binaries)
+# Heavy ML Model Weights — NEVER commit these (violates AGENTS.md Rule 1 — No Bloat)
+# These are auto-downloaded at runtime by the subsystem C (sutra_perception) detector_node.py
+# To manually download: pip install ultralytics && python3 -c "from ultralytics import YOLO; YOLO('yolov8n.pt')"
+# Or run: python3 sutra_ws/src/sutra_perception/scripts/download_weights.py
 *.pt
 *.onnx
 *.engine
+*.trt
 *.weights
 *.bin
+yolov8*.pt
