@@ -146,8 +146,8 @@ class SutraMeshNode(Node):
             peers=list(self.peer_positions.keys())
         )
         self.raft_engine.become_leader()  # Initial state
-        # NOTE: No longer hardcoded — real targets come from Subsystem C via
-        # /sutra/perception/targets subscription (_on_perception_targets below)
+        self.raft_engine.append_state_entry("SWARM_BOOTSTRAP", {"status": "INITIALIZED", "swarm_size": 4})
+        # NOTE: Live target entries come from Subsystem C via /sutra/perception/targets subscription
 
         # Timer for 1Hz status broadcast
         self.timer = self.create_timer(1.0, self.publish_mesh_status)
@@ -358,9 +358,19 @@ class SutraMeshNode(Node):
             'error': 'No intermediate relay drone in coverage range'
         }
 
+    def check_linux_hwsim_interfaces(self) -> List[str]:
+        """Detect active Linux kernel mac80211_hwsim interfaces (wlan0..wlan4)."""
+        import os
+        active = []
+        for i in range(5):
+            if os.path.exists(f"/sys/class/net/wlan{i}"):
+                active.append(f"wlan{i}")
+        return active
+
     def publish_mesh_status(self):
         """Broadcast 1Hz telemetry status payload to /sutra/swarm/mesh_status."""
         link_matrix = self.compute_peer_link_matrix()
+        hwsim_ifaces = self.check_linux_hwsim_interfaces()
         
         # Gate G2 Audit Check
         max_latency = max(info['latency_ms'] for info in link_matrix.values())
@@ -372,6 +382,7 @@ class SutraMeshNode(Node):
             'subsystem': 'Subsystem B (Comms & Sim)',
             'lead': 'Nikhil',
             'mesh_topology': '802.11s Ad-Hoc Peer-to-Peer',
+            'mac80211_hwsim_interfaces': hwsim_ifaces if hwsim_ifaces else 'PHYSICAL_PROPAGATION_EMULATION',
             'peer_links': link_matrix,
             'gate_g2_audit': {
                 'target_latency_ms': '< 12.0',
@@ -385,7 +396,8 @@ class SutraMeshNode(Node):
         msg = String()
         msg.data = json.dumps(payload, indent=2)
         self.publisher_mesh_status.publish(msg)
-        self.get_logger().info(f"📡 Mesh Status Broadcasted | Links: {len(link_matrix)} | Max Latency: {max_latency}ms | Gate G2: {'✓ PASS' if gate_g2_passed else '❌ FAIL'}")
+        self.get_logger().info(f"📡 Mesh Status Broadcasted | Links: {len(link_matrix)} | hwsim: {len(hwsim_ifaces)} ifaces | Gate G2: {'✓ PASS' if gate_g2_passed else '❌ FAIL'}")
+
 
 
 def main(args=None):
