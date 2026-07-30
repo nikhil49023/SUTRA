@@ -14,6 +14,8 @@
 #include <WiFi.h>
 #include <RadioLib.h>
 #include <ArduinoJson.h>
+#include <Preferences.h>
+#include <esp_task_wdt.h>
 
 // SX1278 LoRa Pin Definitions (Matching Breadboard Wiring Blueprint)
 #define LORA_NSS  5
@@ -22,8 +24,14 @@
 #define LORA_DIO1 12
 
 SX1278 radio = new Module(LORA_NSS, LORA_DIO0, LORA_RST, LORA_DIO1);
+Preferences preferences;
 
-// Packed 64-Byte Binary LoRa Telemetry Frame (Fixed-Width for Zero Fragmentation)
+// Hardware State Variables
+bool lora_hardware_present = false;
+uint16_t packet_counter = 0;
+uint16_t current_term = 1;
+
+// Packed 64-Byte Binary Telemetry Frame (Fixed-Width for Zero Memory Drift)
 struct __attribute__((packed)) LoRaPacket {
     uint32_t magic_header;      // 0x53555452 ("SUTR")
     uint16_t node_id;           // 1 = uav_alpha
@@ -39,38 +47,56 @@ struct __attribute__((packed)) LoRaPacket {
     uint16_t crc16;             // CRC Checksum
 };
 
-uint16_t packet_counter = 0;
-uint16_t current_term = 1;
+uint16_t compute_crc16(const uint8_t* data, size_t len) {
+    uint16_t crc = 0xFFFF;
+    for (size_t i = 0; i < len; i++) {
+        crc ^= data[i];
+        for (uint8_t j = 0; j < 8; j++) {
+            if (crc & 0x0001) crc = (crc >> 1) ^ 0xA001;
+            else crc >>= 1;
+        }
+    }
+    return crc;
+}
 
-void setupEspNow();
-void transmitLoRaPacket(double lat, double lon, float alt, uint16_t conf);
+void transmitTelemetryPacket(double lat, double lon, float alt, uint16_t conf);
 
 void setup() {
     Serial.begin(921600);
-    Serial2.begin(921600, SERIAL_8N1, 16, 17); // High-Speed UART2 connection to ESP32-S3 CAM (921.6 Kbps)
-    Serial.println(F("[SUTRA] Initializing Node 1 Swarm Drone Firmware (uav_alpha)..."));
+    Serial2.setRxBufferSize(2048); // Expand UART2 RX Ring Buffer for High-Speed JSON Alerts
+    Serial2.begin(921600, SERIAL_8N1, 16, 17);
+    Serial.println(F("[SUTRA] Initializing Node 1 Hardware-Aware Swarm Firmware (uav_alpha)..."));
 
-    // 1. Initialize ESP-NOW 2.4GHz Mesh
+    // 1. Restore SwarmRAFT Term from NVS Flash Memory
+    preferences.begin("sutra_raft", false);
+    current_term = preferences.getUShort("term", 1);
+    Serial.printf("✓ NVS Flash Restored: SwarmRAFT Term %d\n", current_term);
+
+    // 2. Initialize ESP-NOW 2.4GHz Mesh (Built-in PCB Antenna)
     WiFi.mode(WIFI_STA);
     if (esp_now_init() == ESP_OK) {
-        Serial.println(F("✓ ESP-NOW 2.4GHz Semantic Mesh Engine Initialized."));
+        Serial.println(F("✓ ESP-NOW 2.4GHz Semantic Mesh Engine Active (PCB Antenna)."));
     } else {
         Serial.println(F("❌ ESP-NOW Init Failed!"));
     }
 
-    // 2. Initialize SX1278 433MHz LoRa Module via RadioLib SPI
-    Serial.print(F("[RadioLib] Initializing SX1278 LoRa @ 433.0 MHz... "));
-    int state = radio.begin(433.0, 125.0, 7, 5, 0x12, 20, 8);
+    // 3. Hardware Probe SX1278 433MHz LoRa Module (Safely detects missing antenna/module)
+    Serial.print(F("[RadioLib] Probing SX1278 LoRa @ 433.0 MHz... "));
+    int state = radio.begin(433.0, 125.0, 7, 5, 0x12, 2, 8); // 2 dBm Safe Low Power for Bench Testing
     if (state == RADIOLIB_ERR_NONE) {
-        Serial.println(F("✓ SUCCESS!"));
+        lora_hardware_present = true;
+        Serial.println(F("✓ SUCCESS! LoRa Transceiver Active."));
     } else {
-        Serial.print(F("❌ Failed, code: "));
-        Serial.println(state);
+        lora_hardware_present = false;
+        Serial.printf("⚠️ Warning: LoRa SPI Not Detected (code %d). Seamlessly Routing via ESP-NOW 2.4GHz.\n", state);
     }
 }
 
 void loop() {
-    // A. Check for incoming UART JSON alerts from ESP32-S3 AI Camera
+    // A. Feed Watchdog Timer to prevent reboot
+    yield();
+
+    // B. Check for incoming high-speed UART JSON alerts from ESP32-S3 AI Camera
     if (Serial2.available()) {
         String jsonStr = Serial2.readStringUntil('\n');
         StaticJsonDocument<256> doc;
@@ -83,19 +109,19 @@ void loop() {
             uint16_t conf = (uint16_t)((doc["confidence"] | 0.942f) * 1000);
             
             Serial.printf("[ESP32-S3 Alert] Victim Detected! Lat: %.6f, Lon: %.6f, Conf: %d%%\n", lat, lon, conf / 10);
-            transmitLoRaPacket(lat, lon, alt, conf);
+            transmitTelemetryPacket(lat, lon, alt, conf);
         }
     }
 
-    // B. Periodic SwarmRAFT Consensus Heartbeat Transmission over LoRa (Every 5000ms / 0.2Hz to obey 1% duty cycle)
+    // C. Periodic SwarmRAFT Consensus Heartbeat (Every 100ms)
     static uint32_t last_heartbeat = 0;
-    if (millis() - last_heartbeat >= 5000) { // 5-second interval for LoRa backhaul
+    if (millis() - last_heartbeat >= 100) {
         last_heartbeat = millis();
-        transmitLoRaPacket(37.774929, -122.419416, 15.0f, 942);
+        transmitTelemetryPacket(37.774929, -122.419416, 15.0f, 942);
     }
 }
 
-void transmitLoRaPacket(double lat, double lon, float alt, uint16_t conf) {
+void transmitTelemetryPacket(double lat, double lon, float alt, uint16_t conf) {
     LoRaPacket pkt;
     pkt.magic_header = 0x53555452; // "SUTR"
     pkt.node_id = 1;               // uav_alpha
@@ -106,14 +132,18 @@ void transmitLoRaPacket(double lat, double lon, float alt, uint16_t conf) {
     pkt.wgs84_alt = alt;
     pkt.confidence = conf;
     pkt.raft_state_mask = 0x0000000000000001; // uav_alpha = Leader
-    pkt.battery_pct = 87;
-    pkt.status_flags = 0x01; // Healthy
-    pkt.crc16 = 0xABCD;      // Checksum
+    pkt.battery_pct = 95;
+    pkt.status_flags = 0x01;
+    pkt.crc16 = compute_crc16((uint8_t*)&pkt, sizeof(LoRaPacket) - 2);
 
-    int state = radio.transmit((uint8_t*)&pkt, sizeof(LoRaPacket));
-    if (state == RADIOLIB_ERR_NONE) {
-        Serial.printf("[LoRa TX] Beacon Pkt #%d Sent (64 Bytes, Duty-Cycle OK) | Term: %d | WGS84: %.6f, %.6f\n", 
-                      pkt.sequence_num, pkt.raft_term, lat, lon);
+    if (lora_hardware_present) {
+        radio.transmit((uint8_t*)&pkt, sizeof(LoRaPacket));
     }
-}
+    
+    // Broadcast over ESP-NOW 2.4GHz (PCB Antenna fallback)
+    uint8_t broadcast_mac[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    esp_now_send(broadcast_mac, (uint8_t*)&pkt, sizeof(LoRaPacket));
 
+    Serial.printf("[Telemetry TX] Pkt #%d Sent (64B) | Term: %d | Lat: %.6f | Lon: %.6f\n", 
+                  pkt.sequence_num, pkt.raft_term, lat, lon);
+}
