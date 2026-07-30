@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, ShieldAlert } from 'lucide-react';
 import type { DroneAsset, TelemetryData, Waypoint, AIDetection } from '../../types';
 import { MissionService, type MissionEstimates } from '../../services/missionService';
+import { GISService } from '../../services/gisService';
+import { eventBus } from '../../services/eventBus';
 
 // GIS Modular Components
 import {
@@ -13,8 +15,10 @@ import {
   LayerController,
   MapControls,
   MissionControlConsole,
+  GeofenceManagerPanel,
   type MapStyleMode,
-  type UAVMissionState
+  type UAVMissionState,
+  type GeofencePolygonData
 } from './gis';
 
 interface GISMapProps {
@@ -39,10 +43,11 @@ export const GISMap: React.FC<GISMapProps> = ({
   const [mapStyle, setMapStyle] = useState<MapStyleMode>('TACTICAL_DARK');
   const [interactionMode, setInteractionMode] = useState<MapInteractionMode>('SELECT');
 
-  // Layer Toggles
+  // Layer & Panel Toggles
   const [showWaypointsLayer, setShowWaypointsLayer] = useState(true);
   const [showGeofence, setShowGeofence] = useState(true);
   const [isLayerMenuOpen, setIsLayerMenuOpen] = useState(false);
+  const [showGeofencePanel, setShowGeofencePanel] = useState(false);
   const [followDrone, setFollowDrone] = useState(true);
   const [is3D, setIs3D] = useState(false);
 
@@ -50,20 +55,31 @@ export const GISMap: React.FC<GISMapProps> = ({
   const [missionState, setMissionState] = useState<UAVMissionState>('IDLE');
   const [activeWaypointIdx, setActiveWaypointIdx] = useState(0);
 
-  // Geofence Polygons
-  const [geofences] = useState<[number, number][][]>([
-    [
-      [34.528, 45.102],
-      [34.538, 45.118],
-      [34.532, 45.138],
-      [34.518, 45.122]
-    ]
+  // Geofence Polygons Data
+  const [geofences, setGeofences] = useState<GeofencePolygonData[]>([
+    {
+      id: 'GF-01',
+      name: 'RESTRICTED AIRSPACE ALPHA',
+      type: 'NO_FLY_ZONE',
+      color: '#ff3b30',
+      points: [
+        [34.528, 45.102],
+        [34.538, 45.118],
+        [34.532, 45.138],
+        [34.518, 45.122]
+      ],
+      minAltM: 0,
+      maxAltM: 500,
+      visible: true
+    }
   ]);
+  const [selectedGeofenceId, setSelectedGeofenceId] = useState<string | null>('GF-01');
+  const [drawingGeofencePoints, setDrawingGeofencePoints] = useState<[number, number][]>([]);
 
   // Mission Estimates
   const estimates: MissionEstimates = MissionService.calculateMissionEstimates(waypoints);
 
-  // Connect MissionExecutionEngine callback
+  // Connect MissionExecutionEngine callback + Geofence Violation Checker
   useEffect(() => {
     import('../../engine/missionExecutionEngine').then(({ missionExecutionEngine }) => {
       missionExecutionEngine.setDroneUpdateCallback((pos) => {
@@ -75,13 +91,29 @@ export const GISMap: React.FC<GISMapProps> = ({
           altitudeMSL: (pos.altitude || 0) + 350,
           groundSpeed: pos.groundSpeed || 0
         });
+
         setActiveWaypointIdx(missionExecutionEngine.getCurrentWaypointIndex());
         if (missionExecutionEngine.getState() === 'COMPLETED') {
           setMissionState('COMPLETED');
         }
+
+        // Real-time Geofence Violation Check
+        if (pos.lat && pos.lng) {
+          geofences.forEach((gf) => {
+            if (gf.type === 'NO_FLY_ZONE' && gf.visible) {
+              const inPolygon = GISService.isPointInPolygon([pos.lat!, pos.lng!], gf.points);
+              if (inPolygon) {
+                eventBus.emit('SYSTEM_ALERT', {
+                  title: 'GEOFENCE VIOLATION DETECTED',
+                  message: `UAV penetrated No-Fly Zone: ${gf.name}. Initiating RTH protocol.`
+                });
+              }
+            }
+          });
+        }
       });
     });
-  }, [onUpdateDronePos]);
+  }, [onUpdateDronePos, geofences]);
 
   // Mission State Action Handlers
   const handleArm = () => setMissionState('ARMED');
@@ -132,7 +164,7 @@ export const GISMap: React.FC<GISMapProps> = ({
     setActiveWaypointIdx(0);
   };
 
-  // Add Waypoint on Map Click
+  // Add Waypoint or Drawing Geofence Point on Map Click
   const handleMapClick = (lngLat: { lat: number; lng: number }) => {
     if (interactionMode === 'ADD_WAYPOINT') {
       const newWp: Waypoint = {
@@ -144,9 +176,29 @@ export const GISMap: React.FC<GISMapProps> = ({
         completed: false
       };
       onUpdateWaypoints([...waypoints, newWp]);
-      if (missionState === 'ARMED') {
-        setMissionState('READY');
-      }
+      if (missionState === 'ARMED') setMissionState('READY');
+    } else if (interactionMode === 'DRAW_GEOFENCE') {
+      setDrawingGeofencePoints((prev) => [...prev, [lngLat.lat, lngLat.lng]]);
+    }
+  };
+
+  // Geofence Management Handlers
+  const handleFinishGeofenceDrawing = () => {
+    if (drawingGeofencePoints.length >= 3) {
+      const newGf: GeofencePolygonData = {
+        id: `GF-0${geofences.length + 1}`,
+        name: `SECURITY ZONE 0${geofences.length + 1}`,
+        type: 'NO_FLY_ZONE',
+        color: '#ff3b30',
+        points: drawingGeofencePoints,
+        minAltM: 0,
+        maxAltM: 500,
+        visible: true
+      };
+      setGeofences((prev) => [...prev, newGf]);
+      setDrawingGeofencePoints([]);
+      setInteractionMode('SELECT');
+      setSelectedGeofenceId(newGf.id);
     }
   };
 
@@ -163,7 +215,12 @@ export const GISMap: React.FC<GISMapProps> = ({
         {(map) => (
           <>
             <MissionPathRenderer map={map} waypoints={waypoints} activeWaypointIdx={activeWaypointIdx} />
-            <OverlayRenderer map={map} geofences={geofences} aiDetections={aiDetections} showGeofence={showGeofence} />
+            <OverlayRenderer
+              map={map}
+              geofences={geofences.filter((g) => g.visible).map((g) => g.points)}
+              aiDetections={aiDetections}
+              showGeofence={showGeofence}
+            />
             {showWaypointsLayer && (
               <WaypointRenderer
                 map={map}
@@ -202,6 +259,16 @@ export const GISMap: React.FC<GISMapProps> = ({
           />
 
           <button
+            onClick={() => setShowGeofencePanel(!showGeofencePanel)}
+            className={`p-1.5 rounded text-[10px] font-mono flex items-center space-x-1 ${
+              showGeofencePanel ? 'bg-rose-500/30 text-rose-300 border border-rose-500/50' : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <ShieldAlert className="w-3.5 h-3.5" />
+            <span>GEOFENCE</span>
+          </button>
+
+          <button
             onClick={() => setInteractionMode(interactionMode === 'ADD_WAYPOINT' ? 'SELECT' : 'ADD_WAYPOINT')}
             className={`p-1.5 rounded text-[10px] font-mono flex items-center space-x-1 ${
               interactionMode === 'ADD_WAYPOINT' ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-500/50' : 'text-slate-400 hover:text-slate-200'
@@ -213,8 +280,8 @@ export const GISMap: React.FC<GISMapProps> = ({
         </div>
       </div>
 
-      {/* TACTICAL MISSION CONTROL CONSOLE */}
-      <div className="absolute top-16 left-3 z-10 pointer-events-auto">
+      {/* TACTICAL MISSION CONTROL CONSOLE & GEOFENCE MANAGER */}
+      <div className="absolute top-16 left-3 z-10 pointer-events-auto space-y-2">
         <MissionControlConsole
           missionState={missionState}
           activeDrone={activeDrone}
@@ -234,6 +301,22 @@ export const GISMap: React.FC<GISMapProps> = ({
           onAbort={handleAbort}
           onReset={handleReset}
         />
+
+        {showGeofencePanel && (
+          <GeofenceManagerPanel
+            geofences={geofences}
+            selectedId={selectedGeofenceId}
+            onSelectGeofence={setSelectedGeofenceId}
+            onAddGeofence={() => setInteractionMode('DRAW_GEOFENCE')}
+            onDeleteGeofence={(id) => setGeofences((prev) => prev.filter((g) => g.id !== id))}
+            onToggleVisibility={(id) => setGeofences((prev) => prev.map((g) => g.id === id ? { ...g, visible: !g.visible } : g))}
+            onUpdateGeofence={(id, updated) => setGeofences((prev) => prev.map((g) => g.id === id ? { ...g, ...updated } : g))}
+            isDrawing={interactionMode === 'DRAW_GEOFENCE'}
+            onStartDrawing={() => setInteractionMode('DRAW_GEOFENCE')}
+            onFinishDrawing={handleFinishGeofenceDrawing}
+            drawingPointCount={drawingGeofencePoints.length}
+          />
+        )}
       </div>
 
       {/* MAP CONTROLS */}

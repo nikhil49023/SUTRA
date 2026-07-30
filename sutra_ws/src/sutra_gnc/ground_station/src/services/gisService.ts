@@ -54,7 +54,6 @@ export class GISService {
    */
   static calculatePolygonArea(polygonCoords: [number, number][]): { areaSqMeters: number; hectares: number } {
     if (polygonCoords.length < 3) return { areaSqMeters: 0, hectares: 0 };
-    // Ensure polygon is closed
     const closedCoords = [...polygonCoords];
     if (
       closedCoords[0][0] !== closedCoords[closedCoords.length - 1][0] ||
@@ -69,6 +68,24 @@ export class GISService {
       areaSqMeters: Math.round(areaSqMeters),
       hectares: +(areaSqMeters / 10000).toFixed(2)
     };
+  }
+
+  /**
+   * Check if a Lat/Lng point falls inside a polygon ring
+   */
+  static isPointInPolygon(point: [number, number], polygonCoords: [number, number][]): boolean {
+    if (polygonCoords.length < 3) return false;
+    const closedCoords = [...polygonCoords];
+    if (
+      closedCoords[0][0] !== closedCoords[closedCoords.length - 1][0] ||
+      closedCoords[0][1] !== closedCoords[closedCoords.length - 1][1]
+    ) {
+      closedCoords.push(closedCoords[0]);
+    }
+
+    const pt = turf.point([point[1], point[0]]);
+    const poly = turf.polygon([closedCoords.map(([lat, lng]) => [lng, lat])]);
+    return turf.booleanPointInPolygon(pt, poly);
   }
 
   /**
