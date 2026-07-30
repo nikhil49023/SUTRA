@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Shield, Zap, Radio, AlertTriangle, RefreshCw, Cpu, Activity, Play, Pause, Volume2, VolumeX, Eye } from 'lucide-react';
+import { Shield, Zap, Radio, AlertTriangle, RefreshCw, Cpu, Activity, Play, Pause, Volume2, VolumeX, Eye, Layers, Compass, Maximize2 } from 'lucide-react';
 import { audioSynth } from '../utils/webAudioSynth';
 
 interface Drone3D {
@@ -19,18 +19,6 @@ interface Drone3D {
   battery: number;
 }
 
-interface Particle {
-  x: number;
-  y: number;
-  z: number;
-  targetX: number;
-  targetY: number;
-  targetZ: number;
-  progress: number;
-  speed: number;
-  color: string;
-}
-
 interface RFLink {
   from: string;
   to: string;
@@ -44,19 +32,26 @@ interface RFLink {
 export const SwarmCommsPhysicsSim: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
-  // Audio Mute State
+  // Interactive UI Controls
   const [audioMuted, setAudioMuted] = useState<boolean>(false);
   const [jammingActive, setJammingActive] = useState<boolean>(false);
   const [nlosObstacleActive, setNlosObstacleActive] = useState<boolean>(true);
-  const [cameraAngle, setCameraAngle] = useState<number>(0.65); // 3D Camera Orbit
+  const [showHeatmap, setShowHeatmap] = useState<boolean>(true);
+  const [showInterference, setShowInterference] = useState<boolean>(true);
   const [simSpeed, setSimSpeed] = useState<number>(1.0);
 
-  // Pitch Story Script State
+  // 3D Camera State (Interactive Drag & Zoom)
+  const [cameraAngle, setCameraAngle] = useState<number>(0.65);
+  const [cameraZoom, setCameraZoom] = useState<number>(1.0);
+  const isDraggingRef = useRef<boolean>(false);
+  const lastMouseXRef = useRef<number>(0);
+
+  // Story Presentation State
   const [isStoryRunning, setIsStoryRunning] = useState<boolean>(false);
   const [storyPhase, setStoryPhase] = useState<number>(0);
   const [storyCaption, setStoryCaption] = useState<string>('Click "Play Guided Pitch Story" for automated 60s jury presentation.');
 
-  // Consensus State
+  // SwarmRAFT Consensus State
   const [term, setTerm] = useState<number>(3);
   const [leaderId, setLeaderId] = useState<string>('uav_alpha');
   const [electionStatus, setElectionStatus] = useState<string>('HEALTHY (Quorum 5/5)');
@@ -71,7 +66,6 @@ export const SwarmCommsPhysicsSim: React.FC = () => {
     { id: 'uav_epsilon', name: 'Epsilon (Backhaul)', x: 210, y: 120, z: 28, vx: -0.4, vy: 0.8, vz: 0, roll: 0, pitch: 0, yaw: 0, role: 'FOLLOWER', activeMedium: 'LORA', battery: 82 },
   ]);
 
-  const particlesRef = useRef<Particle[]>([]);
   const [links, setLinks] = useState<RFLink[]>([]);
   const animTimeRef = useRef<number>(0);
 
@@ -81,12 +75,12 @@ export const SwarmCommsPhysicsSim: React.FC = () => {
     setAudioMuted(!audioMuted);
   };
 
-  // 3D Isometric Projection Math: Converts World (x,y,z) to Canvas Screen (isoX, isoY)
-  const project3D = (x: number, y: number, z: number, angle: number, originX = 400, originY = 280) => {
+  // 3D Projection Math: World (x,y,z) -> Screen (isoX, isoY) with Zoom and Angle Orbit
+  const project3D = (x: number, y: number, z: number, angle: number, zoom = 1.0, originX = 400, originY = 280) => {
     const cosA = Math.cos(angle);
     const sinA = Math.sin(angle);
-    const isoX = originX + (x - y) * cosA;
-    const isoY = originY + (x + y) * sinA * 0.45 - z * 1.8;
+    const isoX = originX + ((x - y) * cosA) * zoom;
+    const isoY = originY + ((x + y) * sinA * 0.45 - z * 1.8) * zoom;
     return { isoX, isoY };
   };
 
@@ -94,14 +88,14 @@ export const SwarmCommsPhysicsSim: React.FC = () => {
   const triggerLeaderFailover = () => {
     const start = performance.now();
     audioSynth.playFailoverAlarm();
-    setElectionStatus('🚨 LEADER DISCONNECTED! Triggering Pre-Vote Quorum...');
+    setElectionStatus('🚨 LEADER DISCONNECTED! Pre-Vote Quorum Triggered...');
 
     dronesRef.current[0].role = 'OFFLINE';
     dronesRef.current[0].activeMedium = 'BLACKOUT';
 
     setTimeout(() => {
       dronesRef.current[1].role = 'CANDIDATE';
-      setElectionStatus('CANDIDATE ELECTION IN PROGRESS (Pre-Vote Passed)');
+      setElectionStatus('CANDIDATE ELECTION IN PROGRESS (Pre-Vote Quorum Met)');
     }, 180);
 
     setTimeout(() => {
@@ -143,14 +137,12 @@ export const SwarmCommsPhysicsSim: React.FC = () => {
     setStoryCaption('PHASE 1: 5-Drone Swarm in Autonomous Search Formation over 802.11s Wi-Fi Mesh (54 Mbps).');
     audioSynth.playRadarPing();
 
-    // Phase 2: NLoS Mountain Shadowing
     setTimeout(() => {
       setStoryPhase(2);
-      setStoryCaption('PHASE 2: Disaster Mountain NLoS Shadowing (+15dB Loss) — Drones automatically trigger Multi-Radio Handover to LoRa (915MHz).');
+      setStoryCaption('PHASE 2: NLoS Mountain Shadowing (+15dB Loss) — Drones automatically trigger Multi-Radio Handover to LoRa (915MHz).');
       audioSynth.playRadarPing();
     }, 6000);
 
-    // Phase 3: RF Jamming Attack
     setTimeout(() => {
       setStoryPhase(3);
       setJammingActive(true);
@@ -158,7 +150,6 @@ export const SwarmCommsPhysicsSim: React.FC = () => {
       setStoryCaption('PHASE 3: Enemy RF Jamming Noise (+22dB) — Deep JSCC Semantic Coding preserves thermal features without Digital Cliff Effect.');
     }, 12000);
 
-    // Phase 4: Leader Destruction & SwarmRAFT Re-election
     setTimeout(() => {
       setStoryPhase(4);
       setJammingActive(false);
@@ -166,7 +157,6 @@ export const SwarmCommsPhysicsSim: React.FC = () => {
       setStoryCaption('PHASE 4: Leader UAV Disconnect — SwarmRAFT executes Pre-Vote election (< 500ms failover) to select new Leader.');
     }, 18000);
 
-    // Phase 5: Victim Target Lock & RTL
     setTimeout(() => {
       setStoryPhase(5);
       audioSynth.playTargetLockChime();
@@ -175,7 +165,29 @@ export const SwarmCommsPhysicsSim: React.FC = () => {
     }, 24000);
   };
 
-  // Main 3D Canvas Rendering Loop
+  // Canvas Mouse Drag Orbit Controls
+  const handleMouseDown = (e: React.MouseEvent) => {
+    isDraggingRef.current = true;
+    lastMouseXRef.current = e.clientX;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingRef.current) return;
+    const deltaX = e.clientX - lastMouseXRef.current;
+    lastMouseXRef.current = e.clientX;
+    setCameraAngle((prev) => prev + deltaX * 0.005);
+  };
+
+  const handleMouseUp = () => {
+    isDraggingRef.current = false;
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    setCameraZoom((prev) => Math.max(0.6, Math.min(2.0, prev - e.deltaY * 0.001)));
+  };
+
+  // Main 3D WebGL / Canvas Rendering Engine Loop
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -190,15 +202,44 @@ export const SwarmCommsPhysicsSim: React.FC = () => {
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // 1. Draw 3D Isometric Ground Terrain Grid
+      // 1. Draw 3D RF Coverage Heatmap Background Overlay
+      if (showHeatmap) {
+        const heatmapGridSize = 60;
+        for (let hx = -300; hx <= 300; hx += heatmapGridSize) {
+          for (let hy = -300; hy <= 300; hy += heatmapGridSize) {
+            const hp = project3D(hx, hy, 0, cameraAngle, cameraZoom);
+            // Calculate field signal strength from nearest drone
+            let minDistance = 9999;
+            dronesRef.current.forEach((d) => {
+              if (d.role !== 'OFFLINE') {
+                const dist = Math.hypot(d.x - hx, d.y - hy);
+                if (dist < minDistance) minDistance = dist;
+              }
+            });
+
+            const signalIntensity = Math.max(0, 1.0 - minDistance / 250.0);
+            if (signalIntensity > 0.05) {
+              ctx.beginPath();
+              ctx.arc(hp.isoX, hp.isoY, heatmapGridSize * 0.6 * cameraZoom, 0, Math.PI * 2);
+              const heatColor = signalIntensity > 0.6 ? `rgba(16, 185, 129, ${signalIntensity * 0.15})` :
+                                signalIntensity > 0.3 ? `rgba(6, 182, 212, ${signalIntensity * 0.12})` :
+                                `rgba(249, 115, 22, ${signalIntensity * 0.08})`;
+              ctx.fillStyle = heatColor;
+              ctx.fill();
+            }
+          }
+        }
+      }
+
+      // 2. Draw 3D Isometric Ground Terrain Grid with Elevation Contours
       ctx.lineWidth = 1;
       const gridSize = 40;
       const gridExtent = 320;
 
       for (let x = -gridExtent; x <= gridExtent; x += gridSize) {
-        const p1 = project3D(x, -gridExtent, 0, cameraAngle);
-        const p2 = project3D(x, gridExtent, 0, cameraAngle);
-        ctx.strokeStyle = 'rgba(30, 41, 59, 0.4)';
+        const p1 = project3D(x, -gridExtent, 0, cameraAngle, cameraZoom);
+        const p2 = project3D(x, gridExtent, 0, cameraAngle, cameraZoom);
+        ctx.strokeStyle = 'rgba(30, 41, 59, 0.35)';
         ctx.beginPath();
         ctx.moveTo(p1.isoX, p1.isoY);
         ctx.lineTo(p2.isoX, p2.isoY);
@@ -206,41 +247,41 @@ export const SwarmCommsPhysicsSim: React.FC = () => {
       }
 
       for (let y = -gridExtent; y <= gridExtent; y += gridSize) {
-        const p1 = project3D(-gridExtent, y, 0, cameraAngle);
-        const p2 = project3D(gridExtent, y, 0, cameraAngle);
-        ctx.strokeStyle = 'rgba(30, 41, 59, 0.4)';
+        const p1 = project3D(-gridExtent, y, 0, cameraAngle, cameraZoom);
+        const p2 = project3D(gridExtent, y, 0, cameraAngle, cameraZoom);
+        ctx.strokeStyle = 'rgba(30, 41, 59, 0.35)';
         ctx.beginPath();
         ctx.moveTo(p1.isoX, p1.isoY);
         ctx.lineTo(p2.isoX, p2.isoY);
         ctx.stroke();
       }
 
-      // 2. Render 3D NLoS Mountain Obstacle Mesh
+      // 3. Render 3D NLoS Mountain Obstacle Mesh with Shading
       const obsX = 30, obsY = 40, obsR = 75;
       if (nlosObstacleActive) {
-        const obsCenter = project3D(obsX, obsY, 0, cameraAngle);
-        const obsPeak = project3D(obsX, obsY, 45, cameraAngle);
+        const obsCenter = project3D(obsX, obsY, 0, cameraAngle, cameraZoom);
+        const obsPeak = project3D(obsX, obsY, 50, cameraAngle, cameraZoom);
 
         ctx.beginPath();
         ctx.moveTo(obsPeak.isoX, obsPeak.isoY);
-        ctx.lineTo(obsCenter.isoX - obsR, obsCenter.isoY + obsR * 0.3);
-        ctx.lineTo(obsCenter.isoX + obsR, obsCenter.isoY + obsR * 0.3);
+        ctx.lineTo(obsCenter.isoX - obsR * cameraZoom, obsCenter.isoY + obsR * 0.3 * cameraZoom);
+        ctx.lineTo(obsCenter.isoX + obsR * cameraZoom, obsCenter.isoY + obsR * 0.3 * cameraZoom);
         ctx.closePath();
 
-        const grad = ctx.createLinearGradient(obsPeak.isoX, obsPeak.isoY, obsCenter.isoX, obsCenter.isoY + obsR * 0.3);
-        grad.addColorStop(0, 'rgba(239, 68, 68, 0.4)');
-        grad.addColorStop(1, 'rgba(153, 27, 27, 0.1)');
+        const grad = ctx.createLinearGradient(obsPeak.isoX, obsPeak.isoY, obsCenter.isoX, obsCenter.isoY + obsR * 0.3 * cameraZoom);
+        grad.addColorStop(0, 'rgba(239, 68, 68, 0.45)');
+        grad.addColorStop(1, 'rgba(153, 27, 27, 0.15)');
         ctx.fillStyle = grad;
         ctx.fill();
-        ctx.strokeStyle = 'rgba(239, 68, 68, 0.7)';
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.75)';
         ctx.stroke();
 
         ctx.fillStyle = '#f87171';
-        ctx.font = '11px sans-serif';
-        ctx.fillText('⛰️ NLoS Rubble Mountain', obsPeak.isoX - 60, obsPeak.isoY - 10);
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText('⛰️ NLoS Rubble Mountain (Shadowing)', obsPeak.isoX - 80, obsPeak.isoY - 12);
       }
 
-      // 3. Update Kinematics & 3D Radio Links
+      // 4. Update Kinematics & 3D Radio Links
       const drones = dronesRef.current;
       const activeLinks: RFLink[] = [];
 
@@ -249,17 +290,15 @@ export const SwarmCommsPhysicsSim: React.FC = () => {
           d.x += d.vx * simSpeed;
           d.y += d.vy * simSpeed;
 
-          // Boundary reversal
           if (d.x < -240 || d.x > 240) d.vx *= -1;
           if (d.y < -240 || d.y > 240) d.vy *= -1;
 
-          // Roll/Pitch tilt simulation
           d.pitch = d.vy * 0.15;
           d.roll = d.vx * 0.15;
         }
       });
 
-      // 4. Compute 3D RF Links & Draw Particle Streams
+      // 5. Compute 3D RF Links & Draw Particle Streams
       for (let i = 0; i < drones.length; i++) {
         for (let j = i + 1; j < drones.length; j++) {
           const d1 = drones[i];
@@ -272,7 +311,6 @@ export const SwarmCommsPhysicsSim: React.FC = () => {
           const dz = d2.z - d1.z;
           const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-          // NLoS Test
           let isNlos = false;
           if (nlosObstacleActive) {
             const segDist = Math.abs((obsY - d1.y) * dx - (obsX - d1.x) * dy) / (dist + 1e-5);
@@ -294,9 +332,8 @@ export const SwarmCommsPhysicsSim: React.FC = () => {
 
           activeLinks.push({ from: d1.id, to: d2.id, distance: Math.round(dist), snr: Math.round(snr * 10) / 10, per: Math.round(per * 10) / 10, medium, isNlos });
 
-          // Project 3D Screen Coordinates
-          const p1 = project3D(d1.x, d1.y, d1.z, cameraAngle);
-          const p2 = project3D(d2.x, d2.y, d2.z, cameraAngle);
+          const p1 = project3D(d1.x, d1.y, d1.z, cameraAngle, cameraZoom);
+          const p2 = project3D(d2.x, d2.y, d2.z, cameraAngle, cameraZoom);
 
           // Draw RF Link Line
           ctx.beginPath();
@@ -323,32 +360,31 @@ export const SwarmCommsPhysicsSim: React.FC = () => {
           ctx.stroke();
           ctx.setLineDash([]);
 
-          // 🌟 Photon Data Packet Particles Stream
-          const particleCount = 2;
+          // Photon Data Packet Particles Stream
+          const particleCount = 3;
           for (let k = 0; k < particleCount; k++) {
-            const progress = ((time * 0.8 + k / particleCount + i * 0.3) % 1.0);
+            const progress = ((time * 0.9 + k / particleCount + i * 0.2) % 1.0);
             const px = p1.isoX + (p2.isoX - p1.isoX) * progress;
             const py = p1.isoY + (p2.isoY - p1.isoY) * progress;
 
             ctx.beginPath();
-            ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+            ctx.arc(px, py, 3.8 * cameraZoom, 0, Math.PI * 2);
             ctx.fillStyle = medium === 'WIFI_MESH' ? '#34d399' : medium === 'ESP_NOW' ? '#38bdf8' : '#fb923c';
             ctx.shadowColor = ctx.fillStyle;
-            ctx.shadowBlur = 8;
+            ctx.shadowBlur = 10;
             ctx.fill();
-            ctx.shadowBlur = 0; // Reset shadow
+            ctx.shadowBlur = 0;
           }
         }
       }
       setLinks(activeLinks);
 
-      // 5. Render 3D Quadcopter Drones & Spinning Rotors
+      // 6. Render 3D Quadcopter Drones & Spinning Rotors
       drones.forEach((d) => {
-        const p = project3D(d.x, d.y, d.z, cameraAngle);
-        const shadowP = project3D(d.x, d.y, 0, cameraAngle);
+        const p = project3D(d.x, d.y, d.z, cameraAngle, cameraZoom);
+        const shadowP = project3D(d.x, d.y, 0, cameraAngle, cameraZoom);
 
         if (d.role === 'OFFLINE') {
-          // Draw Crash Cross
           ctx.strokeStyle = '#ef4444';
           ctx.lineWidth = 3;
           ctx.beginPath();
@@ -363,14 +399,14 @@ export const SwarmCommsPhysicsSim: React.FC = () => {
           return;
         }
 
-        // Draw Ground Shadow
+        // Ground Shadow
         ctx.beginPath();
-        ctx.ellipse(shadowP.isoX, shadowP.isoY, 14, 6, 0, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.ellipse(shadowP.isoX, shadowP.isoY, 14 * cameraZoom, 6 * cameraZoom, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
         ctx.fill();
 
         // Altitude Drop Line
-        ctx.strokeStyle = 'rgba(148, 163, 184, 0.3)';
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
         ctx.lineWidth = 1;
         ctx.setLineDash([2, 2]);
         ctx.beginPath();
@@ -380,11 +416,10 @@ export const SwarmCommsPhysicsSim: React.FC = () => {
         ctx.setLineDash([]);
 
         // 3D Quadcopter Airframe Arms
-        const armLength = 16;
+        const armLength = 16 * cameraZoom;
         ctx.strokeStyle = '#cbd5e1';
         ctx.lineWidth = 2.5;
 
-        // Arm 1 & 2
         ctx.beginPath();
         ctx.moveTo(p.isoX - armLength, p.isoY - armLength * 0.5);
         ctx.lineTo(p.isoX + armLength, p.isoY + armLength * 0.5);
@@ -392,10 +427,9 @@ export const SwarmCommsPhysicsSim: React.FC = () => {
         ctx.lineTo(p.isoX - armLength, p.isoY + armLength * 0.5);
         ctx.stroke();
 
-        // 🛸 Spinning Rotor Blades Blur
-        const rotorR = 8;
-        const rotorAngle = time * 20;
-        const rotorColors = ['#38bdf8', '#34d399', '#f59e0b', '#ec4899'];
+        // 🛸 Spinning Rotor Blades
+        const rotorR = 8 * cameraZoom;
+        const rotorAngle = time * 22;
 
         [
           { rx: p.isoX - armLength, ry: p.isoY - armLength * 0.5 },
@@ -405,13 +439,13 @@ export const SwarmCommsPhysicsSim: React.FC = () => {
         ].forEach((rotor, idx) => {
           ctx.beginPath();
           ctx.ellipse(rotor.rx, rotor.ry, rotorR, rotorR * 0.4, rotorAngle + idx, 0, Math.PI * 2);
-          ctx.strokeStyle = 'rgba(56, 189, 248, 0.6)';
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.7)';
           ctx.stroke();
         });
 
-        // Quadcopter Core Body
+        // Core Body Hub
         ctx.beginPath();
-        ctx.arc(p.isoX, p.isoY, 7, 0, Math.PI * 2);
+        ctx.arc(p.isoX, p.isoY, 7 * cameraZoom, 0, Math.PI * 2);
         ctx.fillStyle = d.role === 'LEADER' ? '#eab308' : d.role === 'CANDIDATE' ? '#f97316' : '#38bdf8';
         ctx.fill();
         ctx.strokeStyle = '#0f172a';
@@ -436,15 +470,15 @@ export const SwarmCommsPhysicsSim: React.FC = () => {
 
     render();
     return () => cancelAnimationFrame(animId);
-  }, [cameraAngle, simSpeed, jammingActive, nlosObstacleActive]);
+  }, [cameraAngle, cameraZoom, simSpeed, jammingActive, nlosObstacleActive, showHeatmap]);
 
   return (
     <div style={{ backgroundColor: '#090d16', color: '#f8fafc', padding: '24px', borderRadius: '16px', border: '1px solid #1e293b', fontFamily: 'Inter, sans-serif' }}>
       
-      {/* Narrative Story Banner (For Pitch Presentation) */}
+      {/* Narrative Story Banner */}
       {isStoryRunning && (
         <div style={{ backgroundColor: '#1e1b4b', color: '#c084fc', border: '2px solid #818cf8', borderRadius: '12px', padding: '14px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '14px', boxShadow: '0 0 25px rgba(129, 140, 248, 0.3)' }}>
-          <Eye size={24} style={{ color: '#c084fc', animation: 'pulse 1.5s infinite' }} />
+          <Eye size={24} style={{ color: '#c084fc' }} />
           <div>
             <div style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#a78bfa' }}>
               🎬 INVESTOR PITCH STORY MODE — STEP {storyPhase} / 5
@@ -489,26 +523,36 @@ export const SwarmCommsPhysicsSim: React.FC = () => {
       {/* Main Grid Display */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '20px' }}>
         
-        {/* 3D Isometric Canvas */}
-        <div style={{ position: 'relative', backgroundColor: '#020617', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1e293b' }}>
+        {/* 3D Isometric Interactive Canvas */}
+        <div 
+          style={{ position: 'relative', backgroundColor: '#020617', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1e293b', cursor: 'grab' }}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onWheel={handleWheel}
+        >
           <canvas ref={canvasRef} width={800} height={520} style={{ width: '100%', height: '520px', display: 'block' }} />
 
-          {/* Interactive Controls Overlay */}
+          {/* Controls Overlay */}
           <div style={{ position: 'absolute', bottom: '16px', left: '16px', display: 'flex', gap: '12px', backgroundColor: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(10px)', padding: '10px 16px', borderRadius: '10px', border: '1px solid #334155' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer' }}>
               <input type="checkbox" checked={jammingActive} onChange={(e) => { setJammingActive(e.target.checked); if(e.target.checked) audioSynth.playJammerNoise(); }} />
               <span style={{ color: jammingActive ? '#ef4444' : '#94a3b8', fontWeight: 600 }}>⚡ RF Jammer (+22dB)</span>
             </label>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer', marginLeft: '10px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer', marginLeft: '6px' }}>
               <input type="checkbox" checked={nlosObstacleActive} onChange={(e) => setNlosObstacleActive(e.target.checked)} />
               <span style={{ color: nlosObstacleActive ? '#f87171' : '#94a3b8', fontWeight: 600 }}>⛰️ NLoS Mountain</span>
             </label>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '10px' }}>
-              <span style={{ fontSize: '11px', color: '#94a3b8' }}>3D Orbit:</span>
-              <input type="range" min="0.2" max="1.4" step="0.05" value={cameraAngle} onChange={(e) => setCameraAngle(parseFloat(e.target.value))} style={{ width: '70px', accentColor: '#38bdf8' }} />
-            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer', marginLeft: '6px' }}>
+              <input type="checkbox" checked={showHeatmap} onChange={(e) => setShowHeatmap(e.target.checked)} />
+              <span style={{ color: showHeatmap ? '#34d399' : '#94a3b8', fontWeight: 600 }}>🌐 RF Heatmap</span>
+            </label>
+          </div>
+
+          <div style={{ position: 'absolute', top: '16px', right: '16px', backgroundColor: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)', padding: '10px 14px', borderRadius: '8px', border: '1px solid #334155', fontSize: '11px', color: '#94a3b8' }}>
+            💡 <em>Drag mouse to rotate 3D orbit | Scroll wheel to zoom</em>
           </div>
         </div>
 
