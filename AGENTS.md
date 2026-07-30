@@ -46,6 +46,7 @@ Manual search and rescue operations in disaster-hit, forested, or conflict-prone
 2. **Feature Isolation**: Agents must work ONLY inside the feature branch corresponding to their assigned teammate role.
 3. **Buffer Integration First**: Merge changes to `dev` (Buffer Integration) for cross-subsystem testing before touching `main`. Direct commits to `main` are strictly prohibited.
 4. **Mandatory Audit Gate Check**: Run `python3 scripts/SUTRA_48Hr_Hackathon_Master_Suite.py` to verify Gates G1–G6 before requesting a merge to `main`.
+5. **Mandatory Subsystem `DOCS.md` Synchronization Protocol**: Whenever an agent modifies, refactors, or prepares a commit for a subsystem (`sutra_ws/src/sutra_<subsystem>/`), it MUST update `sutra_ws/src/sutra_<subsystem>/DOCS.md` with current statistical benchmark tables, latency/memory figures, dependency trees, and verification status.
 
 ---
 
