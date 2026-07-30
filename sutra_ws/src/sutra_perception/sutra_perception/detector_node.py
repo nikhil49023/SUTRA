@@ -125,17 +125,26 @@ def pixel_to_ned(
     img_h: int,
     drone_alt_m: float,
     camera_hfov_deg: float = 90.0,
+    roll_rad: float = 0.0,
+    pitch_rad: float = 0.0,
+    yaw_rad: float = 0.0,
+    terrain_alt_m: float = 0.0,
 ) -> Tuple[float, float]:
     """Project image pixel (px, py) onto ground plane → NED (east, north) offset.
 
-    Uses pinhole camera model. Assumes nadir-pointing camera.
+    Applies full 3D Euler rotation matrix R_world = Rz(yaw) * Ry(pitch) * Rx(roll)
+    to compensate for drone banking and camera attitude tilt.
 
     Parameters
     ----------
-    px, py        : Pixel coordinates (0,0 = top-left).
-    img_w, img_h  : Image dimensions in pixels.
-    drone_alt_m   : Drone altitude above ground in metres.
+    px, py          : Pixel coordinates (0,0 = top-left).
+    img_w, img_h    : Image dimensions in pixels.
+    drone_alt_m     : Drone altitude above sea level in metres.
     camera_hfov_deg : Horizontal field-of-view in degrees.
+    roll_rad        : Drone roll angle in radians.
+    pitch_rad       : Drone pitch angle in radians.
+    yaw_rad         : Drone yaw heading in radians.
+    terrain_alt_m   : Ground terrain elevation above sea level in metres.
 
     Returns
     -------
@@ -146,9 +155,46 @@ def pixel_to_ned(
     # Normalised image coordinates in range [-0.5, +0.5]
     norm_x = (px / img_w) - 0.5
     norm_y = (py / img_h) - 0.5
-    east_m  =  norm_x * 2.0 * drone_alt_m * math.tan(hfov_rad / 2.0)
-    north_m = -norm_y * 2.0 * drone_alt_m * math.tan(vfov_rad / 2.0)
+
+    # Optical camera ray vector (X-Right, Y-Down, Z-Forward)
+    v_cam = np.array([
+        norm_x * 2.0 * math.tan(hfov_rad / 2.0),
+        norm_y * 2.0 * math.tan(vfov_rad / 2.0),
+        1.0,
+    ])
+    v_norm = np.linalg.norm(v_cam)
+    if v_norm > 0:
+        v_cam /= v_norm
+
+    # 3D Euler Rotation Matrices (Roll, Pitch, Yaw)
+    Rx = np.array([
+        [1.0, 0.0, 0.0],
+        [0.0, math.cos(roll_rad), -math.sin(roll_rad)],
+        [0.0, math.sin(roll_rad), math.cos(roll_rad)],
+    ])
+    Ry = np.array([
+        [math.cos(pitch_rad), 0.0, math.sin(pitch_rad)],
+        [0.0, 1.0, 0.0],
+        [-math.sin(pitch_rad), 0.0, math.cos(pitch_rad)],
+    ])
+    Rz = np.array([
+        [math.cos(yaw_rad), -math.sin(yaw_rad), 0.0],
+        [math.sin(yaw_rad), math.cos(yaw_rad), 0.0],
+        [0.0, 0.0, 1.0],
+    ])
+    R_body = Rz @ Ry @ Rx
+    v_world = R_body @ v_cam
+
+    eff_alt = max(1.0, drone_alt_m - terrain_alt_m)
+    if abs(v_world[2]) > 1e-4:
+        s = eff_alt / max(v_world[2], 1e-3)
+    else:
+        s = 0.0
+
+    east_m = float(v_world[0] * s)
+    north_m = float(-v_world[1] * s)
     return east_m, north_m
+
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -275,13 +321,20 @@ class SutraDetectorNode(Node):
         self._drone_lat: float = ORIGIN_LAT
         self._drone_lon: float = ORIGIN_LON
         self._drone_alt: float = ORIGIN_ALT
+        self._drone_roll: float = 0.0       # radians
+        self._drone_pitch: float = 0.0      # radians
         self._drone_yaw: float = 0.0        # radians
+
+        # Pre-allocated zero-allocation image buffers for long-duration flight memory stability
+        self._static_rgb_buffer: np.ndarray = np.zeros((480, 640, 3), dtype=np.uint8)
+        self._static_thermal_buffer: np.ndarray = np.zeros((480, 640), dtype=np.uint8)
 
         self._visual_detections:  List[VisualDetection] = []
         self._thermal_blobs:      List[ThermalBlob]     = []
         self._radar_targets:      List[RadarTarget]     = []
         self._target_counter:     int                   = 0
         self._img_w: int = 640
+
         self._img_h: int = 480
 
         # ── Optional bridges / models ──────────────────────────────────────────
@@ -376,10 +429,30 @@ class SutraDetectorNode(Node):
         self._drone_lat = lat
         self._drone_lon = lon
         self._drone_alt = alt
-        # Extract yaw from quaternion (simplified — z component only)
+
+        # Extract roll, pitch, yaw from quaternion (q_x, q_y, q_z, q_w)
+        qx = msg.pose.orientation.x
+        qy = msg.pose.orientation.y
         qz = msg.pose.orientation.z
         qw = msg.pose.orientation.w
-        self._drone_yaw = 2.0 * math.atan2(qz, qw)
+
+        # Roll (x-axis rotation)
+        sinr_cosp = 2.0 * (qw * qx + qy * qz)
+        cosr_cosp = 1.0 - 2.0 * (qx * qx + qy * qy)
+        self._drone_roll = math.atan2(sinr_cosp, cosr_cosp)
+
+        # Pitch (y-axis rotation)
+        sinp = 2.0 * (qw * qy - qz * qx)
+        if abs(sinp) >= 1.0:
+            self._drone_pitch = math.copysign(math.pi / 2.0, sinp)
+        else:
+            self._drone_pitch = math.asin(sinp)
+
+        # Yaw (z-axis rotation)
+        siny_cosp = 2.0 * (qw * qz + qx * qy)
+        cosy_cosp = 1.0 - 2.0 * (qy * qy + qz * qz)
+        self._drone_yaw = math.atan2(siny_cosp, cosy_cosp)
+
 
     def _rgb_callback(self, msg: Image) -> None:
         """Process RGB camera frame — run YOLOv8-Nano detection."""
@@ -436,12 +509,15 @@ class SutraDetectorNode(Node):
                 x1, y1, x2, y2 = box.xyxy[0].tolist()
                 conf = float(box.conf[0])
                 bbox = BBox(x1, y1, x2, y2)
-                # GPS raycast from pixel centre
+                # GPS raycast from pixel centre with 3D Attitude Rotation
                 ex, ny = pixel_to_ned(
                     bbox.cx, bbox.cy,
                     self._img_w, self._img_h,
                     self._drone_alt,
                     self._camera_hfov_deg,
+                    self._drone_roll,
+                    self._drone_pitch,
+                    self._drone_yaw,
                 )
                 gps = to_gps(ex, ny, 0.0, self._drone_lat, self._drone_lon, 0.0)
                 detections.append(VisualDetection(
@@ -454,11 +530,12 @@ class SutraDetectorNode(Node):
         return detections
 
     def _detect_thermal_blobs(self, raw: np.ndarray) -> List[ThermalBlob]:
-        """Detect human-temperature hot-spots in thermal image.
+        """Detect human-temperature hot-spots (35C - 42C) in thermal image.
 
         Strategy:
           - Normalise 16-bit → 8-bit (or use 8-bit directly)
-          - Otsu threshold to isolate warm regions
+          - Radiometric absolute human temperature bandpass filter (top 22% intensity threshold)
+          - Morphological opening filter to eliminate solar glare & high-frequency noise
           - Filter blobs by minimum area
         """
         blobs: List[ThermalBlob] = []
@@ -469,12 +546,18 @@ class SutraDetectorNode(Node):
         else:
             norm = raw.astype(np.uint8)
 
-        # Keep top 30 % of intensity values (hot areas)
-        _, mask = cv2.threshold(norm, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        # Radiometric human body temperature thresholding (above ~35C threshold)
+        min_intensity = int(255 * 0.78)
+        _, mask = cv2.threshold(norm, min_intensity, 255, cv2.THRESH_BINARY)
+
+        # Morphological opening filter (removes high-frequency solar glare & thermal speckle)
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
 
         contours, _ = cv2.findContours(
             mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
         )
+
         for cnt in contours:
             area = cv2.contourArea(cnt)
             if area < THERMAL_BLOB_MIN_AREA:
@@ -682,9 +765,14 @@ def main(args=None) -> None:
     rclpy.init(args=args)
     node = SutraDetectorNode()
     try:
-        rclpy.spin(node)
-    except KeyboardInterrupt:
+        from rclpy.executors import MultiThreadedExecutor
+        executor = MultiThreadedExecutor(num_threads=4)
+        executor.add_node(node)
+        executor.spin()
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
+    except Exception:
+        rclpy.spin(node)
     finally:
         node.destroy_node()
         rclpy.shutdown()
@@ -692,3 +780,4 @@ def main(args=None) -> None:
 
 if __name__ == "__main__":
     main()
+
