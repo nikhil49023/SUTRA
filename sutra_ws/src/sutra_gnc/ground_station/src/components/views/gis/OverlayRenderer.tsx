@@ -30,16 +30,16 @@ export const OverlayRenderer: React.FC<OverlayRendererProps> = ({
     const fillLayerId = 'geofence-polygons-fill';
     const lineLayerId = 'geofence-polygons-line';
     const previewSourceId = 'geofence-preview-source';
-    const previewLayerId = 'geofence-preview-layer';
+    const previewLineLayerId = 'geofence-preview-line-layer';
+    const previewFillLayerId = 'geofence-preview-fill-layer';
 
-    // Always clear vertex and drawing markers first
+    // Clear existing markers
     vertexMarkersRef.current.forEach((m) => m.remove());
     vertexMarkersRef.current = [];
 
     drawingMarkersRef.current.forEach((m) => m.remove());
     drawingMarkersRef.current = [];
 
-    // Empty GeoJSON collection for toggled-off or empty state
     const emptyGeoJSON: GeoJSON.FeatureCollection<GeoJSON.Polygon> = {
       type: 'FeatureCollection',
       features: []
@@ -52,7 +52,7 @@ export const OverlayRenderer: React.FC<OverlayRendererProps> = ({
       return;
     }
 
-    // 1. Render vertex markers for existing geofences
+    // 1. Render vertex markers and closed polygons for existing geofences
     const polygonFeatures: GeoJSON.Feature<GeoJSON.Polygon>[] = geofences.map((poly, polyIdx) => {
       const ring = poly.map(([lat, lng]) => [lng, lat] as [number, number]);
       if (ring.length > 0 && (ring[0][0] !== ring[ring.length - 1][0] || ring[0][1] !== ring[ring.length - 1][1])) {
@@ -62,7 +62,7 @@ export const OverlayRenderer: React.FC<OverlayRendererProps> = ({
       if (onUpdateGeofenceVertex) {
         poly.forEach(([lat, lng], vIdx) => {
           const el = document.createElement('div');
-          el.className = 'vertex-handle w-3.5 h-3.5 bg-rose-500 border-2 border-white rounded-full cursor-grab active:cursor-grabbing shadow-lg select-none';
+          el.className = 'vertex-handle w-3.5 h-3.5 bg-rose-500 border-2 border-white rounded-full cursor-grab active:cursor-grabbing shadow-[0_0_8px_#ff3b30] select-none';
 
           const marker = new maplibregl.Marker({ element: el, draggable: true })
             .setLngLat([lng, lat])
@@ -113,19 +113,25 @@ export const OverlayRenderer: React.FC<OverlayRendererProps> = ({
       features: polygonFeatures
     };
 
-    // Geofence drawing preview line (only if 2+ points exist)
-    const previewCoordinates = drawingPoints.length >= 2 ? drawingPoints.map(([lat, lng]) => [lng, lat]) : [];
-    const previewGeoJSON: GeoJSON.Feature<GeoJSON.LineString> = {
-      type: 'Feature',
-      properties: {},
-      geometry: {
-        type: 'LineString',
-        coordinates: previewCoordinates
-      }
+    // 3. Geofence Drawing Preview (both Line & Red Shaded Polygon Fill if >= 3 points)
+    const previewRing = drawingPoints.map(([lat, lng]) => [lng, lat] as [number, number]);
+    if (previewRing.length >= 3 && (previewRing[0][0] !== previewRing[previewRing.length - 1][0] || previewRing[0][1] !== previewRing[previewRing.length - 1][1])) {
+      previewRing.push([previewRing[0][0], previewRing[0][1]]);
+    }
+
+    const previewPolygonGeoJSON: GeoJSON.FeatureCollection<GeoJSON.Polygon> = {
+      type: 'FeatureCollection',
+      features: previewRing.length >= 4 ? [
+        {
+          type: 'Feature',
+          properties: {},
+          geometry: { type: 'Polygon', coordinates: [previewRing] }
+        }
+      ] : []
     };
 
     const updateOverlays = () => {
-      // Completed Geofences
+      // Completed Geofences (Rich Red Shaded Fill)
       if (map.getSource(sourceId)) {
         (map.getSource(sourceId) as maplibregl.GeoJSONSource).setData(geojson);
       } else {
@@ -134,26 +140,46 @@ export const OverlayRenderer: React.FC<OverlayRendererProps> = ({
           id: fillLayerId,
           type: 'fill',
           source: sourceId,
-          paint: { 'fill-color': '#ff3b30', 'fill-opacity': 0.25 }
+          paint: {
+            'fill-color': '#ff3b30',
+            'fill-opacity': 0.4
+          }
         });
         map.addLayer({
           id: lineLayerId,
           type: 'line',
           source: sourceId,
-          paint: { 'line-color': '#ff3b30', 'line-width': 2.5, 'line-dasharray': [2, 2] }
+          paint: {
+            'line-color': '#ff3b30',
+            'line-width': 3,
+            'line-dasharray': [2, 2]
+          }
         });
       }
 
-      // Drawing Preview Line
+      // Drawing Preview Red Shaded Fill & Border Line
       if (map.getSource(previewSourceId)) {
-        (map.getSource(previewSourceId) as maplibregl.GeoJSONSource).setData(previewGeoJSON);
+        (map.getSource(previewSourceId) as maplibregl.GeoJSONSource).setData(previewPolygonGeoJSON);
       } else {
-        map.addSource(previewSourceId, { type: 'geojson', data: previewGeoJSON });
+        map.addSource(previewSourceId, { type: 'geojson', data: previewPolygonGeoJSON });
         map.addLayer({
-          id: previewLayerId,
+          id: previewFillLayerId,
+          type: 'fill',
+          source: previewSourceId,
+          paint: {
+            'fill-color': '#ff3b30',
+            'fill-opacity': 0.35
+          }
+        });
+        map.addLayer({
+          id: previewLineLayerId,
           type: 'line',
           source: previewSourceId,
-          paint: { 'line-color': '#ff3b30', 'line-width': 2.5, 'line-dasharray': [3, 3] }
+          paint: {
+            'line-color': '#ff3b30',
+            'line-width': 3,
+            'line-dasharray': [3, 3]
+          }
         });
       }
     };
