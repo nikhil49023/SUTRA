@@ -12,6 +12,7 @@ torchvision>=0.15.0
 
 # Subsystem C: Tri-Modal AI Perception
 opencv-python>=4.8.0
+ultralytics>=8.0.0
 pyyaml>=6.0
 
 # ROS 2 & Gazebo Client Libraries
