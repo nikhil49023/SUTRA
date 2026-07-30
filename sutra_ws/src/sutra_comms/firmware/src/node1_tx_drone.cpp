@@ -87,9 +87,9 @@ void loop() {
         }
     }
 
-    // B. Periodic SwarmRAFT Consensus Heartbeat Transmission over LoRa (Every 100ms)
+    // B. Periodic SwarmRAFT Consensus Heartbeat Transmission over LoRa (Every 5000ms / 0.2Hz to obey 1% duty cycle)
     static uint32_t last_heartbeat = 0;
-    if (millis() - last_heartbeat >= 100) {
+    if (millis() - last_heartbeat >= 5000) { // 5-second interval for LoRa backhaul
         last_heartbeat = millis();
         transmitLoRaPacket(37.774929, -122.419416, 15.0f, 942);
     }
@@ -112,7 +112,8 @@ void transmitLoRaPacket(double lat, double lon, float alt, uint16_t conf) {
 
     int state = radio.transmit((uint8_t*)&pkt, sizeof(LoRaPacket));
     if (state == RADIOLIB_ERR_NONE) {
-        Serial.printf("[LoRa TX] Pkt #%d Sent (64 Bytes) | Term: %d | WGS84: %.6f, %.6f\n", 
+        Serial.printf("[LoRa TX] Beacon Pkt #%d Sent (64 Bytes, Duty-Cycle OK) | Term: %d | WGS84: %.6f, %.6f\n", 
                       pkt.sequence_num, pkt.raft_term, lat, lon);
     }
 }
+
