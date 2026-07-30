@@ -383,32 +383,57 @@ export const GISMap: React.FC<GISMapProps> = ({
             />
           )}
 
-          {/* DRONE MARKER (ANIMATED REAPER DRONE) */}
-          <g 
-            transform={`translate(${
-              simState.isRunning 
-                ? 140 + (simState.progressPercent / 100) * 500 
-                : 450
-            }, 260)`} 
-            className="transition-transform duration-300"
-          >
-            {/* Dynamic Orientation Radar Wings */}
-            <circle r="36" fill="none" stroke="#00f0ff" strokeWidth="0.8" opacity="0.5" strokeDasharray="3,3" />
-            <circle r="72" fill="none" stroke="#00f0ff" strokeWidth="0.5" opacity="0.2" />
+          {/* DRONE MARKER (LIVE OPERATIONAL ANIMATED QUADCOPTER) */}
+          {(() => {
+            // Map Lat/Lng bounds (34.550N to 34.470N, 45.080E to 45.160E)
+            const normX = Math.max(0, Math.min(1, (activeDrone.lng - 45.080) / 0.080));
+            const normY = Math.max(0, Math.min(1, (34.550 - activeDrone.lat) / 0.080));
+            const droneX = normX * 900;
+            const droneY = normY * 600;
+            const headingDeg = activeDrone.heading || 0;
 
-            {/* Vector Heading Arrow */}
-            <line x1="0" y1="0" x2="35" y2="-35" stroke="#00e676" strokeWidth="2.5" />
+            return (
+              <g transform={`translate(${droneX}, ${droneY})`} className="transition-all duration-75">
+                {/* GPS Accuracy Halo Circle */}
+                <circle r="36" fill="none" stroke="#00f0ff" strokeWidth="0.8" opacity="0.4" strokeDasharray="3,3" />
+                <circle r="60" fill="none" stroke="#00e676" strokeWidth="0.5" opacity="0.2" className="animate-pulse" />
 
-            {/* Drone Icon Center */}
-            <circle r="6" fill="#00f0ff" />
-            <circle r="14" fill="none" stroke="#00f0ff" strokeWidth="1.5" className="animate-ping" />
+                {/* Rotated Drone SVG Body based on Heading */}
+                <g transform={`rotate(${headingDeg})`}>
+                  {/* Vector Heading Arrow */}
+                  <line x1="0" y1="0" x2="0" y2="-40" stroke="#00e676" strokeWidth="2.5" strokeDasharray="4,2" />
+                  <polygon points="0,-45 -5,-35 5,-35" fill="#00e676" />
 
-            {/* Callsign Tag */}
-            <rect x="18" y="-25" width="115" height="22" rx="3" fill="#0b1322" stroke="#00f0ff" strokeWidth="1" />
-            <text x="24" y="-10" fill="#00f0ff" fontSize="10" fontFamily="monospace" fontWeight="bold">
-              {activeDrone.callsign}
-            </text>
-          </g>
+                  {/* Quadcopter Arms & Rotors */}
+                  <line x1="-18" y1="-18" x2="18" y2="18" stroke="#00f0ff" strokeWidth="2" />
+                  <line x1="18" y1="-18" x2="-18" y2="18" stroke="#00f0ff" strokeWidth="2" />
+
+                  <circle cx="-18" cy="-18" r="6" fill="#00f0ff33" stroke="#00f0ff" strokeWidth="1" />
+                  <circle cx="18" cy="-18" r="6" fill="#00f0ff33" stroke="#00f0ff" strokeWidth="1" />
+                  <circle cx="-18" cy="18" r="6" fill="#00f0ff33" stroke="#00f0ff" strokeWidth="1" />
+                  <circle cx="18" cy="18" r="6" fill="#00f0ff33" stroke="#00f0ff" strokeWidth="1" />
+
+                  {/* Center Fuselage */}
+                  <circle r="6" fill="#00f0ff" />
+                  <circle r="12" fill="none" stroke="#00f0ff" strokeWidth="1.5" className="animate-ping" />
+                </g>
+
+                {/* LIVE TELEMETRY OVERLAY BADGE */}
+                <g transform="translate(20, -25)">
+                  <rect x="0" y="0" width="135" height="52" rx="4" fill="#050912f0" stroke="#00f0ff" strokeWidth="1" />
+                  <text x="8" y="14" fill="#00f0ff" fontSize="9" fontFamily="monospace" fontWeight="bold">
+                    {activeDrone.callsign} • {activeDrone.status}
+                  </text>
+                  <text x="8" y="27" fill="#ffffff" fontSize="8" fontFamily="monospace">
+                    ALT: {activeDrone.altitude || 0}m AGL | SPD: {activeDrone.groundSpeed || 0} km/h
+                  </text>
+                  <text x="8" y="39" fill="#00e676" fontSize="8" fontFamily="monospace">
+                    BAT: {activeDrone.battery || 88}% | GPS: {telemetry.satellites || 21} SVs
+                  </text>
+                </g>
+              </g>
+            );
+          })()}
 
           {/* WAYPOINT MARKERS */}
           {showWaypointsLayer && waypoints.map((wp, idx) => {
