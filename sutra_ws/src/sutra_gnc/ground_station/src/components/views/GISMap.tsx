@@ -1,13 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Play,
-  Pause,
-  RotateCcw,
-  Plus,
-  Trash2,
-  Download,
-  Compass
-} from 'lucide-react';
+import { Plus } from 'lucide-react';
 import type { DroneAsset, TelemetryData, Waypoint, AIDetection } from '../../types';
 import { MissionService, type MissionEstimates } from '../../services/missionService';
 
@@ -20,7 +12,9 @@ import {
   OverlayRenderer,
   LayerController,
   MapControls,
-  type MapStyleMode
+  MissionControlConsole,
+  type MapStyleMode,
+  type UAVMissionState
 } from './gis';
 
 interface GISMapProps {
@@ -51,6 +45,9 @@ export const GISMap: React.FC<GISMapProps> = ({
   const [isLayerMenuOpen, setIsLayerMenuOpen] = useState(false);
   const [followDrone, setFollowDrone] = useState(true);
   const [is3D, setIs3D] = useState(false);
+
+  // Mission Control Console State Machine
+  const [missionState, setMissionState] = useState<UAVMissionState>('IDLE');
   const [activeWaypointIdx, setActiveWaypointIdx] = useState(0);
 
   // Geofence Polygons
@@ -62,9 +59,6 @@ export const GISMap: React.FC<GISMapProps> = ({
       [34.518, 45.122]
     ]
   ]);
-
-  // Simulation State
-  const [simState, setSimState] = useState({ isRunning: false, isPaused: false });
 
   // Mission Estimates
   const estimates: MissionEstimates = MissionService.calculateMissionEstimates(waypoints);
@@ -82,32 +76,59 @@ export const GISMap: React.FC<GISMapProps> = ({
           groundSpeed: pos.groundSpeed || 0
         });
         setActiveWaypointIdx(missionExecutionEngine.getCurrentWaypointIndex());
+        if (missionExecutionEngine.getState() === 'COMPLETED') {
+          setMissionState('COMPLETED');
+        }
       });
     });
   }, [onUpdateDronePos]);
 
-  // Simulation Control Handlers
-  const handleToggleSimulation = async () => {
-    const { missionExecutionEngine } = await import('../../engine/missionExecutionEngine');
-    const state = missionExecutionEngine.getState();
+  // Mission State Action Handlers
+  const handleArm = () => setMissionState('ARMED');
+  const handleDisarm = () => setMissionState('IDLE');
+  const handleTakeoff = () => setMissionState('TAKEOFF');
 
-    if (state === 'IDLE' || state === 'COMPLETED' || state === 'ABORTED') {
-      missionExecutionEngine.loadMission(waypoints);
-      missionExecutionEngine.start();
-      setSimState({ isRunning: true, isPaused: false });
-    } else if (state === 'RUNNING') {
-      missionExecutionEngine.pause();
-      setSimState({ isRunning: true, isPaused: true });
-    } else if (state === 'PAUSED') {
-      missionExecutionEngine.resume();
-      setSimState({ isRunning: true, isPaused: false });
-    }
+  const handleStartMission = async () => {
+    const { missionExecutionEngine } = await import('../../engine/missionExecutionEngine');
+    missionExecutionEngine.loadMission(waypoints);
+    missionExecutionEngine.start();
+    setMissionState('EXECUTING');
   };
 
-  const handleResetSimulation = async () => {
+  const handlePauseMission = async () => {
+    const { missionExecutionEngine } = await import('../../engine/missionExecutionEngine');
+    missionExecutionEngine.pause();
+    setMissionState('PAUSED');
+  };
+
+  const handleResumeMission = async () => {
+    const { missionExecutionEngine } = await import('../../engine/missionExecutionEngine');
+    missionExecutionEngine.resume();
+    setMissionState('EXECUTING');
+  };
+
+  const handleRTH = async () => {
+    const { missionExecutionEngine } = await import('../../engine/missionExecutionEngine');
+    missionExecutionEngine.pause();
+    setMissionState('RTL');
+  };
+
+  const handleLand = async () => {
+    const { missionExecutionEngine } = await import('../../engine/missionExecutionEngine');
+    missionExecutionEngine.pause();
+    setMissionState('LANDING');
+  };
+
+  const handleAbort = async () => {
+    const { missionExecutionEngine } = await import('../../engine/missionExecutionEngine');
+    missionExecutionEngine.abort();
+    setMissionState('ABORTED');
+  };
+
+  const handleReset = async () => {
     const { missionExecutionEngine } = await import('../../engine/missionExecutionEngine');
     missionExecutionEngine.stop();
-    setSimState({ isRunning: false, isPaused: false });
+    setMissionState('IDLE');
     setActiveWaypointIdx(0);
   };
 
@@ -123,28 +144,10 @@ export const GISMap: React.FC<GISMapProps> = ({
         completed: false
       };
       onUpdateWaypoints([...waypoints, newWp]);
+      if (missionState === 'ARMED') {
+        setMissionState('READY');
+      }
     }
-  };
-
-  // Save / Export Mission Plan
-  const handleSaveMission = () => {
-    const missionData = MissionService.exportMissionToMAVLinkJSON({
-      id: `MISSION-${Date.now()}`,
-      name: 'Smart Horizon Mission Plan',
-      createdTime: new Date().toISOString(),
-      cruiseSpeedKmh: 54,
-      cruiseAltitudeM: 200,
-      waypoints,
-      homeLocation: { lat: 34.5011, lng: 45.0920, alt: 0 },
-      geofencePolygons: []
-    });
-
-    const blob = new Blob([missionData], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `flight_plan_${Date.now()}.plan`;
-    a.click();
   };
 
   return (
@@ -178,7 +181,7 @@ export const GISMap: React.FC<GISMapProps> = ({
       <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10 pointer-events-auto">
         <div className="flex items-center space-x-2 bg-[#090e18]/95 border border-[#1a2336] backdrop-blur-md px-3 py-1.5 rounded shadow-lg text-xs font-mono">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span className="text-slate-300 font-semibold uppercase">LIVE MISSION EXECUTION</span>
+          <span className="text-slate-300 font-semibold uppercase">TACTICAL MISSION CONTROL</span>
           <span className="text-slate-600">|</span>
           <span className="text-cyan-400">LAT {activeDrone.lat.toFixed(4)} N</span>
           <span className="text-cyan-400">LON {activeDrone.lng.toFixed(4)} E</span>
@@ -210,67 +213,27 @@ export const GISMap: React.FC<GISMapProps> = ({
         </div>
       </div>
 
-      {/* FLOATING SIMULATION & WAYPOINT PANEL */}
-      <div className="absolute top-16 left-3 w-80 bg-[#090e18]/95 border border-[#1a2336] backdrop-blur-md p-3 rounded-lg shadow-2xl z-10 pointer-events-auto space-y-3">
-        <div className="flex items-center justify-between border-b border-[#1a2336] pb-2">
-          <div className="flex items-center space-x-2">
-            <Compass className="w-4 h-4 text-cyan-400" />
-            <span className="text-xs font-bold text-slate-200 uppercase">Flight Execution Engine</span>
-          </div>
-          <span className="text-[10px] text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20 font-bold">
-            WP {activeWaypointIdx + 1} / {waypoints.length}
-          </span>
-        </div>
-
-        {/* Simulation Controls */}
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={handleToggleSimulation}
-            className={`flex-1 flex items-center justify-center space-x-1.5 py-2 rounded text-xs font-bold transition-all ${
-              simState.isRunning && !simState.isPaused
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50'
-                : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 hover:bg-cyan-500/30'
-            }`}
-          >
-            {simState.isRunning && !simState.isPaused ? (
-              <>
-                <Pause className="w-3.5 h-3.5" />
-                <span>PAUSE</span>
-              </>
-            ) : (
-              <>
-                <Play className="w-3.5 h-3.5" />
-                <span>EXECUTE MISSION</span>
-              </>
-            )}
-          </button>
-
-          <button
-            onClick={handleResetSimulation}
-            className="p-2 bg-[#101726] border border-[#1e293b] text-slate-400 hover:text-rose-400 rounded transition-colors"
-            title="Reset Flight"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {/* Export Flight Plan */}
-        <div className="flex items-center space-x-2 pt-1 border-t border-[#1a2336]">
-          <button
-            onClick={handleSaveMission}
-            className="flex-1 flex items-center justify-center space-x-1 py-1.5 bg-[#101726] border border-[#1e293b] hover:border-cyan-500/50 text-slate-300 hover:text-cyan-400 rounded text-[10px] transition-colors"
-          >
-            <Download className="w-3 h-3 text-cyan-400" />
-            <span>EXPORT .PLAN</span>
-          </button>
-          <button
-            onClick={() => onUpdateWaypoints([])}
-            className="p-1.5 bg-[#101726] border border-[#1e293b] text-slate-400 hover:text-rose-400 rounded transition-colors"
-            title="Clear All Waypoints"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
+      {/* TACTICAL MISSION CONTROL CONSOLE */}
+      <div className="absolute top-16 left-3 z-10 pointer-events-auto">
+        <MissionControlConsole
+          missionState={missionState}
+          activeDrone={activeDrone}
+          telemetry={telemetry}
+          waypoints={waypoints}
+          activeWaypointIdx={activeWaypointIdx}
+          remainingDistanceKm={estimates.totalDistanceKm}
+          etaSeconds={estimates.estimatedFlightTimeMinutes * 60}
+          onArm={handleArm}
+          onDisarm={handleDisarm}
+          onTakeoff={handleTakeoff}
+          onStartMission={handleStartMission}
+          onPauseMission={handlePauseMission}
+          onResumeMission={handleResumeMission}
+          onRTH={handleRTH}
+          onLand={handleLand}
+          onAbort={handleAbort}
+          onReset={handleReset}
+        />
       </div>
 
       {/* MAP CONTROLS */}
