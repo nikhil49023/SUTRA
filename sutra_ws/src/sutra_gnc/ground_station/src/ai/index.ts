@@ -4,3 +4,7 @@ export * from './trackingEngine';
 export * from './modelAdapter';
 export * from './alertEngine';
 export * from './predictionEngine';
+export * from './threatAnalyzer';
+export * from './recommendationEngine';
+export * from './missionAssistant';
+export * from './missionAIEngine';
