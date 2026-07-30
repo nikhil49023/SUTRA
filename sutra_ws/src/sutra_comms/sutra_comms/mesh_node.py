@@ -8,6 +8,12 @@ Features:
 - Peer distance matrix tracking & link quality evaluation for dynamic swarm topologies.
 - Deep JSCC (Joint Source-Channel Coding) neural image encoder simulation for low SNR image transmission.
 - Packet loss estimation and latency metric monitoring (Verification Gate G2).
+
+Integration update (Vedanth, Subsystem C):
+- Subscribes to /sutra/perception/targets (JSON String from Subsystem C detector_node)
+- Each SURVIVOR/THREAT GPS target is appended to the SwarmRaft state log
+- This propagates confirmed survivor locations across the entire swarm mesh
+- Replaces hardcoded WGS84_TARGET entry with real live detections
 """
 
 import math
@@ -106,32 +112,117 @@ class SutraMeshNode(Node):
         
         # Publishers
         self.publisher_mesh_status = self.create_publisher(String, '/sutra/swarm/mesh_status', 10)
-        self.publisher_raft_state = self.create_publisher(String, '/sutra/swarm/raft_consensus', 10)
-        
-        # Swarm Peer Positions (x, y, z in meters matching high_quality_disaster_swarm_world.sdf)
+        self.publisher_raft_state  = self.create_publisher(String, '/sutra/swarm/raft_consensus', 10)
+
+        # ── Subscriber: Subsystem C survivor/threat targets ──────────────────
+        # /sutra/perception/targets is published by detector_node.py (Vedanth)
+        # Format: JSON String with {"targets": [{"id", "label", "confidence",
+        #          "lat", "lon", "alt", "modalities", "ts"}, ...]}
+        self.subscription_targets = self.create_subscription(
+            String,
+            '/sutra/perception/targets',
+            self._on_perception_targets,
+            10
+        )
+
+        # Swarm Peer Positions (x, y, z in meters)
         self.peer_positions: Dict[str, Tuple[float, float, float]] = {
             'uav_alpha': (0.0, 0.0, 15.0),
-            'uav_beta': (25.0, 30.0, 18.0),
-            'uav_gamma': (-40.0, 45.0, 14.0),
-            'uav_delta': (60.0, -20.0, 20.0),
-            'uav_epsilon': (120.0, 10.0, 16.0),
+            'uav_beta':  (15.0, 20.0, 18.0),
+            'uav_gamma': (-25.0, 30.0, 12.0),
+            'uav_delta': (40.0, -10.0, 20.0),
         }
-        
+
+        # Track targets already added to Raft log (avoid duplicates)
+        self._logged_target_ids: set = set()
+
         # Initialize Perceptron-Powered Semantic JSCC Communication Engine
         from sutra_comms.perceptron_jscc import PerceptronSemanticCommsPipeline
         self.perceptron_pipeline = PerceptronSemanticCommsPipeline()
-        
+
         # Initialize SwarmRaft Engine for uav_alpha
         self.raft_engine = SwarmRaftConsensusEngine(
             node_id='uav_alpha',
             peers=list(self.peer_positions.keys())
         )
         self.raft_engine.become_leader()  # Initial state
-        self.raft_engine.append_state_entry("WGS84_TARGET", {"lat": 37.774731, "lon": -122.419206, "confidence": 0.942})
-        
+        # NOTE: No longer hardcoded — real targets come from Subsystem C via
+        # /sutra/perception/targets subscription (_on_perception_targets below)
+
         # Timer for 1Hz status broadcast
         self.timer = self.create_timer(1.0, self.publish_mesh_status)
-        self.get_logger().info('📡 SUTRA Swarm 802.11s Mesh + Perceptron Deep JSCC & SwarmRAFT Node Initialized.')
+        self.get_logger().info(
+            '📡 SUTRA Swarm 802.11s Mesh + Perceptron Deep JSCC & SwarmRAFT Node Initialized.'
+            ' Listening on /sutra/perception/targets for live survivor GPS.'
+        )
+
+    # ── Subsystem C integration ───────────────────────────────────────────────
+
+    def _on_perception_targets(self, msg: String) -> None:
+        """Callback for /sutra/perception/targets from Subsystem C.
+
+        Each SURVIVOR or POSSIBLE_SURVIVOR target is appended to the SwarmRaft
+        state log so all swarm drones receive and act on the confirmed GPS fix.
+        THREAT targets are logged separately for tactical awareness.
+        """
+        try:
+            payload = json.loads(msg.data)
+            targets = payload.get('targets', [])
+
+            for t in targets:
+                tid   = t.get('id')
+                label = t.get('label', 'UNKNOWN')
+                lat   = t.get('lat', 0.0)
+                lon   = t.get('lon', 0.0)
+                alt   = t.get('alt', 0.0)
+                conf  = t.get('confidence', 0.0)
+                mods  = t.get('modalities', [])
+
+                # Unique key per target detection
+                key = f"{tid}_{label}_{lat:.5f}_{lon:.5f}"
+                if key in self._logged_target_ids:
+                    continue  # Already propagated
+
+                self._logged_target_ids.add(key)
+
+                entry_type = (
+                    "SURVIVOR_GPS"  if label in ('SURVIVOR', 'POSSIBLE_SURVIVOR')
+                    else "THREAT_GPS"
+                )
+
+                # Append to Raft log — propagated to all swarm peers
+                entry = self.raft_engine.append_state_entry(entry_type, {
+                    'lat':        lat,
+                    'lon':        lon,
+                    'alt':        alt,
+                    'confidence': conf,
+                    'label':      label,
+                    'modalities': mods,
+                    'source':     'subsystem_c_perception',
+                    'ts':         t.get('ts', time.time()),
+                })
+
+                # Publish Raft consensus update
+                raft_msg      = String()
+                raft_msg.data = json.dumps({
+                    'event':      'NEW_TARGET_COMMITTED',
+                    'entry':      entry,
+                    'raft_role':  self.raft_engine.role,
+                    'raft_term':  self.raft_engine.current_term,
+                    'log_length': len(self.raft_engine.log),
+                })
+                self.publisher_raft_state.publish(raft_msg)
+
+                self.get_logger().info(
+                    f'🎯 SwarmRaft committed {entry_type}: '
+                    f'lat={lat:.5f} lon={lon:.5f} conf={conf:.3f} '
+                    f'mods={mods} | log_len={len(self.raft_engine.log)}'
+                )
+
+        except (json.JSONDecodeError, KeyError) as e:
+            self.get_logger().warn(f'⚠ Failed to parse /sutra/perception/targets: {e}')
+
+    # ── Distance / RF helpers ─────────────────────────────────────────────────
 
     def calculate_distance(self, pos1: Tuple[float, float, float], pos2: Tuple[float, float, float]) -> float:
         """Calculate 3D Euclidean distance between two UAV positions in meters."""
