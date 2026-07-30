@@ -20,14 +20,18 @@ export const OverlayRenderer: React.FC<OverlayRendererProps> = ({
   onUpdateGeofenceVertex
 }) => {
   const vertexMarkersRef = useRef<maplibregl.Marker[]>([]);
+  const drawingMarkersRef = useRef<maplibregl.Marker[]>([]);
   const isDraggingVertexRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (!map || !showGeofence) return;
 
-    // Remove existing vertex markers
+    // Remove existing vertex and drawing markers
     vertexMarkersRef.current.forEach((m) => m.remove());
     vertexMarkersRef.current = [];
+
+    drawingMarkersRef.current.forEach((m) => m.remove());
+    drawingMarkersRef.current = [];
 
     const sourceId = 'geofence-polygons-source';
     const fillLayerId = 'geofence-polygons-fill';
@@ -35,13 +39,13 @@ export const OverlayRenderer: React.FC<OverlayRendererProps> = ({
     const previewSourceId = 'geofence-preview-source';
     const previewLayerId = 'geofence-preview-layer';
 
+    // 1. Render vertex markers for existing geofences
     const polygonFeatures: GeoJSON.Feature<GeoJSON.Polygon>[] = geofences.map((poly, polyIdx) => {
       const ring = poly.map(([lat, lng]) => [lng, lat] as [number, number]);
       if (ring.length > 0 && (ring[0][0] !== ring[ring.length - 1][0] || ring[0][1] !== ring[ring.length - 1][1])) {
         ring.push([ring[0][0], ring[0][1]]);
       }
 
-      // Add draggable vertex handles for geofences
       if (onUpdateGeofenceVertex) {
         poly.forEach(([lat, lng], vIdx) => {
           const el = document.createElement('div');
@@ -74,18 +78,36 @@ export const OverlayRenderer: React.FC<OverlayRendererProps> = ({
       };
     });
 
+    // 2. Render visible red dot markers for active drawing points
+    drawingPoints.forEach(([lat, lng], idx) => {
+      const el = document.createElement('div');
+      el.className = 'drawing-point-marker relative flex items-center justify-center';
+      el.innerHTML = `
+        <div class="w-4 h-4 rounded-full bg-rose-500 border-2 border-white shadow-[0_0_10px_#ff3b30] flex items-center justify-center text-[9px] font-mono text-white font-bold">
+          ${idx + 1}
+        </div>
+      `;
+
+      const marker = new maplibregl.Marker({ element: el })
+        .setLngLat([lng, lat])
+        .addTo(map);
+
+      drawingMarkersRef.current.push(marker);
+    });
+
     const geojson: GeoJSON.FeatureCollection<GeoJSON.Polygon> = {
       type: 'FeatureCollection',
       features: polygonFeatures
     };
 
-    // Geofence drawing preview line
+    // Geofence drawing preview line (only if 2+ points exist)
+    const previewCoordinates = drawingPoints.length >= 2 ? drawingPoints.map(([lat, lng]) => [lng, lat]) : [];
     const previewGeoJSON: GeoJSON.Feature<GeoJSON.LineString> = {
       type: 'Feature',
       properties: {},
       geometry: {
         type: 'LineString',
-        coordinates: drawingPoints.map(([lat, lng]) => [lng, lat])
+        coordinates: previewCoordinates
       }
     };
 
@@ -118,7 +140,7 @@ export const OverlayRenderer: React.FC<OverlayRendererProps> = ({
           id: previewLayerId,
           type: 'line',
           source: previewSourceId,
-          paint: { 'line-color': '#ff3b30', 'line-width': 2, 'line-dasharray': [3, 3] }
+          paint: { 'line-color': '#ff3b30', 'line-width': 2.5, 'line-dasharray': [3, 3] }
         });
       }
     };
@@ -132,6 +154,8 @@ export const OverlayRenderer: React.FC<OverlayRendererProps> = ({
     return () => {
       vertexMarkersRef.current.forEach((m) => m.remove());
       vertexMarkersRef.current = [];
+      drawingMarkersRef.current.forEach((m) => m.remove());
+      drawingMarkersRef.current = [];
     };
   }, [map, geofences, drawingPoints, showGeofence, onUpdateGeofenceVertex]);
 
