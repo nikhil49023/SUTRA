@@ -360,6 +360,10 @@ class SutraDetectorNode(Node):
             reliability=ReliabilityPolicy.BEST_EFFORT,
         )
 
+        # ── Mesh Comms Feedback State ──────────────────────────────────────────
+        self._mesh_snr_db: float = 25.0
+        self._low_bandwidth_mode: bool = False
+
         # ── Subscribers ───────────────────────────────────────────────────────
         self.create_subscription(
             Image,     "/camera/image_raw",   self._rgb_callback,     sensor_qos
@@ -370,6 +374,10 @@ class SutraDetectorNode(Node):
         self.create_subscription(
             LaserScan, "/radar/scan",         self._radar_callback,   sensor_qos
         )
+        # Mesh Comms Adaptive Link Feedback from Subsystem B
+        self.create_subscription(
+            String,    "/sutra/swarm/mesh_status", self._mesh_status_callback, 10
+        )
         # JSON String pose (sim mode / fallback)
         self.create_subscription(
             String,    "/sutra/gnc/pose",     self._pose_callback,    10
@@ -378,6 +386,7 @@ class SutraDetectorNode(Node):
         self.create_subscription(
             PoseStamped, "/sutra/gnc/pose_stamped", self._pose_stamped_callback, 10
         )
+
 
         # ── Publishers ────────────────────────────────────────────────────────
         self._pub_detections = self.create_publisher(
@@ -403,7 +412,24 @@ class SutraDetectorNode(Node):
     # Subscriber callbacks
     # ──────────────────────────────────────────────────────────────────────────
 
+    def _mesh_status_callback(self, msg: String) -> None:
+        """Receive live RF mesh communication link status from Subsystem B (mesh_node)."""
+        try:
+            data = json.loads(msg.data)
+            snr = float(data.get("snr_db", 25.0))
+            self._mesh_snr_db = snr
+            # Automatically toggle low bandwidth mode if SNR drops under heavy jamming/fading
+            if snr < -85.0:
+                if not self._low_bandwidth_mode:
+                    self.get_logger().warn(f"⚠️ Mesh link degraded (SNR={snr:.1f}dB) -> Switched to LOW_BANDWIDTH target mode")
+                self._low_bandwidth_mode = True
+            else:
+                self._low_bandwidth_mode = False
+        except (json.JSONDecodeError, KeyError, TypeError):
+            pass
+
     def _pose_callback(self, msg: String) -> None:
+
         """Receive drone telemetry JSON from Subsystem A (sim/fallback mode)."""
         try:
             data = json.loads(msg.data)
