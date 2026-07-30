@@ -6,16 +6,9 @@ import {
   Plus,
   Trash2,
   Download,
-  Upload,
-  Ruler,
-  Compass,
-  MapPin,
-  Clock,
-  Shield,
-  BatteryCharging
+  Compass
 } from 'lucide-react';
 import type { DroneAsset, TelemetryData, Waypoint, AIDetection } from '../../types';
-import { GISService } from '../../services/gisService';
 import { MissionService, type MissionEstimates } from '../../services/missionService';
 
 // GIS Modular Components
@@ -56,8 +49,9 @@ export const GISMap: React.FC<GISMapProps> = ({
   const [showWaypointsLayer, setShowWaypointsLayer] = useState(true);
   const [showGeofence, setShowGeofence] = useState(true);
   const [isLayerMenuOpen, setIsLayerMenuOpen] = useState(false);
-  const [followDrone, setFollowDrone] = useState(false);
+  const [followDrone, setFollowDrone] = useState(true);
   const [is3D, setIs3D] = useState(false);
+  const [activeWaypointIdx, setActiveWaypointIdx] = useState(0);
 
   // Geofence Polygons
   const [geofences] = useState<[number, number][][]>([
@@ -87,6 +81,7 @@ export const GISMap: React.FC<GISMapProps> = ({
           altitudeMSL: (pos.altitude || 0) + 350,
           groundSpeed: pos.groundSpeed || 0
         });
+        setActiveWaypointIdx(missionExecutionEngine.getCurrentWaypointIndex());
       });
     });
   }, [onUpdateDronePos]);
@@ -113,6 +108,7 @@ export const GISMap: React.FC<GISMapProps> = ({
     const { missionExecutionEngine } = await import('../../engine/missionExecutionEngine');
     missionExecutionEngine.stop();
     setSimState({ isRunning: false, isPaused: false });
+    setActiveWaypointIdx(0);
   };
 
   // Add Waypoint on Map Click
@@ -163,9 +159,16 @@ export const GISMap: React.FC<GISMapProps> = ({
       >
         {(map) => (
           <>
-            <MissionPathRenderer map={map} waypoints={waypoints} />
+            <MissionPathRenderer map={map} waypoints={waypoints} activeWaypointIdx={activeWaypointIdx} />
             <OverlayRenderer map={map} geofences={geofences} aiDetections={aiDetections} showGeofence={showGeofence} />
-            {showWaypointsLayer && <WaypointRenderer map={map} waypoints={waypoints} onUpdateWaypoints={onUpdateWaypoints} />}
+            {showWaypointsLayer && (
+              <WaypointRenderer
+                map={map}
+                waypoints={waypoints}
+                activeWaypointIdx={activeWaypointIdx}
+                onUpdateWaypoints={onUpdateWaypoints}
+              />
+            )}
             <DroneRenderer map={map} activeDrone={activeDrone} telemetry={telemetry} />
           </>
         )}
@@ -175,7 +178,7 @@ export const GISMap: React.FC<GISMapProps> = ({
       <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10 pointer-events-auto">
         <div className="flex items-center space-x-2 bg-[#090e18]/95 border border-[#1a2336] backdrop-blur-md px-3 py-1.5 rounded shadow-lg text-xs font-mono">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span className="text-slate-300 font-semibold uppercase">MAPLIBRE GIS ENGINE</span>
+          <span className="text-slate-300 font-semibold uppercase">LIVE MISSION EXECUTION</span>
           <span className="text-slate-600">|</span>
           <span className="text-cyan-400">LAT {activeDrone.lat.toFixed(4)} N</span>
           <span className="text-cyan-400">LON {activeDrone.lng.toFixed(4)} E</span>
@@ -212,10 +215,10 @@ export const GISMap: React.FC<GISMapProps> = ({
         <div className="flex items-center justify-between border-b border-[#1a2336] pb-2">
           <div className="flex items-center space-x-2">
             <Compass className="w-4 h-4 text-cyan-400" />
-            <span className="text-xs font-bold text-slate-200 uppercase">Flight Plan Engine</span>
+            <span className="text-xs font-bold text-slate-200 uppercase">Flight Execution Engine</span>
           </div>
           <span className="text-[10px] text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20 font-bold">
-            {waypoints.length} WAYPOINTS
+            WP {activeWaypointIdx + 1} / {waypoints.length}
           </span>
         </div>
 
@@ -237,7 +240,7 @@ export const GISMap: React.FC<GISMapProps> = ({
             ) : (
               <>
                 <Play className="w-3.5 h-3.5" />
-                <span>START SIMULATION</span>
+                <span>EXECUTE MISSION</span>
               </>
             )}
           </button>
