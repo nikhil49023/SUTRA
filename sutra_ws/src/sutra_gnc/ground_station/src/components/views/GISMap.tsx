@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, ShieldAlert } from 'lucide-react';
+import { Plus, ShieldAlert, Navigation } from 'lucide-react';
 import type { DroneAsset, TelemetryData, Waypoint, AIDetection } from '../../types';
 import { MissionService, type MissionEstimates } from '../../services/missionService';
 import { GISService } from '../../services/gisService';
@@ -30,7 +30,13 @@ interface GISMapProps {
   onUpdateDronePos: (pos: Partial<DroneAsset>, tel: Partial<TelemetryData>) => void;
 }
 
-export type MapInteractionMode = 'SELECT' | 'ADD_WAYPOINT' | 'DRAW_GEOFENCE';
+export type MapInteractionMode =
+  | 'PAN'
+  | 'ADD_WAYPOINT'
+  | 'EDIT_WAYPOINT'
+  | 'DRAW_GEOFENCE'
+  | 'EDIT_GEOFENCE'
+  | 'MEASURE_DISTANCE';
 
 export const GISMap: React.FC<GISMapProps> = ({
   activeDrone,
@@ -41,7 +47,7 @@ export const GISMap: React.FC<GISMapProps> = ({
   onUpdateDronePos
 }) => {
   const [mapStyle, setMapStyle] = useState<MapStyleMode>('TACTICAL_DARK');
-  const [interactionMode, setInteractionMode] = useState<MapInteractionMode>('SELECT');
+  const [interactionMode, setInteractionMode] = useState<MapInteractionMode>('PAN');
 
   // Layer & Panel Toggles
   const [showWaypointsLayer, setShowWaypointsLayer] = useState(true);
@@ -177,6 +183,7 @@ export const GISMap: React.FC<GISMapProps> = ({
       };
       onUpdateWaypoints([...waypoints, newWp]);
       if (missionState === 'ARMED') setMissionState('READY');
+      setInteractionMode('PAN'); // Automatically exit placement mode after adding 1 waypoint
     } else if (interactionMode === 'DRAW_GEOFENCE') {
       setDrawingGeofencePoints((prev) => [...prev, [lngLat.lat, lngLat.lng]]);
     }
@@ -197,9 +204,20 @@ export const GISMap: React.FC<GISMapProps> = ({
       };
       setGeofences((prev) => [...prev, newGf]);
       setDrawingGeofencePoints([]);
-      setInteractionMode('SELECT');
+      setInteractionMode('PAN');
       setSelectedGeofenceId(newGf.id);
     }
+  };
+
+  const handleUpdateGeofenceVertex = (polyIdx: number, vIdx: number, newLngLat: [number, number]) => {
+    setGeofences((prev) =>
+      prev.map((gf, idx) => {
+        if (idx !== polyIdx) return gf;
+        const newPts = [...gf.points];
+        newPts[vIdx] = newLngLat;
+        return { ...gf, points: newPts };
+      })
+    );
   };
 
   return (
@@ -218,8 +236,10 @@ export const GISMap: React.FC<GISMapProps> = ({
             <OverlayRenderer
               map={map}
               geofences={geofences.filter((g) => g.visible).map((g) => g.points)}
+              drawingPoints={drawingGeofencePoints}
               aiDetections={aiDetections}
               showGeofence={showGeofence}
+              onUpdateGeofenceVertex={interactionMode === 'EDIT_GEOFENCE' ? handleUpdateGeofenceVertex : undefined}
             />
             {showWaypointsLayer && (
               <WaypointRenderer
@@ -227,6 +247,7 @@ export const GISMap: React.FC<GISMapProps> = ({
                 waypoints={waypoints}
                 activeWaypointIdx={activeWaypointIdx}
                 onUpdateWaypoints={onUpdateWaypoints}
+                isEditable={interactionMode === 'EDIT_WAYPOINT' || interactionMode === 'PAN'}
               />
             )}
             <DroneRenderer map={map} activeDrone={activeDrone} telemetry={telemetry} />
@@ -247,6 +268,17 @@ export const GISMap: React.FC<GISMapProps> = ({
         </div>
 
         <div className="flex items-center space-x-1.5 bg-[#090e18]/95 border border-[#1a2336] backdrop-blur-md p-1 rounded shadow-lg">
+          <button
+            onClick={() => setInteractionMode('PAN')}
+            className={`p-1.5 rounded text-[10px] font-mono flex items-center space-x-1 ${
+              interactionMode === 'PAN' ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-500/50' : 'text-slate-400 hover:text-slate-200'
+            }`}
+            title="Pan & Navigate Map"
+          >
+            <Navigation className="w-3.5 h-3.5" />
+            <span>PAN</span>
+          </button>
+
           <LayerController
             mapStyle={mapStyle}
             onSelectStyle={setMapStyle}
@@ -269,7 +301,7 @@ export const GISMap: React.FC<GISMapProps> = ({
           </button>
 
           <button
-            onClick={() => setInteractionMode(interactionMode === 'ADD_WAYPOINT' ? 'SELECT' : 'ADD_WAYPOINT')}
+            onClick={() => setInteractionMode(interactionMode === 'ADD_WAYPOINT' ? 'PAN' : 'ADD_WAYPOINT')}
             className={`p-1.5 rounded text-[10px] font-mono flex items-center space-x-1 ${
               interactionMode === 'ADD_WAYPOINT' ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-500/50' : 'text-slate-400 hover:text-slate-200'
             }`}

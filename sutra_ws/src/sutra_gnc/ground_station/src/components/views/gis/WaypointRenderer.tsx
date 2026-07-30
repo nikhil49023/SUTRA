@@ -7,25 +7,28 @@ interface WaypointRendererProps {
   waypoints: Waypoint[];
   activeWaypointIdx?: number;
   onUpdateWaypoints: (waypoints: Waypoint[]) => void;
+  isEditable?: boolean;
 }
 
 export const WaypointRenderer: React.FC<WaypointRendererProps> = ({
   map,
   waypoints,
   activeWaypointIdx = 0,
-  onUpdateWaypoints
+  onUpdateWaypoints,
+  isEditable = true
 }) => {
   const markersRef = useRef<Map<number, maplibregl.Marker>>(new Map());
 
   useEffect(() => {
     if (!map) return;
 
+    // Clear old markers
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current.clear();
 
     waypoints.forEach((wp, idx) => {
       const el = document.createElement('div');
-      el.className = 'waypoint-marker cursor-pointer transition-transform hover:scale-110';
+      el.className = 'waypoint-marker cursor-grab active:cursor-grabbing transition-transform hover:scale-110 select-none';
 
       const isCompleted = wp.completed || idx < activeWaypointIdx;
       const isActive = idx === activeWaypointIdx;
@@ -43,11 +46,18 @@ export const WaypointRenderer: React.FC<WaypointRendererProps> = ({
         </div>
       `;
 
-      const marker = new maplibregl.Marker({ element: el, draggable: true })
+      const marker = new maplibregl.Marker({ element: el, draggable: isEditable })
         .setLngLat([wp.lng, wp.lat])
         .addTo(map);
 
+      // Disable map panning during marker drag to prevent conflicts
+      marker.on('dragstart', () => {
+        map.dragPan.disable();
+      });
+
+      // Update position ONLY on dragend
       marker.on('dragend', () => {
+        map.dragPan.enable();
         const lngLat = marker.getLngLat();
         const updated = waypoints.map((w) =>
           w.id === wp.id ? { ...w, lat: +lngLat.lat.toFixed(5), lng: +lngLat.lng.toFixed(5) } : w
@@ -62,7 +72,7 @@ export const WaypointRenderer: React.FC<WaypointRendererProps> = ({
       markersRef.current.forEach((marker) => marker.remove());
       markersRef.current.clear();
     };
-  }, [map, waypoints, activeWaypointIdx, onUpdateWaypoints]);
+  }, [map, waypoints, activeWaypointIdx, isEditable, onUpdateWaypoints]);
 
   return null;
 };
