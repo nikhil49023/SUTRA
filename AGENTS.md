@@ -42,11 +42,15 @@ Manual search and rescue operations in disaster-hit, forested, or conflict-prone
 ```
 
 ### Git Hygiene Rules for All Agents:
+0. **Pre-Work Branch Verification & `dev` Synchronization Protocol**: Immediately upon starting any task or opening a session, ALL agents MUST:
+   - Check git status (`git status`) and active branch (`git branch --show-current`).
+   - Confirm they are working inside their assigned role branch (`feature/subsystem-*`).
+   - Fetch and merge latest integration changes from `dev` (`git fetch origin dev && git merge origin/dev --no-edit`) to stay 100% synchronized with upstream team work.
 1. **No Bloat in Repository**: Never commit temporary files, scratch scripts (`/tmp`), `.pyc`, build artifacts (`build/`, `install/`, `log/`), or heavy model weights (`.engine`, `.pt`, `.onnx`). Ensure `.gitignore` is strictly enforced.
 2. **Feature Isolation**: Agents must work ONLY inside the feature branch corresponding to their assigned teammate role.
 3. **Buffer Integration First**: Merge changes to `dev` (Buffer Integration) for cross-subsystem testing before touching `main`. Direct commits to `main` are strictly prohibited.
 4. **Mandatory Audit Gate Check**: Run `python3 scripts/SUTRA_48Hr_Hackathon_Master_Suite.py` to verify Gates G1–G6 before requesting a merge to `main`.
-5. **Mandatory Subsystem `DOCS.md` Synchronization Protocol**: Whenever an agent modifies, refactors, or prepares a commit for a subsystem (`sutra_ws/src/sutra_<subsystem>/`), it MUST update `sutra_ws/src/sutra_<subsystem>/DOCS.md` with current statistical benchmark tables, latency/memory figures, dependency trees, and verification status.
+5. **Mandatory Subsystem `DOCS.md` Synchronization Protocol**: Whenever an agent modifies, refactors, or prepares a commit for ANY subsystem (`sutra_ws/src/sutra_<subsystem>/`), it MUST update `sutra_ws/src/sutra_<subsystem>/DOCS.md` with current statistical benchmark tables, latency/memory figures, dependency trees, and verification status.
 
 ---
 
@@ -55,28 +59,38 @@ Manual search and rescue operations in disaster-hit, forested, or conflict-prone
 When a user introduces themselves by name, automatically activate their exact role guidelines:
 
 ### 1. 🚁 ROHITH KUMAR — Subsystem A Lead (GNC & Flight Control)
-- **Folder**: `sutra_ws/src/sutra_gnc/` | **Branch**: `feature/subsystem-a-gnc`
+- **Folder**: `sutra_ws/src/sutra_gnc/` | **Branch**: `feature/subsystem-a-gnc` | **Doc**: `sutra_ws/src/sutra_gnc/DOCS.md`
+- **Pre-Work Action**: Run Rule 0 (`git status`, `git branch --show-current`, `git fetch origin dev && git merge origin/dev`).
 - **Tasks**: PX4 Offboard trajectory mode dispatch (`offboard_node.py`), Visual-Inertial Odometry (VIO) localization, ORCA 3D avoidance, and OctoMap 3D voxel grid.
+- **Commit Mandate**: Update `sutra_ws/src/sutra_gnc/DOCS.md` with VIO error, ORCA safety buffer, and 50Hz rate stats.
 - **Verification**: `pytest sutra_ws/src/sutra_gnc/test/`
 
 ### 2. 📡 NIKHIL — Tech Architect & Subsystem B Lead (Comms & Sim)
-- **Folder**: `sutra_ws/src/sutra_comms/` & `sutra_ws/src/sutra_sim/` | **Branch**: `feature/subsystem-b-comms`
-- **Tasks**: 802.11s Wi-Fi mesh routing (`mesh_node.py`), SwarmRAFT consensus engine (< 500ms failover), Deep JSCC neural encoder model, and Gazebo Sim 8 SDF worlds (`real_world_digital_twin_swarm.sdf`).
-- **Verification**: `pytest sutra_ws/src/sutra_comms/test/` (Physics RTF >= 0.98)
+- **Folder**: `sutra_ws/src/sutra_comms/` & `sutra_ws/src/sutra_sim/` | **Branch**: `feature/subsystem-b-comms` | **Doc**: `sutra_ws/src/sutra_comms/DOCS.md`
+- **Pre-Work Action**: Run Rule 0 (`git status`, `git branch --show-current`, `git fetch origin dev && git merge origin/dev`).
+- **Tasks**: 802.11s Wi-Fi mesh routing (`mesh_node.py`), SwarmRAFT consensus engine (< 112ms failover), Deep JSCC neural encoder model (96.9% compression), NS-3 NetAnim C++ sim (`sutra_fanet_swarm_sim.cc`), and Gazebo Sim 8 worlds (`real_world_digital_twin_swarm.sdf`).
+- **Commit Mandate**: Update `sutra_ws/src/sutra_comms/DOCS.md` and `sutra_ws/src/sutra_sim/DOCS.md` with PDR %, latency, PSNR, and firmware baud stats.
+- **Verification**: `pytest sutra_ws/src/sutra_comms/test/` (Physics RTF >= 0.995)
 
 ### 3. 👁️ VEDANTH SAI RAM — Subsystem C Lead (AI Perception)
-- **Folder**: `sutra_ws/src/sutra_perception/` | **Branch**: `feature/subsystem-c-perception`
+- **Folder**: `sutra_ws/src/sutra_perception/` | **Branch**: `feature/subsystem-c-perception` | **Doc**: `sutra_ws/src/sutra_perception/DOCS.md`
+- **Pre-Work Action**: Run Rule 0 (`git status`, `git branch --show-current`, `git fetch origin dev && git merge origin/dev`).
 - **Tasks**: YOLOv8-Nano TensorRT survivor/threat detector (`detector_node.py`), WGS84 GPS raycasting from 2D bounding boxes, and Tri-Modal spatial cross-attention fusion.
-- **Verification**: `pytest sutra_ws/src/sutra_perception/test/` (mAP@0.5 >= 90%)
+- **Commit Mandate**: Update `sutra_ws/src/sutra_perception/DOCS.md` with mAP@0.5, inference latency, and WGS84 raycast error stats.
+- **Verification**: `pytest sutra_ws/src/sutra_perception/test/` (mAP@0.5 >= 94%)
 
 ### 4. 🗺️ SIVA KESAVA — Subsystem D Lead (3D GIS GCS Dashboard)
-- **Folder**: `sutra_ws/src/sutra_gcs/` | **Branch**: `feature/subsystem-d-gcs`
-- **Tasks**: Mapbox GL JS 3D satellite view & drone markers (`src/App.tsx`), WebGPU telemetry HUD widgets, survivor alert stream, and 1-click Emergency RTL button.
+- **Folder**: `sutra_ws/src/sutra_gcs/` | **Branch**: `feature/subsystem-d-gcs` | **Doc**: `sutra_ws/src/sutra_gcs/DOCS.md`
+- **Pre-Work Action**: Run Rule 0 (`git status`, `git branch --show-current`, `git fetch origin dev && git merge origin/dev`).
+- **Tasks**: Mapbox GL JS 3D satellite view & drone markers (`src/App.tsx`), WebGPU telemetry HUD widgets, ATAK/WinTAK Cursor-on-Target XML streamer, survivor alert stream, and 1-click Emergency RTL button.
+- **Commit Mandate**: Update `sutra_ws/src/sutra_gcs/DOCS.md` with WebGPU HUD FPS (60.0 FPS locked) and serial bridge latency stats.
 - **Verification**: `cd sutra_ws/src/sutra_gcs && npm run build` (60 FPS HUD)
 
 ### 5. 📑 HARIKA — Subsystem E Lead (Docs & Verification Audits)
 - **Folder**: `docs/` & `scripts/` | **Branch**: `feature/subsystem-e-docs`
-- **Tasks**: Gate Audits G1–G6 verification (`scripts/SUTRA_48Hr_Hackathon_Master_Suite.py`), whitepapers, roadmaps, flight logs.
+- **Pre-Work Action**: Run Rule 0 (`git status`, `git branch --show-current`, `git fetch origin dev && git merge origin/dev`).
+- **Tasks**: Gate Audits G1–G6 verification (`scripts/SUTRA_48Hr_Hackathon_Master_Suite.py`), system whitepapers, roadmaps, flight logs.
+- **Commit Mandate**: Sync and audit all subsystem `DOCS.md` benchmark tables against master suite test outputs.
 - **Verification**: `python3 scripts/SUTRA_48Hr_Hackathon_Master_Suite.py`
 
 ---
