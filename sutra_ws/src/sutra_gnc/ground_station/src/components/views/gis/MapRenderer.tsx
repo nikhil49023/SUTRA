@@ -11,6 +11,7 @@ interface MapRendererProps {
   onMapClick?: (lngLat: { lat: number; lng: number }) => void;
   followDrone?: boolean;
   dronePos?: [number, number]; // [lng, lat]
+  cursorStyle?: string;
 }
 
 export const MapRenderer: React.FC<MapRendererProps> = ({
@@ -20,7 +21,8 @@ export const MapRenderer: React.FC<MapRendererProps> = ({
   children,
   onMapClick,
   followDrone,
-  dronePos
+  dronePos,
+  cursorStyle = 'crosshair'
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -48,6 +50,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({
 
     map.on('load', () => {
       setMapInstance(map);
+      map.getCanvas().style.cursor = cursorStyle;
     });
 
     mapRef.current = map;
@@ -59,6 +62,13 @@ export const MapRenderer: React.FC<MapRendererProps> = ({
       }
     };
   }, []);
+
+  // Update canvas cursor style dynamically (Crosshair in placement/drawing mode, Grab in Pan mode)
+  useEffect(() => {
+    if (mapRef.current) {
+      mapRef.current.getCanvas().style.cursor = cursorStyle;
+    }
+  }, [cursorStyle]);
 
   // Update style when mapStyle prop changes
   useEffect(() => {

@@ -229,6 +229,7 @@ export const GISMap: React.FC<GISMapProps> = ({
         onMapClick={handleMapClick}
         followDrone={followDrone}
         dronePos={[activeDrone.lng, activeDrone.lat]}
+        cursorStyle={interactionMode === 'ADD_WAYPOINT' || interactionMode === 'DRAW_GEOFENCE' ? 'crosshair' : 'grab'}
       >
         {(map) => (
           <>
