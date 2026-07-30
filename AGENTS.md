@@ -101,10 +101,18 @@ When a user introduces themselves by name, automatically activate their exact ro
 
 To maximize performance, accuracy, and code quality, ALL agents MUST actively utilize the following specialized tools and skills:
 
-### 1. ⚡ OpenCode Offloader (`opencode-offloader`)
-- **Usage Requirement**: MANDATORY for offloading non-reasoning, routine, or repetitive code tasks (unit test scaffolding, docstring generation, boilerplate, formatting).
-- **Tools**: `opencode_run_task`, `opencode_quick_edit`.
-- **Benefit**: Frees main agent context while using ultra-fast OpenCode models (Mimo, Nemotron, DeepSeek Flash).
+### 1. ⚡ OpenCode Offloader (`opencode-offloader`) — **DEFAULT TOOL**
+- **Usage Requirement**: **ALWAYS USE BY DEFAULT** for any non-reasoning, routine, or repetitive task. Do NOT use the main agent for tasks the offloader can handle.
+- **Task-to-Model Routing**:
+  | Task Type | Model | Use For |
+  |---|---|---|
+  | `scaffolding` | `opencode/nemotron-3-ultra-free` | Boilerplate, CRUD, folder setup, DTOs |
+  | `testing` | `opencode/mimo-v2.5-free` | pytest suites, unit tests, mock fixtures |
+  | `refactoring` | `opencode/deepseek-v4-flash-free` | Bug fixes, renames, targeted file edits |
+  | `formatting` | `opencode/ling-3.0-flash-free` | Docstrings, README updates, DOCS.md sync |
+  | `frontend` | `ollama-cloud/minimax-m2.5` | React/TSX layout, CSS, UI components |
+- **Tools**: `opencode_run_task`, `opencode_quick_edit`, `opencode_get_model_catalog`.
+- **Benefit**: 10–50x faster than main agent for routine tasks. Frees reasoning context for architecture decisions only.
 
 ### 2. 🕸️ Code Review Graph (`code-review-graph`)
 - **Usage Requirement**: MANDATORY before making architectural changes or multi-file refactors.
@@ -132,8 +140,8 @@ To maximize performance, accuracy, and code quality, ALL agents MUST actively ut
 | Gate | Target Metric | Required Threshold | Verification Tool |
 |---|---|---|---|
 | **G1** | Physics & Telemetry Sync | Real-Time Factor (RTF) ≥ 0.98 | `SUTRA_48Hr_Hackathon_Master_Suite.py` |
-| **G2** | Swarm Mesh & Raft Consensus | Latency < 12ms, Packet Loss < 2%, Failover < 500ms | `pytest sutra_ws/src/sutra_comms/test/` |
-| **G3** | Edge AI Survivor Perception | mAP@0.5 ≥ 90%, Latency < 15ms | `pytest sutra_ws/src/sutra_perception/test/` |
-| **G4** | Target Geolocation | WGS84 Error < 1.5 meters | `SUTRA_48Hr_Hackathon_Master_Suite.py` |
-| **G5** | ORCA 3D Avoidance | Safety Buffer > 2.0 meters | `pytest sutra_ws/src/sutra_gnc/test/` |
+| **G2** | Swarm Mesh & Raft Consensus | Latency < 8ms, Packet Loss < 2%, Failover < 150ms | `pytest sutra_ws/src/sutra_comms/test/` |
+| **G3** | Edge AI Survivor Perception | mAP@0.5 ≥ 94%, Latency < 10ms | `pytest sutra_ws/src/sutra_perception/test/` |
+| **G4** | Target Geolocation | WGS84 Error < 0.8 meters | `SUTRA_48Hr_Hackathon_Master_Suite.py` |
+| **G5** | ORCA 3D Avoidance | Safety Buffer > 2.8 meters | `pytest sutra_ws/src/sutra_gnc/test/` |
 | **G6** | 3D GIS Telemetry HUD | Framerate = 60 FPS | `cd sutra_ws/src/sutra_gcs && npm run build` |
