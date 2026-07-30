@@ -131,66 +131,72 @@ export const OverlayRenderer: React.FC<OverlayRendererProps> = ({
     };
 
     const updateOverlays = () => {
-      // Completed Geofences (Rich Red Shaded Fill)
-      if (map.getSource(sourceId)) {
-        (map.getSource(sourceId) as maplibregl.GeoJSONSource).setData(geojson);
-      } else {
-        map.addSource(sourceId, { type: 'geojson', data: geojson });
-        map.addLayer({
-          id: fillLayerId,
-          type: 'fill',
-          source: sourceId,
-          paint: {
-            'fill-color': '#ff3b30',
-            'fill-opacity': 0.4
-          }
-        });
-        map.addLayer({
-          id: lineLayerId,
-          type: 'line',
-          source: sourceId,
-          paint: {
-            'line-color': '#ff3b30',
-            'line-width': 3,
-            'line-dasharray': [2, 2]
-          }
-        });
-      }
+      try {
+        if (!map.getStyle()) return;
 
-      // Drawing Preview Red Shaded Fill & Border Line
-      if (map.getSource(previewSourceId)) {
-        (map.getSource(previewSourceId) as maplibregl.GeoJSONSource).setData(previewPolygonGeoJSON);
-      } else {
-        map.addSource(previewSourceId, { type: 'geojson', data: previewPolygonGeoJSON });
-        map.addLayer({
-          id: previewFillLayerId,
-          type: 'fill',
-          source: previewSourceId,
-          paint: {
-            'fill-color': '#ff3b30',
-            'fill-opacity': 0.35
-          }
-        });
-        map.addLayer({
-          id: previewLineLayerId,
-          type: 'line',
-          source: previewSourceId,
-          paint: {
-            'line-color': '#ff3b30',
-            'line-width': 3,
-            'line-dasharray': [3, 3]
-          }
-        });
+        // Completed Geofences (Rich Red Shaded Fill)
+        if (map.getSource(sourceId)) {
+          (map.getSource(sourceId) as maplibregl.GeoJSONSource).setData(geojson);
+        } else {
+          map.addSource(sourceId, { type: 'geojson', data: geojson });
+          map.addLayer({
+            id: fillLayerId,
+            type: 'fill',
+            source: sourceId,
+            paint: {
+              'fill-color': '#ff3b30',
+              'fill-opacity': 0.45
+            }
+          });
+          map.addLayer({
+            id: lineLayerId,
+            type: 'line',
+            source: sourceId,
+            paint: {
+              'line-color': '#ff3b30',
+              'line-width': 3,
+              'line-dasharray': [2, 2]
+            }
+          });
+        }
+
+        // Drawing Preview Red Shaded Fill & Border Line
+        if (map.getSource(previewSourceId)) {
+          (map.getSource(previewSourceId) as maplibregl.GeoJSONSource).setData(previewPolygonGeoJSON);
+        } else {
+          map.addSource(previewSourceId, { type: 'geojson', data: previewPolygonGeoJSON });
+          map.addLayer({
+            id: previewFillLayerId,
+            type: 'fill',
+            source: previewSourceId,
+            paint: {
+              'fill-color': '#ff3b30',
+              'fill-opacity': 0.35
+            }
+          });
+          map.addLayer({
+            id: previewLineLayerId,
+            type: 'line',
+            source: previewSourceId,
+            paint: {
+              'line-color': '#ff3b30',
+              'line-width': 3,
+              'line-dasharray': [3, 3]
+            }
+          });
+        }
+      } catch (err) {
+        console.warn('Map overlay update deferred:', err);
       }
     };
 
-    if (map.isStyleLoaded()) {
-      updateOverlays();
-    } else {
-      map.once('load', updateOverlays);
-    }
+    // Execute immediately and listen to styledata for style reloads
+    updateOverlays();
+
+    map.on('styledata', updateOverlays);
 
     return () => {
+      map.off('styledata', updateOverlays);
       vertexMarkersRef.current.forEach((m) => m.remove());
       vertexMarkersRef.current = [];
       drawingMarkersRef.current.forEach((m) => m.remove());
