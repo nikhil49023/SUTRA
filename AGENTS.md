@@ -8,7 +8,7 @@
 ## 📖 Primary Reference Documents
 Before making structural changes, consult the authoritative documentation:
 - 🎨 **Visual Tutorial & Developer Guide**: [docs/guides/SUTRA_Visual_Tutorial_Guide.pdf](file:///home/nikhil/Desktop/Project%20SUTRA/docs/guides/SUTRA_Visual_Tutorial_Guide.pdf) | [HTML Version](file:///home/nikhil/Desktop/Project%20SUTRA/docs/guides/SUTRA_Visual_Tutorial_Guide.html)
-- ⚙️ **Master Verification Suite**: [scripts/SUTRA_48Hr_Hackathon_Master_Suite.py](file:///home/nikhil/Desktop/Project%20SUTRA/scripts/SUTRA_48Hr_Hackathon_Master_Suite.py)
+- ⚙️ **Verification Suites**: `pytest sutra_ws/src/sutra_gnc/test/` | `pytest sutra_ws/src/sutra_comms/test/` | `pytest sutra_ws/src/sutra_perception/test/` | `cd sutra_ws/src/sutra_gcs && npm run build`
 - 🗺️ **Subsystem Roadmaps**: [docs/plans/SUTRA_Team_Roadmaps.md](file:///home/nikhil/Desktop/Project%20SUTRA/docs/plans/SUTRA_Team_Roadmaps.md)
 
 ---
@@ -26,7 +26,7 @@ Manual search and rescue operations in disaster-hit, forested, or conflict-prone
 2. **Subsystem B (Comms & Simulation)**: 802.11s Wi-Fi mesh routing, SwarmRAFT distributed consensus engine (< 500ms leader failover), Deep JSCC neural thermal/visual image compression under low SNR, and Gazebo Sim 8 SITL disaster digital twin.
 3. **Subsystem C (AI Edge Perception)**: YOLOv8-Nano TensorRT edge detector, Tri-Modal sensor fusion (Visual, Thermal, mmWave Radar), survivor/threat identification, and WGS84 GPS raycast target geolocation.
 4. **Subsystem D (3D GIS GCS)**: React 18 + Mapbox GL JS 3D Satellite view, WebGPU real-time telemetry HUD, survivor alert stream, and 1-click Emergency Return-to-Launch (RTL).
-5. **Subsystem E (Docs & Verification Audits)**: Automated verification gate metric audits G1–G6, system whitepapers, flight logs, and presentation scripts.
+5. **Subsystem E (Docs & Verification Audits)**: Automated unit and integration test suites, system whitepapers, flight logs, and presentation scripts.
 
 ---
 
@@ -37,7 +37,7 @@ Manual search and rescue operations in disaster-hit, forested, or conflict-prone
   feature/subsystem-a-gnc (Rohith) ──┐
   feature/subsystem-b-comms (Nikhil) ┼──► dev (Buffer Integration) ────────► main (Final Releases)
   feature/subsystem-c-perception ────┤   (Full 5-Subsystem Integration
-  feature/subsystem-d-gcs (Siva) ────┤    Suite & Gate G1-G6 Audits)
+  feature/subsystem-d-gcs (Siva) ────┤    Suites & Real Verification)
   feature/subsystem-e-docs (Harika) ─┘
 ```
 
@@ -50,7 +50,7 @@ Manual search and rescue operations in disaster-hit, forested, or conflict-prone
 1. **No Bloat in Repository**: Never commit temporary files, scratch scripts (`/tmp`), `.pyc`, build artifacts (`build/`, `install/`, `log/`), or heavy model weights (`.engine`, `.pt`, `.onnx`). Ensure `.gitignore` is strictly enforced.
 2. **Feature Isolation**: Agents must work ONLY inside the feature branch corresponding to their assigned teammate role.
 3. **Buffer Integration First**: Merge changes to `dev` (Buffer Integration) for cross-subsystem testing before touching `main`. Direct commits to `main` are strictly prohibited.
-4. **Mandatory Audit Gate Check**: Run `python3 scripts/SUTRA_48Hr_Hackathon_Master_Suite.py` to verify Gates G1–G6 before requesting a merge to `main`.
+4. **Mandatory Verification Check**: Run unit test suites (`pytest sutra_ws/src/sutra_*/test/` and `cd sutra_ws/src/sutra_gcs && npm run build`) before requesting a merge to `main`.
 5. **Mandatory Subsystem `DOCS.md` Synchronization Protocol**: Whenever an agent modifies, refactors, or prepares a commit for ANY subsystem (`sutra_ws/src/sutra_<subsystem>/`), it MUST update `sutra_ws/src/sutra_<subsystem>/DOCS.md` with current statistical benchmark tables, latency/memory figures, dependency trees, and verification status.
 
 ---
@@ -72,28 +72,28 @@ When a user introduces themselves by name, automatically activate their exact ro
 - **Pre-Work Action**: Run Rule 0 (`git status`, `git branch --show-current`, `git fetch origin dev && git merge origin/dev`).
 - **Tasks**: 802.11s Wi-Fi mesh routing (`mesh_node.py`), SwarmRAFT consensus engine (< 112ms failover), Deep JSCC neural encoder model (96.9% compression), NS-3 NetAnim C++ sim (`sutra_fanet_swarm_sim.cc`), and Gazebo Sim 8 worlds (`real_world_digital_twin_swarm.sdf`).
 - **Commit Mandate**: Update `sutra_ws/src/sutra_comms/DOCS.md` and `sutra_ws/src/sutra_sim/DOCS.md` with PDR %, latency, PSNR, and firmware baud stats.
-- **Verification**: `pytest sutra_ws/src/sutra_comms/test/` (Physics RTF >= 0.995)
+- **Verification**: `pytest sutra_ws/src/sutra_comms/test/`
 
 ### 3. 👁️ VEDANTH SAI RAM — Subsystem C Lead (AI Perception)
 - **Folder**: `sutra_ws/src/sutra_perception/` | **Branch**: `feature/subsystem-c-perception` | **Doc**: `sutra_ws/src/sutra_perception/DOCS.md`
 - **Pre-Work Action**: Run Rule 0 (`git status`, `git branch --show-current`, `git fetch origin dev && git merge origin/dev`).
 - **Tasks**: YOLOv8-Nano TensorRT survivor/threat detector (`detector_node.py`), WGS84 GPS raycasting from 2D bounding boxes, and Tri-Modal spatial cross-attention fusion.
 - **Commit Mandate**: Update `sutra_ws/src/sutra_perception/DOCS.md` with mAP@0.5, inference latency, and WGS84 raycast error stats.
-- **Verification**: `pytest sutra_ws/src/sutra_perception/test/` (mAP@0.5 >= 94%)
+- **Verification**: `pytest sutra_ws/src/sutra_perception/test/`
 
 ### 4. 🗺️ SIVA KESAVA — Subsystem D Lead (3D GIS GCS Dashboard)
 - **Folder**: `sutra_ws/src/sutra_gcs/` | **Branch**: `feature/subsystem-d-gcs` | **Doc**: `sutra_ws/src/sutra_gcs/DOCS.md`
 - **Pre-Work Action**: Run Rule 0 (`git status`, `git branch --show-current`, `git fetch origin dev && git merge origin/dev`).
 - **Tasks**: Mapbox GL JS 3D satellite view & drone markers (`src/App.tsx`), WebGPU telemetry HUD widgets, ATAK/WinTAK Cursor-on-Target XML streamer, survivor alert stream, and 1-click Emergency RTL button.
 - **Commit Mandate**: Update `sutra_ws/src/sutra_gcs/DOCS.md` with WebGPU HUD FPS (60.0 FPS locked) and serial bridge latency stats.
-- **Verification**: `cd sutra_ws/src/sutra_gcs && npm run build` (60 FPS HUD)
+- **Verification**: `cd sutra_ws/src/sutra_gcs && npm run build`
 
 ### 5. 📑 HARIKA — Subsystem E Lead (Docs & Verification Audits)
 - **Folder**: `docs/` & `scripts/` | **Branch**: `feature/subsystem-e-docs`
 - **Pre-Work Action**: Run Rule 0 (`git status`, `git branch --show-current`, `git fetch origin dev && git merge origin/dev`).
-- **Tasks**: Gate Audits G1–G6 verification (`scripts/SUTRA_48Hr_Hackathon_Master_Suite.py`), system whitepapers, roadmaps, flight logs.
-- **Commit Mandate**: Sync and audit all subsystem `DOCS.md` benchmark tables against master suite test outputs.
-- **Verification**: `python3 scripts/SUTRA_48Hr_Hackathon_Master_Suite.py`
+- **Tasks**: Gate Audits G1–G6 verification, system whitepapers, roadmaps, flight logs.
+- **Commit Mandate**: Sync and audit all subsystem `DOCS.md` benchmark tables against real test outputs.
+- **Verification**: `pytest sutra_ws/src/sutra_*/test/` and `cd sutra_ws/src/sutra_gcs && npm run build`
 
 ---
 
@@ -132,16 +132,17 @@ To maximize performance, accuracy, and code quality, ALL agents MUST actively ut
 
 ### 6. 🧪 Log-Based Diagnosis & Empirical Verification
 - **Rule**: NEVER guess failure causes. Inspect un-truncated log tracebacks using file/terminal tools before diagnosing.
-- **Verification**: NEVER declare success without executing build or test verification commands (`pytest`, `npm run build`, `colcon build`, `SUTRA_48Hr_Hackathon_Master_Suite.py`).
+- **Verification**: NEVER declare success without executing build or test verification commands (`pytest`, `npm run build`, `colcon build`).
 
 ---
 
 ## 🎯 Verification Gates G1–G6 Metric Reference
 | Gate | Target Metric | Required Threshold | Verification Tool |
 |---|---|---|---|
-| **G1** | Physics & Telemetry Sync | Real-Time Factor (RTF) ≥ 0.98 | `SUTRA_48Hr_Hackathon_Master_Suite.py` |
+| **G1** | Physics & Telemetry Sync | Real-Time Factor (RTF) ≥ 0.98 | Gazebo Sim World Stats |
 | **G2** | Swarm Mesh & Raft Consensus | Latency < 8ms, Packet Loss < 2%, Failover < 150ms | `pytest sutra_ws/src/sutra_comms/test/` |
 | **G3** | Edge AI Survivor Perception | mAP@0.5 ≥ 94%, Latency < 10ms | `pytest sutra_ws/src/sutra_perception/test/` |
-| **G4** | Target Geolocation | WGS84 Error < 0.8 meters | `SUTRA_48Hr_Hackathon_Master_Suite.py` |
+| **G4** | Target Geolocation | WGS84 Error < 0.8 meters | `pytest sutra_ws/src/sutra_perception/test/` |
 | **G5** | ORCA 3D Avoidance | Safety Buffer > 2.8 meters | `pytest sutra_ws/src/sutra_gnc/test/` |
 | **G6** | 3D GIS Telemetry HUD | Framerate = 60 FPS | `cd sutra_ws/src/sutra_gcs && npm run build` |
+
