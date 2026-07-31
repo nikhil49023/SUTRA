@@ -408,3 +408,27 @@ class TestEndToEndPipeline:
             if not already:
                 fused.append(tblob)
         assert len(fused) == 0
+
+
+    def test_pixel_to_ned_zero_altitude_failsafe(self):
+        """Zero altitude input must produce finite 0.0 NED offset without ZeroDivisionError."""
+        east_m, north_m = pixel_to_ned(320, 240, 640, 480, 0.0, 90.0)
+        assert math.isfinite(east_m)
+        assert math.isfinite(north_m)
+        assert east_m == 0.0
+        assert north_m == 0.0
+
+    def test_pixel_to_ned_extreme_fov_bounds(self):
+        """Extreme FOV angles (e.g. 170 degrees) must produce finite NED bounds."""
+        east_m, north_m = pixel_to_ned(639, 479, 640, 480, 30.0, 170.0)
+        assert math.isfinite(east_m)
+        assert math.isfinite(north_m)
+
+    def test_gps_raycast_pole_boundary_safety(self):
+        """Extreme latitude inputs near polar boundaries must not produce NaN or overflow."""
+        lat, lon, alt = to_gps(1000.0, 1000.0, 50.0)
+        assert math.isfinite(lat)
+        assert math.isfinite(lon)
+        assert -90.0 <= lat <= 90.0
+        assert -180.0 <= lon <= 180.0
+
