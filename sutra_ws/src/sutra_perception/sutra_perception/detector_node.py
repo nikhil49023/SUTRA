@@ -27,7 +27,7 @@ import json
 import math
 import time
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -39,13 +39,58 @@ from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Gracefully handle optional ROS cv_bridge (not needed in unit-test context)
+# Robust ROS Image <-> OpenCV bridge with pure-Python NumPy fallback
 # ──────────────────────────────────────────────────────────────────────────────
-try:
-    from cv_bridge import CvBridge
-    CV_BRIDGE_AVAILABLE = True
-except ImportError:
-    CV_BRIDGE_AVAILABLE = False
+class SutraCvBridge:
+    """ROS Image to OpenCV converter with pure-Python fallback for NumPy 2.x ABI resilience."""
+    def __init__(self):
+        self._native_bridge = None
+        try:
+            from cv_bridge import CvBridge
+            self._native_bridge = CvBridge()
+        except Exception:
+            self._native_bridge = None
+
+    def imgmsg_to_cv2(self, img_msg: Any, desired_encoding: str = "passthrough") -> np.ndarray:
+        if self._native_bridge is not None:
+            try:
+                return self._native_bridge.imgmsg_to_cv2(img_msg, desired_encoding=desired_encoding)
+            except Exception:
+                pass
+
+        # Pure-Python fallback for sensor_msgs/Image
+        dtype = np.uint8
+        encoding = getattr(img_msg, "encoding", "bgr8")
+        if encoding in ["mono8", "8UC1"]:
+            channels = 1
+        elif encoding in ["bgr8", "rgb8", "8UC3"]:
+            channels = 3
+        elif encoding in ["bgra8", "rgba8", "8UC4"]:
+            channels = 4
+        elif encoding in ["32FC1", "32F"]:
+            dtype = np.float32
+            channels = 1
+        elif encoding in ["16UC1", "16U"]:
+            dtype = np.uint16
+            channels = 1
+        else:
+            channels = 1
+
+        img = np.frombuffer(img_msg.data, dtype=dtype)
+        if hasattr(img_msg, "height") and hasattr(img_msg, "width") and img_msg.height > 0 and img_msg.width > 0:
+            if channels > 1:
+                img = img.reshape((img_msg.height, img_msg.width, channels))
+            else:
+                img = img.reshape((img_msg.height, img_msg.width))
+
+        if desired_encoding == "bgr8" and encoding == "rgb8":
+            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        elif desired_encoding == "rgb8" and encoding == "bgr8":
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+        return img
+
+CV_BRIDGE_AVAILABLE = True
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Gracefully handle optional ultralytics (not needed in unit-test context)
@@ -338,7 +383,7 @@ class SutraDetectorNode(Node):
         self._img_h: int = 480
 
         # ── Optional bridges / models ──────────────────────────────────────────
-        self._bridge: Optional[object] = CvBridge() if CV_BRIDGE_AVAILABLE else None
+        self._bridge: Optional[object] = SutraCvBridge()
         self._yolo:   Optional[object] = None
 
         if YOLO_AVAILABLE:

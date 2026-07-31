@@ -22,13 +22,72 @@ export const App: React.FC = () => {
     { id: 1, type: 'SURVIVOR', lat: 37.774731, lon: -122.419206, alt: 15.0, confidence: 0.942, drone: 'uav_alpha', time: '10:04:12' },
     { id: 2, type: 'POSSIBLE_SURVIVOR', lat: 37.775102, lon: -122.418850, alt: 18.2, confidence: 0.785, drone: 'uav_beta', time: '10:05:40' }
   ]);
-
   const [rtlTriggered, setRtlTriggered] = useState<boolean>(false);
+  const [wsConnected, setWsConnected] = useState<boolean>(false);
+  const [wsRef, setWsRef] = useState<WebSocket | null>(null);
+  const [swarmTelemetry, setSwarmTelemetry] = useState<any>({});
+  const [raftStatus, setRaftStatus] = useState<any>(null);
+
+  useEffect(() => {
+    let ws: WebSocket | null = null;
+    let reconnectTimer: any = null;
+
+    const connectWs = () => {
+      const host = window.location.hostname || 'localhost';
+      ws = new WebSocket(`ws://${host}:9090`);
+
+      ws.onopen = () => {
+        setWsConnected(true);
+        setWsRef(ws);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.topic === 'SWARM_TELEMETRY') {
+            if (payload.telemetry) setSwarmTelemetry(payload.telemetry);
+            if (payload.raft_status) setRaftStatus(payload.raft_status);
+            if (payload.survivors && payload.survivors.length > 0) {
+              setTargetAlerts(payload.survivors);
+            }
+          } else if (payload.topic === 'SURVIVOR_ALERT') {
+            setTargetAlerts((prev) => [payload.data, ...prev]);
+          } else if (payload.topic === 'RAFT_STATUS') {
+            setRaftStatus(payload.data);
+          } else if (payload.topic === 'RTL_DISPATCHED') {
+            setRtlTriggered(true);
+          }
+        } catch (e) {
+          console.error("Failed to parse WebSocket message:", e);
+        }
+      };
+
+      ws.onclose = () => {
+        setWsConnected(false);
+        setWsRef(null);
+        reconnectTimer = setTimeout(connectWs, 3000);
+      };
+
+      ws.onerror = () => {
+        ws?.close();
+      };
+    };
+
+    connectWs();
+
+    return () => {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      ws?.close();
+    };
+  }, []);
 
   const handleTriggerRTL = () => {
     setRtlTriggered(true);
+    if (wsRef && wsRef.readyState === WebSocket.OPEN) {
+      wsRef.send(JSON.stringify({ command: 'RTL', drone_id: 'ALL' }));
+    }
     setTimeout(() => {
-      alert("🚨 EMERGENCY RETURN-TO-LAUNCH (RTL) DISPATCHED ACROSS ALL 5 SWARM DRONES!");
+      alert("🚨 EMERGENCY RETURN-TO-LAUNCH (RTL) DISPATCHED OVER REMOTE WEBSOCKET TO ALL SWARM DRONES!");
     }, 100);
   };
 
