@@ -47,27 +47,33 @@ def train_rtx3050():
     print(f"📊 Dataset Config      : {data_cfg}")
     print("======================================================================\n")
     
-    # Initialize model with pre-trained weights transfer
-    model = YOLO("yolov8n.pt")
-    
-    # Execute RTX 3050 VRAM-Calibrated Training Run
-    results = model.train(
-        data=data_cfg if os.path.exists(data_cfg) else "VisDrone.yaml",
-        epochs=35,
-        imgsz=640,
-        batch=16 if has_gpu else 4,          # VRAM calibrated for RTX 3050
-        device=0 if has_gpu else "cpu",      # RTX 3050 CUDA device
-        amp=True,                             # FP16 Automatic Mixed Precision (saves 50% VRAM)
-        freeze=6,                             # Freeze backbone layers 0-6 to prevent catastrophic forgetting
-        lr0=0.001,                            # Low initial learning rate for gentle domain fine-tuning
-        lrf=0.01,                             # Cosine annealing learning rate decay
-        mosaic=1.0,                           # Mosaic augmentation for small target resolution
-        mixup=0.15,                           # Occlusion handling for foliage
-        degrees=15.0,                         # Drone roll/pitch tilt invariance
-        project="sutra_ws/src/sutra_perception/runs",
-        name="rtx3050_p2_sar_model",
-        exist_ok=True
-    )
+    last_ckpt = os.path.abspath("runs/detect/sutra_ws/src/sutra_perception/runs/rtx3050_p2_sar_model/weights/last.pt")
+    if os.path.exists(last_ckpt):
+        print(f"🔄 Found saved checkpoint: {last_ckpt}")
+        print("▶️ Resuming YOLO fine-tuning seamlessly from last saved epoch...")
+        model = YOLO(last_ckpt)
+        results = model.train(resume=True)
+    else:
+        model = YOLO("yolov8n.pt")
+        results = model.train(
+            data=data_target,
+            epochs=35,
+            imgsz=640,
+            batch=8 if has_gpu else 4,
+            device=0 if has_gpu else "cpu",
+            amp=True,
+            cache="ram",
+            workers=4,
+            freeze=6,
+            lr0=0.001,
+            lrf=0.01,
+            mosaic=1.0,
+            mixup=0.15,
+            degrees=15.0,
+            project="sutra_ws/src/sutra_perception/runs",
+            name="rtx3050_p2_sar_model",
+            exist_ok=True
+        )
     
     print("\n🎉 Training Complete! Exporting to Edge Formats (INT8 TFLite Micro for ESP32-S3)...")
     try:
