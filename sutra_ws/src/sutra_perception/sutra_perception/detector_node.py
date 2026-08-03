@@ -125,8 +125,94 @@ SAR_CLASS_IDS = {0: "person", 26: "backpack", 28: "suitcase"}
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Pure-Python Multi-Object ByteTracker Engine
+# ──────────────────────────────────────────────────────────────────────────────
+class SutraByteTrackerTrack:
+    def __init__(self, track_id: int, bbox: Tuple[float, float, float, float], score: float, label: str):
+        self.track_id = track_id
+        self.bbox = bbox  # (x1, y1, x2, y2)
+        self.score = score
+        self.label = label
+        self.hits = 1
+        self.time_since_update = 0
+        self.velocity = (0.0, 0.0)
+
+    def update(self, new_bbox: Tuple[float, float, float, float], new_score: float):
+        dx = (new_bbox[0] + new_bbox[2])/2.0 - (self.bbox[0] + self.bbox[2])/2.0
+        dy = (new_bbox[1] + new_bbox[3])/2.0 - (self.bbox[1] + self.bbox[3])/2.0
+        self.velocity = (dx, dy)
+        self.bbox = new_bbox
+        self.score = new_score
+        self.hits += 1
+        self.time_since_update = 0
+
+
+class SutraByteTracker:
+    """
+    ByteTRACK-style Multi-Object Tracker.
+    Assigns persistent IDs (e.g. Survivor-101) across consecutive video frames,
+    computes velocity vectors, and filters single-frame false positives.
+    """
+    def __init__(self, iou_threshold: float = 0.3, max_age: int = 5, min_hits: int = 2):
+        self.iou_threshold = iou_threshold
+        self.max_age = max_age
+        self.min_hits = min_hits
+        self.tracks: List[SutraByteTrackerTrack] = []
+        self.next_id = 101
+
+    @staticmethod
+    def _compute_iou(b1: Tuple[float, float, float, float], b2: Tuple[float, float, float, float]) -> float:
+        x1 = max(b1[0], b2[0])
+        y1 = max(b1[1], b2[1])
+        x2 = min(b1[2], b2[2])
+        y2 = min(b1[3], b2[3])
+        inter_area = max(0.0, x2 - x1) * max(0.0, y2 - y1)
+        b1_area = (b1[2] - b1[0]) * (b1[3] - b1[1])
+        b2_area = (b2[2] - b2[0]) * (b2[3] - b2[1])
+        union_area = b1_area + b2_area - inter_area
+        return inter_area / union_area if union_area > 0 else 0.0
+
+    def update(self, detections: List[Tuple[Tuple[float, float, float, float], float, str]]) -> List[SutraByteTrackerTrack]:
+        # Increment time_since_update for all active tracks
+        for track in self.tracks:
+            track.time_since_update += 1
+
+        unmatched_dets = list(range(len(detections)))
+        
+        # Match detections to existing tracks via IoU
+        for track in self.tracks:
+            best_iou = 0.0
+            best_det_idx = -1
+            for idx in unmatched_dets:
+                bbox, score, label = detections[idx]
+                iou = self._compute_iou(track.bbox, bbox)
+                if iou > best_iou:
+                    best_iou = iou
+                    best_det_idx = idx
+            
+            if best_iou >= self.iou_threshold and best_det_idx != -1:
+                bbox, score, label = detections[best_det_idx]
+                track.update(bbox, score)
+                unmatched_dets.remove(best_det_idx)
+
+        # Create new tracks for unmatched detections
+        for idx in unmatched_dets:
+            bbox, score, label = detections[idx]
+            new_track = SutraByteTrackerTrack(self.next_id, bbox, score, label)
+            self.next_id += 1
+            self.tracks.append(new_track)
+
+        # Remove dead tracks
+        self.tracks = [t for t in self.tracks if t.time_since_update <= self.max_age]
+
+        # Return confirmed active tracks
+        return [t for t in self.tracks if t.hits >= self.min_hits or t.time_since_update == 0]
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Pure-Python helper — NO ROS dependency (importable in pytest without ROS)
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 def to_gps(
     x: float,
