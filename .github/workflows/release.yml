@@ -32,7 +32,7 @@ jobs:
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
-          context: sutra_ws/src/sutra_gnc/ground_station
+          context: sutra_ws/src/sutra_gcs
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """
-Firecrawl Local arXiv Scraper Script
-Scrapes authoritative research preprints via local Firecrawl API (http://localhost:3002/v1/scrape).
+Scrape Smart Horizon International Hackathon 2026 Guidelines via Local Firecrawl
 """
 
 import requests
 import json
 import os
 
-def scrape_paper_via_firecrawl(url: str, title: str):
+def scrape_smart_horizon_via_firecrawl(url: str, title: str):
     firecrawl_endpoint = "http://localhost:3002/v1/scrape"
     print(f"🔥 Scraping {title} via Local Firecrawl ({firecrawl_endpoint})...")
     
@@ -26,7 +25,7 @@ def scrape_paper_via_firecrawl(url: str, title: str):
         
         output_file = f"/home/nikhil/Desktop/Project SUTRA/docs/plans/FIRECRAWL_SCRAPED_{title}.md"
         with open(output_file, "w", encoding="utf-8") as f:
-            f.write(f"# FIRECRAWL SCRAPED RESEARCH: {title}\n\n")
+            f.write(f"# FIRECRAWL SCRAPED SMART HORIZON HACKATHON: {title}\n\n")
             f.write(f"- **Source URL:** {url}\n")
             f.write(f"- **Scraped via:** Local Firecrawl (http://localhost:3002/v1/scrape)\n\n")
             f.write("---" + "\n\n")
@@ -39,13 +38,9 @@ def scrape_paper_via_firecrawl(url: str, title: str):
         return False
 
 if __name__ == "__main__":
-    papers = [
-        ("https://arxiv.org/abs/1911.07476", "DeepJSCC_Feedback"),
-        ("https://arxiv.org/abs/2108.05658", "Semantic_Swarms"),
-        ("https://arxiv.org/abs/2203.11482", "SwarmRaft_Consensus"),
-        ("https://arxiv.org/abs/2104.14441", "DeepJSCC_Video_Transmission"),
-        ("https://arxiv.org/abs/2303.04221", "Neural_OctoMap_3D_Voxel_Compression"),
-        ("https://arxiv.org/abs/2401.08210", "Semantic_Telemetry_Swarm_JSCC")
+    urls = [
+        ("https://devpost.com/hackathons", "Smart_Horizon_International_Hackathon_2026"),
+        ("https://hackerearth.com/challenges/hackathon/", "Smart_Horizon_Evaluation_Rubric")
     ]
-    for url, name in papers:
-        scrape_paper_via_firecrawl(url, name)
+    for url, name in urls:
+        scrape_smart_horizon_via_firecrawl(url, name)

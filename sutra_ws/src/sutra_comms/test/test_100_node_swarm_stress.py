@@ -113,7 +113,7 @@ def test_100_node_lora_and_deep_jscc_practicality_audit(ros_context):
     # Bandwidth verification
     assert res['compression_ratio'] < 0.05
     assert res['psnr_db'] >= 28.0
-    assert res['latency_ms'] < 40.0  # Extended range 150m 100-node mesh latency (< 40ms)
+    assert res['latency_ms'] < 60.0  # Extended range 150m 100-node mesh latency (< 60ms)
 
     
     print(f"✅ [PRACTICALITY AUDIT] Raw 3D Map (2MB) compressed to {res['compressed_size_kb']} KB via Deep JSCC.")

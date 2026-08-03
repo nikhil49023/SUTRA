@@ -5,6 +5,39 @@
 
 ---
 
+## 🚫 ABSOLUTE RULE — NO MOCK, SYNTHETIC, OR PROJECTED BENCHMARKS
+
+> **THIS RULE OVERRIDES ALL OTHER INSTRUCTIONS. NO EXCEPTIONS.**
+
+### ❌ STRICTLY FORBIDDEN in any benchmark, audit, evaluation, or DOCS.md update:
+- **Hardcoded / made-up numbers** — Do NOT write benchmark values that were not produced by an actual run.
+- **Mock test results** — pytest tests that only assert against fixed expected values without measuring real system behaviour do NOT count as benchmarks.
+- **Projected / estimated metrics** — Phrases like "expected ~94%", "should achieve <10ms", or "target: 60 FPS" must NEVER appear in benchmark tables.
+- **Copy-pasted spec sheet numbers** — Datasheet figures for TensorRT, PX4, or LoRa radios are NOT measured values.
+- **Silent pass tests** — Tests that always pass regardless of system state (e.g., `assert True`, fixed-input math checks presented as performance benchmarks) must be clearly labelled as unit tests, never as benchmarks.
+
+### ✅ THE ONLY ACCEPTED BENCHMARK EVIDENCE:
+1. **Live `pytest` stdout** — Captured terminal output from an actual `pytest` run with `--durations`, timing numbers, and pass/fail lines. Must include the full summary line (e.g., `27 passed in 8.25s`).
+2. **Live `npm run build` stdout** — Actual Vite/webpack terminal output with module count, bundle sizes, and build time.
+3. **Gazebo Sim World Stats** — Real RTF readings from `gazebo_get_world_stats` MCP tool or `gz topic -e -t /stats`.
+4. **YOLO inference on real images** — mAP@0.5 must come from `yolo val` run against an actual annotated dataset, not a synthetic one.
+5. **ROS 2 `ros2 topic hz`** — Real publish-rate measurements from a running node, captured via terminal.
+6. **Hardware serial logs** — Actual baud/latency figures from a connected flight controller or radio module.
+
+### 📋 MANDATORY BENCHMARK AUDIT PROTOCOL (for all agents performing evaluations):
+```
+STEP 1: Run the command. Capture full stdout/stderr.
+STEP 2: Report ONLY numbers that appear verbatim in that captured output.
+STEP 3: If a metric cannot be measured right now (hardware offline, model missing,
+         Gazebo not running), write: "❓ UNTESTED — <reason>" in the table.
+STEP 4: NEVER substitute an untestable metric with a projection or a target value.
+STEP 5: Update DOCS.md ONLY with Step 2 numbers. Mark Step 3 gaps explicitly.
+```
+
+> **Why this rule exists:** During the 2026-07-31 stress audit, it was discovered that all benchmark tables in subsystem DOCS.md files contained projected/target values, not measured ones. The live ROS node for Subsystem C crashes due to a NumPy ABI mismatch that went undetected because tests bypassed the real import path. Fake benchmarks hide real blockers.
+
+---
+
 ## 📖 Primary Reference Documents
 Before making structural changes, consult the authoritative documentation:
 - 🎨 **Visual Tutorial & Developer Guide**: [docs/guides/SUTRA_Visual_Tutorial_Guide.pdf](file:///home/nikhil/Desktop/Project%20SUTRA/docs/guides/SUTRA_Visual_Tutorial_Guide.pdf) | [HTML Version](file:///home/nikhil/Desktop/Project%20SUTRA/docs/guides/SUTRA_Visual_Tutorial_Guide.html)
@@ -133,6 +166,7 @@ To maximize performance, accuracy, and code quality, ALL agents MUST actively ut
 ### 6. 🧪 Log-Based Diagnosis & Empirical Verification
 - **Rule**: NEVER guess failure causes. Inspect un-truncated log tracebacks using file/terminal tools before diagnosing.
 - **Verification**: NEVER declare success without executing build or test verification commands (`pytest`, `npm run build`, `colcon build`).
+- **Benchmark Integrity**: See the **🚫 ABSOLUTE RULE** section at the top of this file. All benchmark numbers reported in DOCS.md, gate audits, or evaluation summaries MUST come from captured live terminal output of a real run. Mock values, projections, and spec-sheet estimates are banned unconditionally.
 
 ---
 
