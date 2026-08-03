@@ -41,17 +41,30 @@
 
 ---
 
+## 🏛️ Subsystem A Architectural Audit & Rating: 3.5 / 10 (Grade D)
+
+> **Audit Date:** August 03, 2026  
+> **Lead Architect Review:** Python GIL latencies during 50Hz setpoint dispatch, missing C++ RVO2 3D solver, missing VIO hardware interface.
+
+### ⚠️ Key Gaps & Needed Upgrades:
+1. **Port `offboard_node.py` to C++ (`rclcpp`)**: Eliminate Python GC pauses for high-frequency flight control loops.
+2. **Implement C++ RVO2 3D Library Integration**: Unblock **Gate G5 (ORCA Safety Buffer > 2.8m)**.
+3. **Connect Hardware VIO Bridge**: Bind Intel RealSense / ArduCam stereo visual-inertial odometry to PX4 `VehicleVisualOdometry`.
+
+---
+
 ## 🌳 Subsystem A Dependency Tree
 
 ```
 sutra_gnc (ROS 2 Package)
 ├── src/
 │   ├── offboard_node.py       # PX4 Offboard Mode & Waypoint Dispatcher (50Hz)
-│   ├── vio_localization.py    # Visual-Inertial Odometry EKF2 Filter
-│   ├── orca_avoidance.py      # ORCA 3D Reciprocal Collision Avoidance Solver
-│   └── octomap_generator.py   # 3D Voxel Occupancy Grid Generator (0.1m)
+│   ├── vio_localization.py    # Visual-Inertial Odometry EKF2 Filter (PENDING)
+│   ├── orca_avoidance.py      # ORCA 3D Reciprocal Collision Avoidance Solver (PENDING)
+│   └── octomap_generator.py   # 3D Voxel Occupancy Grid Generator (0.1m) (PENDING)
 └── dependencies:
     ├── MicroXRCE-DDS Agent & PX4 Autopilot v1.14
     ├── ROS 2 Jazzy (nav_msgs, geometry_msgs, sensor_msgs)
     └── OctoMap C++ / Python Bindings
 ```
+

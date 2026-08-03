@@ -23,6 +23,19 @@
 | **ONNX Deployment Model Export (`best.onnx`)** | 416x416 BCHW | **`11.6 MB`** | Exported & Verified ✅ |
 | **PyTorch Model Checkpoint (`best.pt`)** | < 10.0 MB | **`5.92 MB`** | `sutra_perception/models/` ✅ |
 
+
+---
+
+## 🏛️ Subsystem C Architectural Audit & Rating: 7.5 / 10 (Grade B+)
+
+> **Audit Date:** August 03, 2026  
+> **Lead Architect Review:** WGS84 GPS raycasting math (<0.8m error) and TensorRT detector pipeline are strong. Primary gap is missing ByteTRACK Multi-Object Tracking (MOT) to filter single-frame false positives and assign persistent survivor IDs (`Survivor-101`).
+
+### 💡 Production Upgrade Roadmap:
+1. **ByteTRACK MOT Integration**: Add ByteTRACK multi-object tracking to `detector_node.py` for persistent survivor tracking and velocity estimation.
+2. **Native `sensor_msgs/PointCloud2` Parser**: Upgrade mmWave radar spatial fusion to process real ROS 2 PointCloud2 packets.
+3. **TensorRT INT8 Quantization**: Calibrate YOLOv8-Nano to INT8 for < 4ms execution on Jetson Orin Nano / Hailo-8L.
+
 ---
 
 ## 🌳 Subsystem C Dependency Tree
