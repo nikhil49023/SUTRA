@@ -41,6 +41,34 @@ class TestVIOLocalizationFilter(unittest.TestCase):
         self.assertFalse(is_valid)
         self.assertEqual(status, VIOTrackingStatus.TRACKING_DEGRADED)
 
+    def test_tracking_status_string_mapping(self):
+        """Verify VIOTrackingStatus.to_string maps enum codes to human-readable strings."""
+        self.assertEqual(VIOTrackingStatus.to_string(VIOTrackingStatus.UNINITIALIZED), "UNINITIALIZED")
+        self.assertEqual(VIOTrackingStatus.to_string(VIOTrackingStatus.TRACKING_OK), "TRACKING_OK")
+        self.assertEqual(VIOTrackingStatus.to_string(VIOTrackingStatus.TRACKING_DEGRADED), "TRACKING_DEGRADED")
+        self.assertEqual(VIOTrackingStatus.to_string(VIOTrackingStatus.TRACKING_LOST), "TRACKING_LOST")
+
+    def test_tracking_status_state_transitions(self):
+        """Verify state transitions: OK -> DEGRADED -> LOST -> OK."""
+        pos = (1.0, 2.0, 3.0)
+        orient = (0.0, 0.0, 0.0, 1.0)
+
+        # 1. OK
+        v1, s1, _ = self.filter.process_frame(pos, orient, pos_cov=0.01, rot_cov=0.005)
+        self.assertEqual(s1, VIOTrackingStatus.TRACKING_OK)
+
+        # 2. DEGRADED (high cov)
+        v2, s2, _ = self.filter.process_frame(pos, orient, pos_cov=0.10, rot_cov=0.005)
+        self.assertEqual(s2, VIOTrackingStatus.TRACKING_DEGRADED)
+
+        # 3. LOST (NaN)
+        v3, s3, _ = self.filter.process_frame((float('nan'), 0.0, 0.0), orient, pos_cov=0.01, rot_cov=0.005)
+        self.assertEqual(s3, VIOTrackingStatus.TRACKING_LOST)
+
+        # 4. Recovery -> OK
+        v4, s4, _ = self.filter.process_frame(pos, orient, pos_cov=0.01, rot_cov=0.005)
+        self.assertEqual(s4, VIOTrackingStatus.TRACKING_OK)
+
 
 if __name__ == '__main__':
     unittest.main()

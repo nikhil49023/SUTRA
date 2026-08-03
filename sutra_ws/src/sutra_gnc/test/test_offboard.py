@@ -80,6 +80,21 @@ class TestOffboardControlNode(unittest.TestCase):
         self.assertGreater(new_lat, ORIGIN_LAT)
         self.assertLess(abs(new_lat - (ORIGIN_LAT + 0.000898)), 1e-5)
 
+    def test_vio_status_failsafe(self):
+        """Verify that VIO tracking loss triggers failsafe state flag."""
+        node = SutraOffboardControlNode.__new__(SutraOffboardControlNode)
+        node.vio_tracking_status = "TRACKING_OK"
+        node.vio_status_code = 1
+
+        # Simulate VIO tracking lost callback payload
+        payload = '{"status_code": 3, "status_name": "TRACKING_LOST", "is_valid": false}'
+        class DummyMsg:
+            data = payload
+
+        node._vio_status_callback(DummyMsg())
+        self.assertEqual(node.vio_status_code, 3)
+        self.assertEqual(node.vio_tracking_status, "TRACKING_LOST")
+
 
 if __name__ == '__main__':
     unittest.main()

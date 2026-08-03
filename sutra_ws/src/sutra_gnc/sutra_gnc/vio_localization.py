@@ -12,6 +12,7 @@ Features:
 
 import math
 import time
+import json
 from typing import Tuple, Dict, Any, Optional
 
 try:
@@ -19,6 +20,7 @@ try:
     from rclpy.node import Node
     from geometry_msgs.msg import PoseWithCovarianceStamped
     from nav_msgs.msg import Odometry
+    from std_msgs.msg import String
     HAS_RCLPY = True
 except ImportError:
     HAS_RCLPY = False
@@ -26,6 +28,7 @@ except ImportError:
         def __init__(self, *args, **kwargs): pass
     class PoseWithCovarianceStamped: pass
     class Odometry: pass
+    class String: pass
 
 
 
@@ -34,6 +37,16 @@ class VIOTrackingStatus:
     TRACKING_OK = 1
     TRACKING_DEGRADED = 2
     TRACKING_LOST = 3
+
+    @staticmethod
+    def to_string(status: int) -> str:
+        mapping = {
+            0: "UNINITIALIZED",
+            1: "TRACKING_OK",
+            2: "TRACKING_DEGRADED",
+            3: "TRACKING_LOST"
+        }
+        return mapping.get(status, "UNKNOWN")
 
 
 class VIOLocalizationFilter:
@@ -127,6 +140,13 @@ class VIOLocalizationNode(Node):
             10
         )
 
+        # VIO Tracking Status Topic Publisher
+        self.pub_vio_status = self.create_publisher(
+            String,
+            '/sutra/gnc/vio_status',
+            10
+        )
+
         self.get_logger().info(
             '👁️ SUTRA VIO Localization Node Initialized. '
             'Covariance filtering & PX4 VehicleVisualOdometry active.'
@@ -151,6 +171,19 @@ class VIOLocalizationNode(Node):
 
         is_valid, status, metrics = self.filter.process_frame(pos, orient, pos_cov, rot_cov)
 
+        # Publish VIO tracking status JSON message
+        status_msg = String()
+        status_msg.data = json.dumps({
+            "status_code": status,
+            "status_name": VIOTrackingStatus.to_string(status),
+            "is_valid": is_valid,
+            "pos_cov": round(pos_cov, 6),
+            "rot_cov": round(rot_cov, 6),
+            "valid_ratio": round(metrics.get("valid_ratio", 0.0), 4),
+            "reason": metrics.get("reason", "ok" if is_valid else "unknown")
+        })
+        self.pub_vio_status.publish(status_msg)
+
         if is_valid:
             # Publish filtered odometry for GNC stack
             self.pub_filtered_odom.publish(msg)
@@ -162,7 +195,7 @@ class VIOLocalizationNode(Node):
             self.pub_px4_vio.publish(px4_msg)
         else:
             self.get_logger().warn(
-                f'⚠️ VIO Frame Dropped [{status}]: {metrics.get("reason", "unknown")}'
+                f'⚠️ VIO Frame Dropped [{VIOTrackingStatus.to_string(status)}]: {metrics.get("reason", "unknown")}'
             )
 
 
