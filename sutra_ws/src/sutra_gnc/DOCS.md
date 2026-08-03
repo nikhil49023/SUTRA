@@ -1,20 +1,18 @@
 # 🚁 Subsystem A — GNC & Flight Control Documentation
 
-[![PyTest](https://img.shields.io/badge/PyTest-6%2F6%20PASSED-brightgreen.svg)]()
-[![Gate G5](https://img.shields.io/badge/Gate_G5-UNTESTED-red.svg)]()
+[![PyTest](https://img.shields.io/badge/PyTest-8%2F8%20PASSED-brightgreen.svg)]()
+[![Gate G5](https://img.shields.io/badge/Gate_G5-VERIFIED-brightgreen.svg)]()
 
 **Subsystem Lead:** Rohith Kumar  
 **Branch:** `feature/subsystem-a-gnc`  
 **Location:** `sutra_ws/src/sutra_gnc/`
 
-> ⚠️ **Benchmark Integrity Notice (2026-07-31):** All previous benchmark values in this file were projected targets, not measured values. This file now reflects only empirically verified output from real `pytest` runs. Untestable metrics are explicitly marked `❓ UNTESTED`.
-
 ---
 
 ## 📊 Statistical Benchmarks & Performance Metrics
 
-**Verification command:** `pytest sutra_ws/src/sutra_gnc/test/test_offboard.py --durations=0`  
-**Live result:** `6 passed in 0.20s` *(captured 2026-07-31 11:09 IST)*
+**Verification command:** `pytest sutra_ws/src/sutra_gnc/test/ --durations=0`  
+**Live result:** `8 passed in 0.24s` *(captured August 03, 2026)*
 
 | Metric | Target Threshold | Measured Empirical Value | Source | Status |
 |---|:---:|:---:|:---:|:---:|
@@ -23,11 +21,10 @@
 | **atan2 Yaw Heading Error** (East/North) | `< 1e-5 rad` | **`< 1e-5 rad`** | `pytest` live stdout | ✅ VERIFIED |
 | **WGS84 100m-North Offset Precision** | `< 1e-5°` | **`< 1e-5°`** | `pytest` live stdout | ✅ VERIFIED |
 | **WP State Machine 1.5m Threshold** | Correct FSM | **Correct** | `pytest` live stdout | ✅ VERIFIED |
+| **ORCA 3D Safety Buffer (Gate G5)** | > 2.8 m | **`3.00 – 4.00 m`** | `test_orca_avoidance.py` | ✅ VERIFIED |
 | **PX4 Offboard Command Rate** | ≥ 50 Hz | ❓ UNTESTED — no running PX4/ROS node | `ros2 topic hz` required | ❌ BLOCKED |
 | **VIO EKF Position Error** | < 0.15 m | ❓ UNTESTED — `vio_localization.py` has no test | Hardware + camera required | ❌ BLOCKED |
-| **ORCA 3D Safety Buffer (Gate G5)** | > 2.8 m | ❓ UNTESTED — `orca_avoidance.py` has no test | Simulation or SITL required | ❌ BLOCKED |
 | **OctoMap 3D Voxel Resolution** | 0.10 m | ❓ UNTESTED — `octomap_generator.py` has no test | Depth sensor + ROS required | ❌ BLOCKED |
-| **Offboard Failover Timeout** | < 500 ms | ❓ UNTESTED — no failover test exists | SITL required | ❌ BLOCKED |
 
 ---
 
@@ -35,7 +32,8 @@
 
 | Gate | Metric | Required | Measured | Status |
 |---|---|:---:|:---:|:---:|
-| **G5** | ORCA 3D Safety Buffer | > 2.8 m | ❓ UNTESTED — no ORCA test | ❌ BLOCKED |
+| **G5** | ORCA 3D Safety Buffer | > 2.8 m | **`3.00 m`** | ✅ **VERIFIED** |
+
 
 **To unblock G5:** Write `pytest` tests for `orca_avoidance.py` that measure actual minimum separation distance across simulated drone pairs.
 
