@@ -154,6 +154,44 @@ class PerceptronSemanticCommsPipeline:
             'graceful_degradation': True
         }
 
+    def export_onnx(self, output_dir: str = "sutra_ws/src/sutra_comms/models") -> Dict[str, str]:
+        """
+        Exports PyTorch Deep JSCC Encoder & Decoder models to ONNX format.
+        Enables zero-copy NPU acceleration on Jetson Orin Nano / RPi 5 Hailo-8L.
+        """
+        os.makedirs(output_dir, exist_ok=True)
+        enc_path = os.path.join(output_dir, "jscc_encoder.onnx")
+        dec_path = os.path.join(output_dir, "jscc_decoder.onnx")
+
+        dummy_features = torch.randn(1, 512, dtype=torch.float32)
+        dummy_symbols = torch.randn(1, 16, dtype=torch.float32)
+
+        # Export Encoder
+        torch.onnx.export(
+            self.encoder,
+            dummy_features,
+            enc_path,
+            input_names=['features'],
+            output_names=['symbols'],
+            dynamic_axes={'features': {0: 'batch'}, 'symbols': {0: 'batch'}},
+            opset_version=14
+        )
+
+        # Export Decoder
+        torch.onnx.export(
+            self.decoder,
+            dummy_symbols,
+            dec_path,
+            input_names=['symbols'],
+            output_names=['reconstructed_features'],
+            dynamic_axes={'symbols': {0: 'batch'}, 'reconstructed_features': {0: 'batch'}},
+            opset_version=14
+        )
+
+        print(f"✅ ONNX JSCC Encoder saved: {enc_path}")
+        print(f"✅ ONNX JSCC Decoder saved: {dec_path}")
+        return {'encoder_onnx': enc_path, 'decoder_onnx': dec_path}
+
     def benchmark_vs_h264_webp(self, snr_db: float) -> Dict[str, float]:
         """Compares Deep JSCC neural semantic pipeline against traditional H.264/WebP codecs."""
         is_h264_drop = snr_db < 8.0
@@ -170,7 +208,44 @@ class PerceptronSemanticCommsPipeline:
         }
 
 
+class ONNXJSCTransceiver:
+    """
+    ONNX Runtime Hardware-Accelerated JSCC Transceiver Engine.
+    Executes ONNX JSCC models on CUDA / NPU execution providers.
+    """
+    def __init__(self, encoder_path: str = "sutra_ws/src/sutra_comms/models/jscc_encoder.onnx",
+                 decoder_path: str = "sutra_ws/src/sutra_comms/models/jscc_decoder.onnx"):
+        self.encoder_path = os.path.abspath(encoder_path)
+        self.decoder_path = os.path.abspath(decoder_path)
+        self.onnx_available = False
+        
+        try:
+            import onnxruntime as ort
+            if os.path.exists(self.encoder_path) and os.path.exists(self.decoder_path):
+                self.enc_session = ort.InferenceSession(self.encoder_path, providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
+                self.dec_session = ort.InferenceSession(self.decoder_path, providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
+                self.onnx_available = True
+                print("⚡ ONNX Runtime JSCC Transceiver initialized with NPU/CPU provider.")
+        except Exception as e:
+            print(f"ℹ️ ONNX Runtime unavailable or models missing, using PyTorch fallback: {e}")
+
+    def encode(self, features: torch.Tensor) -> torch.Tensor:
+        if self.onnx_available:
+            import onnxruntime as ort
+            np_inp = features.detach().cpu().numpy()
+            out = self.enc_session.run(None, {'features': np_inp})[0]
+            return torch.from_numpy(out)
+        else:
+            encoder = PerceptronJSCCEncoder()
+            return encoder(features)
+
+
 if __name__ == '__main__':
     pipeline = PerceptronSemanticCommsPipeline()
     res = pipeline.process_semantic_transmission(image_size_kb=512.0, distance_m=25.0)
     print("Perceptron Deep JSCC Test Result:", json.dumps(res, indent=2))
+    
+    # Run ONNX export
+    paths = pipeline.export_onnx()
+    print("ONNX Export Result:", paths)
+

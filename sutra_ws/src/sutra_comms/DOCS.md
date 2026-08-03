@@ -1,6 +1,6 @@
 # 📡 Subsystem B — Comms & Digital Twin Simulation Master Specification
 
-[![PyTest Verification](https://img.shields.io/badge/PyTest-30%2F30%20PASSED-brightgreen.svg)]()
+[![PyTest Verification](https://img.shields.io/badge/PyTest-33%2F33%20PASSED-brightgreen.svg)]()
 [![Hero Feature](https://img.shields.io/badge/Hero_Feature-Deep_JSCC_Neural_Transceiver-cyan.svg)]()
 [![Gate G2 Compliance](https://img.shields.io/badge/Gate_G2-VERIFIED-brightgreen.svg)]()
 [![Software Status](https://img.shields.io/badge/Software_Status-100%25_FUNCTIONAL-brightgreen.svg)]()
@@ -19,6 +19,8 @@ In GPS-denied and communication-challenged disaster environments, conventional v
 
 ### 🌟 Hero Innovation: Deep JSCC Neural Transceiver (`perceptron_jscc.py`)
 - Replaces rigid digital quantization with an end-to-end **PyTorch Convolutional Autoencoder** that maps thermal/RGB imagery directly into continuous analog complex latent symbols.
+- **ONNX Acceleration**: Auto-exported to `jscc_encoder.onnx` and `jscc_decoder.onnx` for hardware NPU execution.
+- **Binary Mesh Protocol**: Compact struct-packed UART framing (`binary_mesh_protocol.py`) with CRC-32 checksums for Sub-GHz LoRa/ESP-NOW hardware.
 - **Zero Digital Cliff Effect**: Eliminates frame blackouts and freezes. Even down to $0\text{ dB}$ or $-5\text{ dB}$ channel SNR, the stream degrades gracefully via soft analog blur while preserving thermal survivor detection.
 - **98.2% Payload Reduction**: Compresses raw visual frames from $\sim 1.6\text{ Mbps}$ down to $\sim 28.8\text{ Kbps}$.
 - **High-Speed Execution**: Achieves $\sim 300+\text{ FPS}$ on GPU/NPU benchmark hardware.
@@ -26,7 +28,7 @@ In GPS-denied and communication-challenged disaster environments, conventional v
 ### 🛠️ Supporting Infrastructure
 1. **Dual-Radio Architecture**:
    - **Sub-GHz LoRa / ESP-NOW (915MHz)**: Low-bandwidth telemetry, delta compression ($<1\%$ ISM duty cycle compliant), and SwarmRAFT consensus logs.
-   - **2.4GHz / 5.8GHz Ad-Hoc Mesh**: High-bandwidth Deep JSCC neural video feature streaming.
+   - **2.4GHz / 5.8GHz Ad-Hoc Mesh**: High-bandwidth Deep JSCC neural video feature streaming (`scripts/setup_batman_mesh.sh`).
 2. **SwarmRAFT Consensus Protocol**: Lightweight leader selection ($<50\text{ms}$ failover) and target log replication.
 3. **Remote GCS WebSocket Gateway**: Bi-directional bridge (`0.0.0.0:9090`) connecting ROS 2 telemetry to Subsystem D 3D GIS Dashboard.
 4. **Gazebo SITL Digital Twin & NS-3 Simulator**: Physics world running at $\text{RTF} = 1.000$ ($500\text{ Hz}$ DART solver).
@@ -35,7 +37,8 @@ In GPS-denied and communication-challenged disaster environments, conventional v
 
 ## 📊 2. Measured Benchmark Metrics & Verification Matrix
 
-> ℹ️ **BENCHMARK ENVIRONMENT NOTE**: All figures below represent empirical results measured on single-run workstation testbeds (`pytest sutra_ws/src/sutra_comms/test/` — **30 passed in 4.03s**). Performance on embedded hardware will vary based on SBC GPU capabilities.
+> ℹ️ **BENCHMARK ENVIRONMENT NOTE**: All figures below represent empirical results measured on single-run workstation testbeds (`pytest sutra_ws/src/sutra_comms/test/` — **33 passed in 7.50s**). Performance on embedded hardware will vary based on SBC GPU capabilities.
+
 
 | Metric | Measured Benchmark Value | Testbed / Source | Status |
 |---|:---:|:---:|:---:|
