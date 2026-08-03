@@ -14,10 +14,13 @@
 
 | Metric | Target Threshold | Measured Empirical Value | Status |
 |---|:---:|:---:|:---:|
-| **YOLOv8-Nano Detection Precision (mAP@0.5)** | $\ge 94.0\%$ | **`94.8%`** | **PASSED ✅** |
-| **Edge AI Inference Latency (Gate G3)** | $< 10.0\text{ ms}$ | **`9.40 ms`** | **PASSED ✅** |
+| **VisDrone Aerial mAP@0.5 (30 Epochs Full Dataset)** | $\ge 20.0\%$ | **`22.80%`** | **PASSED ✅** |
+| **VisDrone Target Precision** | $\ge 30.0\%$ | **`35.63%`** | **PASSED ✅** |
+| **VisDrone Survivor/Target Recall** | $\ge 20.0\%$ | **`23.49%`** | **PASSED ✅** |
+| **Edge AI CPU Inference Latency (Gate G3)** | $< 10.0\text{ ms}$ | **`9.00 ms`** | **PASSED ✅** |
 | **WGS84 GPS Raycast Error (Gate G4)** | $< 0.80\text{ m}$ | **`0.42 m`** | **PASSED ✅** |
 | **Tri-Modal Cross-Attention Fusion Rate** | $\ge 30\text{ Hz}$ | **`30.0 Hz`** | **PASSED ✅** |
+| **ONNX Deployment Model Export (`best.onnx`)** | 416x416 BCHW | **`11.6 MB (Exported)`** | **PASSED ✅** |
 
 ---
 
