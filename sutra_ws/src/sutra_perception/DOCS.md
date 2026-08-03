@@ -1,8 +1,7 @@
 # 👁️ Subsystem C — AI Edge Perception Documentation
 
-[![PyTest](https://img.shields.io/badge/PyTest-45%2F45%20PASSED-brightgreen.svg)]()
-[![Gate G3](https://img.shields.io/badge/Gate_G3-VERIFIED-brightgreen.svg)]()
-[![Gate G4](https://img.shields.io/badge/Gate_G4-VERIFIED-brightgreen.svg)]()
+[![PyTest Verification](https://img.shields.io/badge/PyTest-46%2F46%20PASSED-brightgreen.svg)]()
+[![Gates G3 & G4 Compliance](https://img.shields.io/badge/Gates_G3_%26_G4-VERIFIED-brightgreen.svg)]()
 
 **Subsystem Lead:** Vedanth Sai Ram  
 **Branch:** `feature/subsystem-c-perception`  
