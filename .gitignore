@@ -90,3 +90,12 @@ runs/
 *.weights
 *.bin
 yolov8*.pt
+
+# Dataset directory — too large for git
+/data/
+*.pt
+*.onnx
+*.engine
+*.weights
+*.h5
+kaggle/

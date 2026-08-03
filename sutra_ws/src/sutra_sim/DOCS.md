@@ -3,6 +3,7 @@
 [![Physics Solver](https://img.shields.io/badge/Physics_Solver-500Hz-brightgreen.svg)]()
 [![Gate G1 Metric](https://img.shields.io/badge/Gate_G1-VERIFIED-brightgreen.svg)]()
 [![Real-Time Factor](https://img.shields.io/badge/Real--Time_Factor-1.000-green.svg)]()
+[![Dual Launch Switch](https://img.shields.io/badge/Dual_Launch_Switch-sim_mode-brightgreen.svg)]()
 
 > **Subsystem Lead:** Nikhil (Tech Architect & Subsystem B Lead ⚡) & Harika  
 > **Repository Location:** `sutra_ws/src/sutra_sim/`  
@@ -41,7 +42,19 @@ Subsystem Sim provides the high-fidelity **Disaster Digital Twin Simulation Envi
 
 ---
 
-## 🌲 3. Directory Structure
+## 🚀 3. Dual-Mode Launch Commands
+
+```bash
+# Option A (1 Physical F450 Drone + Gazebo SITL Swarm Digital Twin - $269 / ₹22,450):
+ros2 launch sutra_sim sutra_master_swarm_integration.launch.py sim_mode:=true
+
+# Option B (3 Physical Micro ESP32-S3 Hardware Drones - $145 / ₹12,000):
+ros2 launch sutra_sim sutra_master_swarm_integration.launch.py sim_mode:=false
+```
+
+---
+
+## 🌲 4. Directory Structure
 
 ```
 sutra_ws/src/sutra_sim/
@@ -54,23 +67,7 @@ sutra_ws/src/sutra_sim/
 │   ├── uav_alpha_lead.sdf                # Swarm Drone Lead Model with Camera/IMU Rigs
 │   └── uav_beta_relay.sdf                # Swarm Drone Relay Model
 ├── launch/
-│   └── sim_swarm.launch.py               # ROS 2 Launch File for Gazebo SITL Swarm
+│   └── sutra_master_swarm_integration.launch.py # ROS 2 Master Dual-Mode Launch File
 ├── CMakeLists.txt
 └── package.xml
-```
-
----
-
-## 🚀 4. Execution & Launch Instructions
-
-### Launch SITL Digital Twin Swarm in Gazebo Sim 8:
-```bash
-ros2 launch sutra_sim sim_swarm.launch.py
-```
-
-### Compile & Run NS-3 FANET Swarm C++ Simulator:
-```bash
-cd sutra_ws/src/sutra_sim/ns3
-g++ -O3 sutra_fanet_swarm_sim.cc -o sutra_fanet_swarm_sim
-./sutra_fanet_swarm_sim
 ```

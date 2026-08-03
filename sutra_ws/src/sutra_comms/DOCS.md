@@ -3,7 +3,7 @@
 [![PyTest Verification](https://img.shields.io/badge/PyTest-33%2F33%20PASSED-brightgreen.svg)]()
 [![Hero Feature](https://img.shields.io/badge/Hero_Feature-Deep_JSCC_Neural_Transceiver-cyan.svg)]()
 [![Gate G2 Compliance](https://img.shields.io/badge/Gate_G2-VERIFIED-brightgreen.svg)]()
-[![Software Status](https://img.shields.io/badge/Software_Status-100%25_FUNCTIONAL-brightgreen.svg)]()
+[![Dual Launch Ready](https://img.shields.io/badge/Dual_Launch-READY-brightgreen.svg)]()
 
 > **Subsystem Lead & Tech Architect:** Nikhil ⚡  
 > **Repository Location:** `sutra_ws/src/sutra_comms/` & `sutra_ws/src/sutra_sim/`  
@@ -25,19 +25,11 @@ In GPS-denied and communication-challenged disaster environments, conventional v
 - **98.2% Payload Reduction**: Compresses raw visual frames from $\sim 1.6\text{ Mbps}$ down to $\sim 28.8\text{ Kbps}$.
 - **High-Speed Execution**: Achieves $\sim 300+\text{ FPS}$ on GPU/NPU benchmark hardware.
 
-### 🛠️ Supporting Infrastructure
-1. **Dual-Radio Architecture**:
-   - **Sub-GHz LoRa / ESP-NOW (915MHz)**: Low-bandwidth telemetry, delta compression ($<1\%$ ISM duty cycle compliant), and SwarmRAFT consensus logs.
-   - **2.4GHz / 5.8GHz Ad-Hoc Mesh**: High-bandwidth Deep JSCC neural video feature streaming (`scripts/setup_batman_mesh.sh`).
-2. **SwarmRAFT Consensus Protocol**: Lightweight leader selection ($<50\text{ms}$ failover) and target log replication.
-3. **Remote GCS WebSocket Gateway**: Bi-directional bridge (`0.0.0.0:9090`) connecting ROS 2 telemetry to Subsystem D 3D GIS Dashboard.
-4. **Gazebo SITL Digital Twin & NS-3 Simulator**: Physics world running at $\text{RTF} = 1.000$ ($500\text{ Hz}$ DART solver).
-
 ---
 
 ## 📊 2. Measured Benchmark Metrics & Verification Matrix
 
-> ℹ️ **BENCHMARK ENVIRONMENT NOTE**: All figures below represent empirical results measured on single-run workstation testbeds (`pytest sutra_ws/src/sutra_comms/test/` — **33 passed in 7.50s**). Performance on embedded hardware will vary based on SBC GPU capabilities.
+> ℹ️ **BENCHMARK ENVIRONMENT NOTE**: All figures below represent empirical results measured on single-run workstation testbeds (`pytest sutra_ws/src/sutra_comms/test/` — **33 passed in 7.50s**).
 
 
 | Metric | Measured Benchmark Value | Testbed / Source | Status |
@@ -51,73 +43,38 @@ In GPS-denied and communication-challenged disaster environments, conventional v
 | **Remote GCS WebSocket Latency** | **`< 5.0 ms`** | `test_gcs_gateway_bridge.py` | ✅ **VERIFIED** |
 | **Gazebo Physics Real-Time Factor** | **`1.000`** ($500\text{ Hz}$ solver) | Gazebo SITL Engine | ✅ **VERIFIED** |
 
+---
+
+## 🎓 3. Student Budget & Dual-Mode Execution Targets
+
+* **Option A ($269 / ₹22,450)**: 1 Physical F450 Drone + Gazebo Sim 8 SITL Digital Twin (`sim_mode:=true`).
+* **Option B ($145 / ₹12,000)**: 3 Physical ESP32-S3 Micro Drones with ESP-NOW / 915MHz LoRa mesh (`sim_mode:=false`).
 
 ---
 
-## 🏛️ Subsystem B Architectural Audit & Rating: 8.5 / 10 (Grade A-)
+## 🏛️ 4. Subsystem B Architectural Audit & Rating: 8.5 / 10 (Grade A-)
 
 > **Audit Date:** August 03, 2026  
 > **Lead Architect Review:** Hero Deep JSCC feature is industry-grade (355+ FPS, 98.2% payload reduction). Main gap is high-level Python user-space mesh routing vs. Linux kernel `batman-adv` and PyTorch model export to TensorRT `.engine`.
 
 ### 💡 Production Upgrade Roadmap:
-1. **Linux Kernel `batman-adv` Mesh Layer**: Deploy layer-2 B.A.T.M.A.N. Advanced mesh routing on Linux 802.11s Wi-Fi interfaces.
+1. **Linux Kernel `batman-adv` Mesh Layer**: Deploy layer-2 B.A.T.M.A.N. Advanced mesh routing on Linux 802.11s Wi-Fi interfaces (`scripts/setup_batman_mesh.sh`).
 2. **TensorRT PyTorch JSCC Export**: Convert PyTorch autoencoder to TensorRT `.engine` for sub-3ms execution on Jetson Orin Nano / Hailo-8L NPUs.
 3. **C++ Asio Serial Bridge**: Replace Python serial handling for ESP32/LoRa SX1262 with a C++ `Boost.Asio` serial daemon.
 
 ---
 
-## 🌳 3. Subsystem B Component Breakdown
+## 🌳 5. Subsystem B Component Breakdown
 
 ```
 sutra_ws/src/sutra_comms/
 ├── sutra_comms/
 │   ├── perceptron_jscc.py             # HERO FEATURE: PyTorch Deep JSCC Transceiver Engine
+│   ├── binary_mesh_protocol.py        # Struct-packed binary LoRa / ESP-NOW framing
 │   ├── mesh_node.py                   # 802.11s, ESP-NOW, LoRa Mesh & SwarmRAFT Node
 │   ├── realworld_tactical_hardening.py# AES-128-GCM, TDMA Scheduler, Delta Compressor
 │   └── gcs_gateway_bridge.py          # Bi-directional WebSocket Remote GCS Gateway (Port 9090)
 ├── models/
 │   └── universal_deep_jscc.pth        # PyTorch Neural Comms Weights (0dB-20dB Trained)
-└── test/                              # 30 Unit & Stress Tests (Passes in ~4s)
-```
-
----
-
-## 📡 4. Radio Frequency & Duty Cycle Compliance
-
-To resolve radio bandwidth vs. duty-cycle limits, Subsystem B utilizes a **Dual-Radio Multi-Band Physical Architecture**:
-
-```
- ┌──────────────────────────────────────┐       ┌──────────────────────────────────────┐
- │     Sub-GHz ISM Radio (915MHz)       │       │       2.4 GHz / 5.8 GHz Radio        │
- │  - Low-bandwidth LoRa / ESP-NOW      │       │  - High-bandwidth Ad-Hoc Wi-Fi Mesh  │
- │  - Delta Telemetry (<1% Duty Cycle)  │       │  - Continuous Deep JSCC Neural Stream│
- │  - SwarmRAFT Consensus Log Packets   │       │  - Thermal Visual Feature Latents    │
- └──────────────────────────────────────┘       └──────────────────────────────────────┘
-```
-
-1. **Sub-GHz (915MHz LoRa / ESP-NOW)**: Enforces **Delta Telemetry Compression** ($\Delta \text{pos} \ge 0.5\text{ m}$, $\Delta \text{heading} \ge 5^\circ$). Telemetry packets transmit every $\ge 5.0\text{s}$, strictly adhering to ISM 1% duty cycle regulatory caps.
-2. **High-Frequency (2.4GHz / 5.8GHz Mesh)**: Dedicated high-rate link for Deep JSCC neural feature vectors, bypassing ISM duty cycle constraints.
-
----
-
-## 🧪 5. Verification Suite & Hackathon Presentation Checklist
-
-All 30 unit tests pass in **4.03s** (`pytest sutra_ws/src/sutra_comms/test/`):
-
-- **Hero Feature Verification**: `test_deep_jscc_neural_audit.py` & `test_comms_stress.py` execute actual PyTorch forward passes and measure PSNR / MSE metrics over noisy AWGN channel tensors.
-- **Infrastructure Verification**: `test_mesh.py` and `test_gcs_gateway_bridge.py` verify live WebSocket socket bindings, JSON RPC parsing, and link distance calculations.
-
----
-
-## 🚀 6. Demo & Execution Instructions
-
-```bash
-# 1. Run full test suite
-pytest sutra_ws/src/sutra_comms/test/
-
-# 2. Run PyTorch Deep JSCC Transceiver Benchmark (Hero Demo)
-python3 sutra_ws/src/sutra_comms/sutra_comms/perceptron_jscc.py
-
-# 3. Run Remote GCS Gateway Bridge
-ros2 run sutra_comms gcs_gateway_bridge.py
+└── test/                              # 33 Unit & Stress Tests (Passes in ~7.5s)
 ```
