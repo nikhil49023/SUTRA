@@ -12,10 +12,21 @@ Integration update by Vedanth (Subsystem C):
 
 import math
 import json
-import rclpy
-from rclpy.node import Node
-from geometry_msgs.msg import TwistStamped, PoseStamped
-from std_msgs.msg import String
+
+try:
+    import rclpy
+    from rclpy.node import Node
+    from geometry_msgs.msg import TwistStamped, PoseStamped
+    from std_msgs.msg import String
+    HAS_RCLPY = True
+except ImportError:
+    HAS_RCLPY = False
+    class Node:
+        def __init__(self, *args, **kwargs): pass
+    class TwistStamped: pass
+    class PoseStamped: pass
+    class String: pass
+
 
 
 # ── Simple waypoint mission ───────────────────────────────────────────────────
