@@ -170,13 +170,14 @@ To maximize performance, accuracy, and code quality, ALL agents MUST actively ut
 
 ---
 
-## 🎯 Verification Gates G1–G6 Metric Reference
-| Gate | Target Metric | Required Threshold | Verification Tool |
-|---|---|---|---|
-| **G1** | Physics & Telemetry Sync | Real-Time Factor (RTF) ≥ 0.98 | Gazebo Sim World Stats |
-| **G2** | Swarm Mesh & Raft Consensus | Latency < 8ms, Packet Loss < 2%, Failover < 150ms | `pytest sutra_ws/src/sutra_comms/test/` |
-| **G3** | Edge AI Survivor Perception | mAP@0.5 ≥ 94%, Latency < 10ms | `pytest sutra_ws/src/sutra_perception/test/` |
-| **G4** | Target Geolocation | WGS84 Error < 0.8 meters | `pytest sutra_ws/src/sutra_perception/test/` |
-| **G5** | ORCA 3D Avoidance | Safety Buffer > 2.8 meters | `pytest sutra_ws/src/sutra_gnc/test/` |
-| **G6** | 3D GIS Telemetry HUD | Framerate = 60 FPS | `cd sutra_ws/src/sutra_gcs && npm run build` |
+## 🎯 Verification Gates G1–G6 Metric Reference (Simulation & Production Readiness)
+| Gate | Subsystem & Area | Legacy Target Metric | Upgraded Production & Simulation Readiness Criteria | Verification Tool / Command |
+|---|---|---|---|---|
+| **G1** | Subsystem A/B (Flight Controls & SITL Physics) | RTF ≥ 0.98 | **PX4 Offboard Trajectory RMSE < 0.15m (Horiz) / < 0.10m (Vert)** @ 50Hz setpoint rate; Gazebo Sim 8 RTF ≥ 0.98 with 5 active UAV dynamics | `pytest sutra_ws/src/sutra_gnc/test/` & Gazebo SITL telemetry logs |
+| **G2** | Subsystem B (Swarm Comms & Consensus) | Latency < 8ms, Packet Loss < 2% | **802.11s Mesh PDR ≥ 95% under 20% node churn & NLOS RF path loss**; SwarmRAFT Leader failover < 150ms with 0 log corruption | `pytest sutra_ws/src/sutra_comms/test/` & NS-3 / Mesh SITL test |
+| **G3** | Subsystem C (Edge AI Perception Engine) | mAP@0.5 ≥ 94%, Latency < 10ms | **TensorRT FP16 Latency < 8ms (≥ 60 FPS)**; Tri-Modal mAP@0.5 ≥ 94.5% across thermal/RGB under foliage & dynamic payload noise | `pytest sutra_ws/src/sutra_perception/test/` & `yolo val` |
+| **G4** | Subsystem C (Target Geolocation & Raycast) | WGS84 Error < 0.8m | **Terrain-Corrected DEM WGS84 Error < 0.8m** under simulated drone tilt (±10° roll/pitch) & VIO drift at 30m AGL | `pytest sutra_ws/src/sutra_perception/test/` |
+| **G5** | Subsystem A (ORCA 3D Swarm Avoidance) | Safety Buffer > 2.8m | **Dynamic 3D Multi-Drone Min Clearance ≥ 2.8m (Hard Min ≥ 2.0m)** during 5-drone crossing trajectories under 2.5m/s² acceleration limits | `pytest sutra_ws/src/sutra_gnc/test/` |
+| **G6** | Subsystem D (3D GIS GCS HUD & Telemetry) | Build Check / Framerate = 60 FPS | **WebGPU Telemetry HUD Locked 60.0 FPS** under 5 live UAV streams; Emergency RTL WebSocket Command-to-Execution delay < 25ms | `cd sutra_ws/src/sutra_gcs && npm run build` & GCS performance bench |
+
 
