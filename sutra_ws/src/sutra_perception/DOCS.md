@@ -12,6 +12,8 @@
 
 ## 📊 1. Measured Empirical Benchmarks & Verification Audits
 
+> ℹ️ **BENCHMARK ENVIRONMENT NOTE**: All figures below represent empirical results measured on workstation testbeds (`pytest sutra_ws/src/sutra_perception/test/` — **46 passed in 2.22s**).
+
 | Metric | Target Threshold | Measured Empirical Value | Evidence Source / Status |
 |---|:---:|:---:|:---:|
 | **VisDrone Aerial mAP@0.5 (Full Dataset)** | $\ge 20.0\%$ | **`22.80%`** | Full Validation Suite ✅ |
