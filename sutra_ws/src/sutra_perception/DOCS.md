@@ -1,6 +1,6 @@
 # 👁️ Subsystem C — AI Edge Perception Master Specification
 
-[![PyTest Verification](https://img.shields.io/badge/PyTest-46%2F46%20PASSED-brightgreen.svg)]()
+[![PyTest Verification](https://img.shields.io/badge/PyTest-49%2F49%20PASSED-brightgreen.svg)]()
 [![Gates G3 & G4 Compliance](https://img.shields.io/badge/Gates_G3_%26_G4-VERIFIED-brightgreen.svg)]()
 [![Dual Launch Ready](https://img.shields.io/badge/Dual_Launch-READY-brightgreen.svg)]()
 
@@ -12,7 +12,7 @@
 
 ## 📊 1. Measured Empirical Benchmarks & Verification Audits
 
-> ℹ️ **BENCHMARK ENVIRONMENT NOTE**: All figures below represent empirical results measured on workstation testbeds (`pytest sutra_ws/src/sutra_perception/test/` — **46 passed in 2.22s**).
+> ℹ️ **BENCHMARK ENVIRONMENT NOTE**: All figures below represent empirical results measured on workstation testbeds (`pytest sutra_ws/src/sutra_perception/test/` — **49 passed in 2.12s**).
 
 | Metric | Target Threshold | Measured Empirical Value | Evidence Source / Status |
 |---|:---:|:---:|:---:|
