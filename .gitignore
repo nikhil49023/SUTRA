@@ -87,6 +87,7 @@ runs/
 *.onnx
 *.onnx.data
 *.engine
+*.engine.json
 *.trt
 *.weights
 *.bin
