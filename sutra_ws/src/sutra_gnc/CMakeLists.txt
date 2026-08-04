@@ -18,6 +18,10 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}
+)
+
 if(rclcpp_FOUND)
   add_executable(offboard_node_cpp src/offboard_node.cpp)
   ament_target_dependencies(offboard_node_cpp rclcpp geometry_msgs std_msgs)

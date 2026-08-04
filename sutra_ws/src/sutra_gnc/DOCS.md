@@ -43,10 +43,31 @@
 
 ---
 
+## 🚀 ROS 2 Launching Commands
+
+To launch Subsystem A nodes and the PX4 MicroXRCE-DDS communications bridge:
+
+```bash
+# 1. Launch complete Subsystem A GNC stack (Offboard, VIO, OctoMap, ORCA Avoidance)
+ros2 launch sutra_gnc sutra_gnc_subsystem_a.launch.py
+
+# 2. Launch PX4 MicroXRCE-DDS communications agent (UDP port 8888)
+ros2 launch sutra_gnc px4_bridge.launch.py
+
+# 3. Launch standalone 3D Voxel OctoMap generator
+ros2 launch sutra_gnc octomap.launch.py
+```
+
+---
+
 ## 🌳 Subsystem A Dependency Tree
 
 ```
 sutra_gnc (ROS 2 Package)
+├── launch/
+│   ├── sutra_gnc_subsystem_a.launch.py # Master launcher for all Subsystem A nodes
+│   ├── px4_bridge.launch.py             # MicroXRCE-DDS PX4 agent bridge (UDP 8888)
+│   └── octomap.launch.py                # Standalone 3D Voxel OctoMap launcher
 ├── sutra_gnc/
 │   ├── offboard_node.py       # PX4 Offboard Mode & Waypoint Dispatcher with VIO Failsafe
 │   ├── vio_localization.py    # Visual-Inertial Odometry EKF2 Filter & Covariance Check & Status Stream
@@ -60,3 +81,4 @@ sutra_gnc (ROS 2 Package)
     ├── test_vio_localization.py   # 6/6 PASSED
     └── test_octomap_generator.py  # 7/7 PASSED
 ```
+
