@@ -158,7 +158,7 @@ def main():
     parser = argparse.ArgumentParser(description="Filter perception datasets using Ollama VLM")
     parser.add_argument("--dataset-dir", required=True, type=Path, help="Path to input dataset folder")
     parser.add_argument("--output-dir", required=True, type=Path, help="Path to output curated dataset folder")
-    parser.add_argument("--model", default="llava-phi3:latest", help="Ollama Vision model name (llava-phi3:latest or moondream:latest)")
+    parser.add_argument("--model", default="qwen2.5-vl:latest", help="Ollama Vision model name (qwen2.5-vl:latest, qwen:latest, or llava-phi3:latest)")
     parser.add_argument("--max-samples", type=int, default=None, help="Maximum number of samples to process")
 
     args = parser.parse_args()
