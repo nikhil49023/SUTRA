@@ -258,9 +258,10 @@ class SutraMeshNode(Node):
         else:
             return 85.0  # Heavy link degradation
 
-    def deep_jscc_encode(self, image_size_kb: float, snr_db: float) -> Dict[str, float]:
+    def deep_jscc_encode(self, image_size_kb: float, snr_db: float = 20.0) -> Dict[str, float]:
         """Delegates semantic transmission to PerceptronSemanticCommsPipeline."""
-        return self.perceptron_pipeline.process_semantic_transmission(image_size_kb, distance_m=25.0)
+        dist_m = max(5.0, min(150.0, 10.0 * (10 ** ((20.0 - max(0.1, snr_db) - 38.0) / 20.0))))
+        return self.perceptron_pipeline.process_semantic_transmission(image_size_kb, distance_m=dist_m)
 
     def compute_peer_link_matrix(self) -> Dict[str, dict]:
         """Generate full link metrics matrix across all UAV peer pairs."""
