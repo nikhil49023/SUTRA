@@ -1,6 +1,6 @@
 # 📡 Subsystem B — Comms & Digital Twin Simulation Master Specification
 
-[![PyTest Verification](https://img.shields.io/badge/PyTest-33%2F33%20PASSED-brightgreen.svg)]()
+[![PyTest Verification](https://img.shields.io/badge/PyTest-35%2F35%20PASSED-brightgreen.svg)]()
 [![Hero Feature](https://img.shields.io/badge/Hero_Feature-Deep_JSCC_Neural_Transceiver-cyan.svg)]()
 [![Gate G2 Compliance](https://img.shields.io/badge/Gate_G2-VERIFIED-brightgreen.svg)]()
 [![Dual Launch Ready](https://img.shields.io/badge/Dual_Launch-READY-brightgreen.svg)]()
@@ -29,7 +29,7 @@ In GPS-denied and communication-challenged disaster environments, conventional v
 
 ## 📊 2. Measured Benchmark Metrics & Verification Matrix
 
-> ℹ️ **BENCHMARK ENVIRONMENT NOTE**: All figures below represent empirical results measured on single-run workstation testbeds (`pytest sutra_ws/src/sutra_comms/test/` — **33 passed in 7.50s**).
+> ℹ️ **BENCHMARK ENVIRONMENT NOTE**: All figures below represent empirical results measured on single-run workstation testbeds (`pytest sutra_ws/src/sutra_comms/test/` — **35 passed in 6.85s**).
 
 
 | Metric | Measured Benchmark Value | Testbed / Source | Status |
