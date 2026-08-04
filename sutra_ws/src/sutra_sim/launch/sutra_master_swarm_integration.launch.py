@@ -18,6 +18,12 @@ def generate_launch_description():
         description='Enable Gazebo SITL simulation mode'
     )
 
+    world_arg = DeclareLaunchArgument(
+        'world',
+        default_value='high_quality_disaster_swarm_world.sdf',
+        description='Gazebo Sim 8 world SDF file name'
+    )
+
     ws_port_arg = DeclareLaunchArgument(
         'ws_port',
         default_value='9090',
@@ -90,8 +96,9 @@ def generate_launch_description():
 
     return LaunchDescription([
         sim_mode_arg,
+        world_arg,
         ws_port_arg,
-        LogInfo(msg="🚀 LAUNCHING PROJECT SUTRA MASTER SWARM INTEGRATION PIPELINE..."),
+        LogInfo(msg="🚀 LAUNCHING PROJECT SUTRA MASTER 5-SUBSYSTEM SWARM PIPELINE (PBR MAX QUALITY STACK)..."),
         gcs_gateway_bridge_node,
         mesh_node,
         detector_node,
