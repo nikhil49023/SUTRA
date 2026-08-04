@@ -85,6 +85,7 @@ runs/
 # Or run: python3 sutra_ws/src/sutra_perception/scripts/download_weights.py
 *.pt
 *.onnx
+*.onnx.data
 *.engine
 *.trt
 *.weights
