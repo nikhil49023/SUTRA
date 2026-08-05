@@ -7,8 +7,6 @@ interface LayerControllerProps {
   onSelectStyle: (style: MapStyleMode) => void;
   showWaypoints: boolean;
   onToggleWaypoints: (val: boolean) => void;
-  showGeofence: boolean;
-  onToggleGeofence: (val: boolean) => void;
   isOpen: boolean;
   onToggleOpen: () => void;
 }
@@ -18,8 +16,6 @@ export const LayerController: React.FC<LayerControllerProps> = ({
   onSelectStyle,
   showWaypoints,
   onToggleWaypoints,
-  showGeofence,
-  onToggleGeofence,
   isOpen,
   onToggleOpen
 }) => {
@@ -66,15 +62,6 @@ export const LayerController: React.FC<LayerControllerProps> = ({
               className="rounded accent-cyan-500"
             />
             <span>Waypoints Layer</span>
-          </label>
-          <label className="flex items-center space-x-2 text-slate-300 cursor-pointer hover:text-rose-400">
-            <input
-              type="checkbox"
-              checked={showGeofence}
-              onChange={(e) => onToggleGeofence(e.target.checked)}
-              className="rounded accent-rose-500"
-            />
-            <span>Geofence Polygons</span>
           </label>
         </div>
       )}

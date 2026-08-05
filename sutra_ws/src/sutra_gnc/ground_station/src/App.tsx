@@ -8,6 +8,9 @@ import { BottomPanel } from './components/views/BottomPanel';
 import { LiveOpsCenter } from './components/views/LiveOpsCenter';
 import { AIIntelligenceView } from './components/views/AIIntelligenceView';
 import { AnalyticsView } from './components/views/AnalyticsView';
+import { GeofenceSystemView } from './components/views/GeofenceSystemView';
+import { MissionPlannerView } from './components/views/MissionPlannerView';
+import { GISIntelligenceView } from './components/views/gis/GISIntelligenceView';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { NotificationToastContainer } from './components/common/NotificationToast';
 import { useTelemetryStore } from './services/telemetryStore';
@@ -96,6 +99,7 @@ export function App() {
     setActiveDrone((prev) => ({ ...prev, ...pos }));
   };
 
+
   return (
     <div className="flex flex-col h-screen w-screen bg-[#07090e] text-slate-300 font-sans overflow-hidden select-none relative">
       {/* GLOBAL TOAST NOTIFICATION CONTAINER */}
@@ -129,14 +133,25 @@ export function App() {
           />
         </ErrorBoundary>
 
-        {/* CENTER VIEW SWITCHER: GIS MAP / LIVE OPS / AI INTELLIGENCE / ANALYTICS */}
+        {/* CENTER VIEW SWITCHER: GIS MAP / LIVE OPS / AI INTELLIGENCE / ANALYTICS / MISSION PLANNER */}
         <ErrorBoundary fallbackTitle="CENTER VIEWPORT EXCEPTION">
           {activeTab === 'LIVE_OPERATIONS' ? (
             <LiveOpsCenter />
           ) : activeTab === 'AI_INTELLIGENCE' ? (
-            <AIIntelligenceView />
+            <GISIntelligenceView
+              activeDrone={activeDrone}
+              telemetry={currentTelemetry}
+              waypoints={waypoints}
+            />
           ) : activeTab === 'ANALYTICS' ? (
             <AnalyticsView />
+          ) : activeTab === 'MISSION_PLANNER' ? (
+            <MissionPlannerView
+              activeDrone={activeDrone}
+              telemetry={currentTelemetry}
+              waypoints={waypoints}
+              onUpdateWaypoints={handleUpdateWaypoints}
+            />
           ) : (
             <GISMap
               activeDrone={activeDrone}
