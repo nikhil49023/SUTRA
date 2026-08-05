@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Navigation, Shield } from 'lucide-react';
 import type { DroneAsset, TelemetryData, Waypoint, AIDetection } from '../../types';
 import { MissionService, type MissionEstimates } from '../../services/missionService';
+import { fleetStore } from '../../store/FleetStore';
 
 // Geofence Subsystem Components
 import GeofenceRenderer from '../../geofence/components/GeofenceRenderer';
@@ -179,7 +180,7 @@ export const GISMap: React.FC<GISMapProps> = ({
                 isEditable={interactionMode === 'EDIT_WAYPOINT' || interactionMode === 'PAN'}
               />
             )}
-            <DroneRenderer map={map} activeDrone={activeDrone} telemetry={telemetry} />
+            <DroneRenderer map={map} activeDrone={activeDrone} telemetry={telemetry} drones={fleetStore.getDrones()} />
             {showGeofence && <GeofenceRenderer map={map} />}
           </>
         )}

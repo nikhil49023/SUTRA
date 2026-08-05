@@ -41,6 +41,14 @@ export class MissionExecutionEngine {
     return [...this.waypoints];
   }
 
+  public updateWaypoints(waypoints: Waypoint[]) {
+    this.waypoints = [...waypoints];
+    if (this.currentWpIndex >= waypoints.length) {
+      this.currentWpIndex = Math.max(0, waypoints.length - 1);
+    }
+    missionTimeline.addEvent('MISSION', 'COMMAND', `Mission waypoints updated dynamically (${waypoints.length} waypoints).`);
+  }
+
   /* ============================================================
      Flight Commands & Control API
      ============================================================ */

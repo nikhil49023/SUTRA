@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TopBar } from './TopBar';
 import { LeftSidebar, type NavTab } from '../../components/layout/LeftSidebar';
 import { RightInspector } from './RightInspector';
@@ -13,12 +13,18 @@ import { SwarmOperationsCenter } from '../../components/views/swarm/SwarmOperati
 import { OperationsCenterView } from '../../components/views/operations/OperationsCenterView';
 import { ErrorBoundary } from '../../components/common/ErrorBoundary';
 
+import { useMissionStore } from '../../store/MissionStore';
+import { useFleetStore } from '../../store/FleetStore';
 import { useTelemetryStore } from '../../services/telemetryStore';
 import { emergencyManager } from '../../engine/execution/emergencyManager';
-import type { DroneAsset, Waypoint, TelemetryData } from '../../types';
+import type { TelemetryData } from '../../types';
 
 export const MasterTacticalDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTab>('DASHBOARD');
+
+  // Unified Stores (Priority 6 & 7)
+  const { waypoints, setWaypoints, estimates } = useMissionStore();
+  const { drones, selectedDrone, updateDronePosition } = useFleetStore();
   const { currentTelemetry } = useTelemetryStore();
 
   const telemetryData: TelemetryData = {
@@ -40,37 +46,6 @@ export const MasterTacticalDashboard: React.FC = () => {
     satellites: currentTelemetry?.satellites || 18,
     linkLatencyMs: currentTelemetry?.linkLatencyMs || 18
   };
-
-  const [activeDrone, setActiveDrone] = useState<DroneAsset>({
-    id: 'DRONE_01',
-    callsign: 'Alpha Leader',
-    model: 'HEXAROTOR',
-    status: 'IN_FLIGHT',
-    battery: 95,
-    lat: 45.1082,
-    lng: 34.5225,
-    altitude: 100,
-    heading: 45,
-    groundSpeed: 40,
-    signalStrength: 98,
-    payload: '4K EO / IR',
-    mission: 'RECON_ALPHA',
-    satellites: 18,
-    flightTime: '00:14:22'
-  });
-
-  const [drones] = useState<DroneAsset[]>([
-    activeDrone,
-    { id: 'DRONE_02', callsign: 'Bravo Wingman', model: 'QUADROUTER', status: 'IN_FLIGHT', battery: 91, lat: 45.1090, lng: 34.5235, altitude: 100, heading: 45, groundSpeed: 40, signalStrength: 95, payload: 'Thermal', mission: 'RECON_ALPHA', satellites: 18, flightTime: '00:14:22' },
-    { id: 'DRONE_03', callsign: 'Charlie Scout', model: 'FIXED_WING', status: 'IN_FLIGHT', battery: 88, lat: 45.1075, lng: 34.5215, altitude: 100, heading: 45, groundSpeed: 40, signalStrength: 92, payload: 'LiDAR', mission: 'RECON_ALPHA', satellites: 18, flightTime: '00:14:22' }
-  ]);
-
-  const [waypoints, setWaypoints] = useState<Waypoint[]>([
-    { id: 1, lat: 45.1082, lng: 34.5225, alt: 50, action: 'TAKEOFF', completed: true },
-    { id: 2, lat: 45.1100, lng: 34.5240, alt: 60, action: 'WAYPOINT', completed: false },
-    { id: 3, lat: 45.1120, lng: 34.5260, alt: 75, action: 'SEARCH_GRID', completed: false },
-    { id: 4, lat: 45.1082, lng: 34.5225, alt: 50, action: 'RTH & LAND', completed: false }
-  ]);
 
   const handleEmergencyRTL = () => {
     emergencyManager.triggerEmergency('TELEMETRY_LOST', 'Operator triggered manual emergency RTL.');
@@ -96,62 +71,88 @@ export const MasterTacticalDashboard: React.FC = () => {
           alertCount={0}
         />
 
-        {/* CENTER VIEWPORT SWITCHER */}
+        {/* CENTER VIEWPORT CONTAINER */}
         <main className="flex-1 flex flex-col relative overflow-hidden bg-[#040710]">
-          <ErrorBoundary fallbackTitle="CENTER VIEWPORT EXCEPTION">
-            {activeTab === 'DASHBOARD' ? (
+          <ErrorBoundary fallbackTitle="TACTICAL MAP EXCEPTION">
+            {/* PERSISTENT MAPLIBRE MAP (PRIORITY 3: NEVER RECREATED ON TAB SWITCH) */}
+            <div className={`absolute inset-0 w-full h-full ${activeTab === 'DASHBOARD' ? 'z-10' : 'z-0 invisible'}`}>
               <GISMap
-                activeDrone={activeDrone}
+                activeDrone={selectedDrone}
                 telemetry={telemetryData}
                 waypoints={waypoints}
                 aiDetections={[]}
                 onUpdateWaypoints={setWaypoints}
-                onUpdateDronePos={(pos) => setActiveDrone((prev) => ({ ...prev, ...pos }))}
+                onUpdateDronePos={(pos) => updateDronePosition(selectedDrone.id, pos)}
               />
-            ) : activeTab === 'MISSION_PLANNER' ? (
-              <MissionPlannerView
-                activeDrone={activeDrone}
-                telemetry={telemetryData}
-                waypoints={waypoints}
-                onUpdateWaypoints={setWaypoints}
-              />
-            ) : activeTab === 'GIS_INTEL' ? (
-              <GISIntelligenceView
-                activeDrone={activeDrone}
-                telemetry={telemetryData}
-                waypoints={waypoints}
-              />
-            ) : activeTab === 'FLEET' ? (
-              <SwarmOperationsCenter
-                activeDrone={activeDrone}
-                waypoints={waypoints}
-                drones={drones}
-              />
-            ) : activeTab === 'LIVE_OPERATIONS' ? (
-              <CommunicationConsole
-                activeDrone={activeDrone}
-                telemetry={telemetryData}
-                waypoints={waypoints}
-              />
-            ) : activeTab === 'AI_INTELLIGENCE' ? (
-              <AIOperationsView
-                activeDrone={activeDrone}
-                telemetry={telemetryData}
-                waypoints={waypoints}
-              />
-            ) : (
-              <OperationsCenterView
-                activeDrone={activeDrone}
-                drones={drones}
-                waypoints={waypoints}
-              />
+            </div>
+
+            {/* TAB OVERLAY VIEWS */}
+            {activeTab === 'MISSION_PLANNER' && (
+              <div className="absolute inset-0 z-20 bg-[#050811]">
+                <MissionPlannerView
+                  activeDrone={selectedDrone}
+                  telemetry={telemetryData}
+                  waypoints={waypoints}
+                  onUpdateWaypoints={setWaypoints}
+                />
+              </div>
+            )}
+
+            {activeTab === 'GIS_INTEL' && (
+              <div className="absolute inset-0 z-20 bg-[#050811]">
+                <GISIntelligenceView
+                  activeDrone={selectedDrone}
+                  telemetry={telemetryData}
+                  waypoints={waypoints}
+                />
+              </div>
+            )}
+
+            {activeTab === 'FLEET' && (
+              <div className="absolute inset-0 z-20 bg-[#050811]">
+                <SwarmOperationsCenter
+                  activeDrone={selectedDrone}
+                  waypoints={waypoints}
+                  drones={drones}
+                />
+              </div>
+            )}
+
+            {activeTab === 'LIVE_OPERATIONS' && (
+              <div className="absolute inset-0 z-20 bg-[#050811]">
+                <CommunicationConsole
+                  activeDrone={selectedDrone}
+                  telemetry={telemetryData}
+                  waypoints={waypoints}
+                />
+              </div>
+            )}
+
+            {activeTab === 'AI_INTELLIGENCE' && (
+              <div className="absolute inset-0 z-20 bg-[#050811]">
+                <AIOperationsView
+                  activeDrone={selectedDrone}
+                  telemetry={telemetryData}
+                  waypoints={waypoints}
+                />
+              </div>
+            )}
+
+            {activeTab === 'SETTINGS' && (
+              <div className="absolute inset-0 z-20 bg-[#050811]">
+                <OperationsCenterView
+                  activeDrone={selectedDrone}
+                  drones={drones}
+                  waypoints={waypoints}
+                />
+              </div>
             )}
           </ErrorBoundary>
         </main>
 
         {/* RIGHT CONTEXT INSPECTOR */}
         <RightInspector
-          activeDrone={activeDrone}
+          activeDrone={selectedDrone}
           telemetry={telemetryData}
           waypoints={waypoints}
         />

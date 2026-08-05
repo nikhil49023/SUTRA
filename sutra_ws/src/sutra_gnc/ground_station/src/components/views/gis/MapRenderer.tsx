@@ -74,10 +74,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({
     mapRef.current = map;
 
     return () => {
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
+      // Intentionally preserve MapLibre GL instance across SPA tab navigation!
     };
   }, []);
 
