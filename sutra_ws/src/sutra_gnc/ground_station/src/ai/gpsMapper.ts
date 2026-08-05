@@ -11,8 +11,10 @@ export class GPSMapper {
     gimbalYawDeg: number = 0
   ): { lat: number; lng: number; alt: number } {
     // Center point of bounding box
-    const centerX = (bbox.x + bbox.width / 2) / 100 - 0.5; // -0.5 to +0.5
-    const centerY = (bbox.y + bbox.height / 2) / 100 - 0.5;
+    const width = bbox.width ?? bbox.w ?? 0;
+    const height = bbox.height ?? bbox.h ?? 0;
+    const centerX = (bbox.x + width / 2) / 100 - 0.5; // -0.5 to +0.5
+    const centerY = (bbox.y + height / 2) / 100 - 0.5;
 
     // Approximate angular offset based on camera FOV (60 deg horizontal, 45 deg vertical)
     const offsetLng = (centerX * 60 * 0.00001);

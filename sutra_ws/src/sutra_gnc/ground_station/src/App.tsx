@@ -11,6 +11,7 @@ import { AnalyticsView } from './components/views/AnalyticsView';
 import { GeofenceSystemView } from './components/views/GeofenceSystemView';
 import { MissionPlannerView } from './components/views/MissionPlannerView';
 import { GISIntelligenceView } from './components/views/gis/GISIntelligenceView';
+import { AIOperationsView } from './components/views/ai/AIOperationsView';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { NotificationToastContainer } from './components/common/NotificationToast';
 import { useTelemetryStore } from './services/telemetryStore';
@@ -138,6 +139,13 @@ export function App() {
           {activeTab === 'LIVE_OPERATIONS' ? (
             <LiveOpsCenter />
           ) : activeTab === 'AI_INTELLIGENCE' ? (
+            <AIOperationsView
+              activeDrone={activeDrone}
+              telemetry={currentTelemetry}
+              waypoints={waypoints}
+              aiDetections={MOCK_AI_DETECTIONS}
+            />
+          ) : activeTab === 'GIS_INTEL' ? (
             <GISIntelligenceView
               activeDrone={activeDrone}
               telemetry={currentTelemetry}

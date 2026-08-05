@@ -4,12 +4,12 @@ import {
   Plane, 
   Crosshair, 
   Map, 
+  Cpu,
   Globe, 
   BarChart3, 
   Settings,
   Shield
 } from 'lucide-react';
-import { geofenceStore } from '../../geofence/store/GeofenceStore';
 
 export type NavTab = 
   | 'DASHBOARD' 
@@ -17,6 +17,7 @@ export type NavTab =
   | 'LIVE_OPERATIONS' 
   | 'MISSION_PLANNER' 
   | 'AI_INTELLIGENCE' 
+  | 'GIS_INTEL'
   | 'ANALYTICS' 
   | 'SETTINGS';
 
@@ -38,7 +39,8 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     { id: 'FLEET' as NavTab, label: 'Fleet Grid', icon: Plane, badge: fleetCount },
     { id: 'LIVE_OPERATIONS' as NavTab, label: 'Live Ops', icon: Crosshair, activePulse: true },
     { id: 'MISSION_PLANNER' as NavTab, label: 'Mission Plan', icon: Map },
-    { id: 'AI_INTELLIGENCE' as NavTab, label: 'GIS Intel', icon: Globe, badgeAlert: alertCount },
+    { id: 'AI_INTELLIGENCE' as NavTab, label: 'AI Ops', icon: Cpu, badgeAlert: alertCount },
+    { id: 'GIS_INTEL' as NavTab, label: 'GIS Intel', icon: Globe },
     { id: 'ANALYTICS' as NavTab, label: 'Analytics', icon: BarChart3 },
     { id: 'SETTINGS' as NavTab, label: 'Settings', icon: Settings },
   ];
