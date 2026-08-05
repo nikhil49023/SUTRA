@@ -17,8 +17,7 @@ export class FormationEngine {
   private currentTargets: FormationTarget[] = [];
 
   private constructor() {
-    // Sync initial positions on startup
-    this.recalculateAndAnimate(true);
+    // Intentionally empty to prevent circular static initialization
   }
 
   public static getInstance(): FormationEngine {
@@ -65,8 +64,9 @@ export class FormationEngine {
   }
 
   public recalculateAndAnimate(immediate: boolean = false): FormationTarget[] {
+    if (!fleetStore) return [];
     const drones = fleetStore.getDrones();
-    if (drones.length === 0) return [];
+    if (!drones || drones.length === 0) return [];
 
     const droneIds = drones.map((d) => d.id);
     const leader = drones.find((d) => d.id === this.config.leaderId) || drones[0];
