@@ -12,6 +12,7 @@ import { GeofenceSystemView } from './components/views/GeofenceSystemView';
 import { MissionPlannerView } from './components/views/MissionPlannerView';
 import { GISIntelligenceView } from './components/views/gis/GISIntelligenceView';
 import { AIOperationsView } from './components/views/ai/AIOperationsView';
+import { CommunicationConsole } from './components/views/communication/CommunicationConsole';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { NotificationToastContainer } from './components/common/NotificationToast';
 import { useTelemetryStore } from './services/telemetryStore';
@@ -137,7 +138,11 @@ export function App() {
         {/* CENTER VIEW SWITCHER: GIS MAP / LIVE OPS / AI INTELLIGENCE / ANALYTICS / MISSION PLANNER */}
         <ErrorBoundary fallbackTitle="CENTER VIEWPORT EXCEPTION">
           {activeTab === 'LIVE_OPERATIONS' ? (
-            <LiveOpsCenter />
+            <CommunicationConsole
+              activeDrone={activeDrone}
+              telemetry={currentTelemetry}
+              waypoints={waypoints}
+            />
           ) : activeTab === 'AI_INTELLIGENCE' ? (
             <AIOperationsView
               activeDrone={activeDrone}

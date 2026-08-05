@@ -1,6 +1,6 @@
-import type { IDroneAdapter, MAVLinkCommand, MAVLinkCommandAck, MAVParam } from './types';
+import type { IDroneAdapter, MAVLinkCommand, MAVLinkCommandAck, MAVParam, MAVLinkMissionItem } from './types';
 import { CommandQueue } from './commandQueue';
-import { MissionTransferManager, type MAVLinkMissionItem } from './missionTransferManager';
+import { MissionTransferManager } from './missionTransferManager';
 import { ParameterManager } from './parameterManager';
 
 export class SimulatedDroneAdapter implements IDroneAdapter {
@@ -40,7 +40,7 @@ export class SimulatedDroneAdapter implements IDroneAdapter {
   public async sendCommand(cmd: MAVLinkCommand): Promise<MAVLinkCommandAck> {
     return new Promise((resolve) => {
       this.commandQueue.registerAckHandler((sentCmd, ack) => {
-        if (sentCmd.id === cmd.id) {
+        if ((sentCmd.id || sentCmd.commandId) === (cmd.id || cmd.commandId)) {
           resolve(ack);
         }
       });
@@ -61,7 +61,10 @@ export class SimulatedDroneAdapter implements IDroneAdapter {
       param4: 0,
       x: w.lat,
       y: w.lng,
-      z: w.alt
+      z: w.alt,
+      lat: w.lat,
+      lng: w.lng,
+      alt: w.alt
     }));
 
     const result = await MissionTransferManager.uploadMission(this.sysId, mavItems);
@@ -70,18 +73,19 @@ export class SimulatedDroneAdapter implements IDroneAdapter {
 
   public async downloadMission(): Promise<any[]> {
     const mavItems = await MissionTransferManager.downloadMission(this.sysId);
-    return mavItems.map((item) => ({
+    return mavItems.map((item: MAVLinkMissionItem) => ({
       id: item.seq + 1,
-      lat: item.x,
-      lng: item.y,
-      alt: item.z,
+      lat: item.lat || item.x || 0,
+      lng: item.lng || item.y || 0,
+      alt: item.alt || item.z || 0,
       action: item.command === 22 ? 'TAKEOFF' : item.command === 20 ? 'RTH & LAND' : 'WAYPOINT',
       completed: false
     }));
   }
 
   public async fetchParameters(): Promise<MAVParam[]> {
-    return await this.parameterManager.requestParameterList();
+    const params = await this.parameterManager.requestParameterList();
+    return params.map((p) => ({ name: p.name, value: p.value }));
   }
 
   public async setParameter(paramId: string, value: number): Promise<boolean> {
