@@ -14,6 +14,7 @@ import { GISIntelligenceView } from './components/views/gis/GISIntelligenceView'
 import { AIOperationsView } from './components/views/ai/AIOperationsView';
 import { CommunicationConsole } from './components/views/communication/CommunicationConsole';
 import { SwarmOperationsCenter } from './components/views/swarm/SwarmOperationsCenter';
+import { OperationsCenterView } from './components/views/operations/OperationsCenterView';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { NotificationToastContainer } from './components/common/NotificationToast';
 import { useTelemetryStore } from './services/telemetryStore';
@@ -161,6 +162,12 @@ export function App() {
             <GISIntelligenceView
               activeDrone={activeDrone}
               telemetry={currentTelemetry}
+              waypoints={waypoints}
+            />
+          ) : activeTab === 'SETTINGS' ? (
+            <OperationsCenterView
+              activeDrone={activeDrone}
+              drones={drones}
               waypoints={waypoints}
             />
           ) : activeTab === 'ANALYTICS' ? (
