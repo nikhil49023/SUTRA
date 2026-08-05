@@ -13,6 +13,7 @@ import { MissionPlannerView } from './components/views/MissionPlannerView';
 import { GISIntelligenceView } from './components/views/gis/GISIntelligenceView';
 import { AIOperationsView } from './components/views/ai/AIOperationsView';
 import { CommunicationConsole } from './components/views/communication/CommunicationConsole';
+import { SwarmOperationsCenter } from './components/views/swarm/SwarmOperationsCenter';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { NotificationToastContainer } from './components/common/NotificationToast';
 import { useTelemetryStore } from './services/telemetryStore';
@@ -135,9 +136,15 @@ export function App() {
           />
         </ErrorBoundary>
 
-        {/* CENTER VIEW SWITCHER: GIS MAP / LIVE OPS / AI INTELLIGENCE / ANALYTICS / MISSION PLANNER */}
+        {/* CENTER VIEW SWITCHER: GIS MAP / FLEET SWARM / LIVE OPS / AI INTELLIGENCE / ANALYTICS / MISSION PLANNER */}
         <ErrorBoundary fallbackTitle="CENTER VIEWPORT EXCEPTION">
-          {activeTab === 'LIVE_OPERATIONS' ? (
+          {activeTab === 'FLEET' ? (
+            <SwarmOperationsCenter
+              activeDrone={activeDrone}
+              waypoints={waypoints}
+              drones={drones}
+            />
+          ) : activeTab === 'LIVE_OPERATIONS' ? (
             <CommunicationConsole
               activeDrone={activeDrone}
               telemetry={currentTelemetry}
