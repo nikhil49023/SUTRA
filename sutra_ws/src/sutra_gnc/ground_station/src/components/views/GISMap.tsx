@@ -23,6 +23,7 @@ import {
   MapStyleMode,
   UAVMissionState
 } from './gis';
+import { AITargetRenderer } from './gis/AITargetRenderer';
 
 interface GISMapProps {
   activeDrone: DroneAsset;
@@ -181,6 +182,7 @@ export const GISMap: React.FC<GISMapProps> = ({
               />
             )}
             <DroneRenderer map={map} activeDrone={activeDrone} telemetry={telemetry} />
+            <AITargetRenderer map={map} />
             {showGeofence && <GeofenceRenderer map={map} />}
           </>
         )}
