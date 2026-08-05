@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import type { DroneAsset, TelemetryData } from '../types';
-import { FormationController } from '../swarm/formation/FormationController';
+import type { DroneAsset } from '../types';
+import type { FormationType, FormationConfig, FormationTarget } from '../swarm/FormationTypes';
+import { formationEngine } from '../swarm/FormationEngine';
 
 type FleetListener = () => void;
 
@@ -70,6 +71,30 @@ class FleetStore {
     return this.drones.find((d) => d.id === this.selectedDroneId) || this.drones[0];
   }
 
+  public getLeaderDrone(): DroneAsset {
+    const config = formationEngine.getConfig();
+    return this.drones.find((d) => d.id === config.leaderId) || this.drones[0];
+  }
+
+  public getFormationConfig(): FormationConfig {
+    return formationEngine.getConfig();
+  }
+
+  public setFormation(type: FormationType): void {
+    formationEngine.setFormation(type);
+    this.notify();
+  }
+
+  public setSpacing(spacingMeters: number): void {
+    formationEngine.setSpacing(spacingMeters);
+    this.notify();
+  }
+
+  public setLeader(leaderId: string): void {
+    formationEngine.setLeader(leaderId);
+    this.notify();
+  }
+
   public selectDrone(id: string): void {
     this.selectedDroneId = id;
     this.notify();
@@ -79,6 +104,18 @@ class FleetStore {
     const drone = this.drones.find((d) => d.id === droneId);
     if (drone) {
       Object.assign(drone, pos);
+
+      // If leader position moved, continuously update formation follower positions
+      const config = formationEngine.getConfig();
+      if (droneId === config.leaderId && (pos.lat !== undefined || pos.lng !== undefined)) {
+        formationEngine.updateLeaderPosition({
+          lat: drone.lat,
+          lng: drone.lng,
+          alt: drone.altitude || 50,
+          heading: drone.heading || 0
+        });
+      }
+
       this.notify();
     }
   }
@@ -104,6 +141,11 @@ export function useFleetStore() {
   return {
     drones: fleetStore.getDrones(),
     selectedDrone: fleetStore.getSelectedDrone(),
+    leaderDrone: fleetStore.getLeaderDrone(),
+    formationConfig: fleetStore.getFormationConfig(),
+    setFormation: fleetStore.setFormation.bind(fleetStore),
+    setSpacing: fleetStore.setSpacing.bind(fleetStore),
+    setLeader: fleetStore.setLeader.bind(fleetStore),
     selectDrone: fleetStore.selectDrone.bind(fleetStore),
     updateDronePosition: fleetStore.updateDronePosition.bind(fleetStore)
   };

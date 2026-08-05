@@ -1,4 +1,10 @@
 export * from './types';
+export type { FormationType, FormationTarget, FormationConfig } from './FormationTypes';
+
+// Swarm Formation Engine Exports
+export { FormationEngine, formationEngine } from './FormationEngine';
+export { FormationCalculator } from './FormationCalculator';
+export { FormationAnimator, formationAnimator } from './FormationAnimator';
 
 // Core Exports
 export { SwarmManager, swarmManager } from './core/SwarmManager';
@@ -6,7 +12,7 @@ export { DroneRegistry } from './core/DroneRegistry';
 export { SwarmStateMachine, swarmStateMachine } from './core/SwarmStateMachine';
 export { SwarmMissionEngine } from './core/SwarmMissionEngine';
 
-// Formation Exports
+// Legacy Controller Exports
 export { FormationController } from './formation/FormationController';
 export { FormationGenerator } from './formation/FormationGenerator';
 export { LeaderFollowerEngine } from './formation/LeaderFollower';

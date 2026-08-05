@@ -20,7 +20,6 @@ import {
 import { 
   SwarmManager, 
   DroneRegistry, 
-  FormationController, 
   TaskAllocator, 
   CollisionAvoidanceEngine, 
   LeaderElectionEngine, 
@@ -28,8 +27,10 @@ import {
   swarmStateMachine
 } from '../../../swarm';
 
+import type { FormationType } from '../../../swarm/FormationTypes';
+import { useFleetStore } from '../../../store/FleetStore';
 import type { DroneAsset, Waypoint } from '../../../types';
-import type { SwarmNode, FormationPattern, SwarmAnalyticsSummary, CollisionRisk } from '../../../swarm/types';
+import type { SwarmAnalyticsSummary, CollisionRisk } from '../../../swarm/types';
 
 interface SwarmOperationsCenterProps {
   activeDrone: DroneAsset;
@@ -43,8 +44,7 @@ export const SwarmOperationsCenter: React.FC<SwarmOperationsCenterProps> = ({
   drones
 }) => {
   const [activeTab, setActiveTab] = useState<'FLEET' | 'FORMATION' | 'TASKS' | 'HEALTH' | 'MISSION' | 'ANALYTICS'>('FLEET');
-  const [formationPattern, setFormationPattern] = useState<FormationPattern>(FormationController.getCurrentPattern());
-  const [spacingMeters, setSpacingMeters] = useState<number>(25);
+  const { formationConfig, setFormation, setSpacing, setLeader } = useFleetStore();
 
   // Sync Registry with prop drones
   DroneRegistry.syncFromDroneAssets(drones);
@@ -55,14 +55,32 @@ export const SwarmOperationsCenter: React.FC<SwarmOperationsCenterProps> = ({
   const analytics: SwarmAnalyticsSummary = SwarmAnalyticsEngine.computeSummary();
   const conflicts: CollisionRisk[] = CollisionAvoidanceEngine.auditProximity();
 
-  const handleSetFormation = (pattern: FormationPattern) => {
-    setFormationPattern(pattern);
-    FormationController.setFormation(pattern, spacingMeters);
+  const handleSetFormation = (pattern: FormationType) => {
+    setFormation(pattern);
+  };
+
+  const handleSpacingChange = (val: number) => {
+    setSpacing(val);
   };
 
   const handleElectLeader = () => {
-    LeaderElectionEngine.electNewLeader();
+    const res = LeaderElectionEngine.electNewLeader();
+    if (res) {
+      setLeader(res.newLeader.droneId);
+    }
   };
+
+  const allFormations: { id: FormationType; label: string }[] = [
+    { id: 'LINE', label: 'Line' },
+    { id: 'COLUMN', label: 'Column' },
+    { id: 'V_FORMATION', label: 'V-Shape' },
+    { id: 'DIAMOND', label: 'Diamond' },
+    { id: 'ECHELON_LEFT', label: 'Echelon L' },
+    { id: 'ECHELON_RIGHT', label: 'Echelon R' },
+    { id: 'CIRCLE', label: 'Circle' },
+    { id: 'GRID', label: 'Grid' },
+    { id: 'CUSTOM', label: 'Custom' }
+  ];
 
   return (
     <div className="flex flex-col h-full w-full bg-[#050811] text-slate-200 font-mono select-none overflow-hidden relative">
@@ -156,30 +174,65 @@ export const SwarmOperationsCenter: React.FC<SwarmOperationsCenterProps> = ({
         {/* TAB 2: FORMATION CONTROL PANEL */}
         {activeTab === 'FORMATION' && (
           <div className="space-y-4">
-            <div className="bg-[#070d1a] border border-[#1b253b] p-4 rounded-xl flex items-center justify-between">
+            <div className="bg-[#070d1a] border border-[#1b253b] p-4 rounded-xl space-y-3">
               <div>
-                <h3 className="text-white font-bold text-sm tracking-wider uppercase">TACTICAL FORMATION GEOMETRY</h3>
-                <p className="text-xs text-slate-400">Select geometry: Line, Column, V Formation, Diamond, Circle, Grid.</p>
+                <h3 className="text-white font-bold text-sm tracking-wider uppercase">SWARM FORMATION ENGINE CONTROL</h3>
+                <p className="text-xs text-slate-400">Select geometry layout to immediately animate followers at 60 FPS.</p>
               </div>
 
-              <div className="flex items-center space-x-2">
-                {(['LINE', 'COLUMN', 'V_FORMATION', 'DIAMOND', 'CIRCLE', 'GRID'] as FormationPattern[]).map((pat) => (
+              {/* 9 FORMATION BUTTONS */}
+              <div className="grid grid-cols-5 gap-2 pt-1">
+                {allFormations.map((fmt) => (
                   <button
-                    key={pat}
-                    onClick={() => handleSetFormation(pat)}
-                    className={`px-3 py-1.5 rounded text-xs font-bold border transition-all ${
-                      formationPattern === pat ? 'bg-cyan-600 text-white border-cyan-400 shadow-md' : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                    key={fmt.id}
+                    onClick={() => handleSetFormation(fmt.id)}
+                    className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all flex items-center justify-center space-x-1.5 ${
+                      formationConfig.type === fmt.id
+                        ? 'bg-cyan-600 text-white border-cyan-400 shadow-lg shadow-cyan-600/30'
+                        : 'bg-slate-900/80 text-slate-400 border-slate-800 hover:text-white hover:bg-slate-800'
                     }`}
                   >
-                    {pat}
+                    <span>{fmt.label}</span>
                   </button>
                 ))}
+              </div>
+
+              {/* SPACING SLIDER & LEADER SELECTION */}
+              <div className="flex items-center space-x-6 pt-3 border-t border-slate-800 text-xs">
+                <div className="flex-1 space-y-1">
+                  <div className="flex justify-between text-slate-300 font-bold">
+                    <span>INTER-NODE SPACING</span>
+                    <span className="text-cyan-400">{formationConfig.spacingMeters} meters</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={10}
+                    max={100}
+                    step={5}
+                    value={formationConfig.spacingMeters}
+                    onChange={(e) => handleSpacingChange(Number(e.target.value))}
+                    className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+                  />
+                </div>
+
+                <div className="w-64 space-y-1">
+                  <span className="text-slate-300 font-bold block">FORMATION LEADER</span>
+                  <select
+                    value={formationConfig.leaderId}
+                    onChange={(e) => setLeader(e.target.value)}
+                    className="w-full bg-[#040710] border border-slate-700 rounded px-2.5 py-1 text-white font-bold outline-none"
+                  >
+                    {drones.map((d) => (
+                      <option key={d.id} value={d.id}>{d.callsign} ({d.id})</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
             <div className="bg-[#070d1a] border border-[#1b253b] p-4 rounded-xl grid grid-cols-3 gap-4 text-xs">
-              <div><span className="text-slate-400 font-bold block">ACTIVE GEOMETRY</span><span className="text-xl font-bold text-cyan-400">{formationPattern}</span></div>
-              <div><span className="text-slate-400 font-bold block">INTER-NODE SPACING</span><span className="text-xl font-bold text-white">{spacingMeters} m</span></div>
+              <div><span className="text-slate-400 font-bold block">ACTIVE GEOMETRY</span><span className="text-xl font-bold text-cyan-400">{formationConfig.type}</span></div>
+              <div><span className="text-slate-400 font-bold block">SPACING & LEADER</span><span className="text-xl font-bold text-white">{formationConfig.spacingMeters}m ({formationConfig.leaderId})</span></div>
               <div><span className="text-slate-400 font-bold block">FORMATION INTEGRITY</span><span className="text-xl font-bold text-emerald-400">{analytics.formationIntegrityPercent}%</span></div>
             </div>
           </div>
