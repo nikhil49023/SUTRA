@@ -5,19 +5,21 @@ export class FormationAnimator {
   private animationFrameId: number | null = null;
   private isAnimating: boolean = false;
   private currentTargets: FormationTarget[] = [];
-  private lerpFactor: number = 0.08; // Smooth 60 FPS interpolation factor
+  private lerpFactor: number = 0.12; // Smooth 60 FPS interpolation factor
 
   public animateToTargets(targets: FormationTarget[], immediate: boolean = false): void {
     this.currentTargets = targets;
 
     if (immediate) {
-      // Teleport only on initial load if requested
+      // Direct position locking during active mission flight so no follower is left behind
       targets.forEach((target) => {
+        if (target.isLeader) return; // Leader position is driven by mission execution engine
         fleetStore.updateDronePosition(target.droneId, {
           lat: target.targetLat,
           lng: target.targetLng,
           altitude: target.targetAlt,
-          heading: target.headingDegrees
+          heading: target.headingDegrees,
+          status: 'IN_FLIGHT'
         });
       });
       return;
@@ -41,7 +43,7 @@ export class FormationAnimator {
       const currentDrones = fleetStore.getDrones();
 
       this.currentTargets.forEach((target) => {
-        if (target.isLeader) return; // Leader position is driven by flight engine or manual control
+        if (target.isLeader) return; // Leader position is driven by flight engine
 
         const currentDrone = currentDrones.find((d) => d.id === target.droneId);
         if (!currentDrone) return;

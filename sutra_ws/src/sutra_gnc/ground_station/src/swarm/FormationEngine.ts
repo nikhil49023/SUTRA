@@ -17,7 +17,7 @@ export class FormationEngine {
   private currentTargets: FormationTarget[] = [];
 
   private constructor() {
-    // Intentionally empty to prevent circular static initialization
+    // Intentionally empty to avoid circular static initialization
   }
 
   public static getInstance(): FormationEngine {
@@ -34,29 +34,33 @@ export class FormationEngine {
   public setFormation(type: FormationType): void {
     if (this.config.type === type) return;
     this.config.type = type;
-    this.recalculateAndAnimate();
+    this.recalculateAndAnimate(false);
   }
 
   public setSpacing(spacingMeters: number): void {
     if (this.config.spacingMeters === spacingMeters) return;
     this.config.spacingMeters = spacingMeters;
-    this.recalculateAndAnimate();
+    this.recalculateAndAnimate(false);
   }
 
   public setLeader(leaderId: string): void {
     if (this.config.leaderId === leaderId) return;
     this.config.leaderId = leaderId;
-    this.recalculateAndAnimate();
+    this.recalculateAndAnimate(true);
   }
 
   public setHeading(headingDegrees: number): void {
     this.config.headingDegrees = headingDegrees;
-    this.recalculateAndAnimate();
+    this.recalculateAndAnimate(true);
   }
 
+  /**
+   * Called continuously during mission flight when Leader position updates.
+   * Lock followers to leader position immediately during active flight so no drone is left behind!
+   */
   public updateLeaderPosition(leaderPos: { lat: number; lng: number; alt: number; heading: number }): void {
     this.config.headingDegrees = leaderPos.heading;
-    this.recalculateAndAnimate();
+    this.recalculateAndAnimate(true);
   }
 
   public getCurrentTargets(): FormationTarget[] {
