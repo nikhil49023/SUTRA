@@ -180,7 +180,7 @@ export const GISMap: React.FC<GISMapProps> = ({
                 isEditable={interactionMode === 'EDIT_WAYPOINT' || interactionMode === 'PAN'}
               />
             )}
-            <DroneRenderer map={map} activeDrone={activeDrone} telemetry={telemetry} drones={fleetStore.getDrones()} />
+            <DroneRenderer map={map} activeDrone={activeDrone} telemetry={telemetry} />
             {showGeofence && <GeofenceRenderer map={map} />}
           </>
         )}

@@ -1,30 +1,32 @@
 import React, { useEffect, useRef } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import type { DroneAsset, TelemetryData } from '../../../types';
-import { fleetStore } from '../../../store/FleetStore';
+import { useFleetStore } from '../../../store/FleetStore';
+import { SwarmRenderer } from '../../../swarm/visualization/SwarmRenderer';
 
 interface DroneRendererProps {
   map: maplibregl.Map | null;
   activeDrone: DroneAsset;
   telemetry: TelemetryData;
-  drones?: DroneAsset[];
 }
 
-export const DroneRenderer: React.FC<DroneRendererProps> = ({ map, activeDrone, telemetry, drones }) => {
+export const DroneRenderer: React.FC<DroneRendererProps> = ({ map, activeDrone, telemetry }) => {
   const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
+  const { drones: fleetDrones } = useFleetStore();
 
-  const fleetList = drones && drones.length > 0 ? drones : [activeDrone];
+  const fleetList = fleetDrones && fleetDrones.length > 0 ? fleetDrones : [activeDrone];
 
   useEffect(() => {
     if (!map) return;
 
+    // 1. Update / Create MapLibre HTML Markers for all drones in fleet
     fleetList.forEach((drone) => {
       let marker = markersRef.current.get(drone.id);
+      const isLeader = drone.id === 'DRONE_01' || drone.id === activeDrone.id;
 
       if (!marker) {
         const el = document.createElement('div');
         el.className = 'drone-marker-container relative cursor-pointer';
-        const isLeader = drone.id === 'DRONE_01' || drone.id === activeDrone.id;
 
         el.innerHTML = `
           <div class="relative flex items-center justify-center">
@@ -48,7 +50,7 @@ export const DroneRenderer: React.FC<DroneRendererProps> = ({ map, activeDrone, 
             </div>
 
             <div class="absolute left-10 top-[-8px] whitespace-nowrap bg-[#060b14]/95 border ${isLeader ? 'border-[#00f0ff]' : 'border-slate-700'} backdrop-blur-md px-2 py-0.5 rounded text-[9px] font-mono shadow-2xl z-20">
-              <div className="font-bold uppercase flex items-center space-x-1 ${isLeader ? 'text-cyan-400' : 'text-slate-300'}">
+              <div class="font-bold uppercase flex items-center space-x-1 ${isLeader ? 'text-cyan-400' : 'text-slate-300'}">
                 <span class="w-1.5 h-1.5 rounded-full ${isLeader ? 'bg-cyan-400 animate-pulse' : 'bg-emerald-400'}"></span>
                 <span>${drone.callsign}</span>
               </div>
@@ -65,7 +67,7 @@ export const DroneRenderer: React.FC<DroneRendererProps> = ({ map, activeDrone, 
 
         markersRef.current.set(drone.id, marker);
       } else {
-        // Fast 60 FPS update of existing marker
+        // 60 FPS direct marker coordinate & rotation update
         marker.setLngLat([drone.lng, drone.lat]);
         const rotEl = marker.getElement().querySelector(`#drone-rot-${drone.id}`) as HTMLElement;
         if (rotEl) {
@@ -77,6 +79,41 @@ export const DroneRenderer: React.FC<DroneRendererProps> = ({ map, activeDrone, 
         }
       }
     });
+
+    // 2. Render Swarm Formation Guide Lines
+    const lines = SwarmRenderer.getFormationLines();
+    const geojsonData: GeoJSON.FeatureCollection = {
+      type: 'FeatureCollection',
+      features: lines.map((line) => ({
+        type: 'Feature',
+        properties: { droneId: line.droneId },
+        geometry: {
+          type: 'LineString',
+          coordinates: [line.from, line.to]
+        }
+      }))
+    };
+
+    const sourceId = 'swarm-formation-lines-source';
+    const layerId = 'swarm-formation-lines-layer';
+
+    if (!map.getSource(sourceId)) {
+      map.addSource(sourceId, { type: 'geojson', data: geojsonData });
+      map.addLayer({
+        id: layerId,
+        type: 'line',
+        source: sourceId,
+        paint: {
+          'line-color': '#00f0ff',
+          'line-width': 1.5,
+          'line-dasharray': [3, 3],
+          'line-opacity': 0.7
+        }
+      });
+    } else {
+      (map.getSource(sourceId) as maplibregl.GeoJSONSource).setData(geojsonData);
+    }
+
   }, [map, fleetList]);
 
   return null;
