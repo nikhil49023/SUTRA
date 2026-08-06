@@ -94,10 +94,22 @@ When a user introduces themselves by name, automatically activate their exact ro
 
 ### 1. 🚁 ROHITH KUMAR — Subsystem A Lead (GNC & Flight Control)
 - **Folder**: `sutra_ws/src/sutra_gnc/` | **Branch**: `feature/subsystem-a-gnc` | **Doc**: `sutra_ws/src/sutra_gnc/DOCS.md`
-- **Pre-Work Action**: Run Rule 0 (`git status`, `git branch --show-current`, `git fetch origin dev && git merge origin/dev`).
-- **Tasks**: PX4 Offboard trajectory mode dispatch (`offboard_node.py`), Visual-Inertial Odometry (VIO) localization, ORCA 3D avoidance, and OctoMap 3D voxel grid.
-- **Commit Mandate**: Update `sutra_ws/src/sutra_gnc/DOCS.md` with VIO error, ORCA safety buffer, and 50Hz rate stats.
-- **Verification**: `pytest sutra_ws/src/sutra_gnc/test/`
+- **Pre-Work Action**: Run Rule 0 (`git status`, `git branch --show-current`, `git fetch origin dev && git merge origin/dev --no-edit`).
+- **Core Tasks**:
+  1. **PX4 Offboard Dispatch**: Execute and verify `offboard_node.py` against Gazebo Sim 8 SITL digital twin at 50Hz setpoints (`ros2 launch sutra_sim sutra_master_swarm_integration.launch.py sim_mode:=true`).
+  2. **GPS-Denied VIO Localization**: Test `vio_localization.py` EKF2 position drift under simulated GPS loss.
+  3. **3D Voxel OctoMap**: Run `octomap_generator.py` with depth sensor point cloud topics (`/camera/points`) to generate 0.10m occupancy grids.
+  4. **ORCA 3D Collision Avoidance**: Test `orca_avoidance.py` velocity obstacle solver to maintain $\ge 2.8\text{m}$ clearance (Gate G5).
+- **Execution & Verification Workflow**:
+  ```bash
+  # Step 1: Sync branch
+  git checkout feature/subsystem-a-gnc && git fetch origin dev && git merge origin/dev --no-edit
+  # Step 2: Run verification test suite
+  pytest sutra_ws/src/sutra_gnc/test/ --durations=0
+  # Step 3: Launch Gazebo SITL swarm world
+  ros2 launch sutra_sim sutra_master_swarm_integration.launch.py sim_mode:=true
+  ```
+- **Commit Mandate**: Update `sutra_ws/src/sutra_gnc/DOCS.md` with measured VIO error, ORCA safety buffer, and 50Hz trajectory setpoint rate stats. Do NOT use synthetic/hardcoded numbers.
 
 ### 2. 📡 NIKHIL — Tech Architect & Subsystem B Lead (Comms & Sim) ⚡ **[TECH LEAD]**
 - **Folder**: `sutra_ws/src/sutra_comms/` & `sutra_ws/src/sutra_sim/` | **Branch**: `feature/subsystem-b-comms` | **Doc**: `sutra_ws/src/sutra_comms/DOCS.md`

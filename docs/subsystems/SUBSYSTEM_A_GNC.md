@@ -36,3 +36,26 @@ sutra_gnc (ROS 2 Package)
     ├── ROS 2 Jazzy (nav_msgs, geometry_msgs, sensor_msgs)
     └── OctoMap C++ / Python Bindings
 ```
+
+---
+
+## 🛠️ Step-by-Step Execution & Verification Guide for Rohith
+
+1. **Sync Feature Branch**:
+   ```bash
+   git checkout feature/subsystem-a-gnc && git fetch origin dev && git merge origin/dev --no-edit
+   ```
+2. **Execute Unit & Integration Suite**:
+   ```bash
+   pytest sutra_ws/src/sutra_gnc/test/ --durations=0
+   ```
+3. **Launch SITL Digital Twin Swarm & Offboard Node**:
+   ```bash
+   ros2 launch sutra_sim sutra_master_swarm_integration.launch.py sim_mode:=true
+   ros2 run sutra_gnc offboard_node
+   ```
+4. **Verify Setpoint Rate & Audit Benchmarks**:
+   ```bash
+   ros2 topic hz /fmu/in/trajectory_setpoint
+   ```
+

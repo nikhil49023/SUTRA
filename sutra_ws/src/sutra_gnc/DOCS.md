@@ -65,3 +65,38 @@ sutra_gnc (ROS 2 Package)
     ├── ROS 2 Jazzy (nav_msgs, geometry_msgs, sensor_msgs)
     └── OctoMap C++ / Python Bindings
 ```
+
+---
+
+## 🛠️ 5. Step-by-Step Task & Execution Guide for Rohith
+
+Follow these exact steps to complete Subsystem A GNC verification:
+
+### Step 1: Branch Sync & Environment Setup
+```bash
+git checkout feature/subsystem-a-gnc
+git fetch origin dev && git merge origin/dev --no-edit
+```
+
+### Step 2: Run Automated Unit & Integration Tests
+```bash
+pytest sutra_ws/src/sutra_gnc/test/ --durations=0
+```
+
+### Step 3: Run SITL Simulation Flight Verification (Gate G1)
+1. **Launch Gazebo Sim 8 Digital Twin Swarm World:**
+   ```bash
+   ros2 launch sutra_sim sutra_master_swarm_integration.launch.py sim_mode:=true
+   ```
+2. **Execute PX4 Offboard Dispatcher:**
+   ```bash
+   ros2 run sutra_gnc offboard_node
+   ```
+3. **Verify 50Hz Setpoint Rate:**
+   ```bash
+   ros2 topic hz /fmu/in/trajectory_setpoint
+   ```
+
+### Step 4: Update Measured Benchmarks
+After completing the SITL verification run, update Section 1 of this document (`sutra_ws/src/sutra_gnc/DOCS.md`) with your actual captured terminal results. Do NOT use synthetic or projected numbers.
+
