@@ -40,6 +40,7 @@ STEP 5: Update DOCS.md ONLY with Step 2 numbers. Mark Step 3 gaps explicitly.
 
 ## 📖 Primary Reference Documents
 Before making structural changes, consult the authoritative documentation:
+- ⚡ **Full-Day Master Sprint Plan**: [docs/plans/SUTRA_Full_Day_Master_Sprint_Plan.md](file:///home/nikhil/Desktop/Project%20SUTRA/docs/plans/SUTRA_Full_Day_Master_Sprint_Plan.md)
 - 🎨 **Visual Tutorial & Developer Guide**: [docs/guides/SUTRA_Visual_Tutorial_Guide.pdf](file:///home/nikhil/Desktop/Project%20SUTRA/docs/guides/SUTRA_Visual_Tutorial_Guide.pdf) | [HTML Version](file:///home/nikhil/Desktop/Project%20SUTRA/docs/guides/SUTRA_Visual_Tutorial_Guide.html)
 - ⚙️ **Verification Suites**: `pytest sutra_ws/src/sutra_gnc/test/` | `pytest sutra_ws/src/sutra_comms/test/` | `pytest sutra_ws/src/sutra_perception/test/` | `cd sutra_ws/src/sutra_gcs && npm run build`
 - 🗺️ **Subsystem Roadmaps**: [docs/plans/SUTRA_Team_Roadmaps.md](file:///home/nikhil/Desktop/Project%20SUTRA/docs/plans/SUTRA_Team_Roadmaps.md)
