@@ -12,10 +12,21 @@ Integration update by Vedanth (Subsystem C):
 
 import math
 import json
-import rclpy
-from rclpy.node import Node
-from geometry_msgs.msg import TwistStamped, PoseStamped
-from std_msgs.msg import String
+
+try:
+    import rclpy
+    from rclpy.node import Node
+    from geometry_msgs.msg import TwistStamped, PoseStamped
+    from std_msgs.msg import String
+    HAS_RCLPY = True
+except ImportError:
+    HAS_RCLPY = False
+    class Node:
+        def __init__(self, *args, **kwargs): pass
+    class TwistStamped: pass
+    class PoseStamped: pass
+    class String: pass
+
 
 
 # ── Simple waypoint mission ───────────────────────────────────────────────────
@@ -56,6 +67,16 @@ class SutraOffboardControlNode(Node):
             String, '/sutra/gnc/pose', 10
         )
 
+        # ── Subscriber for VIO Tracking Status Failsafe ──────────────────────
+        self.vio_tracking_status = "TRACKING_OK"
+        self.vio_status_code = 1
+        self.sub_vio_status = self.create_subscription(
+            String,
+            '/sutra/gnc/vio_status',
+            self._vio_status_callback,
+            10
+        )
+
         # ── State ─────────────────────────────────────────────────────────────
         self.state        = DroneState()
         self.wp_index     = 0
@@ -70,6 +91,14 @@ class SutraOffboardControlNode(Node):
             '🚁 SUTRA PX4 Offboard Control Node Initialized. '
             'Publishing pose on /sutra/gnc/pose_stamped'
         )
+
+    def _vio_status_callback(self, msg: String):
+        try:
+            data = json.loads(msg.data)
+            self.vio_tracking_status = data.get("status_name", "TRACKING_OK")
+            self.vio_status_code = data.get("status_code", 1)
+        except Exception:
+            pass
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -95,24 +124,39 @@ class SutraOffboardControlNode(Node):
     def control_loop(self):
         """10 Hz: navigate to next waypoint + publish pose for Subsystem C."""
 
-        wp = self.wp_list[self.wp_index]
-
-        # ── Simple proportional navigation ────────────────────────────────────
-        dist = self._distance_to_wp(wp)
-        yaw  = self._yaw_to_wp(wp)
-
-        if dist < 1.5:
-            # Reached waypoint — advance to next
-            self.wp_index = (self.wp_index + 1) % len(self.wp_list)
-            self.get_logger().info(
-                f'✅ Waypoint {self.wp_index} reached → next: {self.wp_list[self.wp_index]}'
-            )
+        # Check VIO Tracking Status Failsafe
+        if self.vio_status_code == 3:  # TRACKING_LOST
+            self.get_logger().warn('🚨 VIO TRACKING LOST! Activating Position Hold Failsafe.')
             vx, vy, vz = 0.0, 0.0, 0.0
+            yaw = self.state.yaw
+        elif self.vio_status_code == 2:  # TRACKING_DEGRADED
+            self.get_logger().warn('⚠️ VIO TRACKING DEGRADED! Slowing down to 0.5 m/s.')
+            wp = self.wp_list[self.wp_index]
+            dist = self._distance_to_wp(wp)
+            yaw = self._yaw_to_wp(wp)
+            slow_speed = 0.5
+            vx = slow_speed * math.sin(yaw)
+            vy = slow_speed * math.cos(yaw)
+            vz = (wp[2] - self.state.z) * 0.2
         else:
-            # Fly toward waypoint at cruise speed
-            vx = self.cruise_speed * math.sin(yaw)
-            vy = self.cruise_speed * math.cos(yaw)
-            vz = (wp[2] - self.state.z) * 0.5  # altitude proportional
+            wp = self.wp_list[self.wp_index]
+
+            # ── Simple proportional navigation ────────────────────────────────────
+            dist = self._distance_to_wp(wp)
+            yaw  = self._yaw_to_wp(wp)
+
+            if dist < 1.5:
+                # Reached waypoint — advance to next
+                self.wp_index = (self.wp_index + 1) % len(self.wp_list)
+                self.get_logger().info(
+                    f'✅ Waypoint {self.wp_index} reached → next: {self.wp_list[self.wp_index]}'
+                )
+                vx, vy, vz = 0.0, 0.0, 0.0
+            else:
+                # Fly toward waypoint at cruise speed
+                vx = self.cruise_speed * math.sin(yaw)
+                vy = self.cruise_speed * math.cos(yaw)
+                vz = (wp[2] - self.state.z) * 0.5  # altitude proportional
 
         # Update simulated position (dead reckoning for SITL)
         dt = 0.1

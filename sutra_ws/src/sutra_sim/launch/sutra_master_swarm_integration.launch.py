@@ -1,7 +1,8 @@
 import os
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import DeclareLaunchArgument, LogInfo
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, LogInfo
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
@@ -9,7 +10,7 @@ def generate_launch_description():
     Project SUTRA — Master 5-Subsystem Autonomous Swarm Integration Launch File
     =============================================================================
     Launches GNC (A), Comms & SwarmRAFT (B), Perception & Raycasting (C), 
-    and Remote GCS WebSocket Gateway Bridge (D) concurrently.
+    Gazebo Sim 8 Digital Twin (Sim), and Remote GCS WebSocket Gateway Bridge (D) concurrently.
     """
     sim_mode_arg = DeclareLaunchArgument(
         'sim_mode',
@@ -22,6 +23,8 @@ def generate_launch_description():
         default_value='9090',
         description='WebSocket port for remote GCS telemetry connection'
     )
+
+    sim_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
     # 1. Subsystem B (Comms): Remote GCS Gateway Bridge Node
     gcs_gateway_bridge_node = Node(
@@ -69,6 +72,22 @@ def generate_launch_description():
         }]
     )
 
+    # 5. Subsystem A (GNC): VIO Localization & Covariance Filter Node
+    vio_node = Node(
+        package='sutra_gnc',
+        executable='vio_localization',
+        name='sutra_vio_localization',
+        output='screen'
+    )
+
+    # 6. Subsystem A (GNC): 3D OctoMap Voxel Generator Node
+    octomap_node = Node(
+        package='sutra_gnc',
+        executable='octomap_generator',
+        name='sutra_octomap_generator',
+        output='screen'
+    )
+
     return LaunchDescription([
         sim_mode_arg,
         ws_port_arg,
@@ -77,4 +96,6 @@ def generate_launch_description():
         mesh_node,
         detector_node,
         offboard_node,
+        vio_node,
+        octomap_node,
     ])
