@@ -1,12 +1,14 @@
 # 🚁 Subsystem A — GNC & Flight Control Master Specification
 
+[![Subsystem Status](https://img.shields.io/badge/Subsystem_Status-IN_PROGRESS-orange.svg)]()
 [![PyTest Verification](https://img.shields.io/badge/PyTest-8%2F8%20PASSED-brightgreen.svg)]()
-[![Gate G5 Compliance](https://img.shields.io/badge/Gate_G5-VERIFIED-brightgreen.svg)]()
-[![Dual-Mode Launch](https://img.shields.io/badge/Dual--Mode_Launch-READY-brightgreen.svg)]()
+[![Gate G5 Math Check](https://img.shields.io/badge/Gate_G5-MATH_VERIFIED-blue.svg)]()
+[![SITL Flight Test](https://img.shields.io/badge/SITL_Flight_Test-PENDING-red.svg)]()
 
-**Subsystem Lead:** Rohith Kumar  
-**Branch:** `feature/subsystem-a-gnc`  
-**Location:** `sutra_ws/src/sutra_gnc/`
+> **Subsystem Lead:** Rohith Kumar  
+> **Branch:** `feature/subsystem-a-gnc`  
+> **Location:** `sutra_ws/src/sutra_gnc/`  
+> **Current Audit Status:** ⚠️ **INCOMPLETE** — Static math tests passed. SITL 50Hz flight verification, VIO EKF module, and OctoMap generator remain incomplete.
 
 ---
 
@@ -99,4 +101,17 @@ pytest sutra_ws/src/sutra_gnc/test/ --durations=0
 
 ### Step 4: Update Measured Benchmarks
 After completing the SITL verification run, update Section 1 of this document (`sutra_ws/src/sutra_gnc/DOCS.md`) with your actual captured terminal results. Do NOT use synthetic or projected numbers.
+
+---
+
+## 📋 6. Mandatory Subsystem A Sign-off & Completion Checklist
+
+Subsystem A CANNOT be declared "Complete" or merged to `main` until all 5 criteria are verified:
+
+- [ ] **1. Code Commit Verification**: Rohith must author and commit `sutra_gnc/vio_localization.py` and `sutra_gnc/octomap_generator.py` to `feature/subsystem-a-gnc`.
+- [ ] **2. Gate G1 SITL Flight Verification**: `offboard_node.py` must be run against live PX4 SITL Gazebo simulation with setpoint rate $\ge 50\text{Hz}$ (`ros2 topic hz /fmu/in/trajectory_setpoint`) and position tracking RMSE $< 0.15\text{m}$.
+- [ ] **3. Gate G5 Multi-Drone Avoidance**: ORCA 3D avoidance must demonstrate dynamic clearance $\ge 2.8\text{m}$ across 5 active drones in Gazebo SITL.
+- [ ] **4. Failsafe Latency Test**: Emergency RTL transition on telemetry drop must be verified $< 100\text{ms}$.
+- [ ] **5. Statistical DOCS.md Sync**: Update Section 1 of this document with verbatim captured stdout output from live verification commands.
+
 

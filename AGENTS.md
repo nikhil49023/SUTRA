@@ -94,22 +94,18 @@ When a user introduces themselves by name, automatically activate their exact ro
 
 ### 1. 🚁 ROHITH KUMAR — Subsystem A Lead (GNC & Flight Control)
 - **Folder**: `sutra_ws/src/sutra_gnc/` | **Branch**: `feature/subsystem-a-gnc` | **Doc**: `sutra_ws/src/sutra_gnc/DOCS.md`
+- **Subsystem Status**: ⚠️ **INCOMPLETE / IN PROGRESS (0 commits by Rohith)** — Current unit tests only cover static math checks written by Nikhil. Core GNC modules are missing.
 - **Pre-Work Action**: Run Rule 0 (`git status`, `git branch --show-current`, `git fetch origin dev && git merge origin/dev --no-edit`).
-- **Core Tasks**:
-  1. **PX4 Offboard Dispatch**: Execute and verify `offboard_node.py` against Gazebo Sim 8 SITL digital twin at 50Hz setpoints (`ros2 launch sutra_sim sutra_master_swarm_integration.launch.py sim_mode:=true`).
-  2. **GPS-Denied VIO Localization**: Test `vio_localization.py` EKF2 position drift under simulated GPS loss.
-  3. **3D Voxel OctoMap**: Run `octomap_generator.py` with depth sensor point cloud topics (`/camera/points`) to generate 0.10m occupancy grids.
-  4. **ORCA 3D Collision Avoidance**: Test `orca_avoidance.py` velocity obstacle solver to maintain $\ge 2.8\text{m}$ clearance (Gate G5).
-- **Execution & Verification Workflow**:
-  ```bash
-  # Step 1: Sync branch
-  git checkout feature/subsystem-a-gnc && git fetch origin dev && git merge origin/dev --no-edit
-  # Step 2: Run verification test suite
-  pytest sutra_ws/src/sutra_gnc/test/ --durations=0
-  # Step 3: Launch Gazebo SITL swarm world
-  ros2 launch sutra_sim sutra_master_swarm_integration.launch.py sim_mode:=true
-  ```
-- **Commit Mandate**: Update `sutra_ws/src/sutra_gnc/DOCS.md` with measured VIO error, ORCA safety buffer, and 50Hz trajectory setpoint rate stats. Do NOT use synthetic/hardcoded numbers.
+- **Missing & Incomplete Deliverables**:
+  1. ❌ **`vio_localization.py`**: Missing VIO EKF localization for GPS-denied forest navigation.
+  2. ❌ **`octomap_generator.py`**: Missing 0.10m 3D voxel occupancy grid generator parsing `/camera/points`.
+  3. ❌ **PX4 SITL 50Hz Live Verification (Gate G1)**: Untested against Gazebo Sim 8 digital twin (`ros2 topic hz /fmu/in/trajectory_setpoint`).
+  4. ❌ **Emergency RTL Failsafe**: Untested failover transition under simulated telemetry dropouts (< 100ms requirement).
+- **Mandatory Completion Criteria (Before Subsystem A can be declared complete)**:
+  - [ ] Implement and commit `sutra_gnc/vio_localization.py` and `sutra_gnc/octomap_generator.py`.
+  - [ ] Run `ros2 launch sutra_sim sutra_master_swarm_integration.launch.py sim_mode:=true` and verify 50Hz setpoint rate with RMSE < 0.15m.
+  - [ ] Verify ORCA 3D multi-drone dynamic clearance $\ge 2.8\text{m}$ (Gate G5).
+  - [ ] Execute `pytest sutra_ws/src/sutra_gnc/test/ --durations=0` and update `sutra_ws/src/sutra_gnc/DOCS.md` with verbatim terminal stdout evidence.
 
 ### 2. 📡 NIKHIL — Tech Architect & Subsystem B Lead (Comms & Sim) ⚡ **[TECH LEAD]**
 - **Folder**: `sutra_ws/src/sutra_comms/` & `sutra_ws/src/sutra_sim/` | **Branch**: `feature/subsystem-b-comms` | **Doc**: `sutra_ws/src/sutra_comms/DOCS.md`

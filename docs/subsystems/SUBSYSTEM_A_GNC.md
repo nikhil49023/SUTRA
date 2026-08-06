@@ -1,12 +1,13 @@
 # 🚁 Subsystem A — GNC & Flight Control Documentation
 
-[![Build Status](https://img.shields.io/badge/PX4_Offboard-ACTIVE-brightgreen.svg)]()
-[![Gate G5 Metric](https://img.shields.io/badge/Gate_G5-PASSED-blue.svg)]()
-[![Safety Buffer](https://img.shields.io/badge/ORCA_3D-3.1m-green.svg)]()
+[![Subsystem Status](https://img.shields.io/badge/Subsystem_Status-IN_PROGRESS-orange.svg)]()
+[![PX4 Offboard](https://img.shields.io/badge/PX4_Offboard-SITL_UNVERIFIED-red.svg)]()
+[![Gate G5 Math Check](https://img.shields.io/badge/Gate_G5-MATH_VERIFIED-blue.svg)]()
 
-**Subsystem Lead:** Rohith Kumar  
-**Branch:** `feature/subsystem-a-gnc`  
-**Location:** `sutra_ws/src/sutra_gnc/`
+> **Subsystem Lead:** Rohith Kumar  
+> **Branch:** `feature/subsystem-a-gnc`  
+> **Location:** `sutra_ws/src/sutra_gnc/`  
+> **Audit Status:** ⚠️ **INCOMPLETE (0 Commits by Lead)** — Python unit math tests passed, but VIO localization, OctoMap generation, and PX4 SITL 50Hz trajectory testing are unfinished.
 
 ---
 
