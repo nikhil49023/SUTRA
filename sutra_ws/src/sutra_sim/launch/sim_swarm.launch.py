@@ -29,7 +29,7 @@ def generate_launch_description():
 
     # ExecuteProcess for Gazebo Sim 8 (Harmonic) engine
     gazebo_process = ExecuteProcess(
-        cmd=['gz', 'sim', '-r', world_path],
+        cmd=['gz', 'sim', '-s', '-r', world_path],
         output='screen'
     )
 
