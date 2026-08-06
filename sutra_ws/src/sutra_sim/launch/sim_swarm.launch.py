@@ -28,9 +28,9 @@ def generate_launch_description():
     sim_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     world_path = PathJoinSubstitution([sim_dir, 'worlds', LaunchConfiguration('world')])
 
-    # ExecuteProcess for Gazebo Sim 8 (Harmonic) engine
+    # ExecuteProcess for Gazebo Sim 8 (Harmonic) engine (3D GUI enabled by default)
     gazebo_process = ExecuteProcess(
-        cmd=['gz', 'sim', '-s', '-r', world_path],
+        cmd=['gz', 'sim', '-r', world_path],
         output='screen'
     )
 
