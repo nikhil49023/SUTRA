@@ -102,3 +102,7 @@ yolov8*.pt
 *.weights
 *.h5
 kaggle/
+
+# Blender heavy binary files — regenerate via python3 scripts/build_submerged_flood_disaster_world.py
+*.blend
+*.blend1
