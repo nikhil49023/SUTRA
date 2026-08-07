@@ -18,6 +18,12 @@ def generate_launch_description():
         description='Enable Gazebo SITL simulation mode'
     )
 
+    world_arg = DeclareLaunchArgument(
+        'world',
+        default_value='high_quality_disaster_swarm_world.sdf',
+        description='Gazebo Sim 8 world SDF file name'
+    )
+
     ws_port_arg = DeclareLaunchArgument(
         'ws_port',
         default_value='9090',
@@ -64,7 +70,7 @@ def generate_launch_description():
     # 4. Subsystem A (GNC): Offboard Controller Node
     offboard_node = Node(
         package='sutra_gnc',
-        executable='offboard_node',
+        executable='offboard_node.py',
         name='sutra_offboard_node',
         output='screen',
         parameters=[{
@@ -75,7 +81,7 @@ def generate_launch_description():
     # 5. Subsystem A (GNC): VIO Localization & Covariance Filter Node
     vio_node = Node(
         package='sutra_gnc',
-        executable='vio_localization',
+        executable='vio_localization.py',
         name='sutra_vio_localization',
         output='screen'
     )
@@ -83,15 +89,16 @@ def generate_launch_description():
     # 6. Subsystem A (GNC): 3D OctoMap Voxel Generator Node
     octomap_node = Node(
         package='sutra_gnc',
-        executable='octomap_generator',
+        executable='octomap_generator.py',
         name='sutra_octomap_generator',
         output='screen'
     )
 
     return LaunchDescription([
         sim_mode_arg,
+        world_arg,
         ws_port_arg,
-        LogInfo(msg="🚀 LAUNCHING PROJECT SUTRA MASTER SWARM INTEGRATION PIPELINE..."),
+        LogInfo(msg="🚀 LAUNCHING PROJECT SUTRA MASTER 5-SUBSYSTEM SWARM PIPELINE (PBR MAX QUALITY STACK)..."),
         gcs_gateway_bridge_node,
         mesh_node,
         detector_node,

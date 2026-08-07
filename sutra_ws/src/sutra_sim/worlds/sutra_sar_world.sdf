@@ -1,0 +1,1128 @@
+<?xml version="1.0" ?>
+<sdf version="1.8">
+  <world name="sutra_sar_disaster_world">
+    <!-- Physics: 500Hz for high-fidelity PX4 SITL -->
+    <physics name="500hz_physics" type="dart">
+      <max_step_size>0.002</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>500</real_time_update_rate>
+    </physics>
+
+    <!-- Gazebo plugins -->
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-contact-system" name="gz::sim::systems::Contact"/>
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
+    <plugin filename="gz-sim-navsat-system" name="gz::sim::systems::NavSat"/>
+    <plugin filename="gz-sim-thermal-camera-system" name="gz::sim::systems::ThermalCamera"/>
+
+    <!-- Geographic coordinates: San Francisco disaster zone -->
+    <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <latitude_deg>37.774929</latitude_deg>
+      <longitude_deg>-122.419416</longitude_deg>
+      <elevation>15.0</elevation>
+    </spherical_coordinates>
+
+    <!-- Lighting: afternoon sun with shadows -->
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 50 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.2 -0.8</direction>
+    </light>
+
+    <!-- Ambient light for better visibility -->
+    <light type="ambient" name="ambient_light">
+      <diffuse>0.3 0.3 0.3 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+    </light>
+
+    <!-- ==================== TERRAIN ==================== -->
+    <model name="terrain">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <heightmap>
+              <uri>file://media/materials/textures/terrain_heightmap.png</uri>
+              <size>200 200 20 0 0 0</size>
+            </heightmap>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <heightmap>
+              <uri>file://media/materials/textures/terrain_heightmap.png</uri>
+              <size>200 200 20 0 0 0</size>
+              <texture>
+                <diffuse>file://media/materials/textures/dirt.png</diffuse>
+                <normal>file://media/materials/textures/dirt_normal.png</normal>
+                <size>100</size>
+              </texture>
+              <texture>
+                <diffuse>file://media/materials/textures/grass.png</diffuse>
+                <normal>file://media/materials/textures/grass_normal.png</normal>
+                <size>100</size>
+              </texture>
+              <texture>
+                <diffuse>file://media/materials/textures/rock.png</diffuse>
+                <normal>file://media/materials/textures/rock_normal.png</normal>
+                <size>100</size>
+              </texture>
+              <blend>
+                <min_height>0</min_height>
+                <fade_dist>5</fade_dist>
+              </blend>
+              <blend>
+                <min_height>5</min_height>
+                <fade_dist>5</fade_dist>
+              </blend>
+            </heightmap>
+          </visual>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ==================== FLAT TAKEOFF ZONE ==================== -->
+    <model name="takeoff_zone">
+      <static>true</static>
+      <pose>0 0 0.1 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <cylinder>
+              <radius>5</radius>
+              <length>0.05</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.4 0.4 0.4 1</ambient>
+            <diffuse>0.6 0.6 0.6 1</diffuse>
+          </material>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <cylinder>
+              <radius>5</radius>
+              <length>0.05</length>
+            </cylinder>
+          </geometry>
+        </collision>
+      </link>
+    </model>
+
+    <!-- ==================== DAMAGED BUILDINGS ==================== -->
+    <!-- Building 1: Partially collapsed -->
+    <model name="building_1">
+      <static>true</static>
+      <pose>30 20 0 0 0 0</pose>
+      <link name="link">
+        <visual name="wall_north">
+          <geometry>
+            <box>
+              <size>10 0.3 8</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.6 0.6 0.6 1</ambient>
+            <diffuse>0.7 0.7 0.7 1</diffuse>
+          </material>
+          <pose>0 -4.85 4 0 0 0</pose>
+        </visual>
+        <visual name="wall_south">
+          <geometry>
+            <box>
+              <size>10 0.3 6</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.6 0.6 0.6 1</ambient>
+            <diffuse>0.7 0.7 0.7 1</diffuse>
+          </material>
+          <pose>0 4.85 3 0 0 0.1</pose>
+        </visual>
+        <visual name="wall_east">
+          <geometry>
+            <box>
+              <size>0.3 10 7</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.6 0.6 0.6 1</ambient>
+            <diffuse>0.7 0.7 0.7 1</diffuse>
+          </material>
+          <pose>4.85 0 3.5 0 0 0</pose>
+        </visual>
+        <visual name="wall_west">
+          <geometry>
+            <box>
+              <size>0.3 10 5</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.6 0.6 0.6 1</ambient>
+            <diffuse>0.7 0.7 0.7 1</diffuse>
+          </material>
+          <pose>-4.85 0 2.5 0 0 0.2</pose>
+        </visual>
+        <visual name="roof">
+          <geometry>
+            <box>
+              <size>10 10 0.2</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.4 0.3 0.2 1</ambient>
+            <diffuse>0.5 0.4 0.3 1</diffuse>
+          </material>
+          <pose>0 0 8 0 0 0.3</pose>
+        </visual>
+        <visual name="floor">
+          <geometry>
+            <box>
+              <size>10 10 0.3</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.6 0.6 0.6 1</diffuse>
+          </material>
+          <pose>0 0 0.15 0 0 0</pose>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>10 10 8</size>
+            </box>
+          </geometry>
+          <pose>0 0 4 0 0 0</pose>
+        </collision>
+      </link>
+    </model>
+
+    <!-- Building 2: Intact with debris -->
+    <model name="building_2">
+      <static>true</static>
+      <pose>-40 30 0 0 0 0.5</pose>
+      <link name="link">
+        <visual name="walls">
+          <geometry>
+            <box>
+              <size>8 8 10</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.5 0.5 0.55 1</ambient>
+            <diffuse>0.6 0.6 0.65 1</diffuse>
+          </material>
+        </visual>
+        <visual name="roof">
+          <geometry>
+            <box>
+              <size>8.5 8.5 0.3</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.3 0.3 0.3 1</ambient>
+            <diffuse>0.4 0.4 0.4 1</diffuse>
+          </material>
+          <pose>0 0 5.15 0 0 0</pose>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>8 8 10</size>
+            </box>
+          </geometry>
+          <pose>0 0 5 0 0 0</pose>
+        </collision>
+      </link>
+    </model>
+
+    <!-- Building 3: Completely collapsed rubble -->
+    <model name="building_3_rubble">
+      <static>true</static>
+      <pose>20 -35 0 0 0 0</pose>
+      <link name="link">
+        <visual name="rubble_pile">
+          <geometry>
+            <sphere>
+              <radius>4</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.4 0.35 0.3 1</ambient>
+            <diffuse>0.5 0.45 0.4 1</diffuse>
+          </material>
+          <pose>0 0 1.5 0 0 0</pose>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <sphere>
+              <radius>4</radius>
+            </sphere>
+          </geometry>
+          <pose>0 0 1.5 0 0 0</pose>
+        </collision>
+        <!-- Rubble chunks -->
+        <visual name="chunk_1">
+          <geometry><box><size>2 1 1</size></box></geometry>
+          <material><ambient>0.5 0.4 0.3 1</ambient><diffuse>0.6 0.5 0.4 1</diffuse></material>
+          <pose>3 1 0.5 0.2 0.1 0.5</pose>
+        </visual>
+        <visual name="chunk_2">
+          <geometry><box><size>1.5 1.5 0.8</size></box></geometry>
+          <material><ambient>0.4 0.4 0.4 1</ambient><diffuse>0.5 0.5 0.5 1</diffuse></material>
+          <pose>-2 2 0.4 0.5 0 0.3</pose>
+        </visual>
+        <visual name="chunk_3">
+          <geometry><cylinder><radius>0.8</radius><length>3</length></cylinder></geometry>
+          <material><ambient>0.3 0.3 0.3 1</ambient><diffuse>0.4 0.4 0.4 1</diffuse></material>
+          <pose>1 -3 0.8 0.3 0.5 0</pose>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ==================== FOREST (Scattered Trees) ==================== -->
+    <!-- Tree 1 -->
+    <model name="tree_1">
+      <static>true</static>
+      <pose>50 40 0 0 0 0</pose>
+      <link name="link">
+        <visual name="trunk">
+          <geometry>
+            <cylinder>
+              <radius>0.2</radius>
+              <length>3</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.3 0.2 0.1 1</ambient>
+            <diffuse>0.4 0.3 0.2 1</diffuse>
+          </material>
+          <pose>0 0 1.5 0 0 0</pose>
+        </visual>
+        <visual name="canopy">
+          <geometry>
+            <sphere>
+              <radius>2</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.1 0.3 0.1 1</ambient>
+            <diffuse>0.2 0.4 0.2 1</diffuse>
+          </material>
+          <pose>0 0 4 0 0 0</pose>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <cylinder>
+              <radius>0.3</radius>
+              <length>3</length>
+            </cylinder>
+          </geometry>
+          <pose>0 0 1.5 0 0 0</pose>
+        </collision>
+      </link>
+    </model>
+
+    <!-- Tree 2 (burning) -->
+    <model name="tree_2_burning">
+      <static>true</static>
+      <pose>45 50 0 0 0 0</pose>
+      <link name="link">
+        <visual name="trunk">
+          <geometry>
+            <cylinder>
+              <radius>0.25</radius>
+              <length>4</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.2 0.1 0.05 1</ambient>
+            <diffuse>0.3 0.2 0.1 1</diffuse>
+          </material>
+          <pose>0 0 2 0 0 0</pose>
+        </visual>
+        <visual name="canopy">
+          <geometry>
+            <sphere>
+              <radius>2.5</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.1 0.2 0.05 1</ambient>
+            <diffuse>0.2 0.3 0.1 1</diffuse>
+          </material>
+          <pose>0 0 5 0 0 0</pose>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <cylinder>
+              <radius>0.3</radius>
+              <length>4</length>
+            </cylinder>
+          </geometry>
+          <pose>0 0 2 0 0 0</pose>
+        </collision>
+      </link>
+    </model>
+
+    <!-- Tree 3 -->
+    <model name="tree_3">
+      <static>true</static>
+      <pose>-60 45 0 0 0 0</pose>
+      <link name="link">
+        <visual name="trunk">
+          <geometry>
+            <cylinder>
+              <radius>0.18</radius>
+              <length>2.5</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.3 0.2 0.1 1</ambient>
+            <diffuse>0.4 0.3 0.2 1</diffuse>
+          </material>
+          <pose>0 0 1.25 0 0 0</pose>
+        </visual>
+        <visual name="canopy">
+          <geometry>
+            <sphere>
+              <radius>1.8</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.1 0.3 0.1 1</ambient>
+            <diffuse>0.2 0.4 0.2 1</diffuse>
+          </material>
+          <pose>0 0 3.5 0 0 0</pose>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <cylinder>
+              <radius>0.25</radius>
+              <length>2.5</length>
+            </cylinder>
+          </geometry>
+          <pose>0 0 1.25 0 0 0</pose>
+        </collision>
+      </link>
+    </model>
+
+    <!-- Tree 4 (fallen) -->
+    <model name="tree_4_fallen">
+      <static>true</static>
+      <pose>-50 -20 0 0 1.5708 0</pose>
+      <link name="link">
+        <visual name="trunk">
+          <geometry>
+            <cylinder>
+              <radius>0.3</radius>
+              <length>6</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.3 0.2 0.1 1</ambient>
+            <diffuse>0.4 0.3 0.2 1</diffuse>
+          </material>
+          <pose>0 0 0.3 0 0 0</pose>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <cylinder>
+              <radius>0.35</radius>
+              <length>6</length>
+            </cylinder>
+          </geometry>
+          <pose>0 0 0.3 0 0 0</pose>
+        </collision>
+      </link>
+    </model>
+
+    <!-- Tree 5 -->
+    <model name="tree_5">
+      <static>true</static>
+      <pose>60 -30 0 0 0 0</pose>
+      <link name="link">
+        <visual name="trunk">
+          <geometry>
+            <cylinder>
+              <radius>0.22</radius>
+              <length>3.5</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.3 0.2 0.1 1</ambient>
+            <diffuse>0.4 0.3 0.2 1</diffuse>
+          </material>
+          <pose>0 0 1.75 0 0 0</pose>
+        </visual>
+        <visual name="canopy">
+          <geometry>
+            <sphere>
+              <radius>2.2</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.1 0.3 0.1 1</ambient>
+            <diffuse>0.2 0.4 0.2 1</diffuse>
+          </material>
+          <pose>0 0 4.5 0 0 0</pose>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <cylinder>
+              <radius>0.3</radius>
+              <length>3.5</length>
+            </cylinder>
+          </geometry>
+          <pose>0 0 1.75 0 0 0</pose>
+        </collision>
+      </link>
+    </model>
+
+    <!-- ==================== RUBBLE & DEBRIS ==================== -->
+    <!-- Debris pile 1 -->
+    <model name="debris_1">
+      <static>true</static>
+      <pose>15 10 0 0 0 0</pose>
+      <link name="link">
+        <visual name="debris">
+          <geometry>
+            <box>
+              <size>3 2 1.5</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.4 0.35 0.3 1</ambient>
+            <diffuse>0.5 0.45 0.4 1</diffuse>
+          </material>
+          <pose>0 0 0.75 0 0 0.3</pose>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>3 2 1.5</size>
+            </box>
+          </geometry>
+          <pose>0 0 0.75 0 0 0.3</pose>
+        </collision>
+      </link>
+    </model>
+
+    <!-- Debris pile 2 -->
+    <model name="debris_2">
+      <static>true</static>
+      <pose>-25 -15 0 0 0 0</pose>
+      <link name="link">
+        <visual name="debris">
+          <geometry>
+            <box>
+              <size>4 3 2</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.35 0.3 0.25 1</ambient>
+            <diffuse>0.45 0.4 0.35 1</diffuse>
+          </material>
+          <pose>0 0 1 0 0 0.5</pose>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>4 3 2</size>
+            </box>
+          </geometry>
+          <pose>0 0 1 0 0 0.5</pose>
+        </collision>
+      </link>
+    </model>
+
+    <!-- ==================== WATER/FLOODED AREA ==================== -->
+    <model name="flooded_area">
+      <static>true</static>
+      <pose>0 -50 0 0 0 0</pose>
+      <link name="link">
+        <visual name="water">
+          <geometry>
+            <box>
+              <size>60 40 0.5</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.1 0.2 0.4 0.7</ambient>
+            <diffuse>0.2 0.3 0.5 0.7</diffuse>
+            <transparency>0.5</transparency>
+          </material>
+          <pose>0 0 0.25 0 0 0</pose>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>60 40 0.5</size>
+            </box>
+          </geometry>
+          <pose>0 0 0.25 0 0 0</pose>
+        </collision>
+      </link>
+    </model>
+
+    <!-- ==================== SURVIVORS (Mannequins) ==================== -->
+    <!-- Survivor 1: In rubble -->
+    <model name="survivor_1">
+      <static>true</static>
+      <pose>22 -33 0.5 0 0 0</pose>
+      <link name="link">
+        <visual name="body">
+          <geometry>
+            <cylinder>
+              <radius>0.15</radius>
+              <length>1.0</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.8 0.4 0.4 1</ambient>
+            <diffuse>0.9 0.5 0.5 1</diffuse>
+          </material>
+          <pose>0 0 0.5 0 0 0</pose>
+        </visual>
+        <visual name="head">
+          <geometry>
+            <sphere>
+              <radius>0.15</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.9 0.7 0.6 1</ambient>
+            <diffuse>1.0 0.8 0.7 1</diffuse>
+          </material>
+          <pose>0 0 1.15 0 0 0</pose>
+        </visual>
+        <visual name="heat_signature">
+          <geometry>
+            <sphere>
+              <radius>0.3</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>1.0 0.2 0.2 1</ambient>
+            <diffuse>1.0 0.3 0.3 1</diffuse>
+            <emissive>1.0 0.3 0.3 1</emissive>
+          </material>
+          <pose>0 0 0.6 0 0 0</pose>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <cylinder>
+              <radius>0.15</radius>
+              <length>1.0</length>
+            </cylinder>
+          </geometry>
+          <pose>0 0 0.5 0 0 0</pose>
+        </collision>
+      </link>
+    </model>
+
+    <!-- Survivor 2: In building -->
+    <model name="survivor_2">
+      <static>true</static>
+      <pose>32 22 2 0 0 0</pose>
+      <link name="link">
+        <visual name="body">
+          <geometry>
+            <cylinder>
+              <radius>0.15</radius>
+              <length>1.0</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.2 0.4 0.8 1</ambient>
+            <diffuse>0.3 0.5 0.9 1</diffuse>
+          </material>
+          <pose>0 0 0.5 0 0 0</pose>
+        </visual>
+        <visual name="head">
+          <geometry>
+            <sphere>
+              <radius>0.15</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.9 0.7 0.6 1</ambient>
+            <diffuse>1.0 0.8 0.7 1</diffuse>
+          </material>
+          <pose>0 0 1.15 0 0 0</pose>
+        </visual>
+        <visual name="heat_signature">
+          <geometry>
+            <sphere>
+              <radius>0.3</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>1.0 0.2 0.2 1</ambient>
+            <diffuse>1.0 0.3 0.3 1</diffuse>
+            <emissive>1.0 0.3 0.3 1</emissive>
+          </material>
+          <pose>0 0 0.6 0 0 0</pose>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <cylinder>
+              <radius>0.15</radius>
+              <length>1.0</length>
+            </cylinder>
+          </geometry>
+          <pose>0 0 0.5 0 0 0</pose>
+        </collision>
+      </link>
+    </model>
+
+    <!-- Survivor 3: Near water -->
+    <model name="survivor_3">
+      <static>true</static>
+      <pose>10 -45 0 0 0 0</pose>
+      <link name="link">
+        <visual name="body">
+          <geometry>
+            <cylinder>
+              <radius>0.15</radius>
+              <length>1.0</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.8 0.6 0.2 1</ambient>
+            <diffuse>0.9 0.7 0.3 1</diffuse>
+          </material>
+          <pose>0 0 0.5 0 0 0</pose>
+        </visual>
+        <visual name="head">
+          <geometry>
+            <sphere>
+              <radius>0.15</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.9 0.7 0.6 1</ambient>
+            <diffuse>1.0 0.8 0.7 1</diffuse>
+          </material>
+          <pose>0 0 1.15 0 0 0</pose>
+        </visual>
+        <visual name="heat_signature">
+          <geometry>
+            <sphere>
+              <radius>0.3</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>1.0 0.2 0.2 1</ambient>
+            <diffuse>1.0 0.3 0.3 1</diffuse>
+            <emissive>1.0 0.3 0.3 1</emissive>
+          </material>
+          <pose>0 0 0.6 0 0 0</pose>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <cylinder>
+              <radius>0.15</radius>
+              <length>1.0</length>
+            </cylinder>
+          </geometry>
+          <pose>0 0 0.5 0 0 0</pose>
+        </collision>
+      </link>
+    </model>
+
+    <!-- Survivor 4: In forest -->
+    <model name="survivor_4">
+      <static>true</static>
+      <pose>48 48 0 0 0 0</pose>
+      <link name="link">
+        <visual name="body">
+          <geometry>
+            <cylinder>
+              <radius>0.15</radius>
+              <length>1.0</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.4 0.8 0.4 1</ambient>
+            <diffuse>0.5 0.9 0.5 1</diffuse>
+          </material>
+          <pose>0 0 0.5 0 0 0</pose>
+        </visual>
+        <visual name="head">
+          <geometry>
+            <sphere>
+              <radius>0.15</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.9 0.7 0.6 1</ambient>
+            <diffuse>1.0 0.8 0.7 1</diffuse>
+          </material>
+          <pose>0 0 1.15 0 0 0</pose>
+        </visual>
+        <visual name="heat_signature">
+          <geometry>
+            <sphere>
+              <radius>0.3</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>1.0 0.2 0.2 1</ambient>
+            <diffuse>1.0 0.3 0.3 1</diffuse>
+            <emissive>1.0 0.3 0.3 1</emissive>
+          </material>
+          <pose>0 0 0.6 0 0 0</pose>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <cylinder>
+              <radius>0.15</radius>
+              <length>1.0</length>
+            </cylinder>
+          </geometry>
+          <pose>0 0 0.5 0 0 0</pose>
+        </collision>
+      </link>
+    </model>
+
+    <!-- ==================== FIRE EFFECTS ==================== -->
+    <!-- Fire 1: Building fire -->
+    <model name="fire_1">
+      <static>true</static>
+      <pose>30 20 8 0 0 0</pose>
+      <link name="link">
+        <visual name="flame">
+          <geometry>
+            <sphere>
+              <radius>1.5</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>1.0 0.5 0.0 1</ambient>
+            <diffuse>1.0 0.6 0.1 1</diffuse>
+            <emissive>1.0 0.5 0.0 1</emissive>
+            <transparency>0.3</transparency>
+          </material>
+        </visual>
+        <visual name="smoke">
+          <geometry>
+            <sphere>
+              <radius>2.0</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.2 0.2 0.2 0.5</ambient>
+            <diffuse>0.3 0.3 0.3 0.5</diffuse>
+            <transparency>0.7</transparency>
+          </material>
+          <pose>0 0 2 0 0 0</pose>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Fire 2: Tree fire -->
+    <model name="fire_2">
+      <static>true</static>
+      <pose>45 50 5 0 0 0</pose>
+      <link name="link">
+        <visual name="flame">
+          <geometry>
+            <sphere>
+              <radius>1.0</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>1.0 0.4 0.0 1</ambient>
+            <diffuse>1.0 0.5 0.1 1</diffuse>
+            <emissive>1.0 0.4 0.0 1</emissive>
+            <transparency>0.3</transparency>
+          </material>
+        </visual>
+        <visual name="smoke">
+          <geometry>
+            <sphere>
+              <radius>1.5</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.15 0.15 0.15 0.5</ambient>
+            <diffuse>0.25 0.25 0.25 0.5</diffuse>
+            <transparency>0.7</transparency>
+          </material>
+          <pose>0 0 1.5 0 0 0</pose>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Fire 3: Ground fire -->
+    <model name="fire_3">
+      <static>true</static>
+      <pose>50 35 0 0 0 0</pose>
+      <link name="link">
+        <visual name="flame">
+          <geometry>
+            <sphere>
+              <radius>0.8</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>1.0 0.3 0.0 1</ambient>
+            <diffuse>1.0 0.4 0.1 1</diffuse>
+            <emissive>1.0 0.3 0.0 1</emissive>
+            <transparency>0.3</transparency>
+          </material>
+        </visual>
+        <visual name="smoke">
+          <geometry>
+            <sphere>
+              <radius>1.2</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.1 0.1 0.1 0.5</ambient>
+            <diffuse>0.2 0.2 0.2 0.5</diffuse>
+            <transparency>0.7</transparency>
+          </material>
+          <pose>0 0 1 0 0 0</pose>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ==================== ROADS ==================== -->
+    <!-- Main road -->
+    <model name="road_main">
+      <static>true</static>
+      <pose>0 0 0.05 0 0 0</pose>
+      <link name="link">
+        <visual name="road_surface">
+          <geometry>
+            <box>
+              <size>200 8 0.1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.2 0.2 0.2 1</ambient>
+            <diffuse>0.3 0.3 0.3 1</diffuse>
+          </material>
+        </visual>
+        <visual name="road_markings">
+          <geometry>
+            <box>
+              <size>200 0.3 0.12</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.0 1</ambient>
+            <diffuse>0.9 0.9 0.1 1</diffuse>
+          </material>
+          <pose>0 0 0.01 0 0 0</pose>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>200 8 0.1</size>
+            </box>
+          </geometry>
+        </collision>
+      </link>
+    </model>
+
+    <!-- Cross road -->
+    <model name="road_cross">
+      <static>true</static>
+      <pose>0 0 0.05 0 0 1.5708</pose>
+      <link name="link">
+        <visual name="road_surface">
+          <geometry>
+            <box>
+              <size>200 8 0.1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.2 0.2 0.2 1</ambient>
+            <diffuse>0.3 0.3 0.3 1</diffuse>
+          </material>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>200 8 0.1</size>
+            </box>
+          </geometry>
+        </collision>
+      </link>
+    </model>
+
+    <!-- ==================== DAMAGED VEHICLES ==================== -->
+    <!-- Car 1 (overturned) -->
+    <model name="car_1_overturned">
+      <static>true</static>
+      <pose>40 5 0 0 0 0.8</pose>
+      <link name="link">
+        <visual name="body">
+          <geometry>
+            <box>
+              <size>4 2 1.5</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.6 0.1 0.1 1</ambient>
+            <diffuse>0.7 0.2 0.2 1</diffuse>
+          </material>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>4 2 1.5</size>
+            </box>
+          </geometry>
+        </collision>
+      </link>
+    </model>
+
+    <!-- Car 2 (crushed) -->
+    <model name="car_2_crushed">
+      <static>true</static>
+      <pose>-30 8 0 0 0 0.2</pose>
+      <link name="link">
+        <visual name="body">
+          <geometry>
+            <box>
+              <size>3.5 1.8 1.0</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.2 0.2 0.6 1</ambient>
+            <diffuse>0.3 0.3 0.7 1</diffuse>
+          </material>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>3.5 1.8 1.0</size>
+            </box>
+          </geometry>
+        </collision>
+      </link>
+    </model>
+
+    <!-- ==================== DRONE SPAWN POINTS ==================== -->
+    <!-- These are reference points for PX4 multi-vehicle spawn -->
+    <model name="drone_spawn_1">
+      <static>true</static>
+      <pose>0 0 0.1 0 0 0</pose>
+      <link name="link">
+        <visual name="marker">
+          <geometry>
+            <cylinder>
+              <radius>0.2</radius>
+              <length>0.05</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0 1 0 0.5</ambient>
+            <diffuse>0 1 0 0.5</diffuse>
+            <transparency>0.5</transparency>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="drone_spawn_2">
+      <static>true</static>
+      <pose>3 0 0.1 0 0 0</pose>
+      <link name="link">
+        <visual name="marker">
+          <geometry>
+            <cylinder>
+              <radius>0.2</radius>
+              <length>0.05</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0 1 0 0.5</ambient>
+            <diffuse>0 1 0 0.5</diffuse>
+            <transparency>0.5</transparency>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="drone_spawn_3">
+      <static>true</static>
+      <pose>-3 0 0.1 0 0 0</pose>
+      <link name="link">
+        <visual name="marker">
+          <geometry>
+            <cylinder>
+              <radius>0.2</radius>
+              <length>0.05</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0 1 0 0.5</ambient>
+            <diffuse>0 1 0 0.5</diffuse>
+            <transparency>0.5</transparency>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="drone_spawn_4">
+      <static>true</static>
+      <pose>0 3 0.1 0 0 0</pose>
+      <link name="link">
+        <visual name="marker">
+          <geometry>
+            <cylinder>
+              <radius>0.2</radius>
+              <length>0.05</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0 1 0 0.5</ambient>
+            <diffuse>0 1 0 0.5</diffuse>
+            <transparency>0.5</transparency>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="drone_spawn_5">
+      <static>true</static>
+      <pose>0 -3 0.1 0 0 0</pose>
+      <link name="link">
+        <visual name="marker">
+          <geometry>
+            <cylinder>
+              <radius>0.2</radius>
+              <length>0.05</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0 1 0 0.5</ambient>
+            <diffuse>0 1 0 0.5</diffuse>
+            <transparency>0.5</transparency>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>
