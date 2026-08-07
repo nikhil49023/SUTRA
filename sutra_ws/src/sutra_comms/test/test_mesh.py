@@ -134,3 +134,25 @@ def test_multihop_mesh_relay_routing(ros_context):
         assert route_res['total_latency_ms'] < 16.0  # Multi-hop 2-hop relay latency (< 16ms)
     finally:
         node.destroy_node()
+
+
+def test_missing_torch_fallback(ros_context, monkeypatch):
+    """Verify SutraMeshNode and PerceptronSemanticCommsPipeline operate cleanly even if PyTorch is not installed."""
+    import sutra_comms.perceptron_jscc as jscc_module
+    
+    # Simulate PyTorch missing environment
+    monkeypatch.setattr(jscc_module, "TORCH_AVAILABLE", False)
+    
+    pipeline = jscc_module.PerceptronSemanticCommsPipeline()
+    res = pipeline.process_semantic_transmission(image_size_kb=512.0, distance_m=20.0)
+    assert res['compression_ratio'] < 0.05
+    assert res['psnr_db'] >= 28.0
+    assert res['latency_ms'] < 12.0
+    
+    node = SutraMeshNode()
+    try:
+        matrix = node.compute_peer_link_matrix()
+        assert len(matrix) > 0
+    finally:
+        node.destroy_node()
+

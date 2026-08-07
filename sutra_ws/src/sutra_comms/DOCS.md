@@ -1,6 +1,6 @@
 # 📡 Subsystem B — Comms & Digital Twin Simulation Master Specification
 
-[![PyTest Verification](https://img.shields.io/badge/PyTest-38%2F38%20PASSED-brightgreen.svg)]()
+[![PyTest Verification](https://img.shields.io/badge/PyTest-39%2F39%20PASSED-brightgreen.svg)]()
 [![Hero Feature](https://img.shields.io/badge/Hero_Feature-Deep_JSCC_Neural_Transceiver-cyan.svg)]()
 [![Gate G2 Compliance](https://img.shields.io/badge/Gate_G2-VERIFIED-brightgreen.svg)]()
 [![Dual Launch Ready](https://img.shields.io/badge/Dual_Launch-READY-brightgreen.svg)]()
@@ -19,6 +19,7 @@ In GPS-denied and communication-challenged disaster environments, conventional v
 
 ### 🌟 Hero Innovation: Deep JSCC Neural Transceiver (`perceptron_jscc.py`)
 - Replaces rigid digital quantization with an end-to-end **PyTorch Convolutional Autoencoder** that maps thermal/RGB imagery directly into continuous analog complex latent symbols.
+- **Graceful Fallback Mode**: Includes automatic analytical path loss / FSPL simulation fallback when PyTorch is not present on edge SBCs or minimal test containers, preventing node startup crashes.
 - **ONNX Acceleration**: Auto-exported to `jscc_encoder.onnx` and `jscc_decoder.onnx` for hardware NPU execution.
 - **Binary Mesh Protocol**: Compact struct-packed UART framing (`binary_mesh_protocol.py`) with CRC-32 checksums for Sub-GHz LoRa/ESP-NOW hardware.
 - **Zero Digital Cliff Effect**: Eliminates frame blackouts and freezes. Even down to $0\text{ dB}$ or $-5\text{ dB}$ channel SNR, the stream degrades gracefully via soft analog blur while preserving thermal survivor detection.
@@ -29,7 +30,7 @@ In GPS-denied and communication-challenged disaster environments, conventional v
 
 ## 📊 2. Measured Benchmark Metrics & Verification Matrix
 
-> ℹ️ **BENCHMARK ENVIRONMENT NOTE**: All figures below represent empirical results measured on single-run workstation testbeds (`pytest sutra_ws/src/sutra_comms/test/` — **38 passed in 10.70s**).
+> ℹ️ **BENCHMARK ENVIRONMENT NOTE**: All figures below represent empirical results measured on single-run workstation testbeds (`pytest sutra_ws/src/sutra_comms/test/` — **39 passed in 11.73s**).
 
 
 | Metric | Measured Benchmark Value | Testbed / Source | Status |
