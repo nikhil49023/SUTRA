@@ -36,24 +36,24 @@ logging.basicConfig(level=logging.INFO, format='[GCS Bridge] %(levelname)s: %(me
 
 
 class SutraGcsGatewayBridge(Node):
-    def __init__(self, host: str = "0.0.0.0", port: int = 9090):
+    def __init__(self, host: str = "0.0.0.0", port: int = 8765):
         super().__init__("sutra_gcs_gateway_bridge")
         self.host = host
         self.port = port
         self.ws_clients: Set[object] = set()
 
-        # Swarm State Cache
+        # Swarm State Cache (Indian Flood Disaster Site Coordinates: 20.5937 N, 78.9629 E)
         self.swarm_telemetry: Dict[str, dict] = {
-            "uav_alpha": {"lat": 37.774929, "lon": -122.419416, "alt": 15.0, "battery": 98.5, "status": "MISSION"},
-            "uav_beta":  {"lat": 37.775100, "lon": -122.419200, "alt": 18.0, "battery": 95.0, "status": "MISSION"},
-            "uav_gamma": {"lat": 37.774600, "lon": -122.419600, "alt": 20.0, "battery": 92.0, "status": "MISSION"},
-            "uav_delta": {"lat": 37.775300, "lon": -122.418900, "alt": 16.5, "battery": 97.0, "status": "MISSION"},
-            "uav_epsilon":{"lat": 37.774300, "lon": -122.419800, "alt": 22.0, "battery": 89.5, "status": "RELAY"}
+            "uav_alpha": {"lat": 20.593700, "lon": 78.962900, "alt": 15.0, "battery": 98.5, "status": "MISSION"},
+            "uav_beta":  {"lat": 20.593900, "lon": 78.963100, "alt": 18.0, "battery": 95.0, "status": "MISSION"},
+            "uav_gamma": {"lat": 20.593400, "lon": 78.962700, "alt": 20.0, "battery": 92.0, "status": "MISSION"},
+            "uav_delta": {"lat": 20.594100, "lon": 78.963300, "alt": 16.5, "battery": 97.0, "status": "MISSION"},
+            "uav_epsilon":{"lat": 20.593100, "lon": 78.962500, "alt": 22.0, "battery": 89.5, "status": "RELAY"}
         }
 
         self.survivor_alerts = [
-            {"id": 1, "type": "SURVIVOR", "lat": 37.774731, "lon": -122.419206, "alt": 15.0, "confidence": 0.948, "drone": "uav_alpha", "time": "11:00:15"},
-            {"id": 2, "type": "POSSIBLE_SURVIVOR", "lat": 37.775102, "lon": -122.418850, "alt": 18.2, "confidence": 0.785, "drone": "uav_beta", "time": "11:02:40"}
+            {"id": 1, "type": "SURVIVOR", "lat": 20.593650, "lon": 78.962850, "alt": 15.0, "confidence": 0.948, "drone": "uav_alpha", "time": "11:00:15"},
+            {"id": 2, "type": "POSSIBLE_SURVIVOR", "lat": 20.593950, "lon": 78.963150, "alt": 18.2, "confidence": 0.785, "drone": "uav_beta", "time": "11:02:40"}
         ]
 
         self.raft_consensus_status = {

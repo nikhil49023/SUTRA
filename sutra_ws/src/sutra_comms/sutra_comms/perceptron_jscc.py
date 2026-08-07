@@ -346,6 +346,19 @@ class PerceptronSemanticCommsPipeline:
         }
 
 
+def resolve_model_path(relative_path: str) -> str:
+    """Resolves ROS 2 package share directory for model files with workspace fallback."""
+    try:
+        from ament_index_python.packages import get_package_share_directory
+        pkg_dir = get_package_share_directory('sutra_comms')
+        candidate = os.path.join(pkg_dir, "models", os.path.basename(relative_path))
+        if os.path.exists(candidate):
+            return candidate
+    except Exception:
+        pass
+    return os.path.abspath(relative_path)
+
+
 class ONNXJSCTransceiver:
     """
     ONNX Runtime Hardware-Accelerated JSCC Transceiver Engine.
@@ -353,8 +366,8 @@ class ONNXJSCTransceiver:
     """
     def __init__(self, encoder_path: str = "sutra_ws/src/sutra_comms/models/jscc_encoder.onnx",
                  decoder_path: str = "sutra_ws/src/sutra_comms/models/jscc_decoder.onnx"):
-        self.encoder_path = os.path.abspath(encoder_path)
-        self.decoder_path = os.path.abspath(decoder_path)
+        self.encoder_path = resolve_model_path(encoder_path)
+        self.decoder_path = resolve_model_path(decoder_path)
         self.onnx_available = False
         
         try:
