@@ -703,6 +703,10 @@ class SutraDetectorNode(Node):
         else:
             norm = raw.astype(np.uint8)
 
+        # Adaptive Thermal CLAHE Normalization (removes hot ground / solar clutter)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        norm = clahe.apply(norm)
+
         # Radiometric human body temperature thresholding (above ~35C threshold)
         min_intensity = int(255 * 0.78)
         _, mask = cv2.threshold(norm, min_intensity, 255, cv2.THRESH_BINARY)
