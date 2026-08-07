@@ -2,13 +2,15 @@ import os
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument, ExecuteProcess, LogInfo
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     """
     Project SUTRA — Gazebo Sim 8 (Harmonic) SITL Digital Twin Launcher
     ===================================================================
     Launches Gazebo Sim 8 Harmonic disaster world (`master_swarm_disaster_world.sdf`)
+    or custom selected world file (warehouse, baylands, runway, empty)
     and configures ROS 2 Gazebo bridges for telemetry, depth camera, and control.
     """
     world_arg = DeclareLaunchArgument(
@@ -23,11 +25,10 @@ def generate_launch_description():
         description='Run Gazebo in headless mode (-s server only)'
     )
 
-    # Path to world file
     sim_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-    world_path = os.path.join(sim_dir, 'worlds', 'master_swarm_disaster_world.sdf')
+    world_path = PathJoinSubstitution([sim_dir, 'worlds', LaunchConfiguration('world')])
 
-    # ExecuteProcess for Gazebo Sim 8 (Harmonic) engine
+    # ExecuteProcess for Gazebo Sim 8 (Harmonic) engine (3D GUI enabled by default)
     gazebo_process = ExecuteProcess(
         cmd=['gz', 'sim', '-r', world_path],
         output='screen'

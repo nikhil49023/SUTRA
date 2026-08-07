@@ -95,6 +95,27 @@ class SutraOffboardControlNode:
         self.vio_tracking_status = "TRACKING_OK"
         self.vio_status_code = 1
 
+        if HAVE_ROS2 and hasattr(self, 'declare_parameter'):
+            try:
+                self.declare_parameter('drone_id', 'uav_alpha')
+                self.declare_parameter('start_x', 0.0)
+                self.declare_parameter('start_y', 0.0)
+                self.declare_parameter('start_z', 0.0)
+                self.declare_parameter('cruise_speed', 2.5)
+
+                self.drone_id = self.get_parameter('drone_id').get_parameter_value().string_value
+                self.start_x = self.get_parameter('start_x').get_parameter_value().double_value
+                self.start_y = self.get_parameter('start_y').get_parameter_value().double_value
+                self.start_z = self.get_parameter('start_z').get_parameter_value().double_value
+                self.cruise_speed = self.get_parameter('cruise_speed').get_parameter_value().double_value
+
+                self.publisher_vel = self.create_publisher(TwistStamped, f'/{self.drone_id}/gazebo/command/twist', 10)
+                self.publisher_pose_stamped = self.create_publisher(PoseStamped, f'/sutra/gnc/{self.drone_id}/pose_stamped', 10)
+                self.publisher_pose_json = self.create_publisher(String, f'/sutra/gnc/{self.drone_id}/pose', 10)
+                self.sub_vio_status = self.create_subscription(String, f'/sutra/gnc/{self.drone_id}/vio_status', self._vio_status_callback, 10)
+            except Exception:
+                pass
+
     def distance_to_wp(self, wp: Tuple[float, float, float]) -> float:
         return math.sqrt((wp[0] - self.state.x)**2 + (wp[1] - self.state.y)**2)
 

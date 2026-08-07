@@ -4,6 +4,7 @@ project(sutra_sim)
 find_package(ament_cmake REQUIRED)
 
 install(DIRECTORY
+  launch
   worlds
   models
   DESTINATION share/${PROJECT_NAME}
