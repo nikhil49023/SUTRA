@@ -48,8 +48,40 @@ MESH_DIR   = "{MESH_DIR}"
 
 bpy.ops.wm.open_mainfile(filepath=BLEND_PATH)
 
-# Select all visible objects and export OBJ
+# Unpack all packed textures to the meshes directory
+for img in bpy.data.images:
+    if img.packed_file:
+        img_name = os.path.basename(img.filepath) if img.filepath else f"{{img.name}}.png"
+        if not img_name.endswith(('.jpg', '.png', '.tga', '.jpeg')):
+            img_name += '.png'
+        out_img_path = os.path.join(MESH_DIR, img_name)
+        try:
+            img.save_render(out_img_path)
+        except Exception:
+            pass
+
+# Select all visible objects and export DAE and OBJ
 bpy.ops.object.select_all(action='SELECT')
+
+dae_out = os.path.join(MESH_DIR, "submerged_village.dae")
+bpy.ops.wm.collada_export(
+    filepath=dae_out,
+    selected=True,
+    include_children=True,
+    triangulate=True
+)
+print(f"✅ Exported Master Scene DAE -> {{dae_out}}")
+
+# Create URL-encoded texture file aliases for Gazebo material parser
+import urllib.parse, shutil
+for f in os.listdir(MESH_DIR):
+    if ' ' in f:
+        url_encoded = f.replace(' ', '%20')
+        src = os.path.join(MESH_DIR, f)
+        dst = os.path.join(MESH_DIR, url_encoded)
+        if not os.path.exists(dst):
+            shutil.copy2(src, dst)
+            print(f"✅ Created URL-encoded texture alias: {{url_encoded}}")
 
 obj_out = os.path.join(MESH_DIR, "submerged_village.obj")
 bpy.ops.wm.obj_export(
@@ -99,7 +131,7 @@ model_sdf = """<?xml version="1.0" ?>
       <collision name="collision">
         <geometry>
           <mesh>
-            <uri>model://submerged_village_flood/meshes/submerged_village.obj</uri>
+            <uri>model://submerged_village_flood/meshes/submerged_village.dae</uri>
             <scale>1 1 1</scale>
           </mesh>
         </geometry>
@@ -107,10 +139,15 @@ model_sdf = """<?xml version="1.0" ?>
       <visual name="visual">
         <geometry>
           <mesh>
-            <uri>model://submerged_village_flood/meshes/submerged_village.obj</uri>
+            <uri>model://submerged_village_flood/meshes/submerged_village.dae</uri>
             <scale>1 1 1</scale>
           </mesh>
         </geometry>
+        <material>
+          <ambient>0.9 0.9 0.9 1.0</ambient>
+          <diffuse>0.9 0.9 0.9 1.0</diffuse>
+          <specular>0.3 0.3 0.3 1.0</specular>
+        </material>
       </visual>
     </link>
   </model>
@@ -136,22 +173,37 @@ master_sdf_world = """<?xml version="1.0" ?>
       <real_time_update_rate>500</real_time_update_rate>
     </physics>
 
-    <!-- ── Atmosphere & Fog ────────────────────────────────────────────────── -->
+    <!-- ── Atmosphere & Lighting Settings ─────────────────────────────────── -->
     <atmosphere type="adiabatic"/>
     <scene>
-      <ambient>0.6 0.65 0.7 1.0</ambient>
-      <background>0.4 0.55 0.7 1.0</background>
+      <ambient>1.0 1.0 1.0 1.0</ambient>
+      <background>0.5 0.7 0.9 1.0</background>
       <shadows>true</shadows>
       <grid>false</grid>
     </scene>
 
-    <!-- ── High-Intensity SAR Sunlight ──────────────────────────────────────── -->
+    <!-- ── High-Intensity Primary Sun Light ─────────────────────────────────── -->
     <light type="directional" name="sun">
       <cast_shadows>true</cast_shadows>
-      <pose>50 50 150 0 0 0</pose>
-      <diffuse>0.95 0.95 0.90 1</diffuse>
-      <specular>0.3 0.3 0.3 1</specular>
-      <direction>-0.5 -0.5 -1.0</direction>
+      <pose>0 0 200 0 0 0</pose>
+      <diffuse>1.0 1.0 1.0 1</diffuse>
+      <specular>0.5 0.5 0.5 1</specular>
+      <direction>-0.2 0.2 -1.0</direction>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+    </light>
+
+    <!-- ── Secondary Ambient Fill Light (Eliminates Dark Shadows) ───────────── -->
+    <light type="directional" name="fill_light">
+      <cast_shadows>false</cast_shadows>
+      <pose>0 0 150 0 0 0</pose>
+      <diffuse>0.8 0.85 0.9 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <direction>0.2 -0.2 -1.0</direction>
     </light>
 
     <!-- ── Ground & Water Surface Base ─────────────────────────────────────── -->
