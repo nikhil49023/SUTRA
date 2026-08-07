@@ -28,4 +28,14 @@ print(f"""
   ⚡ Isaac Sim Bin:  {ISAAC_BIN}
 """)
 
-subprocess.run([ISAAC_BIN, f"--/app/file/open={USD_STAGE}"])
+cmd = [
+    ISAAC_BIN,
+    f"--/app/file/open={USD_STAGE}",
+    "--/app/renderer/resolution/width=1280",
+    "--/app/renderer/resolution/height=720",
+    "--/rtx/textures/maxRes=1024",
+    "--/rtx/post/dlss/execMode=1",
+    "--/app/asyncRendering=true"
+]
+
+subprocess.run(cmd)
