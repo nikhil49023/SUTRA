@@ -103,6 +103,9 @@ yolov8*.pt
 *.h5
 kaggle/
 
-# Blender heavy binary files — regenerate via python3 scripts/build_submerged_flood_disaster_world.py
+# CAD & 3D Simulation Heavy Binary Assets (>100MB GitHub limit)
 *.blend
 *.blend1
+*.usd
+*.usda
+*.usdc
