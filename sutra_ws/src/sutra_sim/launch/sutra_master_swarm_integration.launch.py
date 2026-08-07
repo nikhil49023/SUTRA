@@ -64,7 +64,7 @@ def generate_launch_description():
     # 4. Subsystem A (GNC): Offboard Controller Node
     offboard_node = Node(
         package='sutra_gnc',
-        executable='offboard_node',
+        executable='offboard_node.py',
         name='sutra_offboard_node',
         output='screen',
         parameters=[{
@@ -75,7 +75,7 @@ def generate_launch_description():
     # 5. Subsystem A (GNC): VIO Localization & Covariance Filter Node
     vio_node = Node(
         package='sutra_gnc',
-        executable='vio_localization',
+        executable='vio_localization.py',
         name='sutra_vio_localization',
         output='screen'
     )
@@ -83,7 +83,7 @@ def generate_launch_description():
     # 6. Subsystem A (GNC): 3D OctoMap Voxel Generator Node
     octomap_node = Node(
         package='sutra_gnc',
-        executable='octomap_generator',
+        executable='octomap_generator.py',
         name='sutra_octomap_generator',
         output='screen'
     )
