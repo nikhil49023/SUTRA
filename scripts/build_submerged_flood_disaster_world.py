@@ -38,7 +38,7 @@ MODEL_CARS     = os.path.join(BASE_ASSETS, "post_apoc_cars/source/extracted/disp
 # ─────────────────────────────────────────────────────────────────────────────
 # SCENE PURGE & SETUP
 # ─────────────────────────────────────────────────────────────────────────────
-print("🌊 [1/9] Purging scene & configuring Cycles GPU engine...")
+print("🌊 [1/9] Purging scene & configuring Cycles engine with daylight exposure...")
 bpy.ops.wm.read_factory_settings(use_empty=True)
 
 scene = bpy.context.scene
@@ -47,26 +47,23 @@ scene.unit_settings.system = 'METRIC'
 scene.unit_settings.scale_length = 1.0
 scene.unit_settings.length_unit = 'METERS'
 
-# Cycles Engine Setup
+# Cycles Engine & Exposure Setup
 scene.render.engine = 'CYCLES'
-scene.cycles.samples = 128
+scene.cycles.samples = 64
 scene.cycles.use_denoising = True
-scene.cycles.device = 'GPU'
-try:
-    bpy.context.preferences.addons['cycles'].preferences.compute_device_type = 'CUDA'
-    for dev in bpy.context.preferences.addons['cycles'].preferences.devices:
-        dev.use = True
-    print("⚡ CUDA GPU Acceleration enabled for Cycles!")
-except Exception as e:
-    print("ℹ️ Fallback to CPU Cycles:", e)
+
+# Color Management (Bright Daylight Exposure)
+scene.view_settings.view_transform = 'Standard'
+scene.view_settings.exposure = 1.8
+scene.view_settings.gamma = 1.0
 
 scene.render.resolution_x = 1920
 scene.render.resolution_y = 1080
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 2. LIGHTING & ENVIRONMENT (SUNLIGHT + HIGHLIGHT SPOTLIGHTS)
+# 2. LIGHTING & ENVIRONMENT (HIGH POWER SUNLIGHT + AMBIENT SKY)
 # ─────────────────────────────────────────────────────────────────────────────
-print("🌩️ [2/9] Constructing High-Visibility Atmospheric Lighting & Sky...")
+print("🌩️ [2/9] Constructing High-Daylight Atmospheric Lighting & Sky...")
 world = bpy.data.worlds.new("Disaster_Sky_World")
 world.use_nodes = True
 scene.world = world
@@ -76,20 +73,29 @@ w_nodes.clear()
 
 w_out = w_nodes.new('ShaderNodeOutputWorld')
 w_bg  = w_nodes.new('ShaderNodeBackground')
-w_bg.inputs['Color'].default_value = (0.22, 0.28, 0.35, 1.0)  # Bright daylight storm sky
-w_bg.inputs['Strength'].default_value = 2.0
+w_bg.inputs['Color'].default_value = (0.55, 0.72, 0.90, 1.0)  # Bright sky blue daylight
+w_bg.inputs['Strength'].default_value = 6.0
 w_links.new(w_bg.outputs['Background'], w_out.inputs['Surface'])
 
 # Sunlight (High Intensity Golden Daylight)
 sun_data = bpy.data.lights.new(name="Sun_Disaster", type='SUN')
-sun_data.energy = 7.5
-sun_data.color = (1.0, 0.95, 0.85)
-sun_data.angle = math.radians(1.5)
+sun_data.energy = 22.0
+sun_data.color = (1.0, 0.98, 0.92)
+sun_data.angle = math.radians(2.0)
 
 sun_obj = bpy.data.objects.new(name="Sun_Disaster", object_data=sun_data)
 bpy.context.collection.objects.link(sun_obj)
-sun_obj.location = (50.0, 50.0, 100.0)
-sun_obj.rotation_euler = (math.radians(35.0), math.radians(15.0), math.radians(120.0))
+sun_obj.location = (0.0, 0.0, 120.0)
+sun_obj.rotation_euler = (math.radians(25.0), math.radians(10.0), math.radians(45.0))
+
+# Ambient Fill Light
+fill_data = bpy.data.lights.new(name="Fill_Daylight", type='SUN')
+fill_data.energy = 10.0
+fill_data.color = (0.85, 0.92, 1.0)
+fill_obj = bpy.data.objects.new(name="Fill_Daylight", object_data=fill_data)
+bpy.context.collection.objects.link(fill_obj)
+fill_obj.location = (0.0, 0.0, 100.0)
+fill_obj.rotation_euler = (math.radians(65.0), math.radians(0.0), math.radians(-135.0))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. EXPANSIVE 200m x 200m TERRAIN MESH
@@ -117,8 +123,8 @@ nodes_mud.clear()
 
 out_m = nodes_mud.new('ShaderNodeOutputMaterial')
 bsdf_m = nodes_mud.new('ShaderNodeBsdfPrincipled')
-bsdf_m.inputs['Base Color'].default_value = (0.22, 0.16, 0.10, 1.0)
-bsdf_m.inputs['Roughness'].default_value = 0.40
+bsdf_m.inputs['Base Color'].default_value = (0.35, 0.28, 0.20, 1.0) # Bright brown earth
+bsdf_m.inputs['Roughness'].default_value = 0.50
 mat_mud.node_tree.links.new(bsdf_m.outputs['BSDF'], out_m.inputs['Surface'])
 terrain_obj.data.materials.append(mat_mud)
 
@@ -134,7 +140,7 @@ mod_disp = water_obj.modifiers.new(name="Water_Wave_Displace", type='DISPLACE')
 tex_wave = bpy.data.textures.new("Water_Noise_Tex", type='CLOUDS')
 tex_wave.noise_scale = 1.5
 mod_disp.texture = tex_wave
-mod_disp.strength = 0.12
+mod_disp.strength = 0.10
 
 mat_water = bpy.data.materials.new("PBR_Flood_Water_Volume")
 mat_water.use_nodes = True
@@ -143,18 +149,11 @@ links_w = mat_water.node_tree.links
 nodes_w.clear()
 
 out_w    = nodes_w.new('ShaderNodeOutputMaterial')
-glass_w  = nodes_w.new('ShaderNodeBsdfGlass')
-vol_w    = nodes_w.new('ShaderNodeVolumeAbsorption')
-
-glass_w.inputs['Color'].default_value = (0.75, 0.88, 0.82, 1.0)
-glass_w.inputs['Roughness'].default_value = 0.05
-glass_w.inputs['IOR'].default_value = 1.333
-
-vol_w.inputs['Color'].default_value = (0.15, 0.25, 0.20, 1.0)
-vol_w.inputs['Density'].default_value = 0.12
-
-links_w.new(glass_w.outputs['BSDF'], out_w.inputs['Surface'])
-links_w.new(vol_w.outputs['Volume'], out_w.inputs['Volume'])
+bsdf_w   = nodes_w.new('ShaderNodeBsdfPrincipled')
+bsdf_w.inputs['Base Color'].default_value = (0.20, 0.45, 0.40, 0.75) # Translucent river water
+bsdf_w.inputs['Roughness'].default_value = 0.08
+bsdf_w.inputs['Transmission Weight'].default_value = 0.85 if 'Transmission Weight' in bsdf_w.inputs else 0.85
+links_w.new(bsdf_w.outputs['BSDF'], out_w.inputs['Surface'])
 
 water_obj.data.materials.append(mat_water)
 
@@ -218,7 +217,7 @@ if car_objs:
 # ─────────────────────────────────────────────────────────────────────────────
 print("🧍 [6/9] Creating High-Vis Emergency SAR Outfits & Upright Character Armatures...")
 
-def make_hivis_mat(name, color_rgb, emission_strength=0.25):
+def make_hivis_mat(name, color_rgb, emission_strength=0.45):
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
     nodes = mat.node_tree.nodes
@@ -233,20 +232,20 @@ def make_hivis_mat(name, color_rgb, emission_strength=0.25):
     mat.node_tree.links.new(bsdf.outputs['BSDF'], out.inputs['Surface'])
     return mat
 
-mat_orange_lifejacket = make_hivis_mat("HighVis_Safety_Orange", (1.0, 0.22, 0.0), emission_strength=0.30)
-mat_red_rescue      = make_hivis_mat("HighVis_Rescue_Red", (0.95, 0.05, 0.05), emission_strength=0.30)
-mat_yellow_saree     = make_hivis_mat("HighVis_Yellow_Saree", (1.0, 0.85, 0.0), emission_strength=0.35)
+mat_orange_lifejacket = make_hivis_mat("HighVis_Safety_Orange", (1.0, 0.25, 0.0), emission_strength=0.50)
+mat_red_rescue      = make_hivis_mat("HighVis_Rescue_Red", (0.98, 0.05, 0.05), emission_strength=0.50)
+mat_yellow_saree     = make_hivis_mat("HighVis_Yellow_Saree", (1.0, 0.85, 0.0), emission_strength=0.55)
 
 def apply_hivis_to_character(objs, mat):
     for o in objs:
-        if o.type == 'MESH' and ('outfit' in o.name.lower() or 'top' in o.name.lower() or 'body' in o.name.lower()):
+        if o.type == 'MESH':
             o.data.materials.clear()
             o.data.materials.append(mat)
 
 def add_spotlight_over_survivor(name, location, target_loc):
     spot_data = bpy.data.lights.new(name=f"Spot_{name}", type='SPOT')
-    spot_data.energy = 850.0  # High intensity focus light
-    spot_data.spot_size = math.radians(45.0)
+    spot_data.energy = 2500.0  # Studio high power spot
+    spot_data.spot_size = math.radians(50.0)
     spot_data.color = (1.0, 0.98, 0.90)
     spot_obj = bpy.data.objects.new(name=f"Spot_{name}", object_data=spot_data)
     bpy.context.collection.objects.link(spot_obj)
@@ -266,7 +265,7 @@ if man_ts_objs:
     armature1 = [o for o in man_ts_objs if o.type == 'ARMATURE'][0]
     armature1.name = "Survivor_1_Wading_Male"
     armature1.rotation_euler = (0, 0, math.radians(110.0))
-    armature1.location = (2.0, 5.0, 0.85) # Standing upright, Z=0.85m -> upper chest & head exposed above Z=1.15m water
+    armature1.location = (2.0, 5.0, 0.85) # Standing upright
     apply_hivis_to_character(man_ts_objs, mat_orange_lifejacket)
     add_spotlight_over_survivor("Survivor1", (2.0, 5.0, 15.0), (2.0, 5.0, 1.2))
     print("✅ Survivor #1 (Male Wading - High-Vis Orange) Upright at (2.0, 5.0, 0.85)")
@@ -277,7 +276,7 @@ if man_dj_objs:
     armature2 = [o for o in man_dj_objs if o.type == 'ARMATURE'][0]
     armature2.name = "Survivor_2_Rooftop_Male"
     armature2.rotation_euler = (0, 0, math.radians(200.0))
-    armature2.location = (-15.0, 12.0, 3.85) # Standing upright on central village roof
+    armature2.location = (-15.0, 12.0, 3.85) # Standing upright on roof
     apply_hivis_to_character(man_dj_objs, mat_red_rescue)
     add_spotlight_over_survivor("Survivor2", (-15.0, 12.0, 18.0), (-15.0, 12.0, 4.0))
     print("✅ Survivor #2 (Male Rooftop - High-Vis Red) Upright at (-15.0, 12.0, 3.85)")
@@ -288,7 +287,7 @@ if woman_objs:
     armature3 = [o for o in woman_objs if o.type == 'ARMATURE'][0]
     armature3.name = "Survivor_3_Ruin_Female"
     armature3.rotation_euler = (0, 0, math.radians(65.0))
-    armature3.location = (18.5, 21.0, 2.45) # Standing upright in ruin balcony window
+    armature3.location = (18.5, 21.0, 2.45) # Standing upright in balcony
     apply_hivis_to_character(woman_objs, mat_yellow_saree)
     add_spotlight_over_survivor("Survivor3", (18.5, 21.0, 16.0), (18.5, 21.0, 3.0))
     print("✅ Survivor #3 (Female Ruin - High-Vis Yellow Saree) Upright at (18.5, 21.0, 2.45)")
@@ -316,55 +315,12 @@ for i in range(12):
     tree_trunk.rotation_euler = (math.radians(random.uniform(15, 60)), math.radians(random.uniform(0, 45)), random.uniform(0, 6.28))
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 8. PERCEPTION-OPTIMIZED CAMERAS & RENDERING
+# 8. SAVE MASTER BLEND FILE
 # ─────────────────────────────────────────────────────────────────────────────
-print("📸 [8/9] Configuring Subsystem C Perception Cameras & Rendering Previews...")
-
-# Camera 1: Drone Aerial SAR POV (Targeting Rooftop & Wading Survivors)
-cam_sar_data = bpy.data.cameras.new("Cam_Drone_SAR_Data")
-cam_sar_data.lens = 35.0
-cam_sar_obj = bpy.data.objects.new("Camera_Drone_SAR", cam_sar_data)
-bpy.context.collection.objects.link(cam_sar_obj)
-cam_sar_obj.location = (-10.0, -12.0, 22.0)
-cam_sar_obj.rotation_euler = (math.radians(45.0), math.radians(0.0), math.radians(-15.0))
-
-# Camera 2: Rooftop Survivor Close-up POV (Subsystem C YOLO Bounding Box Test)
-cam_roof_data = bpy.data.cameras.new("Cam_Rooftop_Survivor_Data")
-cam_roof_data.lens = 85.0
-cam_roof_obj = bpy.data.objects.new("Camera_Rooftop_Survivor", cam_roof_data)
-bpy.context.collection.objects.link(cam_roof_obj)
-cam_roof_obj.location = (-15.0, 0.0, 6.5)
-cam_roof_obj.rotation_euler = (math.radians(72.0), math.radians(0.0), math.radians(0.0))
-
-# Camera 3: Wading Survivor Close-up POV
-cam_wading_data = bpy.data.cameras.new("Cam_Wading_Survivor_Data")
-cam_wading_data.lens = 50.0
-cam_wading_obj = bpy.data.objects.new("Camera_Wading_Survivor", cam_wading_data)
-bpy.context.collection.objects.link(cam_wading_obj)
-cam_wading_obj.location = (2.0, -5.0, 3.2)
-cam_wading_obj.rotation_euler = (math.radians(75.0), math.radians(0.0), math.radians(0.0))
-
-# Set active camera to Drone Aerial SAR
-scene.camera = cam_sar_obj
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 9. SAVE MASTER BLEND & EXECUTE RENDERS
-# ─────────────────────────────────────────────────────────────────────────────
-print("💾 [9/9] Saving Master Blender File & Rendering Perception Images...")
+print("💾 [8/9] Saving Master Blender File...")
 
 os.makedirs(os.path.dirname(OUT_BLEND), exist_ok=True)
 bpy.ops.wm.save_as_mainfile(filepath=OUT_BLEND)
 print(f"💾 Master Blender File Saved: {OUT_BLEND}")
 
-# Render Drone Aerial SAR View
-scene.render.filepath = os.path.join(RENDER_DIR, "submerged_flood_world_drone_sar.png")
-bpy.ops.render.render(write_still=True)
-print(f"🖼️ Drone Aerial SAR Perception Render Saved: {scene.render.filepath}")
-
-# Render Rooftop Survivor Focus View
-scene.camera = cam_roof_obj
-scene.render.filepath = os.path.join(RENDER_DIR, "submerged_flood_world_rooftop_survivor.png")
-bpy.ops.render.render(write_still=True)
-print(f"🖼️ Rooftop Survivor Perception Render Saved: {scene.render.filepath}")
-
-print("✨ [SUCCESS] Subsystem C Perception-Ready Submerged Village Flood World Completed Successfully!")
+print("✨ [SUCCESS] Subsystem C Perception-Ready Submerged Village Flood World Built Successfully!")
