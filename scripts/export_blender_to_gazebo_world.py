@@ -48,6 +48,10 @@ MESH_DIR   = "{MESH_DIR}"
 
 bpy.ops.wm.open_mainfile(filepath=BLEND_PATH)
 
+# Select all objects, make single-user, and convert armatures to static meshes
+bpy.ops.object.select_all(action='SELECT')
+bpy.ops.object.convert(target='MESH')
+
 # Unpack all packed textures to the meshes directory
 for img in bpy.data.images:
     if img.packed_file:
@@ -60,29 +64,7 @@ for img in bpy.data.images:
         except Exception:
             pass
 
-# Select all visible objects and export DAE and OBJ
-bpy.ops.object.select_all(action='SELECT')
-
-dae_out = os.path.join(MESH_DIR, "submerged_village.dae")
-bpy.ops.wm.collada_export(
-    filepath=dae_out,
-    selected=True,
-    include_children=True,
-    triangulate=True
-)
-print(f"✅ Exported Master Scene DAE -> {{dae_out}}")
-
-# Create URL-encoded texture file aliases for Gazebo material parser
-import urllib.parse, shutil
-for f in os.listdir(MESH_DIR):
-    if ' ' in f:
-        url_encoded = f.replace(' ', '%20')
-        src = os.path.join(MESH_DIR, f)
-        dst = os.path.join(MESH_DIR, url_encoded)
-        if not os.path.exists(dst):
-            shutil.copy2(src, dst)
-            print(f"✅ Created URL-encoded texture alias: {{url_encoded}}")
-
+# Export pure static OBJ + MTL
 obj_out = os.path.join(MESH_DIR, "submerged_village.obj")
 bpy.ops.wm.obj_export(
     filepath=obj_out,
@@ -90,8 +72,7 @@ bpy.ops.wm.obj_export(
     export_materials=True,
     export_triangulated_mesh=True
 )
-
-print(f"✅ Exported Master Scene OBJ -> {{obj_out}}")
+print(f"✅ Exported Pure Static Master Scene OBJ -> {{obj_out}}")
 """
 
 export_py = "/tmp/export_gazebo_meshes.py"
@@ -131,7 +112,7 @@ model_sdf = """<?xml version="1.0" ?>
       <collision name="collision">
         <geometry>
           <mesh>
-            <uri>model://submerged_village_flood/meshes/submerged_village.dae</uri>
+            <uri>model://submerged_village_flood/meshes/submerged_village.obj</uri>
             <scale>1 1 1</scale>
           </mesh>
         </geometry>
@@ -139,15 +120,10 @@ model_sdf = """<?xml version="1.0" ?>
       <visual name="visual">
         <geometry>
           <mesh>
-            <uri>model://submerged_village_flood/meshes/submerged_village.dae</uri>
+            <uri>model://submerged_village_flood/meshes/submerged_village.obj</uri>
             <scale>1 1 1</scale>
           </mesh>
         </geometry>
-        <material>
-          <ambient>0.9 0.9 0.9 1.0</ambient>
-          <diffuse>0.9 0.9 0.9 1.0</diffuse>
-          <specular>0.3 0.3 0.3 1.0</specular>
-        </material>
       </visual>
     </link>
   </model>
