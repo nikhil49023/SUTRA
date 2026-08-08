@@ -7,10 +7,8 @@ export class CommandQueue {
 
   public enqueue(cmd: MAVLinkCommand) {
     if (cmd.priority === 'EMERGENCY') {
-      // Emergency commands jump to the very front of the queue
       this.queue.unshift(cmd);
     } else if (cmd.priority === 'HIGH') {
-      // Insert after emergency commands
       const lastEmergencyIdx = this.queue.findLastIndex((c) => c.priority === 'EMERGENCY');
       this.queue.splice(lastEmergencyIdx + 1, 0, cmd);
     } else {
@@ -38,8 +36,9 @@ export class CommandQueue {
     } catch (e) {
       if (this.onCommandAckHandler) {
         this.onCommandAckHandler(currentCmd, {
-          commandId: currentCmd.commandId,
-          result: 'FAILED'
+          commandId: currentCmd.commandId || currentCmd.id,
+          command: currentCmd.command,
+          result: 4 // MAV_RESULT_FAILED
         });
       }
     } finally {
@@ -52,10 +51,11 @@ export class CommandQueue {
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve({
-          commandId: cmd.commandId,
-          result: 'ACCEPTED'
+          commandId: cmd.commandId || cmd.id,
+          command: cmd.command,
+          result: 0 // MAV_RESULT_ACCEPTED
         });
-      }, 150); // Simulated MAVLink bus delay
+      }, 150);
     });
   }
 

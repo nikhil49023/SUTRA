@@ -106,4 +106,50 @@ export class GISService {
     const lng = start[1] + (end[1] - start[1]) * factor;
     return [lat, lng];
   }
+
+  /**
+   * Check if a polygon ring is self-intersecting using turf.kinks
+   */
+  static isPolygonSelfIntersecting(polygonCoords: [number, number][]): boolean {
+    if (polygonCoords.length < 3) return false;
+    // Map [lat, lng] to [lng, lat] for GeoJSON
+    let ring: [number, number][] = polygonCoords.map(([lat, lng]) => [lng, lat]);
+    if (ring[0][0] !== ring[ring.length - 1][0] || ring[0][1] !== ring[ring.length - 1][1]) {
+      ring.push([ring[0][0], ring[0][1]]);
+    }
+    try {
+      const poly = turf.polygon([ring]);
+      const kinks = turf.kinks(poly);
+      return kinks.features.length > 0;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  /**
+   * Check if adding newPt creates a duplicate consecutive vertex
+   */
+  static isDuplicateConsecutiveVertex(lastPt: [number, number], newPt: [number, number]): boolean {
+    const dist = Math.hypot(lastPt[0] - newPt[0], lastPt[1] - newPt[1]);
+    return dist < 1e-6;
+  }
+
+  /**
+   * Converts polygon coordinates [lat, lng][] into a standard closed GeoJSON Polygon Feature
+   */
+  static toGeoJSONPolygon(polygonCoords: [number, number][], properties: Record<string, any> = {}): GeoJSON.Feature<GeoJSON.Polygon> {
+    let ring: [number, number][] = polygonCoords.map(([lat, lng]) => [lng, lat]);
+    if (ring.length >= 3 && (ring[0][0] !== ring[ring.length - 1][0] || ring[0][1] !== ring[ring.length - 1][1])) {
+      ring.push([ring[0][0], ring[0][1]]);
+    }
+    return {
+      type: 'Feature',
+      properties,
+      geometry: {
+        type: 'Polygon',
+        coordinates: [ring]
+      }
+    };
+  }
 }
+

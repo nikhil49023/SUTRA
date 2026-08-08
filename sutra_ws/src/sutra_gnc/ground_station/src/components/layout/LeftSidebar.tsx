@@ -4,10 +4,10 @@ import {
   Plane, 
   Crosshair, 
   Map, 
-  Cpu, 
+  Cpu,
+  Globe, 
   BarChart3, 
   Settings,
-  ChevronRight,
   Shield
 } from 'lucide-react';
 
@@ -17,6 +17,7 @@ export type NavTab =
   | 'LIVE_OPERATIONS' 
   | 'MISSION_PLANNER' 
   | 'AI_INTELLIGENCE' 
+  | 'GIS_INTEL'
   | 'ANALYTICS' 
   | 'SETTINGS';
 
@@ -38,7 +39,8 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     { id: 'FLEET' as NavTab, label: 'Fleet Grid', icon: Plane, badge: fleetCount },
     { id: 'LIVE_OPERATIONS' as NavTab, label: 'Live Ops', icon: Crosshair, activePulse: true },
     { id: 'MISSION_PLANNER' as NavTab, label: 'Mission Plan', icon: Map },
-    { id: 'AI_INTELLIGENCE' as NavTab, label: 'AI Intel', icon: Cpu, badgeAlert: alertCount },
+    { id: 'AI_INTELLIGENCE' as NavTab, label: 'AI Ops', icon: Cpu, badgeAlert: alertCount },
+    { id: 'GIS_INTEL' as NavTab, label: 'GIS Intel', icon: Globe },
     { id: 'ANALYTICS' as NavTab, label: 'Analytics', icon: BarChart3 },
     { id: 'SETTINGS' as NavTab, label: 'Settings', icon: Settings },
   ];
@@ -92,8 +94,8 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
         <div className="flex items-center space-x-3 text-slate-400">
           <Shield className="w-5 h-5 text-cyan-400 shrink-0" />
           <div className="flex flex-col opacity-0 group-hover:opacity-100 transition-opacity duration-200 overflow-hidden">
-            <span className="text-[10px] font-mono text-slate-300">DEFENSE GRID</span>
-            <span className="text-[9px] font-mono text-emerald-400">OPERATIONAL</span>
+            <span className="text-[10px] font-mono text-slate-300">GEOFENCE GRID</span>
+            <span className="text-[9px] font-mono text-emerald-400">ACTIVE & SECURED</span>
           </div>
         </div>
       </div>

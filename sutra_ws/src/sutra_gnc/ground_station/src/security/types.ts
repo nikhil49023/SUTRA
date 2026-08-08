@@ -1,31 +1,38 @@
-export type RoleLevel = 'COMMANDER' | 'OPERATOR' | 'ANALYST' | 'VIEWER';
+export type UserRole = 'ADMIN' | 'OPERATOR' | 'VIEWER' | 'PILOT' | 'COMMANDER';
+export type RoleLevel = UserRole;
 
 export interface UserSession {
   userId: string;
-  callsign: string;
-  role: RoleLevel;
-  clearanceLevel: number;
+  username: string;
+  callsign?: string;
+  role: UserRole;
   token: string;
-  loginTime: string;
   expiresAt: string;
+}
+
+export interface SecurityAuditRecord {
+  id: string;
+  userId: string;
+  action: string;
+  targetResource: string;
+  ipAddress: string;
+  timestamp: string;
+  status: 'SUCCESS' | 'DENIED' | 'FLAGGED';
 }
 
 export interface SecurityAuditLog {
   id: string;
-  timestamp: string;
   userId: string;
-  callsign: string;
+  callsign?: string;
   action: string;
   resource: string;
-  status: 'GRANTED' | 'DENIED' | 'SUCCESS' | 'FAILURE';
-  ipAddress: string;
+  result: string;
+  timestamp: string;
 }
 
 export interface TeamMember {
-  userId: string;
+  id: string;
   name: string;
+  role: UserRole;
   callsign: string;
-  role: RoleLevel;
-  clearanceLevel: number;
-  assignedDrones: string[];
 }

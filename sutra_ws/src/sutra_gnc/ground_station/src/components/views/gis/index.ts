@@ -5,8 +5,6 @@ export * from './MapRenderer';
 export * from './DroneRenderer';
 export * from './WaypointRenderer';
 export * from './MissionPathRenderer';
-export * from './OverlayRenderer';
 export * from './LayerController';
 export * from './MapControls';
 export * from './MissionControlConsole';
-export * from './GeofenceManagerPanel';

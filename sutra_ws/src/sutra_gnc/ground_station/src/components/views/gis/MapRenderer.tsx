@@ -9,6 +9,7 @@ interface MapRendererProps {
   mapStyle: MapStyleMode;
   children: (map: maplibregl.Map | null) => React.ReactNode;
   onMapClick?: (lngLat: { lat: number; lng: number }) => void;
+  onMapMouseMove?: (lngLat: { lat: number; lng: number }) => void;
   followDrone?: boolean;
   dronePos?: [number, number]; // [lng, lat]
   cursorStyle?: string;
@@ -20,6 +21,7 @@ export const MapRenderer: React.FC<MapRendererProps> = ({
   mapStyle,
   children,
   onMapClick,
+  onMapMouseMove,
   followDrone,
   dronePos,
   cursorStyle = 'crosshair'
@@ -28,11 +30,14 @@ export const MapRenderer: React.FC<MapRendererProps> = ({
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null);
   const onMapClickRef = useRef(onMapClick);
+  const onMapMouseMoveRef = useRef(onMapMouseMove);
+  const initialStyleRef = useRef<MapStyleMode>(mapStyle);
 
-  // Keep latest onMapClick callback in ref to prevent stale closures
+  // Keep latest callbacks in refs to prevent stale closures
   useEffect(() => {
     onMapClickRef.current = onMapClick;
-  }, [onMapClick]);
+    onMapMouseMoveRef.current = onMapMouseMove;
+  }, [onMapClick, onMapMouseMove]);
 
   // Initialize MapLibre GL Map
   useEffect(() => {
@@ -54,18 +59,22 @@ export const MapRenderer: React.FC<MapRendererProps> = ({
       }
     });
 
+    map.on('mousemove', (e: maplibregl.MapMouseEvent) => {
+      if (onMapMouseMoveRef.current) {
+        onMapMouseMoveRef.current({ lat: +e.lngLat.lat.toFixed(5), lng: +e.lngLat.lng.toFixed(5) });
+      }
+    });
+
     map.on('load', () => {
       setMapInstance(map);
+      (window as any).__mapInstance = map;
       map.getCanvas().style.cursor = cursorStyle;
     });
 
     mapRef.current = map;
 
     return () => {
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
+      // Intentionally preserve MapLibre GL instance across SPA tab navigation!
     };
   }, []);
 
@@ -76,10 +85,14 @@ export const MapRenderer: React.FC<MapRendererProps> = ({
     }
   }, [cursorStyle]);
 
-  // Update style when mapStyle prop changes
+  // Update style when mapStyle prop changes (skip initial — constructor already set it)
   useEffect(() => {
-    if (mapRef.current) {
+    if (mapRef.current && mapStyle !== initialStyleRef.current) {
       mapRef.current.setStyle(MAP_STYLES[mapStyle].url);
+    }
+    // After first real change, clear the guard so future changes always apply
+    if (mapStyle !== initialStyleRef.current) {
+      initialStyleRef.current = '' as MapStyleMode;
     }
   }, [mapStyle]);
 
