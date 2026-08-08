@@ -21,9 +21,9 @@ from sutra_comms.perceptron_jscc import PerceptronSemanticCommsPipeline
 
 @pytest.fixture(scope="module")
 def ros_context():
-    rclpy.init()
+    if not rclpy.ok():
+        rclpy.init()
     yield
-    rclpy.shutdown()
 
 
 def test_swarm_scale_stress(ros_context):
