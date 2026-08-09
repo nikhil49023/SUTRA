@@ -52,6 +52,9 @@ class PerceptronSNREstimator(nn_base):
             if isinstance(m, nn.Linear):
                 nn.init.kaiming_normal_(m.weight)
                 nn.init.constant_(m.bias, 0.0)
+        # Small weights on final layer so default output delta is near 0
+        nn.init.normal_(self.mlp[-1].weight, std=0.01)
+        nn.init.constant_(self.mlp[-1].bias, 0.0)
 
     def forward(self, x) -> float:
         if TORCH_AVAILABLE:
@@ -65,12 +68,17 @@ class PerceptronSNREstimator(nn_base):
         snr_analytical = rx_power - (-95.0)  # -95 dBm noise floor
 
         if TORCH_AVAILABLE:
-            inp = torch.tensor([[dist_km, tx_power_dbm, freq_ghz, shadow_db]], dtype=torch.float32)
+            dist_norm = (dist_km - 0.5) / 0.5
+            tx_norm = (tx_power_dbm - 20.0) / 10.0
+            freq_norm = (freq_ghz - 2.4) / 1.0
+            shadow_norm = (shadow_db - 2.5) / 2.0
+            inp = torch.tensor([[dist_norm, tx_norm, freq_norm, shadow_norm]], dtype=torch.float32)
             with torch.no_grad():
-                snr_pred = self.forward(inp).item()
-            return round(0.5 * snr_pred + 0.5 * snr_analytical, 2)
+                snr_delta = self.forward(inp).item()
+            snr_val = snr_analytical + snr_delta
+            return round(max(0.0, snr_val), 2)
         else:
-            return round(snr_analytical, 2)
+            return round(max(0.0, snr_analytical), 2)
 
 
 
@@ -100,7 +108,7 @@ class PerceptronJSCCEncoder(nn_base):
 class PerceptronJSCCDecoder(nn_base):
     """
     Perceptron Joint Source-Channel Decoder.
-    Reconstructs original semantic feature vectors from noise-corrupted channel symbols.
+    Reconstructs 512-dim semantic feature maps from noise-corrupted symbols.
     """
     def __init__(self, bottleneck_dim: int = 16, out_features: int = 512):
         if TORCH_AVAILABLE:
