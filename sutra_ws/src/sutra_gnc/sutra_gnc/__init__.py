@@ -1,6 +1,6 @@
 """
-Subsystem A: Autonomous Navigation & GNC Package
-Lead Engineer: Rohith Kumar
+Subsystem A: Autonomous Navigation & GNC Package (Clean Phase 1 Stack)
+Tech Lead: Nikhil
 """
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"
