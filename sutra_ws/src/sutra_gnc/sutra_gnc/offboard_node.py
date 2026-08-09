@@ -33,6 +33,9 @@ except ImportError:
 
 
 from sutra_gnc.orca_avoidance import ORCA3DSolver, DroneAgentState, Vector3D
+from sutra_gnc.trajectory_nmpc import NMPCTrajectoryPlanner
+from sutra_gnc.apace_feature_cost import APACEFeatureCost
+from sutra_gnc.emergency_landing import EmergencyLandingFSM, LandingRiskMap
 
 
 class OffboardFlightMode(Enum):
@@ -88,6 +91,11 @@ class SutraOffboardControlNode:
         self.wp_list = DEFAULT_WAYPOINTS
         self.cruise_speed = 2.5  # m/s
         self.orca_solver = ORCA3DSolver(safety_buffer_m=safety_buffer_m)
+        self.nmpc = NMPCTrajectoryPlanner(N=10, dt=0.02, v_max=3.0, a_max=2.5)
+        self.apace = APACEFeatureCost(fov_deg=90.0)
+        self.risk_map = LandingRiskMap(grid_res_m=0.5, extent_m=30.0)
+        self.el_fsm = EmergencyLandingFSM(self.risk_map, nav_speed_m_s=1.5, max_descent_m_s=0.5)
+        self._nmpc_setpoints: List[Tuple[float, float, float]] = []
         self.peer_drones: List[DroneAgentState] = []
         self.last_mode_change_time = time.time()
         self.failsafe_triggered = False
@@ -183,8 +191,9 @@ class SutraOffboardControlNode:
             return (vx, vy, vz), self.flight_mode
 
         # Check VIO Status
-        if self.vio_status_code == 3:  # TRACKING_LOST
-            return (0.0, 0.0, 0.0), OffboardFlightMode.FAILSAFE_LAND
+        if self.vio_status_code == 3:  # TRACKING_LOST -> Risk-aware emergency landing descent
+            vel_step, fsm_state = self.el_fsm.step((self.state.x, self.state.y, self.state.z), (self.state.vx, self.state.vy, self.state.vz))
+            return vel_step, OffboardFlightMode.FAILSAFE_LAND
 
         effective_speed = self.cruise_speed
         # Normal patrol / ring target navigation flight mode
@@ -215,10 +224,19 @@ class SutraOffboardControlNode:
                 )
             wp = next_wp
             yaw = self.yaw_to_wp(wp)
+            self._nmpc_setpoints.clear()
 
-        pref_vx = effective_speed * math.sin(yaw)
-        pref_vy = effective_speed * math.cos(yaw)
-        pref_vz = max(-2.5, min(2.5, dz * 1.5))
+        # Generate setpoint horizon via NMPC trajectory planner
+        if not self._nmpc_setpoints:
+            self._nmpc_setpoints = self.nmpc.plan(
+                current_pos=(self.state.x, self.state.y, self.state.z),
+                current_vel=(self.state.vx, self.state.vy, self.state.vz),
+                target_wp=wp,
+                feature_cost_fn=self.apace
+            )
+
+        nmpc_step = self._nmpc_setpoints.pop(0) if self._nmpc_setpoints else (0.0, 0.0, 0.0)
+        pref_vx, pref_vy, pref_vz = nmpc_step
 
         pref_vel = Vector3D(pref_vx, pref_vy, pref_vz)
         me_agent = DroneAgentState(
