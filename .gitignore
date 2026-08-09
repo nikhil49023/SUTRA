@@ -109,3 +109,4 @@ kaggle/
 *.usd
 *.usda
 *.usdc
+.firecrawl/
