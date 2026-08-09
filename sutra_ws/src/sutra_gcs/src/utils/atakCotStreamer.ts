@@ -14,6 +14,15 @@ export interface CotTarget {
   timestamp?: string;
 }
 
+const escapeXml = (str: string): string => {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+};
+
 /**
  * Generates MIL-STD-2525 Cursor-on-Target (CoT) XML v2.0 Event
  */
@@ -25,14 +34,18 @@ export const generateAtakCotXml = (target: CotTarget): string => {
   // a-f-G-U-C-F = Friendly/Civilian Ground Unit
   // a-h-G-U-C-F = Hostile Ground Threat
   const cotType = target.type === 'THREAT' ? 'a-h-G-U-C-F' : 'a-f-G-U-C-F';
+  const cleanId = escapeXml(target.id);
+  const cleanDetectedBy = escapeXml(target.detectedBy);
+  const cleanType = escapeXml(target.type);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<event version="2.0" uid="SUTRA-${target.id}" type="${cotType}" time="${now}" start="${now}" stale="${staleTime}">
+<event version="2.0" uid="SUTRA-${cleanId}" type="${cotType}" time="${now}" start="${now}" stale="${staleTime}">
   <point lat="${target.lat.toFixed(6)}" lon="${target.lon.toFixed(6)}" hae="${target.alt.toFixed(1)}" ce="1.5" le="1.0"/>
   <detail>
-    <contact callsign="${target.type}_${target.id}"/>
-    <remarks>Detected by Project SUTRA Swarm Perception (${target.detectedBy}) | Confidence: ${(target.confidence * 100).toFixed(1)}%</remarks>
+    <contact callsign="${cleanType}_${cleanId}"/>
+    <remarks>Detected by Project SUTRA Swarm Perception (${cleanDetectedBy}) | Confidence: ${(target.confidence * 100).toFixed(1)}%</remarks>
     <flowTags sutra_subsystem="C_PERCEPT" consensus_term="3"/>
   </detail>
 </event>`;
 };
+

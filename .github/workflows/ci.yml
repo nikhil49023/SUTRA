@@ -1,0 +1,30 @@
+name: Ground Control Station CI/CD Pipeline
+
+on:
+  push:
+    branches: [ feature/subsystem-d-gcs, main, dev ]
+  pull_request:
+    branches: [ feature/subsystem-d-gcs, main, dev ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Dependencies
+        run: |
+          cd sutra_ws/src/sutra_gcs
+          npm install
+
+      - name: Production Build
+        run: |
+          cd sutra_ws/src/sutra_gcs
+          npm run build

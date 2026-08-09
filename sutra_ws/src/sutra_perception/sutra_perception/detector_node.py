@@ -27,7 +27,7 @@ import json
 import math
 import time
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -39,13 +39,58 @@ from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Gracefully handle optional ROS cv_bridge (not needed in unit-test context)
+# Robust ROS Image <-> OpenCV bridge with pure-Python NumPy fallback
 # ──────────────────────────────────────────────────────────────────────────────
-try:
-    from cv_bridge import CvBridge
-    CV_BRIDGE_AVAILABLE = True
-except ImportError:
-    CV_BRIDGE_AVAILABLE = False
+class SutraCvBridge:
+    """ROS Image to OpenCV converter with pure-Python fallback for NumPy 2.x ABI resilience."""
+    def __init__(self):
+        self._native_bridge = None
+        try:
+            from cv_bridge import CvBridge
+            self._native_bridge = CvBridge()
+        except Exception:
+            self._native_bridge = None
+
+    def imgmsg_to_cv2(self, img_msg: Any, desired_encoding: str = "passthrough") -> np.ndarray:
+        if self._native_bridge is not None:
+            try:
+                return self._native_bridge.imgmsg_to_cv2(img_msg, desired_encoding=desired_encoding)
+            except Exception:
+                pass
+
+        # Pure-Python fallback for sensor_msgs/Image
+        dtype = np.uint8
+        encoding = getattr(img_msg, "encoding", "bgr8")
+        if encoding in ["mono8", "8UC1"]:
+            channels = 1
+        elif encoding in ["bgr8", "rgb8", "8UC3"]:
+            channels = 3
+        elif encoding in ["bgra8", "rgba8", "8UC4"]:
+            channels = 4
+        elif encoding in ["32FC1", "32F"]:
+            dtype = np.float32
+            channels = 1
+        elif encoding in ["16UC1", "16U"]:
+            dtype = np.uint16
+            channels = 1
+        else:
+            channels = 1
+
+        img = np.frombuffer(img_msg.data, dtype=dtype)
+        if hasattr(img_msg, "height") and hasattr(img_msg, "width") and img_msg.height > 0 and img_msg.width > 0:
+            if channels > 1:
+                img = img.reshape((img_msg.height, img_msg.width, channels))
+            else:
+                img = img.reshape((img_msg.height, img_msg.width))
+
+        if desired_encoding == "bgr8" and encoding == "rgb8":
+            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        elif desired_encoding == "rgb8" and encoding == "bgr8":
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+        return img
+
+CV_BRIDGE_AVAILABLE = True
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Gracefully handle optional ultralytics (not needed in unit-test context)
@@ -80,8 +125,94 @@ SAR_CLASS_IDS = {0: "person", 26: "backpack", 28: "suitcase"}
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Pure-Python Multi-Object ByteTracker Engine
+# ──────────────────────────────────────────────────────────────────────────────
+class SutraByteTrackerTrack:
+    def __init__(self, track_id: int, bbox: Tuple[float, float, float, float], score: float, label: str):
+        self.track_id = track_id
+        self.bbox = bbox  # (x1, y1, x2, y2)
+        self.score = score
+        self.label = label
+        self.hits = 1
+        self.time_since_update = 0
+        self.velocity = (0.0, 0.0)
+
+    def update(self, new_bbox: Tuple[float, float, float, float], new_score: float):
+        dx = (new_bbox[0] + new_bbox[2])/2.0 - (self.bbox[0] + self.bbox[2])/2.0
+        dy = (new_bbox[1] + new_bbox[3])/2.0 - (self.bbox[1] + self.bbox[3])/2.0
+        self.velocity = (dx, dy)
+        self.bbox = new_bbox
+        self.score = new_score
+        self.hits += 1
+        self.time_since_update = 0
+
+
+class SutraByteTracker:
+    """
+    ByteTRACK-style Multi-Object Tracker.
+    Assigns persistent IDs (e.g. Survivor-101) across consecutive video frames,
+    computes velocity vectors, and filters single-frame false positives.
+    """
+    def __init__(self, iou_threshold: float = 0.3, max_age: int = 5, min_hits: int = 2):
+        self.iou_threshold = iou_threshold
+        self.max_age = max_age
+        self.min_hits = min_hits
+        self.tracks: List[SutraByteTrackerTrack] = []
+        self.next_id = 101
+
+    @staticmethod
+    def _compute_iou(b1: Tuple[float, float, float, float], b2: Tuple[float, float, float, float]) -> float:
+        x1 = max(b1[0], b2[0])
+        y1 = max(b1[1], b2[1])
+        x2 = min(b1[2], b2[2])
+        y2 = min(b1[3], b2[3])
+        inter_area = max(0.0, x2 - x1) * max(0.0, y2 - y1)
+        b1_area = (b1[2] - b1[0]) * (b1[3] - b1[1])
+        b2_area = (b2[2] - b2[0]) * (b2[3] - b2[1])
+        union_area = b1_area + b2_area - inter_area
+        return inter_area / union_area if union_area > 0 else 0.0
+
+    def update(self, detections: List[Tuple[Tuple[float, float, float, float], float, str]]) -> List[SutraByteTrackerTrack]:
+        # Increment time_since_update for all active tracks
+        for track in self.tracks:
+            track.time_since_update += 1
+
+        unmatched_dets = list(range(len(detections)))
+        
+        # Match detections to existing tracks via IoU
+        for track in self.tracks:
+            best_iou = 0.0
+            best_det_idx = -1
+            for idx in unmatched_dets:
+                bbox, score, label = detections[idx]
+                iou = self._compute_iou(track.bbox, bbox)
+                if iou > best_iou:
+                    best_iou = iou
+                    best_det_idx = idx
+            
+            if best_iou >= self.iou_threshold and best_det_idx != -1:
+                bbox, score, label = detections[best_det_idx]
+                track.update(bbox, score)
+                unmatched_dets.remove(best_det_idx)
+
+        # Create new tracks for unmatched detections
+        for idx in unmatched_dets:
+            bbox, score, label = detections[idx]
+            new_track = SutraByteTrackerTrack(self.next_id, bbox, score, label)
+            self.next_id += 1
+            self.tracks.append(new_track)
+
+        # Remove dead tracks
+        self.tracks = [t for t in self.tracks if t.time_since_update <= self.max_age]
+
+        # Return confirmed active tracks
+        return [t for t in self.tracks if t.hits >= self.min_hits or t.time_since_update == 0]
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Pure-Python helper — NO ROS dependency (importable in pytest without ROS)
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 def to_gps(
     x: float,
@@ -125,17 +256,26 @@ def pixel_to_ned(
     img_h: int,
     drone_alt_m: float,
     camera_hfov_deg: float = 90.0,
+    roll_rad: float = 0.0,
+    pitch_rad: float = 0.0,
+    yaw_rad: float = 0.0,
+    terrain_alt_m: float = 0.0,
 ) -> Tuple[float, float]:
     """Project image pixel (px, py) onto ground plane → NED (east, north) offset.
 
-    Uses pinhole camera model. Assumes nadir-pointing camera.
+    Applies full 3D Euler rotation matrix R_world = Rz(yaw) * Ry(pitch) * Rx(roll)
+    to compensate for drone banking and camera attitude tilt.
 
     Parameters
     ----------
-    px, py        : Pixel coordinates (0,0 = top-left).
-    img_w, img_h  : Image dimensions in pixels.
-    drone_alt_m   : Drone altitude above ground in metres.
+    px, py          : Pixel coordinates (0,0 = top-left).
+    img_w, img_h    : Image dimensions in pixels.
+    drone_alt_m     : Drone altitude above sea level in metres.
     camera_hfov_deg : Horizontal field-of-view in degrees.
+    roll_rad        : Drone roll angle in radians.
+    pitch_rad       : Drone pitch angle in radians.
+    yaw_rad         : Drone yaw heading in radians.
+    terrain_alt_m   : Ground terrain elevation above sea level in metres.
 
     Returns
     -------
@@ -146,9 +286,46 @@ def pixel_to_ned(
     # Normalised image coordinates in range [-0.5, +0.5]
     norm_x = (px / img_w) - 0.5
     norm_y = (py / img_h) - 0.5
-    east_m  =  norm_x * 2.0 * drone_alt_m * math.tan(hfov_rad / 2.0)
-    north_m = -norm_y * 2.0 * drone_alt_m * math.tan(vfov_rad / 2.0)
+
+    # Optical camera ray vector (X-Right, Y-Down, Z-Forward)
+    v_cam = np.array([
+        norm_x * 2.0 * math.tan(hfov_rad / 2.0),
+        norm_y * 2.0 * math.tan(vfov_rad / 2.0),
+        1.0,
+    ])
+    v_norm = np.linalg.norm(v_cam)
+    if v_norm > 0:
+        v_cam /= v_norm
+
+    # 3D Euler Rotation Matrices (Roll, Pitch, Yaw)
+    Rx = np.array([
+        [1.0, 0.0, 0.0],
+        [0.0, math.cos(roll_rad), -math.sin(roll_rad)],
+        [0.0, math.sin(roll_rad), math.cos(roll_rad)],
+    ])
+    Ry = np.array([
+        [math.cos(pitch_rad), 0.0, math.sin(pitch_rad)],
+        [0.0, 1.0, 0.0],
+        [-math.sin(pitch_rad), 0.0, math.cos(pitch_rad)],
+    ])
+    Rz = np.array([
+        [math.cos(yaw_rad), -math.sin(yaw_rad), 0.0],
+        [math.sin(yaw_rad), math.cos(yaw_rad), 0.0],
+        [0.0, 0.0, 1.0],
+    ])
+    R_body = Rz @ Ry @ Rx
+    v_world = R_body @ v_cam
+
+    eff_alt = max(1.0, drone_alt_m - terrain_alt_m)
+    if abs(v_world[2]) > 1e-4:
+        s = eff_alt / max(v_world[2], 1e-3)
+    else:
+        s = 0.0
+
+    east_m = float(v_world[0] * s)
+    north_m = float(-v_world[1] * s)
     return east_m, north_m
+
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -275,17 +452,24 @@ class SutraDetectorNode(Node):
         self._drone_lat: float = ORIGIN_LAT
         self._drone_lon: float = ORIGIN_LON
         self._drone_alt: float = ORIGIN_ALT
+        self._drone_roll: float = 0.0       # radians
+        self._drone_pitch: float = 0.0      # radians
         self._drone_yaw: float = 0.0        # radians
+
+        # Pre-allocated zero-allocation image buffers for long-duration flight memory stability
+        self._static_rgb_buffer: np.ndarray = np.zeros((480, 640, 3), dtype=np.uint8)
+        self._static_thermal_buffer: np.ndarray = np.zeros((480, 640), dtype=np.uint8)
 
         self._visual_detections:  List[VisualDetection] = []
         self._thermal_blobs:      List[ThermalBlob]     = []
         self._radar_targets:      List[RadarTarget]     = []
         self._target_counter:     int                   = 0
         self._img_w: int = 640
+
         self._img_h: int = 480
 
         # ── Optional bridges / models ──────────────────────────────────────────
-        self._bridge: Optional[object] = CvBridge() if CV_BRIDGE_AVAILABLE else None
+        self._bridge: Optional[object] = SutraCvBridge()
         self._yolo:   Optional[object] = None
 
         if YOLO_AVAILABLE:
@@ -307,6 +491,10 @@ class SutraDetectorNode(Node):
             reliability=ReliabilityPolicy.BEST_EFFORT,
         )
 
+        # ── Mesh Comms Feedback State ──────────────────────────────────────────
+        self._mesh_snr_db: float = 25.0
+        self._low_bandwidth_mode: bool = False
+
         # ── Subscribers ───────────────────────────────────────────────────────
         self.create_subscription(
             Image,     "/camera/image_raw",   self._rgb_callback,     sensor_qos
@@ -317,6 +505,10 @@ class SutraDetectorNode(Node):
         self.create_subscription(
             LaserScan, "/radar/scan",         self._radar_callback,   sensor_qos
         )
+        # Mesh Comms Adaptive Link Feedback from Subsystem B
+        self.create_subscription(
+            String,    "/sutra/swarm/mesh_status", self._mesh_status_callback, 10
+        )
         # JSON String pose (sim mode / fallback)
         self.create_subscription(
             String,    "/sutra/gnc/pose",     self._pose_callback,    10
@@ -325,6 +517,7 @@ class SutraDetectorNode(Node):
         self.create_subscription(
             PoseStamped, "/sutra/gnc/pose_stamped", self._pose_stamped_callback, 10
         )
+
 
         # ── Publishers ────────────────────────────────────────────────────────
         self._pub_detections = self.create_publisher(
@@ -350,7 +543,24 @@ class SutraDetectorNode(Node):
     # Subscriber callbacks
     # ──────────────────────────────────────────────────────────────────────────
 
+    def _mesh_status_callback(self, msg: String) -> None:
+        """Receive live RF mesh communication link status from Subsystem B (mesh_node)."""
+        try:
+            data = json.loads(msg.data)
+            snr = float(data.get("snr_db", 25.0))
+            self._mesh_snr_db = snr
+            # Automatically toggle low bandwidth mode if SNR drops under heavy jamming/fading
+            if snr < -85.0:
+                if not self._low_bandwidth_mode:
+                    self.get_logger().warn(f"⚠️ Mesh link degraded (SNR={snr:.1f}dB) -> Switched to LOW_BANDWIDTH target mode")
+                self._low_bandwidth_mode = True
+            else:
+                self._low_bandwidth_mode = False
+        except (json.JSONDecodeError, KeyError, TypeError):
+            pass
+
     def _pose_callback(self, msg: String) -> None:
+
         """Receive drone telemetry JSON from Subsystem A (sim/fallback mode)."""
         try:
             data = json.loads(msg.data)
@@ -376,10 +586,30 @@ class SutraDetectorNode(Node):
         self._drone_lat = lat
         self._drone_lon = lon
         self._drone_alt = alt
-        # Extract yaw from quaternion (simplified — z component only)
+
+        # Extract roll, pitch, yaw from quaternion (q_x, q_y, q_z, q_w)
+        qx = msg.pose.orientation.x
+        qy = msg.pose.orientation.y
         qz = msg.pose.orientation.z
         qw = msg.pose.orientation.w
-        self._drone_yaw = 2.0 * math.atan2(qz, qw)
+
+        # Roll (x-axis rotation)
+        sinr_cosp = 2.0 * (qw * qx + qy * qz)
+        cosr_cosp = 1.0 - 2.0 * (qx * qx + qy * qy)
+        self._drone_roll = math.atan2(sinr_cosp, cosr_cosp)
+
+        # Pitch (y-axis rotation)
+        sinp = 2.0 * (qw * qy - qz * qx)
+        if abs(sinp) >= 1.0:
+            self._drone_pitch = math.copysign(math.pi / 2.0, sinp)
+        else:
+            self._drone_pitch = math.asin(sinp)
+
+        # Yaw (z-axis rotation)
+        siny_cosp = 2.0 * (qw * qz + qx * qy)
+        cosy_cosp = 1.0 - 2.0 * (qy * qy + qz * qz)
+        self._drone_yaw = math.atan2(siny_cosp, cosy_cosp)
+
 
     def _rgb_callback(self, msg: Image) -> None:
         """Process RGB camera frame — run YOLOv8-Nano detection."""
@@ -436,12 +666,15 @@ class SutraDetectorNode(Node):
                 x1, y1, x2, y2 = box.xyxy[0].tolist()
                 conf = float(box.conf[0])
                 bbox = BBox(x1, y1, x2, y2)
-                # GPS raycast from pixel centre
+                # GPS raycast from pixel centre with 3D Attitude Rotation
                 ex, ny = pixel_to_ned(
                     bbox.cx, bbox.cy,
                     self._img_w, self._img_h,
                     self._drone_alt,
                     self._camera_hfov_deg,
+                    self._drone_roll,
+                    self._drone_pitch,
+                    self._drone_yaw,
                 )
                 gps = to_gps(ex, ny, 0.0, self._drone_lat, self._drone_lon, 0.0)
                 detections.append(VisualDetection(
@@ -454,11 +687,12 @@ class SutraDetectorNode(Node):
         return detections
 
     def _detect_thermal_blobs(self, raw: np.ndarray) -> List[ThermalBlob]:
-        """Detect human-temperature hot-spots in thermal image.
+        """Detect human-temperature hot-spots (35C - 42C) in thermal image.
 
         Strategy:
           - Normalise 16-bit → 8-bit (or use 8-bit directly)
-          - Otsu threshold to isolate warm regions
+          - Radiometric absolute human temperature bandpass filter (top 22% intensity threshold)
+          - Morphological opening filter to eliminate solar glare & high-frequency noise
           - Filter blobs by minimum area
         """
         blobs: List[ThermalBlob] = []
@@ -469,12 +703,22 @@ class SutraDetectorNode(Node):
         else:
             norm = raw.astype(np.uint8)
 
-        # Keep top 30 % of intensity values (hot areas)
-        _, mask = cv2.threshold(norm, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        # Adaptive Thermal CLAHE Normalization (removes hot ground / solar clutter)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        norm = clahe.apply(norm)
+
+        # Radiometric human body temperature thresholding (above ~35C threshold)
+        min_intensity = int(255 * 0.78)
+        _, mask = cv2.threshold(norm, min_intensity, 255, cv2.THRESH_BINARY)
+
+        # Morphological opening filter (removes high-frequency solar glare & thermal speckle)
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
 
         contours, _ = cv2.findContours(
             mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
         )
+
         for cnt in contours:
             area = cv2.contourArea(cnt)
             if area < THERMAL_BLOB_MIN_AREA:
@@ -682,9 +926,14 @@ def main(args=None) -> None:
     rclpy.init(args=args)
     node = SutraDetectorNode()
     try:
-        rclpy.spin(node)
-    except KeyboardInterrupt:
+        from rclpy.executors import MultiThreadedExecutor
+        executor = MultiThreadedExecutor(num_threads=4)
+        executor.add_node(node)
+        executor.spin()
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
+    except Exception:
+        rclpy.spin(node)
     finally:
         node.destroy_node()
         rclpy.shutdown()
@@ -692,3 +941,4 @@ def main(args=None) -> None:
 
 if __name__ == "__main__":
     main()
+

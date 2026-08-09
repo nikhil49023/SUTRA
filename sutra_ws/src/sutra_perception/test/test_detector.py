@@ -408,3 +408,55 @@ class TestEndToEndPipeline:
             if not already:
                 fused.append(tblob)
         assert len(fused) == 0
+
+
+    def test_pixel_to_ned_zero_altitude_failsafe(self):
+        """Zero altitude input must produce finite 0.0 NED offset without ZeroDivisionError."""
+        east_m, north_m = pixel_to_ned(320, 240, 640, 480, 0.0, 90.0)
+        assert math.isfinite(east_m)
+        assert math.isfinite(north_m)
+        assert east_m == 0.0
+        assert north_m == 0.0
+
+    def test_pixel_to_ned_extreme_fov_bounds(self):
+        """Extreme FOV angles (e.g. 170 degrees) must produce finite NED bounds."""
+        east_m, north_m = pixel_to_ned(639, 479, 640, 480, 30.0, 170.0)
+        assert math.isfinite(east_m)
+        assert math.isfinite(north_m)
+
+    def test_gps_raycast_pole_boundary_safety(self):
+        """Extreme latitude inputs near polar boundaries must not produce NaN or overflow."""
+        lat, lon, alt = to_gps(1000.0, 1000.0, 50.0)
+        assert math.isfinite(lat)
+        assert math.isfinite(lon)
+        assert -90.0 <= lat <= 90.0
+        assert -180.0 <= lon <= 180.0
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Phase 7 — ByteTRACK Multi-Object Tracker
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestByteTracker:
+    """Validate multi-frame object tracking and ID persistence."""
+
+    def test_bytetracker_id_persistence_and_velocity(self):
+        from sutra_perception.detector_node import SutraByteTracker
+        tracker = SutraByteTracker(iou_threshold=0.3)
+        
+        # Frame 1: Detections at (100, 100, 200, 200)
+        dets_f1 = [((100.0, 100.0, 200.0, 200.0), 0.9, "person")]
+        tracks_f1 = tracker.update(dets_f1)
+        assert len(tracks_f1) == 1
+        track_id = tracks_f1[0].track_id
+        assert track_id == 101
+        
+        # Frame 2: Shifted detection at (110, 105, 210, 205)
+        dets_f2 = [((110.0, 105.0, 210.0, 205.0), 0.92, "person")]
+        tracks_f2 = tracker.update(dets_f2)
+        assert len(tracks_f2) == 1
+        assert tracks_f2[0].track_id == track_id  # Persistent ID maintained
+        assert tracks_f2[0].hits == 2
+        assert tracks_f2[0].velocity == (10.0, 5.0)  # Velocity calculated
+
+

@@ -42,7 +42,10 @@ if __name__ == "__main__":
     papers = [
         ("https://arxiv.org/abs/1911.07476", "DeepJSCC_Feedback"),
         ("https://arxiv.org/abs/2108.05658", "Semantic_Swarms"),
-        ("https://arxiv.org/abs/2203.11482", "SwarmRaft_Consensus")
+        ("https://arxiv.org/abs/2203.11482", "SwarmRaft_Consensus"),
+        ("https://arxiv.org/abs/2104.14441", "DeepJSCC_Video_Transmission"),
+        ("https://arxiv.org/abs/2303.04221", "Neural_OctoMap_3D_Voxel_Compression"),
+        ("https://arxiv.org/abs/2401.08210", "Semantic_Telemetry_Swarm_JSCC")
     ]
     for url, name in papers:
         scrape_paper_via_firecrawl(url, name)

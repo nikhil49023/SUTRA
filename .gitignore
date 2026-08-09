@@ -18,6 +18,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+!**/src/lib/
 lib64/
 parts/
 sdist/
@@ -74,14 +75,37 @@ Thumbs.db
 *.lib
 *.dylib
 
+# Temporary evaluation & cache directories
+runs/
+.wwebjs_cache/
+
 # Heavy ML Model Weights — NEVER commit these (violates AGENTS.md Rule 1 — No Bloat)
 # These are auto-downloaded at runtime by the subsystem C (sutra_perception) detector_node.py
 # To manually download: pip install ultralytics && python3 -c "from ultralytics import YOLO; YOLO('yolov8n.pt')"
 # Or run: python3 sutra_ws/src/sutra_perception/scripts/download_weights.py
 *.pt
+*.pth
 *.onnx
+*.onnx.data
 *.engine
+*.engine.json
 *.trt
 *.weights
 *.bin
 yolov8*.pt
+
+# Dataset directory — too large for git
+/data/
+*.pt
+*.onnx
+*.engine
+*.weights
+*.h5
+kaggle/
+
+# CAD & 3D Simulation Heavy Binary Assets (>100MB GitHub limit)
+*.blend
+*.blend1
+*.usd
+*.usda
+*.usdc

@@ -1,12 +1,13 @@
 # 🚁 Subsystem A — GNC & Flight Control Documentation
 
-[![Build Status](https://img.shields.io/badge/PX4_Offboard-ACTIVE-brightgreen.svg)]()
-[![Gate G5 Metric](https://img.shields.io/badge/Gate_G5-PASSED-blue.svg)]()
-[![Safety Buffer](https://img.shields.io/badge/ORCA_3D-3.1m-green.svg)]()
+[![Subsystem Status](https://img.shields.io/badge/Subsystem_Status-IN_PROGRESS-orange.svg)]()
+[![PX4 Offboard](https://img.shields.io/badge/PX4_Offboard-SITL_UNVERIFIED-red.svg)]()
+[![Gate G5 Math Check](https://img.shields.io/badge/Gate_G5-MATH_VERIFIED-blue.svg)]()
 
-**Subsystem Lead:** Rohith Kumar  
-**Branch:** `feature/subsystem-a-gnc`  
-**Location:** `sutra_ws/src/sutra_gnc/`
+> **Subsystem Lead:** Rohith Kumar  
+> **Branch:** `feature/subsystem-a-gnc`  
+> **Location:** `sutra_ws/src/sutra_gnc/`  
+> **Audit Status:** ⚠️ **INCOMPLETE (0 Commits by Lead)** — Python unit math tests passed, but VIO localization, OctoMap generation, and PX4 SITL 50Hz trajectory testing are unfinished.
 
 ---
 
@@ -36,3 +37,26 @@ sutra_gnc (ROS 2 Package)
     ├── ROS 2 Jazzy (nav_msgs, geometry_msgs, sensor_msgs)
     └── OctoMap C++ / Python Bindings
 ```
+
+---
+
+## 🛠️ Step-by-Step Execution & Verification Guide for Rohith
+
+1. **Sync Feature Branch**:
+   ```bash
+   git checkout feature/subsystem-a-gnc && git fetch origin dev && git merge origin/dev --no-edit
+   ```
+2. **Execute Unit & Integration Suite**:
+   ```bash
+   pytest sutra_ws/src/sutra_gnc/test/ --durations=0
+   ```
+3. **Launch SITL Digital Twin Swarm & Offboard Node**:
+   ```bash
+   ros2 launch sutra_sim sutra_master_swarm_integration.launch.py sim_mode:=true
+   ros2 run sutra_gnc offboard_node
+   ```
+4. **Verify Setpoint Rate & Audit Benchmarks**:
+   ```bash
+   ros2 topic hz /fmu/in/trajectory_setpoint
+   ```
+

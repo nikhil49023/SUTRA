@@ -21,6 +21,7 @@ setup(
     entry_points={
         'console_scripts': [
             'mesh_node = sutra_comms.mesh_node:main',
+            'gcs_gateway_bridge = sutra_comms.gcs_gateway_bridge:main',
         ],
     },
 )

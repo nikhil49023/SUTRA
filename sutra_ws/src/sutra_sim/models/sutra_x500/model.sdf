@@ -1,0 +1,286 @@
+<?xml version="1.0" ?>
+<sdf version="1.9">
+  <model name="sutra_x500">
+    <link name="base_link">
+      <pose>0 0 0.15 0 0 0</pose>
+      <inertial>
+        <mass>1.5</mass>
+        <inertia>
+          <ixx>0.0035</ixx>
+          <iyy>0.0035</iyy>
+          <izz>0.0063</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+      </inertial>
+      
+      <!-- Visual: simple quadrotor frame -->
+      <visual name="visual">
+        <geometry>
+          <cylinder>
+            <radius>0.5</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.3 0.3 0.3 1</diffuse>
+        </material>
+      </visual>
+      
+      <!-- Collision: simple cylinder -->
+      <collision name="collision">
+        <geometry>
+          <cylinder>
+            <radius>0.5</radius>
+            <length>0.1</length>
+          </cylinder>
+        </geometry>
+      </collision>
+
+      <!-- IMU (250 Hz) -->
+      <sensor name="imu" type="imu">
+        <always_on>true</always_on>
+        <update_rate>250</update_rate>
+        <topic>/fmu/out/sensor_combined</topic>
+      </sensor>
+
+      <!-- GPS/NavSat (5 Hz) -->
+      <sensor name="gps" type="navsat">
+        <always_on>true</always_on>
+        <update_rate>5</update_rate>
+      </sensor>
+
+      <!-- RGB Camera (forward, 30 Hz) -->
+      <sensor name="rgb_camera" type="camera">
+        <always_on>true</always_on>
+        <update_rate>30</update_rate>
+        <topic>/camera/rgb/image_raw</topic>
+        <camera name="rgb">
+          <horizontal_fov>1.047</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>480</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>100</far>
+          </clip>
+        </camera>
+        <pose relative_to="base_link">0.3 0 0.1 0 0 0</pose>
+      </sensor>
+
+      <!-- Thermal Camera (downward, 10 Hz) -->
+      <sensor name="thermal" type="thermal_camera">
+        <always_on>true</always_on>
+        <update_rate>10</update_rate>
+        <topic>/camera/thermal/image_raw</topic>
+        <camera name="thermal">
+          <horizontal_fov>0.872</horizontal_fov>
+          <image>
+            <width>320</width>
+            <height>240</height>
+            <format>L8</format>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>50</far>
+          </clip>
+        </camera>
+        <pose relative_to="base_link">0 0 -0.1 1.5708 0 0</pose>
+      </sensor>
+
+      <!-- 3D LiDAR (10 Hz, 1024x32 channels) -->
+      <sensor name="lidar" type="gpu_lidar">
+        <always_on>true</always_on>
+        <update_rate>10</update_rate>
+        <topic>/lidar/points</topic>
+        <lidar name="lidar">
+          <scan>
+            <horizontal>
+              <samples>1024</samples>
+              <min_angle>-3.14159</min_angle>
+              <max_angle>3.14159</max_angle>
+            </horizontal>
+            <vertical>
+              <samples>32</samples>
+              <min_angle>-0.4189</min_angle>
+              <max_angle>0.4189</max_angle>
+            </vertical>
+          </scan>
+          <range>
+            <min>0.1</min>
+            <max>30</max>
+          </range>
+        </lidar>
+        <pose relative_to="base_link">0 0 0.2 0 0 0</pose>
+      </sensor>
+
+      <!-- mmWave Radar (downward, 20 Hz, proxy) -->
+      <sensor name="radar" type="ray">
+        <always_on>true</always_on>
+        <update_rate>20</update_rate>
+        <topic>/radar/scan</topic>
+        <ray name="radar_ray">
+          <scan>
+            <horizontal>
+              <samples>100</samples>
+              <min_angle>-0.5236</min_angle>
+              <max_angle>0.5236</max_angle>
+            </horizontal>
+          </scan>
+          <range>
+            <min>0.5</min>
+            <max>50</max>
+          </range>
+        </ray>
+        <pose relative_to="base_link">0 0 -0.1 1.5708 0 0</pose>
+      </sensor>
+    </link>
+
+    <!-- 4× Motor links (simplified from default x500) -->
+    <link name="motor_0">
+      <pose>0.25 0.25 0.15 0 0 0</pose>
+      <inertial>
+        <mass>0.05</mass>
+        <inertia>
+          <ixx>1e-05</ixx><iyy>1e-05</iyy><izz>1e-05</izz>
+          <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <visual name="visual">
+        <geometry><cylinder><radius>0.02</radius><length>0.02</length></cylinder></geometry>
+        <material><ambient>0.8 0.8 0.8 1</ambient><diffuse>0.9 0.9 0.9 1</diffuse></material>
+      </visual>
+      <collision name="collision">
+        <geometry><cylinder><radius>0.02</radius><length>0.02</length></cylinder></geometry>
+      </collision>
+    </link>
+
+    <link name="motor_1">
+      <pose>-0.25 -0.25 0.15 0 0 0</pose>
+      <inertial>
+        <mass>0.05</mass>
+        <inertia>
+          <ixx>1e-05</ixx><iyy>1e-05</iyy><izz>1e-05</izz>
+          <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <visual name="visual">
+        <geometry><cylinder><radius>0.02</radius><length>0.02</length></cylinder></geometry>
+        <material><ambient>0.8 0.8 0.8 1</ambient><diffuse>0.9 0.9 0.9 1</diffuse></material>
+      </visual>
+      <collision name="collision">
+        <geometry><cylinder><radius>0.02</radius><length>0.02</length></cylinder></geometry>
+      </collision>
+    </link>
+
+    <link name="motor_2">
+      <pose>0.25 -0.25 0.15 0 0 0</pose>
+      <inertial>
+        <mass>0.05</mass>
+        <inertia>
+          <ixx>1e-05</ixx><iyy>1e-05</iyy><izz>1e-05</izz>
+          <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <visual name="visual">
+        <geometry><cylinder><radius>0.02</radius><length>0.02</length></cylinder></geometry>
+        <material><ambient>0.8 0.8 0.8 1</ambient><diffuse>0.9 0.9 0.9 1</diffuse></material>
+      </visual>
+      <collision name="collision">
+        <geometry><cylinder><radius>0.02</radius><length>0.02</length></cylinder></geometry>
+      </collision>
+    </link>
+
+    <link name="motor_3">
+      <pose>-0.25 0.25 0.15 0 0 0</pose>
+      <inertial>
+        <mass>0.05</mass>
+        <inertia>
+          <ixx>1e-05</ixx><iyy>1e-05</iyy><izz>1e-05</izz>
+          <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <visual name="visual">
+        <geometry><cylinder><radius>0.02</radius><length>0.02</length></cylinder></geometry>
+        <material><ambient>0.8 0.8 0.8 1</ambient><diffuse>0.9 0.9 0.9 1</diffuse></material>
+      </visual>
+      <collision name="collision">
+        <geometry><cylinder><radius>0.02</radius><length>0.02</length></cylinder></geometry>
+      </collision>
+    </link>
+
+    <!-- Joint: base to motor_0 -->
+    <joint name="joint_motor_0" type="revolute">
+      <parent>base_link</parent>
+      <child>motor_0</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+      </axis>
+    </joint>
+
+    <!-- Joint: base to motor_1 -->
+    <joint name="joint_motor_1" type="revolute">
+      <parent>base_link</parent>
+      <child>motor_1</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+      </axis>
+    </joint>
+
+    <!-- Joint: base to motor_2 -->
+    <joint name="joint_motor_2" type="revolute">
+      <parent>base_link</parent>
+      <child>motor_2</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+      </axis>
+    </joint>
+
+    <!-- Joint: base to motor_3 -->
+    <joint name="joint_motor_3" type="revolute">
+      <parent>base_link</parent>
+      <child>motor_3</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+      </axis>
+    </joint>
+
+    <!-- Drone battery plugin (for PX4) -->
+    <plugin filename="gz-sim-battery-system" name="gz::sim::systems::Battery">
+      <battery_name>lipo2s2p</battery_name>
+      <voltage>12.6</voltage>
+      <capacity>2.2</capacity>
+      <resistance>0.001</resistance>
+      <smooth_current_tau>0.99</smooth_current_tau>
+      <start_on_motion>true</start_on_motion>
+    </plugin>
+
+    <!-- Joint state publisher for visualization -->
+    <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
+      <joint_name>joint_motor_0</joint_name>
+      <joint_name>joint_motor_1</joint_name>
+      <joint_name>joint_motor_2</joint_name>
+      <joint_name>joint_motor_3</joint_name>
+    </plugin>
+  </model>
+</sdf>
