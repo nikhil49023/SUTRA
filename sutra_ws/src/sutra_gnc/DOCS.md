@@ -1,20 +1,20 @@
 # 🚁 Subsystem A — GNC & Flight Control Master Specification
 
-[![PyTest Verification](https://img.shields.io/badge/PyTest-58%2F58%20PASSED-brightgreen.svg)]()
+[![PyTest Verification](https://img.shields.io/badge/PyTest-61%2F61%20PASSED-brightgreen.svg)]()
 [![Gate G5 Compliance](https://img.shields.io/badge/Gate_G5-VERIFIED-brightgreen.svg)]()
 [![Dual-Mode Launch](https://img.shields.io/badge/Dual--Mode_Launch-READY-brightgreen.svg)]()
 
 > **Subsystem Lead:** Nikhil (Tech Architect & Subsystem A Lead — Tech Lead Takeover)  
 > **Branch:** `feature/subsystem-a-gnc`  
 > **Location:** `sutra_ws/src/sutra_gnc/`  
-> **Current Audit Status:** ✅ **COMMITTED & VERIFIED (58/58 Tests Passing)**
+> **Current Audit Status:** ✅ **COMMITTED & VERIFIED (61/61 Tests Passing)**
 
 ---
 
 ## 📊 1. Measured Empirical Benchmarks & Performance Metrics (Simulation & Production Readiness)
 
 **Verification command:** `pytest sutra_ws/src/sutra_gnc/test/ --durations=0`  
-**Live result:** `58 passed in 0.56s`
+**Live result:** `61 passed in 0.46s`
 
 | Metric | Production / SITL Target Threshold | Measured Empirical Value | Evidence Source | Status |
 |---|:---:|:---:|:---:|:---:|
@@ -34,6 +34,7 @@
 | **Risk-Aware Emergency Landing FSM** | 4-state ASSESS->GROUNDED descent | **Verified** | `test_emergency_landing.py` | ✅ **VERIFIED** |
 | **Semantic OctoMap Label Channel** | Per-voxel NDMA classification | **Verified** | `test_semantic_octomap.py` | ✅ **VERIFIED** |
 | **CILC Swarm Loop Closure Security** | HMAC-SHA256 verification | **Verified** | `test_cilc_security.py` | ✅ **VERIFIED** |
+| **NMPC Predictive Target Pursuit** | Standoff 4m, lead-point prediction | **Verified** | `test_target_tracker.py` | ✅ **VERIFIED** |
 
 ---
 

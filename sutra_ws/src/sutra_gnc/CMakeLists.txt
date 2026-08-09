@@ -17,6 +17,7 @@ install(PROGRAMS
   sutra_gnc/vio_localization.py
   sutra_gnc/octomap_generator.py
   sutra_gnc/orca_avoidance.py
+  sutra_gnc/target_tracker_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
