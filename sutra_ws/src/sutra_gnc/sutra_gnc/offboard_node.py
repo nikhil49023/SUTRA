@@ -235,17 +235,29 @@ if HAVE_ROS2:
     class SutraOffboardROS2Node(Node):
         def __init__(self):
             super().__init__('sutra_offboard_control')
-            self.controller = SutraOffboardControlNode()
+            
+            self.declare_parameter('drone_id', 'uav_alpha')
+            self.declare_parameter('cruise_speed', 2.5)
+            self.declare_parameter('safety_buffer_m', 3.0)
 
-            self.pub_vel = self.create_publisher(TwistStamped, '/uav_alpha/gazebo/command/twist', 10)
-            self.pub_pose_stamped = self.create_publisher(PoseStamped, '/sutra/gnc/pose_stamped', 10)
-            self.pub_pose_json = self.create_publisher(String, '/sutra/gnc/pose', 10)
+            self.drone_id = self.get_parameter('drone_id').get_parameter_value().string_value
+            cruise_speed = self.get_parameter('cruise_speed').get_parameter_value().double_value
+            safety_buffer = self.get_parameter('safety_buffer_m').get_parameter_value().double_value
+
+            self.controller = SutraOffboardControlNode(agent_id=hash(self.drone_id) % 100 + 1, safety_buffer_m=safety_buffer)
+            self.controller.cruise_speed = cruise_speed
+
+            self.pub_vel = self.create_publisher(TwistStamped, f'/{self.drone_id}/gazebo/command/twist', 10)
+            self.pub_pose_stamped = self.create_publisher(PoseStamped, f'/sutra/gnc/{self.drone_id}/pose_stamped', 10)
+            self.pub_pose_json = self.create_publisher(String, f'/sutra/gnc/{self.drone_id}/pose', 10)
+            self.pub_px4_setpoint = self.create_publisher(String, f'/{self.drone_id}/fmu/in/trajectory_setpoint', 10)
 
             self.sub_vio_status = self.create_subscription(
-                String, '/sutra/gnc/vio_status', self._vio_status_callback, 10
+                String, f'/sutra/gnc/{self.drone_id}/vio_status', self._vio_status_callback, 10
             )
 
             self.timer = self.create_timer(0.02, self._control_loop)  # 50 Hz loop
+            self.get_logger().info(f"🚀 Subsystem A Offboard Node Initialized for [{self.drone_id}] @ 50Hz setpoint rate.")
 
         def _vio_status_callback(self, msg: String):
             try:
@@ -258,16 +270,20 @@ if HAVE_ROS2:
         def _control_loop(self):
             (vx, vy, vz), mode = self.controller.compute_control_step(dt=0.02)
 
+            now_msg = self.get_clock().now().to_msg()
+
+            # 1. Publish TwistStamped for Gazebo Sim
             twist = TwistStamped()
-            twist.header.stamp = self.get_clock().now().to_msg()
+            twist.header.stamp = now_msg
             twist.header.frame_id = 'base_link'
             twist.twist.linear.x = vx
             twist.twist.linear.y = vy
             twist.twist.linear.z = vz
             self.pub_vel.publish(twist)
 
+            # 2. Publish PoseStamped for Subsystem C & D
             pose = PoseStamped()
-            pose.header.stamp = twist.header.stamp
+            pose.header.stamp = now_msg
             pose.header.frame_id = 'world'
             pose.pose.position.x = self.controller.state.x
             pose.pose.position.y = self.controller.state.y
@@ -278,6 +294,19 @@ if HAVE_ROS2:
             pose.pose.orientation.z = qz
             pose.pose.orientation.w = qw
             self.pub_pose_stamped.publish(pose)
+
+            # 3. Publish PX4 TrajectorySetpoint JSON for microDDS Bridge
+            setpoint_data = {
+                "drone_id": self.drone_id,
+                "timestamp_us": int(time.time() * 1e6),
+                "position": [self.controller.state.x, self.controller.state.y, self.controller.state.z],
+                "velocity": [vx, vy, vz],
+                "yaw_rad": self.controller.state.yaw,
+                "flight_mode": mode.name
+            }
+            px4_msg = String()
+            px4_msg.data = json.dumps(setpoint_data)
+            self.pub_px4_setpoint.publish(px4_msg)
 
 
 def main(args=None):
