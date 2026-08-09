@@ -117,11 +117,19 @@ When a user introduces themselves by name, automatically activate their exact ro
 - **Folder**: `sutra_ws/src/sutra_perception/` | **Branch**: `feature/subsystem-c-perception` | **Doc**: `sutra_ws/src/sutra_perception/DOCS.md`
 - **Pre-Work Action**: Run Rule 0 (`git status`, `git branch --show-current`, `git fetch origin dev && git merge origin/dev`).
 - **Tasks**: YOLOv8-Nano TensorRT survivor/threat detector (`detector_node.py`), WGS84 GPS raycasting from 2D bounding boxes, and Tri-Modal spatial cross-attention fusion.
+- **Inter-Subsystem Interfaces**:
+  - Consumes `/sutra/gnc/{drone_id}/pose_stamped` from Subsystem A for DEM terrain raycasting.
+  - Streams target classifications (`Survivor`, `Threat/Fire`, `Safe Corridor`) aligned with Subsystem F NDMA rescue categories.
+  - Feeds bounding box telemetry to Subsystem B (`mesh_node`) for Deep JSCC neural transmission.
 
 ### 4. 🗺️ SIVA KESAVA — Subsystem D Lead (3D GIS GCS Dashboard)
 - **Folder**: `sutra_ws/src/sutra_gcs/` | **Branch**: `feature/subsystem-d-gcs` | **Doc**: `sutra_ws/src/sutra_gcs/DOCS.md`
 - **Pre-Work Action**: Run Rule 0 (`git status`, `git branch --show-current`, `git fetch origin dev && git merge origin/dev`).
-- **Tasks**: Mapbox GL JS 3D satellite view & drone markers (`src/App.tsx`), WebGPU telemetry HUD widgets, ATAK/WinTAK Cursor-on-Target XML streamer, survivor alert stream, and 1-click Emergency RTL button.
+- **Tasks**: Mapbox GL JS 3D satellite view & drone markers (`src/App.tsx`), WebGPU real-time telemetry HUD widgets, ATAK/WinTAK Cursor-on-Target XML streamer, survivor alert stream, and 1-click Emergency RTL button.
+- **Inter-Subsystem Interfaces**:
+  - Renders Subsystem F search corridor polygons and NDMA staging geofence overlays on 3D Mapbox viewer.
+  - Displays Pre-Flight SOP checklist verification badges on WebGPU HUD.
+  - Connects to Subsystem B WebSocket gateway (`ws_port: 9090`) maintaining 60.0 FPS HUD performance under 5 UAV streams.
 
 ### 5. 📑 HARIKA — Subsystem E Lead (Docs, Verification Audits & Presentation Design)
 - **Folder**: `docs/` & `scripts/` | **Branch**: `feature/subsystem-e-docs`
