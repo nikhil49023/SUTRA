@@ -51,28 +51,48 @@ class TargetTrackingState(Enum):
 class SimulatedTarget:
     """
     Generates realistic 3D trajectories for a moving target (ground vehicle, survivor, or target UAV).
-    Trajectory patterns: CIRCLE, LEMNISCATE_8, WAYPOINT_PATH.
-    Includes simulated wind/terrain perturbation noise.
+    Dynamically switches trajectory patterns (CIRCLE <-> LEMNISCATE_8 <-> WAYPOINT_PATH)
+    and adapts speed/radius to test real-time UAV intercept and pursuit.
     """
 
     def __init__(
         self,
         center: Tuple[float, float, float] = (15.0, 15.0, 0.0),
         radius_m: float = 12.0,
-        speed_m_s: float = 2.0,
+        speed_m_s: float = 2.5,
         pattern: str = "LEMNISCATE_8",
+        auto_switch_interval_s: float = 15.0,
     ):
         self.cx, self.cy, self.cz = center
         self.radius = radius_m
         self.speed = speed_m_s
         self.pattern = pattern
+        self.auto_switch_interval = auto_switch_interval_s
         self.start_time = time.time()
+        self.last_switch_time = time.time()
+
+        self._patterns = ["LEMNISCATE_8", "CIRCLE", "WAYPOINT_PATH"]
+        self._pattern_idx = 0
+
+    def set_pattern(self, new_pattern: str) -> None:
+        if new_pattern in self._patterns:
+            self.pattern = new_pattern
+            self.last_switch_time = time.time()
+
+    def update_dynamic_behavior(self, t_current: float) -> None:
+        """Dynamically switches pattern every auto_switch_interval_s seconds."""
+        if t_current - self.last_switch_time > self.auto_switch_interval:
+            self._pattern_idx = (self._pattern_idx + 1) % len(self._patterns)
+            self.pattern = self._patterns[self._pattern_idx]
+            self.last_switch_time = t_current
 
     def get_state(self, t_current: Optional[float] = None) -> Tuple[Tuple[float, float, float], Tuple[float, float, float]]:
         """
         Returns ((x, y, z), (vx, vy, vz)) of the simulated target at time t.
         """
-        t = (t_current if t_current is not None else time.time()) - self.start_time
+        now = t_current if t_current is not None else time.time()
+        self.update_dynamic_behavior(now)
+        t = now - self.start_time
         omega = self.speed / max(1.0, self.radius)
 
         if self.pattern == "CIRCLE":
@@ -275,11 +295,20 @@ if HAVE_ROS2:
                 PoseStamped, f'/sutra/gnc/{self.drone_id}/pose_stamped', self._pose_callback, 10
             )
 
+            self.sub_pattern = self.create_subscription(
+                String, '/sutra/gnc/set_target_pattern', self._pattern_callback, 10
+            )
+
             self.timer = self.create_timer(0.02, self._control_loop)  # 50Hz loop
-            self.get_logger().info(f"🎯 Subsystem A Autonomous Target Pursuit Node Initialized [{pattern} pattern @ 50Hz].")
+            self.get_logger().info(f"🎯 Subsystem A Autonomous Target Pursuit Node Initialized [Dynamic target switching enabled @ 50Hz].")
 
         def _pose_callback(self, msg: PoseStamped):
             self.drone_pos = (msg.pose.position.x, msg.pose.position.y, msg.pose.position.z)
+
+        def _pattern_callback(self, msg: String):
+            new_p = msg.data.strip()
+            self.sim_target.set_pattern(new_p)
+            self.get_logger().info(f"🔄 Dynamic Target Trajectory Pattern Switched to [{new_p}]!")
 
         def _control_loop(self):
             # Use simulated target trajectory
