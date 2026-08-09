@@ -20,7 +20,7 @@ from typing import List, Tuple, Optional
 try:
     import rclpy
     from rclpy.node import Node
-    from geometry_msgs.msg import TwistStamped, PoseStamped
+    from geometry_msgs.msg import TwistStamped, PoseStamped, Pose
     from std_msgs.msg import String, Header
     HAVE_ROS2 = True
 except ImportError:
@@ -45,11 +45,11 @@ class OffboardFlightMode(Enum):
 
 # ── Waypoint Mission Specs (NED Coordinates: East, North, Altitude) ─────────
 DEFAULT_WAYPOINTS = [
-    (  0.0,   0.0, 15.0),   # Home / Takeoff
-    ( 20.0,   0.0, 20.0),   # Waypoint 1: North leg
-    ( 20.0,  20.0, 20.0),   # Waypoint 2: East leg
-    (  0.0,  20.0, 20.0),   # Waypoint 3: South leg
-    (  0.0,   0.0, 15.0),   # Waypoint 4: RTL Home
+    ( 10.0,   0.0, 15.0),   # 3D Ring Target 1
+    ( 20.0,  15.0, 18.0),   # 3D Ring Target 2
+    (  5.0,  25.0, 12.0),   # 3D Ring Target 3
+    (-15.0,  10.0, 16.0),   # 3D Ring Target 4
+    (  0.0,   0.0, 15.0),   # 3D Ring Target 5 (Home Loop)
 ]
 
 
@@ -187,22 +187,38 @@ class SutraOffboardControlNode:
             return (0.0, 0.0, 0.0), OffboardFlightMode.FAILSAFE_LAND
 
         effective_speed = self.cruise_speed
-        if self.vio_status_code == 2:  # TRACKING_DEGRADED
-            effective_speed = 0.5
-
-        # Normal patrol flight mode
+        # Normal patrol / ring target navigation flight mode
         wp = self.wp_list[self.wp_index]
-        dist = self.distance_to_wp(wp)
+        dx = wp[0] - self.state.x
+        dy = wp[1] - self.state.y
+        dz = wp[2] - self.state.z
+        dist_3d = math.sqrt(dx*dx + dy*dy + dz*dz)
         yaw = self.yaw_to_wp(wp)
 
-        if dist < 1.5:
+        if dist_3d < 0.8:
+            target_num = self.wp_index + 1
             self.wp_index = (self.wp_index + 1) % len(self.wp_list)
-            wp = self.wp_list[self.wp_index]
+            next_wp = self.wp_list[self.wp_index]
+            
+            if HAVE_ROS2 and hasattr(self, 'get_logger'):
+                try:
+                    self.get_logger().info(
+                        f"🎯 [RING TARGET REACHED] UAV Cleared Ring Target #{target_num} at ({wp[0]:.1f}, {wp[1]:.1f}, {wp[2]:.1f}m)! "
+                        f"--> Generating NEW Ring Target #{self.wp_index+1} at ({next_wp[0]:.1f}, {next_wp[1]:.1f}, {next_wp[2]:.1f}m)"
+                    )
+                except Exception:
+                    pass
+            else:
+                print(
+                    f"🎯 [RING TARGET REACHED] UAV Cleared Ring Target #{target_num} at ({wp[0]:.1f}, {wp[1]:.1f}, {wp[2]:.1f}m)! "
+                    f"--> Generating NEW Ring Target #{self.wp_index+1} at ({next_wp[0]:.1f}, {next_wp[1]:.1f}, {next_wp[2]:.1f}m)"
+                )
+            wp = next_wp
             yaw = self.yaw_to_wp(wp)
 
         pref_vx = effective_speed * math.sin(yaw)
         pref_vy = effective_speed * math.cos(yaw)
-        pref_vz = (wp[2] - self.state.z) * 0.5
+        pref_vz = max(-2.5, min(2.5, dz * 1.5))
 
         pref_vel = Vector3D(pref_vx, pref_vy, pref_vz)
         me_agent = DroneAgentState(
@@ -223,9 +239,10 @@ class SutraOffboardControlNode:
             self.flight_mode = OffboardFlightMode.MISSION_PATROL
 
         self.state.vx, self.state.vy, self.state.vz = vx, vy, vz
-        self.state.x += vx * dt
-        self.state.y += vy * dt
-        self.state.z += vz * dt
+        if not getattr(self, 'use_closed_loop_feedback', False):
+            self.state.x += vx * dt
+            self.state.y += vy * dt
+            self.state.z += vz * dt
         self.state.yaw = yaw
 
         return (vx, vy, vz), self.flight_mode
@@ -252,12 +269,32 @@ if HAVE_ROS2:
             self.pub_pose_json = self.create_publisher(String, f'/sutra/gnc/{self.drone_id}/pose', 10)
             self.pub_px4_setpoint = self.create_publisher(String, f'/{self.drone_id}/fmu/in/trajectory_setpoint', 10)
 
+            self.sub_pose = self.create_subscription(
+                PoseStamped, f'/model/{self.drone_id}/pose', self._pose_feedback_callback, 10
+            )
+
             self.sub_vio_status = self.create_subscription(
                 String, f'/sutra/gnc/{self.drone_id}/vio_status', self._vio_status_callback, 10
             )
 
             self.timer = self.create_timer(0.02, self._control_loop)  # 50 Hz loop
-            self.get_logger().info(f"🚀 Subsystem A Offboard Node Initialized for [{self.drone_id}] @ 50Hz setpoint rate.")
+            self.get_logger().info(f"🚀 Subsystem A Offboard Node Initialized for [{self.drone_id}] @ 50Hz closed-loop control rate.")
+
+        def _pose_feedback_callback(self, msg):
+            try:
+                if hasattr(msg, 'pose') and hasattr(msg.pose, 'position'):
+                    pos = msg.pose.position
+                elif hasattr(msg, 'position'):
+                    pos = msg.position
+                else:
+                    return
+                self.controller.use_closed_loop_feedback = True
+                self.controller.state.x = pos.x
+                self.controller.state.y = pos.y
+                self.controller.state.z = pos.z
+                self.controller.state.last_heartbeat = time.time()
+            except Exception:
+                pass
 
         def _vio_status_callback(self, msg: String):
             try:
