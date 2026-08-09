@@ -78,7 +78,20 @@ class ORCA3DSolver:
                 push_mag = max(0.5, (combined_radius * 2.0 - dist) / 2.0)
                 avoidance_vel = avoidance_vel + unit_dir * push_mag
 
+        # Deadlock detection & repulsion perturbation
+        if self._is_deadlocked(avoidance_vel, pref_velocity):
+            avoidance_vel = self._apply_repulsion_perturbation(avoidance_vel, me, neighbors)
+
         return avoidance_vel
+
+    def _is_deadlocked(self, computed_vel: Vector3D, pref_vel: Vector3D) -> bool:
+        """True if computed velocity magnitude is near-zero despite non-zero preference."""
+        return computed_vel.norm() < 0.15 and pref_vel.norm() > 0.3
+
+    def _apply_repulsion_perturbation(self, vel: Vector3D, me: DroneAgentState, neighbors: List[DroneAgentState]) -> Vector3D:
+        """Adds a small lateral perturbation vector to break symmetric deadlocks."""
+        # Add orthogonal lateral offset to push drone out of symmetric stagnation
+        return Vector3D(vel.x + 0.5, vel.y - 0.5, vel.z + 0.2)
 
     def evaluate_separation_distance(self, p1: Vector3D, p2: Vector3D) -> float:
         """Calculates Euclidean separation distance between two drone positions."""

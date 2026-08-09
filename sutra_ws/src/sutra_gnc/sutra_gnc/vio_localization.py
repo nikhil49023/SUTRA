@@ -109,6 +109,10 @@ class VIOLocalizationFilter:
         return True, self.tracking_status, metrics
 
 
+from sutra_gnc.vio_factor_graph import GraphVIOAdapter
+from sutra_gnc.imu_debiaser import IMUDebiaser
+
+
 class VIOLocalizationNode(Node):
     """
     ROS 2 Node for Visual-Inertial Odometry processing & PX4 VehicleVisualOdometry publishing.
@@ -117,6 +121,12 @@ class VIOLocalizationNode(Node):
         super().__init__('sutra_vio_localization')
 
         self.filter = VIOLocalizationFilter(max_pos_covariance=0.05, max_rot_covariance=0.02)
+        self.graph_adapter = GraphVIOAdapter(
+            vio_filter=self.filter,
+            lc_drift_threshold_m=2.0,
+            keyframe_interval_m=0.5
+        )
+        self.imu_debiaser = IMUDebiaser()
 
         # ── Subscribers ───────────────────────────────────────────────────────
         self.sub_odom = self.create_subscription(
@@ -169,7 +179,10 @@ class VIOLocalizationNode(Node):
         pos_cov = msg.pose.covariance[0] if len(msg.pose.covariance) > 0 else 0.01
         rot_cov = msg.pose.covariance[21] if len(msg.pose.covariance) > 21 else 0.005
 
-        is_valid, status, metrics = self.filter.process_frame(pos, orient, pos_cov, rot_cov)
+        # Apply IMU debiaser quality adjustment
+        pos_cov, rot_cov, quality = self.imu_debiaser.apply_to_frame(pos_cov, rot_cov, quality_score=1.0)
+
+        is_valid, status, metrics = self.graph_adapter.add_frame(pos, orient, pos_cov, rot_cov, quality_score=quality)
 
         # Publish VIO tracking status JSON message
         status_msg = String()

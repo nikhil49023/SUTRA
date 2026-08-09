@@ -251,6 +251,9 @@ class OctoMap3DVoxelGrid:
             del self.grid[key]
 
 
+from sutra_gnc.octomap_downsampler import GeometricDownsampler
+
+
 class OctoMapGeneratorNode(Node):
     """
     ROS 2 Node for 3D OctoMap generation, PointCloud2 processing & RViz/GCS visualization.
@@ -258,6 +261,7 @@ class OctoMapGeneratorNode(Node):
     def __init__(self):
         super().__init__('sutra_octomap_generator')
         self.voxel_grid = OctoMap3DVoxelGrid(resolution_m=0.10)
+        self.downsampler = GeometricDownsampler(target_ratio=0.5, min_feature_radius_m=0.3)
         self.drone_pose: Tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)  # (x, y, z, yaw)
 
         # ── Subscribers ───────────────────────────────────────────────────────
@@ -352,7 +356,8 @@ class OctoMapGeneratorNode(Node):
 
     def publish_voxel_markers(self):
         """Publishes MarkerArray message for RViz and JSON for GCS."""
-        occupied_positions = self.voxel_grid.get_occupied_positions()
+        raw_occupied = self.voxel_grid.get_occupied_positions()
+        occupied_positions = self.downsampler.downsample_positions(raw_occupied)
 
         # Publish JSON stream for 3D GIS GCS
         json_msg = String()

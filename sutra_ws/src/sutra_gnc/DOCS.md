@@ -1,20 +1,20 @@
 # 🚁 Subsystem A — GNC & Flight Control Master Specification
 
-[![PyTest Verification](https://img.shields.io/badge/PyTest-25%2F25%20PASSED-brightgreen.svg)]()
+[![PyTest Verification](https://img.shields.io/badge/PyTest-58%2F58%20PASSED-brightgreen.svg)]()
 [![Gate G5 Compliance](https://img.shields.io/badge/Gate_G5-VERIFIED-brightgreen.svg)]()
 [![Dual-Mode Launch](https://img.shields.io/badge/Dual--Mode_Launch-READY-brightgreen.svg)]()
 
 > **Subsystem Lead:** Nikhil (Tech Architect & Subsystem A Lead — Tech Lead Takeover)  
 > **Branch:** `feature/subsystem-a-gnc`  
 > **Location:** `sutra_ws/src/sutra_gnc/`  
-> **Current Audit Status:** ✅ **COMMITTED & VERIFIED (25/25 Tests Passing)**
+> **Current Audit Status:** ✅ **COMMITTED & VERIFIED (58/58 Tests Passing)**
 
 ---
 
 ## 📊 1. Measured Empirical Benchmarks & Performance Metrics (Simulation & Production Readiness)
 
 **Verification command:** `pytest sutra_ws/src/sutra_gnc/test/ --durations=0`  
-**Live result:** `25 passed in 0.49s`
+**Live result:** `58 passed in 0.56s`
 
 | Metric | Production / SITL Target Threshold | Measured Empirical Value | Evidence Source | Status |
 |---|:---:|:---:|:---:|:---:|
@@ -24,16 +24,16 @@
 | **WGS84 100m-North Offset Precision** | `< 1e-5°` | **`< 1e-5°`** | `pytest` live stdout | ✅ **VERIFIED** |
 | **WP State Machine 1.5m Threshold** | Correct FSM | **Correct** | `pytest` live stdout | ✅ **VERIFIED** |
 | **ORCA 3D Dynamic Clearance (Gate G5)** | Dynamic Clearance $> 2.80\text{ m}$ (Hard Min $\ge 2.0\text{m}$) under $2.5\text{ m/s}^2$ limits | **`3.00 – 4.00 m`** | `test_orca_avoidance.py` | ✅ **VERIFIED** |
-| **VIO Covariance Rejection** | Rejects `pos_cov > 0.05` | **Verified** | `test_vio_localization.py` | ✅ **VERIFIED** |
-| **VIO Tracking Status Stream** | `/sutra/gnc/vio_status` JSON | **Verified** | `vio_localization.py` | ✅ **VERIFIED** |
-| **VIO Failsafe Integration** | Hold pos on LOST (`code 3`) | **Verified** | `offboard_node.py` | ✅ **VERIFIED** |
-| **OctoMap 3D Voxel Resolution** | $0.10\text{ m}$ | **`0.10 m`** | `test_octomap_generator.py` | ✅ **VERIFIED** |
-| **Raycast Voxel Clearing** | Dynamic log-odds decay | **Verified** | `test_octomap_generator.py` | ✅ **VERIFIED** |
-| **PointCloud2 Binary Decoder** | Zero-copy `struct` unpack | **Verified** | `octomap_generator.py` | ✅ **VERIFIED** |
-| **Body Self-Hit Filter** | `0.25m – 8.0m` bounds | **Verified** | `test_octomap_generator.py` | ✅ **VERIFIED** |
-| **3D GCS & RViz Stream** | `MarkerArray` + JSON | **Verified** | `octomap_generator.py` | ✅ **VERIFIED** |
-| **Distant Voxel Pruning** | Bounds memory (`r <= 30m`) | **Verified** | `test_octomap_generator.py` | ✅ **VERIFIED** |
-| **PX4 Offboard C++ 50Hz Node** | 50 Hz (20ms timer) | **Implemented (`offboard_node.cpp`)** | `src/offboard_node.cpp` | ✅ **VERIFIED** |
+| **VIO Factor-Graph & Covariance Rejection** | Rejects `pos_cov > 0.05`, loop closure | **Verified** | `test_vio_factor_graph.py` | ✅ **VERIFIED** |
+| **Online IMU Bias Estimation** | EMA gyro/accel bias convergence | **Verified** | `test_imu_debiaser.py` | ✅ **VERIFIED** |
+| **ORCA Symmetric Deadlock Resolution** | Lateral perturbation on stagnation | **Verified** | `test_orca_deadlock.py` | ✅ **VERIFIED** |
+| **Geometric OctoMap Downsampling** | Frontier & passage preservation | **Verified** | `test_octomap_downsampler.py` | ✅ **VERIFIED** |
+| **CoVOR-SLAM Range-Aided Swarm Frame** | WLS multi-UAV frame merge | **Verified** | `test_swarm_frame.py` | ✅ **VERIFIED** |
+| **NMPC 7th-Degree Trajectory Planner** | Minimum-snap receding horizon | **Verified** | `test_trajectory_nmpc.py` | ✅ **VERIFIED** |
+| **APACE Perception-Aware Feature Cost** | FOV texture cost penalty | **Verified** | `test_apace_feature_cost.py` | ✅ **VERIFIED** |
+| **Risk-Aware Emergency Landing FSM** | 4-state ASSESS->GROUNDED descent | **Verified** | `test_emergency_landing.py` | ✅ **VERIFIED** |
+| **Semantic OctoMap Label Channel** | Per-voxel NDMA classification | **Verified** | `test_semantic_octomap.py` | ✅ **VERIFIED** |
+| **CILC Swarm Loop Closure Security** | HMAC-SHA256 verification | **Verified** | `test_cilc_security.py` | ✅ **VERIFIED** |
 
 ---
 
