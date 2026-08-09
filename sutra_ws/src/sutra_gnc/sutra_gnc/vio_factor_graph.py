@@ -26,9 +26,10 @@ Wind robustness:
 
 import math
 import time
-from typing import Tuple, Dict, List, Optional, Any
+from typing import TYPE_CHECKING, Tuple, Dict, List, Optional, Any
 
-from sutra_gnc.vio_localization import VIOLocalizationFilter, VIOTrackingStatus
+if TYPE_CHECKING:
+    from sutra_gnc.vio_localization import VIOLocalizationFilter, VIOTrackingStatus
 
 
 class PoseNode:
@@ -102,7 +103,7 @@ class GraphVIOAdapter:
 
     def __init__(
         self,
-        vio_filter: VIOLocalizationFilter,
+        vio_filter: "VIOLocalizationFilter",
         lc_drift_threshold_m: float = 2.0,
         keyframe_interval_m: float = 0.5,
         max_keyframes: int = 200,
