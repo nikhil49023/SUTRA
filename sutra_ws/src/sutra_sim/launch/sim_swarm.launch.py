@@ -28,10 +28,20 @@ def generate_launch_description():
     sim_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     world_path = PathJoinSubstitution([sim_dir, 'worlds', LaunchConfiguration('world')])
 
-    # ExecuteProcess for Gazebo Sim 8 (Harmonic) engine (3D GUI enabled by default)
-    gazebo_process = ExecuteProcess(
+    # ExecuteProcess for Gazebo Sim 8 (Harmonic) engine
+    # Uses '-s' (server only) when headless is true, otherwise standard GUI mode
+    from launch.conditions import IfCondition, UnlessCondition
+
+    gazebo_server_process = ExecuteProcess(
+        cmd=['gz', 'sim', '-s', '-r', world_path],
+        output='screen',
+        condition=IfCondition(LaunchConfiguration('headless'))
+    )
+
+    gazebo_gui_process = ExecuteProcess(
         cmd=['gz', 'sim', '-r', world_path],
-        output='screen'
+        output='screen',
+        condition=UnlessCondition(LaunchConfiguration('headless'))
     )
 
     # ROS GZ Bridge for Gazebo Sim <-> ROS 2 topics
@@ -54,6 +64,7 @@ def generate_launch_description():
         world_arg,
         headless_arg,
         LogInfo(msg=f"🌐 LAUNCHING GAZEBO SIM 8 (HARMONIC) DIGITAL TWIN WORLD: {world_path}"),
-        gazebo_process,
+        gazebo_server_process,
+        gazebo_gui_process,
         ros_gz_bridge_node,
     ])

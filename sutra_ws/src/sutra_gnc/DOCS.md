@@ -14,7 +14,7 @@
 ## 📊 1. Measured Empirical Benchmarks & Performance Metrics (Simulation & Production Readiness)
 
 **Verification command:** `pytest sutra_ws/src/sutra_gnc/test/ --durations=0`  
-**Live result:** `61 passed in 0.46s`
+**Live result:** `61 passed in 0.55s`
 
 | Metric | Production / SITL Target Threshold | Measured Empirical Value | Evidence Source | Status |
 |---|:---:|:---:|:---:|:---:|

@@ -62,6 +62,24 @@ class VIOLocalizationFilter:
         self.total_frames_processed = 0
         self.valid_frames_count = 0
 
+    def adapt_covariance(
+        self,
+        pos_cov: float,
+        rot_cov: float,
+        imu_variance: float = 0.01,
+        feature_count: int = 50,
+    ) -> Tuple[float, float]:
+        """
+        Dynamically adjusts effective covariance bounds based on IMU vibration noise
+        and visual feature match density (D²SLAM / OpenVINS principles).
+        """
+        feature_factor = max(0.5, min(2.0, 50.0 / max(1, feature_count)))
+        vibration_factor = 1.0 + max(0.0, imu_variance - 0.01) * 10.0
+
+        adapted_pos_cov = pos_cov * feature_factor * vibration_factor
+        adapted_rot_cov = rot_cov * feature_factor * vibration_factor
+        return adapted_pos_cov, adapted_rot_cov
+
     def process_frame(
         self,
         position: Tuple[float, float, float],
@@ -107,6 +125,7 @@ class VIOLocalizationFilter:
             "valid_ratio": self.valid_frames_count / float(self.total_frames_processed)
         }
         return True, self.tracking_status, metrics
+
 
 
 from sutra_gnc.vio_factor_graph import GraphVIOAdapter

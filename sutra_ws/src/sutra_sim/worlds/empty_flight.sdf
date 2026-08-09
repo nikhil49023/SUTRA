@@ -148,6 +148,94 @@
       </plugin>
     </model>
 
+    <!-- Drone 3: UAV Gamma - Amber Gold -->
+    <model name="uav_gamma">
+      <pose>-10 10 0.5 0 0 0</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <kinematic>true</kinematic>
+        <inertial><mass>1.5</mass><inertia><ixx>0.025</ixx><ixy>0</ixy><ixz>0</ixz><iyy>0.025</iyy><iyz>0</iyz><izz>0.045</izz></inertia></inertial>
+        <collision name="chassis_collision"><geometry><cylinder><radius>0.22</radius><length>0.10</length></cylinder></geometry></collision>
+        <visual name="canopy_body"><pose>0 0 0.02 0 0 0</pose><geometry><cylinder><radius>0.14</radius><length>0.06</length></cylinder></geometry><material><ambient>0.08 0.06 0.02 1</ambient><diffuse>0.25 0.20 0.05 1</diffuse></material></visual>
+        <visual name="arm_fl"><pose>0.14 0.14 0 0 0 0.785</pose><geometry><box><size>0.32 0.025 0.02</size></box></geometry><material><ambient>0.15 0.15 0.15 1</ambient></material></visual>
+        <visual name="arm_fr"><pose>0.14 -0.14 0 0 0 -0.785</pose><geometry><box><size>0.32 0.025 0.02</size></box></geometry><material><ambient>0.15 0.15 0.15 1</ambient></material></visual>
+        <visual name="arm_rl"><pose>-0.14 0.14 0 0 0 -0.785</pose><geometry><box><size>0.32 0.025 0.02</size></box></geometry><material><ambient>0.15 0.15 0.15 1</ambient></material></visual>
+        <visual name="arm_rr"><pose>-0.14 -0.14 0 0 0 0.785</pose><geometry><box><size>0.32 0.025 0.02</size></box></geometry><material><ambient>0.15 0.15 0.15 1</ambient></material></visual>
+        <visual name="rotor_fl"><pose>0.22 0.22 0.045 0 0 0</pose><geometry><cylinder><radius>0.14</radius><length>0.005</length></cylinder></geometry><material><ambient>1.0 0.8 0.1 0.6</ambient></material></visual>
+        <visual name="rotor_fr"><pose>0.22 -0.22 0.045 0 0 0</pose><geometry><cylinder><radius>0.14</radius><length>0.005</length></cylinder></geometry><material><ambient>1.0 0.8 0.1 0.6</ambient></material></visual>
+        <visual name="rotor_rl"><pose>-0.22 0.22 0.045 0 0 0</pose><geometry><cylinder><radius>0.14</radius><length>0.005</length></cylinder></geometry><material><ambient>1.0 0.8 0.1 0.6</ambient></material></visual>
+        <visual name="rotor_rr"><pose>-0.22 -0.22 0.045 0 0 0</pose><geometry><cylinder><radius>0.14</radius><length>0.005</length></cylinder></geometry><material><ambient>1.0 0.8 0.1 0.6</ambient></material></visual>
+        <sensor name="imu_sensor" type="imu"><always_on>true</always_on><update_rate>200.0</update_rate><topic>/uav_gamma/imu</topic></sensor>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <topic>/uav_gamma/gazebo/command/twist</topic>
+        <initial_linear>0 0 0</initial_linear><initial_angular>0 0 0</initial_angular>
+      </plugin>
+      <plugin filename="gz-sim-pose-publisher-system" name="gz::sim::systems::PosePublisher">
+        <publish_link_pose>true</publish_link_pose><update_frequency>50</update_frequency>
+      </plugin>
+    </model>
+
+    <!-- Drone 4: UAV Delta - Magenta -->
+    <model name="uav_delta">
+      <pose>15 -10 0.5 0 0 0</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <kinematic>true</kinematic>
+        <inertial><mass>1.5</mass><inertia><ixx>0.025</ixx><ixy>0</ixy><ixz>0</ixz><iyy>0.025</iyy><iyz>0</iyz><izz>0.045</izz></inertia></inertial>
+        <collision name="chassis_collision"><geometry><cylinder><radius>0.22</radius><length>0.10</length></cylinder></geometry></collision>
+        <visual name="canopy_body"><pose>0 0 0.02 0 0 0</pose><geometry><cylinder><radius>0.14</radius><length>0.06</length></cylinder></geometry><material><ambient>0.08 0.02 0.08 1</ambient><diffuse>0.25 0.05 0.25 1</diffuse></material></visual>
+        <visual name="arm_fl"><pose>0.14 0.14 0 0 0 0.785</pose><geometry><box><size>0.32 0.025 0.02</size></box></geometry><material><ambient>0.15 0.15 0.15 1</ambient></material></visual>
+        <visual name="arm_fr"><pose>0.14 -0.14 0 0 0 -0.785</pose><geometry><box><size>0.32 0.025 0.02</size></box></geometry><material><ambient>0.15 0.15 0.15 1</ambient></material></visual>
+        <visual name="arm_rl"><pose>-0.14 0.14 0 0 0 -0.785</pose><geometry><box><size>0.32 0.025 0.02</size></box></geometry><material><ambient>0.15 0.15 0.15 1</ambient></material></visual>
+        <visual name="arm_rr"><pose>-0.14 -0.14 0 0 0 0.785</pose><geometry><box><size>0.32 0.025 0.02</size></box></geometry><material><ambient>0.15 0.15 0.15 1</ambient></material></visual>
+        <visual name="rotor_fl"><pose>0.22 0.22 0.045 0 0 0</pose><geometry><cylinder><radius>0.14</radius><length>0.005</length></cylinder></geometry><material><ambient>0.9 0.2 0.9 0.6</ambient></material></visual>
+        <visual name="rotor_fr"><pose>0.22 -0.22 0.045 0 0 0</pose><geometry><cylinder><radius>0.14</radius><length>0.005</length></cylinder></geometry><material><ambient>0.9 0.2 0.9 0.6</ambient></material></visual>
+        <visual name="rotor_rl"><pose>-0.22 0.22 0.045 0 0 0</pose><geometry><cylinder><radius>0.14</radius><length>0.005</length></cylinder></geometry><material><ambient>0.9 0.2 0.9 0.6</ambient></material></visual>
+        <visual name="rotor_rr"><pose>-0.22 -0.22 0.045 0 0 0</pose><geometry><cylinder><radius>0.14</radius><length>0.005</length></cylinder></geometry><material><ambient>0.9 0.2 0.9 0.6</ambient></material></visual>
+        <sensor name="imu_sensor" type="imu"><always_on>true</always_on><update_rate>200.0</update_rate><topic>/uav_delta/imu</topic></sensor>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <topic>/uav_delta/gazebo/command/twist</topic>
+        <initial_linear>0 0 0</initial_linear><initial_angular>0 0 0</initial_angular>
+      </plugin>
+      <plugin filename="gz-sim-pose-publisher-system" name="gz::sim::systems::PosePublisher">
+        <publish_link_pose>true</publish_link_pose><update_frequency>50</update_frequency>
+      </plugin>
+    </model>
+
+    <!-- Drone 5: UAV Epsilon - Deep Cyan -->
+    <model name="uav_epsilon">
+      <pose>-15 -10 0.5 0 0 0</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <kinematic>true</kinematic>
+        <inertial><mass>1.5</mass><inertia><ixx>0.025</ixx><ixy>0</ixy><ixz>0</ixz><iyy>0.025</iyy><iyz>0</iyz><izz>0.045</izz></inertia></inertial>
+        <collision name="chassis_collision"><geometry><cylinder><radius>0.22</radius><length>0.10</length></cylinder></geometry></collision>
+        <visual name="canopy_body"><pose>0 0 0.02 0 0 0</pose><geometry><cylinder><radius>0.14</radius><length>0.06</length></cylinder></geometry><material><ambient>0.02 0.08 0.08 1</ambient><diffuse>0.05 0.25 0.25 1</diffuse></material></visual>
+        <visual name="arm_fl"><pose>0.14 0.14 0 0 0 0.785</pose><geometry><box><size>0.32 0.025 0.02</size></box></geometry><material><ambient>0.15 0.15 0.15 1</ambient></material></visual>
+        <visual name="arm_fr"><pose>0.14 -0.14 0 0 0 -0.785</pose><geometry><box><size>0.32 0.025 0.02</size></box></geometry><material><ambient>0.15 0.15 0.15 1</ambient></material></visual>
+        <visual name="arm_rl"><pose>-0.14 0.14 0 0 0 -0.785</pose><geometry><box><size>0.32 0.025 0.02</size></box></geometry><material><ambient>0.15 0.15 0.15 1</ambient></material></visual>
+        <visual name="arm_rr"><pose>-0.14 -0.14 0 0 0 0.785</pose><geometry><box><size>0.32 0.025 0.02</size></box></geometry><material><ambient>0.15 0.15 0.15 1</ambient></material></visual>
+        <visual name="rotor_fl"><pose>0.22 0.22 0.045 0 0 0</pose><geometry><cylinder><radius>0.14</radius><length>0.005</length></cylinder></geometry><material><ambient>0.2 0.9 0.9 0.6</ambient></material></visual>
+        <visual name="rotor_fr"><pose>0.22 -0.22 0.045 0 0 0</pose><geometry><cylinder><radius>0.14</radius><length>0.005</length></cylinder></geometry><material><ambient>0.2 0.9 0.9 0.6</ambient></material></visual>
+        <visual name="rotor_rl"><pose>-0.22 0.22 0.045 0 0 0</pose><geometry><cylinder><radius>0.14</radius><length>0.005</length></cylinder></geometry><material><ambient>0.2 0.9 0.9 0.6</ambient></material></visual>
+        <visual name="rotor_rr"><pose>-0.22 -0.22 0.045 0 0 0</pose><geometry><cylinder><radius>0.14</radius><length>0.005</length></cylinder></geometry><material><ambient>0.2 0.9 0.9 0.6</ambient></material></visual>
+        <sensor name="imu_sensor" type="imu"><always_on>true</always_on><update_rate>200.0</update_rate><topic>/uav_epsilon/imu</topic></sensor>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <topic>/uav_epsilon/gazebo/command/twist</topic>
+        <initial_linear>0 0 0</initial_linear><initial_angular>0 0 0</initial_angular>
+      </plugin>
+      <plugin filename="gz-sim-pose-publisher-system" name="gz::sim::systems::PosePublisher">
+        <publish_link_pose>true</publish_link_pose><update_frequency>50</update_frequency>
+      </plugin>
+    </model>
+
+
     <!-- ================================================================= -->
     <!--     HIGH-VISIBILITY 3D GLOWING AERIAL RING TARGET GATE (4.0m)     -->
     <!-- ================================================================= -->

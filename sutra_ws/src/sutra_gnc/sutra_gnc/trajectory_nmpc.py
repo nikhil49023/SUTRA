@@ -118,14 +118,19 @@ class NMPCTrajectoryPlanner:
         dt: float = 0.02,
         v_max: float = 3.0,
         a_max: float = 2.5,
+        j_max: float = 5.0,
     ):
         self.N = N
         self.dt = dt
         self.v_max = v_max
         self.a_max = a_max
+        self.j_max = j_max
 
         # Disturbance estimator accumulators (integral wind-rejection term)
         self.disturb_accel = np.zeros(3)  # estimated external disturbance (e.g. wind)
+        self.last_vel = np.zeros(3)
+        self.last_acc = np.zeros(3)
+
 
     def plan(
         self,
