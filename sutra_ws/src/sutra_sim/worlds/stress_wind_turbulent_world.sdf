@@ -1,0 +1,82 @@
+<?xml version="1.0" ?>
+<!--
+Project SUTRA — Stress Scenario 1: Aerodynamic Wind Turbulence & High-Velocity Gusts
+Features Real-World PBR Terrain, 5600K Physical Daylight Luminance, and Dynamic Wind Gust Plugin.
+-->
+<sdf version="1.8">
+  <world name="stress_wind_turbulent_world">
+    
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.002</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <!-- Essential Gazebo Sim Systems -->
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics" />
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster" />
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands" />
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+
+    <!-- 💨 Dynamic Wind Velocity Plugin (12m/s Peak Gusts, 45-degree angle) -->
+    <plugin filename="gz-sim-wind-effects-system" name="gz::sim::systems::WindEffects">
+      <horizontal>
+        <magnitude>12.0</magnitude>
+        <direction>0.7071 0.7071 0</direction>
+      </horizontal>
+      <vertical>
+        <magnitude>2.5</magnitude>
+      </vertical>
+    </plugin>
+
+    <!-- ☀️ 5600K Physical Daylight Directional Sun Light -->
+    <light type="directional" name="sun_5600k">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 120 0 0.5 0.8</pose>
+      <diffuse>0.95 0.92 0.88 1</diffuse>
+      <specular>0.4 0.4 0.4 1</specular>
+      <direction>-0.4 0.3 -0.85</direction>
+    </light>
+
+    <!-- Real-World Disaster Terrain with PBR Material -->
+    <model name="pbr_disaster_terrain">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><plane><normal>0 0 1</normal><size>300 300</size></plane></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><plane><normal>0 0 1</normal><size>300 300</size></plane></geometry>
+          <material>
+            <ambient>0.4 0.35 0.3 1</ambient>
+            <diffuse>0.5 0.45 0.4 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+            <pbr>
+              <metal>
+                <roughness>0.85</roughness>
+                <metalness>0.05</metalness>
+              </metal>
+            </pbr>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- OpenRobotics X3 Quadcopter -->
+    <model name="uav_alpha">
+      <pose>0 0 1.0 0 0 0</pose>
+      <include><uri>model://x3_uav</uri></include>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name>
+        <topic>/uav_alpha/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+        <odom_publish_frequency>50</odom_publish_frequency>
+        <odom_frame>world</odom_frame>
+        <robot_base_frame>base_link</robot_base_frame>
+      </plugin>
+    </model>
+
+  </world>
+</sdf>

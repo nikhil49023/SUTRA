@@ -1,34 +1,62 @@
 <?xml version="1.0" ?>
+<!--
+Project SUTRA — Phase 1: High-Fidelity Prebuilt Quadcopter Simulation World
+==========================================================================
+Integrates OpenRobotics Official X3 UAV Quadcopter (3D Collada Meshes)
+with 50Hz Velocity Control, Odometry Telemetry, and Dynamic 3D Checkpoints.
+-->
 <sdf version="1.8">
   <world name="phase1_quadcopter_world">
 
-    <!-- 500Hz Physics Solver for Flight Dynamics -->
-    <physics name="ode_physics" type="ode">
-      <max_step_size>0.002</max_step_size>
+    <!-- Earth Gravity & Physics Engine -->
+    <gravity>0 0 -9.80665</gravity>
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_update_rate>1000</real_time_update_rate>
       <real_time_factor>1.0</real_time_factor>
-      <real_time_update_rate>500</real_time_update_rate>
     </physics>
 
-    <!-- Gazebo Sim 8 Core Plugins -->
-    <plugin filename="gz-sim-physics-system"        name="gz::sim::systems::Physics"/>
-    <plugin filename="gz-sim-user-commands-system"  name="gz::sim::systems::UserCommands"/>
-    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
-    <plugin filename="gz-sim-sensors-system"        name="gz::sim::systems::Sensors"/>
+    <!-- Ogre2 GPU Rendering & Scene Configuration -->
+    <scene>
+      <ambient>0.4 0.4 0.4 1.0</ambient>
+      <background>0.7 0.8 1.0 1.0</background>
+      <shadows>true</shadows>
+      <grid>true</grid>
+    </scene>
 
-    <!-- WGS84 Reference Coordinates (San Francisco SAR Baseline) -->
-    <spherical_coordinates>
-      <surface_model>EARTH_WGS84</surface_model>
-      <latitude_deg>37.774929</latitude_deg>
-      <longitude_deg>-122.419416</longitude_deg>
-      <elevation>0.0</elevation>
-    </spherical_coordinates>
+    <!-- Required Gazebo Sim Systems -->
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics" />
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster" />
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands" />
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu" />
 
-    <!-- Directional Sun Lighting -->
+    <!-- 💨 Dynamic Aerodynamic Wind Effects Plugin (8.5 m/s gust) -->
+    <plugin filename="gz-sim-wind-effects-system" name="gz::sim::systems::WindEffects">
+      <horizontal>
+        <magnitude>8.5</magnitude>
+        <direction>0.7071 0.7071 0</direction>
+      </horizontal>
+      <vertical>
+        <magnitude>1.2</magnitude>
+      </vertical>
+    </plugin>
+
+    <!-- Directional Sun Light -->
     <light type="directional" name="sun">
       <cast_shadows>true</cast_shadows>
-      <pose>100 100 150 0 0 0</pose>
-      <diffuse>1.0 1.0 0.95 1</diffuse>
+      <pose>0 0 100 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
       <specular>0.3 0.3 0.3 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
     </light>
 
     <!-- Ground Plane -->
@@ -39,7 +67,7 @@
           <geometry>
             <plane>
               <normal>0 0 1</normal>
-              <size>500 500</size>
+              <size>200 200</size>
             </plane>
           </geometry>
         </collision>
@@ -47,114 +75,294 @@
           <geometry>
             <plane>
               <normal>0 0 1</normal>
-              <size>500 500</size>
+              <size>200 200</size>
             </plane>
           </geometry>
           <material>
-            <ambient>0.15 0.20 0.25 1</ambient>
-            <diffuse>0.25 0.30 0.35 1</diffuse>
+            <ambient>0.3 0.5 0.3 1</ambient>
+            <diffuse>0.3 0.5 0.3 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
           </material>
         </visual>
       </link>
     </model>
 
-    <!-- ================================================================= -->
-    <!--            PHASE 1: SINGLE TACTICAL QUADCOPTER (uav_alpha)        -->
-    <!-- ================================================================= -->
+    <!-- 🚁 uav_alpha: Official OpenRobotics X3 UAV Quadcopter Model -->
     <model name="uav_alpha">
-      <pose>0 0 0.5 0 0 0</pose>
+      <pose>0 0 0.2 0 0 0</pose>
       <static>false</static>
       <link name="base_link">
         <gravity>false</gravity>
-        <kinematic>true</kinematic>
+        <kinematic>false</kinematic>
         <inertial>
           <mass>1.5</mass>
           <inertia>
-            <ixx>0.025</ixx><ixy>0</ixy><ixz>0</ixz>
-            <iyy>0.025</iyy><iyz>0</iyz>
-            <izz>0.045</izz>
+            <ixx>0.03475</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.07000</iyy>
+            <iyz>0</iyz>
+            <izz>0.09770</izz>
           </inertia>
         </inertial>
-        <collision name="chassis_collision">
-          <geometry><cylinder><radius>0.22</radius><length>0.10</length></cylinder></geometry>
+
+        <collision name="base_link_collision">
+          <geometry>
+            <box>
+              <size>0.47 0.47 0.11</size>
+            </box>
+          </geometry>
         </collision>
-        
-        <!-- Streamlined Fuselage Canopy -->
-        <visual name="canopy_body">
-          <pose>0 0 0.02 0 0 0</pose>
-          <geometry><cylinder><radius>0.14</radius><length>0.06</length></cylinder></geometry>
-          <material><ambient>0.05 0.05 0.08 1</ambient><diffuse>0.1 0.15 0.25 1</diffuse></material>
+
+        <!-- Official X3 Quadcopter Body Mesh -->
+        <visual name="x3_body_visual">
+          <pose>0 0 0 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>1.5 1.5 1.5</scale>
+              <uri>model://x3_uav/meshes/x3.dae</uri>
+            </mesh>
+          </geometry>
         </visual>
-        <visual name="nose_cone">
-          <pose>0.12 0 0.02 0 1.5708 0</pose>
-          <geometry><cylinder><radius>0.05</radius><length>0.10</length></cylinder></geometry>
-          <material><ambient>0.0 0.8 1.0 1</ambient><diffuse>0.0 0.9 1.0 1</diffuse></material>
+
+        <!-- Front Left Rotor -->
+        <visual name="rotor_0_visual">
+          <pose>0.20 -0.33 0.035 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>0.15 0.15 0.15</scale>
+              <uri>model://x3_uav/meshes/propeller_ccw.dae</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.0 0.8 1.0 1</ambient>
+            <diffuse>0.0 0.8 1.0 1</diffuse>
+          </material>
         </visual>
 
-        <!-- 4 Diagonal Carbon Fiber Quad Arms -->
-        <visual name="arm_fl"><pose>0.14 0.14 0 0 0 0.785</pose><geometry><box><size>0.32 0.025 0.02</size></box></geometry><material><ambient>0.15 0.15 0.15 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material></visual>
-        <visual name="arm_fr"><pose>0.14 -0.14 0 0 0 -0.785</pose><geometry><box><size>0.32 0.025 0.02</size></box></geometry><material><ambient>0.15 0.15 0.15 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material></visual>
-        <visual name="arm_rl"><pose>-0.14 0.14 0 0 0 -0.785</pose><geometry><box><size>0.32 0.025 0.02</size></box></geometry><material><ambient>0.15 0.15 0.15 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material></visual>
-        <visual name="arm_rr"><pose>-0.14 -0.14 0 0 0 0.785</pose><geometry><box><size>0.32 0.025 0.02</size></box></geometry><material><ambient>0.15 0.15 0.15 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material></visual>
+        <!-- Rear Right Rotor -->
+        <visual name="rotor_1_visual">
+          <pose>-0.20 0.30 0.035 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>0.15 0.15 0.15</scale>
+              <uri>model://x3_uav/meshes/propeller_ccw.dae</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>1.0 0.2 0.2 1</ambient>
+            <diffuse>1.0 0.2 0.2 1</diffuse>
+          </material>
+        </visual>
 
-        <!-- 4 Brushless Motor Pods -->
-        <visual name="motor_fl"><pose>0.22 0.22 0.02 0 0 0</pose><geometry><cylinder><radius>0.035</radius><length>0.04</length></cylinder></geometry><material><ambient>0.3 0.3 0.35 1</ambient><diffuse>0.5 0.5 0.6 1</diffuse></material></visual>
-        <visual name="motor_fr"><pose>0.22 -0.22 0.02 0 0 0</pose><geometry><cylinder><radius>0.035</radius><length>0.04</length></cylinder></geometry><material><ambient>0.3 0.3 0.35 1</ambient><diffuse>0.5 0.5 0.6 1</diffuse></material></visual>
-        <visual name="motor_rl"><pose>-0.22 0.22 0.02 0 0 0</pose><geometry><cylinder><radius>0.035</radius><length>0.04</length></cylinder></geometry><material><ambient>0.3 0.3 0.35 1</ambient><diffuse>0.5 0.5 0.6 1</diffuse></material></visual>
-        <visual name="motor_rr"><pose>-0.22 -0.22 0.02 0 0 0</pose><geometry><cylinder><radius>0.035</radius><length>0.04</length></cylinder></geometry><material><ambient>0.3 0.3 0.35 1</ambient><diffuse>0.5 0.5 0.6 1</diffuse></material></visual>
+        <!-- Front Right Rotor -->
+        <visual name="rotor_2_visual">
+          <pose>0.20 0.33 0.035 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>0.15 0.15 0.15</scale>
+              <uri>model://x3_uav/meshes/propeller_cw.dae</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.0 0.8 1.0 1</ambient>
+            <diffuse>0.0 0.8 1.0 1</diffuse>
+          </material>
+        </visual>
 
-        <!-- 4 Spinning Rotor Discs -->
-        <visual name="rotor_fl"><pose>0.22 0.22 0.045 0 0 0</pose><geometry><cylinder><radius>0.14</radius><length>0.005</length></cylinder></geometry><material><ambient>0.0 0.9 1.0 0.6</ambient><diffuse>0.0 1.0 1.0 0.6</diffuse></material></visual>
-        <visual name="rotor_fr"><pose>0.22 -0.22 0.045 0 0 0</pose><geometry><cylinder><radius>0.14</radius><length>0.005</length></cylinder></geometry><material><ambient>0.0 0.9 1.0 0.6</ambient><diffuse>0.0 1.0 1.0 0.6</diffuse></material></visual>
-        <visual name="rotor_rl"><pose>-0.22 0.22 0.045 0 0 0</pose><geometry><cylinder><radius>0.14</radius><length>0.005</length></cylinder></geometry><material><ambient>1.0 0.6 0.0 0.6</ambient><diffuse>1.0 0.6 0.0 0.6</diffuse></material></visual>
-        <visual name="rotor_rr"><pose>-0.22 -0.22 0.045 0 0 0</pose><geometry><cylinder><radius>0.14</radius><length>0.005</length></cylinder></geometry><material><ambient>1.0 0.6 0.0 0.6</ambient><diffuse>1.0 0.6 0.0 0.6</diffuse></material></visual>
+        <!-- Rear Left Rotor -->
+        <visual name="rotor_3_visual">
+          <pose>-0.20 -0.30 0.035 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>0.15 0.15 0.15</scale>
+              <uri>model://x3_uav/meshes/propeller_cw.dae</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>1.0 0.2 0.2 1</ambient>
+            <diffuse>1.0 0.2 0.2 1</diffuse>
+          </material>
+        </visual>
 
-        <!-- Landing Legs -->
-        <visual name="leg_fl"><pose>0.12 0.12 -0.06 0 0 0</pose><geometry><cylinder><radius>0.008</radius><length>0.12</length></cylinder></geometry><material><ambient>0.1 0.1 0.1 1</ambient></material></visual>
-        <visual name="leg_fr"><pose>0.12 -0.12 -0.06 0 0 0</pose><geometry><cylinder><radius>0.008</radius><length>0.12</length></cylinder></geometry><material><ambient>0.1 0.1 0.1 1</ambient></material></visual>
-        <visual name="leg_rl"><pose>-0.12 0.12 -0.06 0 0 0</pose><geometry><cylinder><radius>0.008</radius><length>0.12</length></cylinder></geometry><material><ambient>0.1 0.1 0.1 1</ambient></material></visual>
-        <visual name="leg_rr"><pose>-0.12 -0.12 -0.06 0 0 0</pose><geometry><cylinder><radius>0.008</radius><length>0.12</length></cylinder></geometry><material><ambient>0.1 0.1 0.1 1</ambient></material></visual>
 
-        <sensor name="imu_sensor" type="imu">
-          <always_on>true</always_on>
+        <!-- IMU Sensor -->
+        <sensor name="uav_alpha_imu" type="imu">
+          <always_on>1</always_on>
           <update_rate>200.0</update_rate>
           <topic>/uav_alpha/imu</topic>
         </sensor>
+
+        <!-- 3D GPU LiDAR Sensor -->
+        <sensor name="uav_alpha_lidar" type="gpu_lidar">
+          <pose>0 0 0.1 0 0 0</pose>
+          <topic>/uav_alpha/lidar/points</topic>
+          <update_rate>10</update_rate>
+          <ray>
+            <scan>
+              <horizontal>
+                <samples>360</samples>
+                <resolution>1</resolution>
+                <min_angle>-3.14159</min_angle>
+                <max_angle>3.14159</max_angle>
+              </horizontal>
+              <vertical>
+                <samples>16</samples>
+                <resolution>1</resolution>
+                <min_angle>-0.261799</min_angle>
+                <max_angle>0.261799</max_angle>
+              </vertical>
+            </scan>
+            <range>
+              <min>0.1</min>
+              <max>30.0</max>
+            </range>
+          </ray>
+          <always_on>1</always_on>
+        </sensor>
+
+        <!-- Thermal Infrared Sensor -->
+        <sensor name="uav_alpha_thermal" type="thermal">
+          <pose>0.1 0 0 0 0 0</pose>
+          <topic>/uav_alpha/thermal/image_raw</topic>
+          <update_rate>15</update_rate>
+          <camera>
+            <horizontal_fov>1.047</horizontal_fov>
+            <image>
+              <width>640</width>
+              <height>480</height>
+              <format>L8</format>
+            </image>
+            <clip>
+              <near>0.1</near>
+              <far>100</far>
+            </clip>
+          </camera>
+          <always_on>1</always_on>
+        </sensor>
+
+        <!-- RGB Camera Sensor -->
+        <sensor name="uav_alpha_camera" type="camera">
+          <pose>0.15 0 0 0 0 0</pose>
+          <topic>/uav_alpha/camera/image_raw</topic>
+          <update_rate>30</update_rate>
+          <camera>
+            <horizontal_fov>1.3962634</horizontal_fov>
+            <image>
+              <width>1280</width>
+              <height>720</height>
+              <format>R8G8B8</format>
+            </image>
+            <clip>
+              <near>0.1</near>
+              <far>100</far>
+            </clip>
+          </camera>
+          <always_on>1</always_on>
+        </sensor>
       </link>
 
-      <!-- Plugins for Twist Velocity Control & Pose Publishing -->
+      <!-- Plugins for Velocity Control & Odometry -->
       <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name>
         <topic>/uav_alpha/gazebo/command/twist</topic>
         <initial_linear>0 0 0</initial_linear>
         <initial_angular>0 0 0</initial_angular>
       </plugin>
 
-      <plugin filename="gz-sim-pose-publisher-system" name="gz::sim::systems::PosePublisher">
-        <publish_link_pose>true</publish_link_pose>
-        <update_frequency>50</update_frequency>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+        <dimensions>3</dimensions>
+        <odom_publish_frequency>50</odom_publish_frequency>
+        <odom_frame>world</odom_frame>
+        <robot_base_frame>base_link</robot_base_frame>
       </plugin>
     </model>
 
-    <!-- Visual Target Ring Gate -->
+    <!-- High-Visibility 3D Checkpoint Gate with Vertical Beacon & Ground Projection -->
     <model name="ring_target">
-      <static>true</static>
-      <pose>10.0 0.0 15.0 0 0 0</pose>
+      <static>false</static>
+      <pose>8.0 0.0 4.0 0 0 0</pose>
       <link name="link">
+        <gravity>false</gravity>
+        <kinematic>true</kinematic>
+
+        <!-- 🌟 Vertical Laser Beacon Pillar (Extends 12m into the sky so target is visible from any angle) -->
+        <visual name="vertical_beacon_line">
+          <pose>0 0 2.0 0 0 0</pose>
+          <geometry><cylinder><radius>0.08</radius><length>12.0</length></cylinder></geometry>
+          <material>
+            <ambient>0.0 1.0 1.0 1</ambient>
+            <diffuse>0.0 1.0 1.0 1</diffuse>
+            <emissive>0.0 1.0 1.0 1</emissive>
+          </material>
+        </visual>
+
+        <!-- 🎯 Glowing Central Orb -->
         <visual name="center_beacon">
           <pose>0 0 0 0 0 0</pose>
           <geometry><sphere><radius>0.6</radius></sphere></geometry>
           <material>
+            <ambient>1.0 0.9 0.0 1</ambient>
+            <diffuse>1.0 0.9 0.0 1</diffuse>
+            <emissive>1.0 0.9 0.0 1</emissive>
+          </material>
+        </visual>
+
+        <!-- ⭕ Neon Cyan Checkpoint Ring Gate -->
+        <visual name="ring_top">
+          <pose>0 0 2.0 0 1.5708 0</pose>
+          <geometry><cylinder><radius>0.18</radius><length>4.0</length></cylinder></geometry>
+          <material>
+            <ambient>0.0 1.0 1.0 1</ambient>
+            <diffuse>0.0 1.0 1.0 1</diffuse>
+            <emissive>0.0 1.0 1.0 1</emissive>
+          </material>
+        </visual>
+
+        <visual name="ring_bottom">
+          <pose>0 0 -2.0 0 1.5708 0</pose>
+          <geometry><cylinder><radius>0.18</radius><length>4.0</length></cylinder></geometry>
+          <material>
+            <ambient>0.0 1.0 1.0 1</ambient>
+            <diffuse>0.0 1.0 1.0 1</diffuse>
+            <emissive>0.0 1.0 1.0 1</emissive>
+          </material>
+        </visual>
+
+        <visual name="ring_left">
+          <pose>0 2.0 0 1.5708 0 0</pose>
+          <geometry><cylinder><radius>0.18</radius><length>4.0</length></cylinder></geometry>
+          <material>
+            <ambient>0.0 1.0 1.0 1</ambient>
+            <diffuse>0.0 1.0 1.0 1</diffuse>
+            <emissive>0.0 1.0 1.0 1</emissive>
+          </material>
+        </visual>
+
+        <visual name="ring_right">
+          <pose>0 -2.0 0 1.5708 0 0</pose>
+          <geometry><cylinder><radius>0.18</radius><length>4.0</length></cylinder></geometry>
+          <material>
+            <ambient>0.0 1.0 1.0 1</ambient>
+            <diffuse>0.0 1.0 1.0 1</diffuse>
+            <emissive>0.0 1.0 1.0 1</emissive>
+          </material>
+        </visual>
+
+        <!-- 📍 Ground Target Projection Ring (Visible on terrain beneath checkpoint) -->
+        <visual name="ground_target_ring">
+          <pose>0 0 -3.9 0 0 0</pose>
+          <geometry><cylinder><radius>2.2</radius><length>0.02</length></cylinder></geometry>
+          <material>
             <ambient>1.0 0.8 0.0 1</ambient>
-            <diffuse>1.0 0.9 0.1 1</diffuse>
+            <diffuse>1.0 0.8 0.0 1</diffuse>
             <emissive>1.0 0.8 0.0 1</emissive>
           </material>
         </visual>
-        <visual name="ring_top"><pose>0 0 2.0 0 1.5708 0</pose><geometry><cylinder><radius>0.10</radius><length>2.0</length></cylinder></geometry><material><ambient>0.0 1.0 0.5 1</ambient><emissive>0.0 1.0 0.5 1</emissive></material></visual>
-        <visual name="ring_bottom"><pose>0 0 -2.0 0 1.5708 0</pose><geometry><cylinder><radius>0.10</radius><length>2.0</length></cylinder></geometry><material><ambient>0.0 1.0 0.5 1</ambient><emissive>0.0 1.0 0.5 1</emissive></material></visual>
-        <visual name="ring_left"><pose>0 2.0 0 1.5708 1.5708 0</pose><geometry><cylinder><radius>0.10</radius><length>2.0</length></cylinder></geometry><material><ambient>0.0 1.0 0.5 1</ambient><emissive>0.0 1.0 0.5 1</emissive></material></visual>
-        <visual name="ring_right"><pose>0 -2.0 0 1.5708 1.5708 0</pose><geometry><cylinder><radius>0.10</radius><length>2.0</length></cylinder></geometry><material><ambient>0.0 1.0 0.5 1</ambient><emissive>0.0 1.0 0.5 1</emissive></material></visual>
+
       </link>
     </model>
+
 
   </world>
 </sdf>

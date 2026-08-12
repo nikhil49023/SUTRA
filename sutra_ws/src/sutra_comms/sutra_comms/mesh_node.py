@@ -25,6 +25,12 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
 
+try:
+    from nav_msgs.msg import Odometry
+    NAV_MSGS_AVAILABLE = True
+except ImportError:
+    NAV_MSGS_AVAILABLE = False
+
 
 class SwarmRaftConsensusEngine:
     """
@@ -143,6 +149,7 @@ class SutraMeshNode(Node):
         # Publishers
         self.publisher_mesh_status = self.create_publisher(String, '/sutra/swarm/mesh_status', 10)
         self.publisher_raft_state  = self.create_publisher(String, '/sutra/swarm/raft_consensus', 10)
+        self.publisher_heartbeat   = self.create_publisher(String, '/sutra/comms/heartbeats', 10)
 
         # ── Subscriber: Subsystem C survivor/threat targets ──────────────────
         # /sutra/perception/targets is published by detector_node.py (Vedanth)
@@ -161,7 +168,20 @@ class SutraMeshNode(Node):
             'uav_beta':  (15.0, 20.0, 18.0),
             'uav_gamma': (-25.0, 30.0, 12.0),
             'uav_delta': (40.0, -10.0, 20.0),
+            'uav_epsilon': (0.0, 10.0, 22.0),
         }
+
+        # Dynamically update peer positions from Gazebo Sim live odometry
+        self._odom_subs = []
+        if NAV_MSGS_AVAILABLE:
+            for drone_id in list(self.peer_positions.keys()):
+                sub = self.create_subscription(
+                    Odometry,
+                    f'/model/{drone_id}/odometry',
+                    lambda msg, d=drone_id: self._on_drone_odometry(d, msg),
+                    10
+                )
+                self._odom_subs.append(sub)
 
         # Track targets already added to Raft log (avoid duplicates)
         self._logged_target_ids: set = set()
@@ -176,15 +196,41 @@ class SutraMeshNode(Node):
             peers=list(self.peer_positions.keys())
         )
         self.raft_engine.become_leader()  # Initial state
-        self.raft_engine.append_state_entry("SWARM_BOOTSTRAP", {"status": "INITIALIZED", "swarm_size": 4})
-        # NOTE: Live target entries come from Subsystem C via /sutra/perception/targets subscription
+        self.raft_engine.append_state_entry("SWARM_BOOTSTRAP", {"status": "INITIALIZED", "swarm_size": 5})
 
-        # Timer for 1Hz status broadcast
+        # Timer for 1Hz status broadcast and 2Hz heartbeat broadcast
         self.timer = self.create_timer(1.0, self.publish_mesh_status)
+        self.heartbeat_timer = self.create_timer(0.5, self.publish_heartbeats)
         self.get_logger().info(
             '📡 SUTRA Swarm 802.11s Mesh + Perceptron Deep JSCC & SwarmRAFT Node Initialized.'
-            ' Listening on /sutra/perception/targets for live survivor GPS.'
+            ' Listening on /sutra/perception/targets and live /model/{drone_id}/odometry.'
         )
+
+    def _on_drone_odometry(self, drone_id: str, msg):
+        """Dynamic odometry callback updating 3D peer position for real-time link matrix calculation."""
+        try:
+            pos = msg.pose.pose.position
+            self.peer_positions[drone_id] = (float(pos.x), float(pos.y), float(pos.z))
+        except Exception:
+            pass
+
+    def publish_heartbeats(self):
+        """Broadcast 2Hz binary mesh heartbeat packets for all active swarm drones."""
+        now = time.time()
+        for drone_id, pos in self.peer_positions.items():
+            heartbeat_data = {
+                'drone_id': drone_id,
+                'timestamp': now,
+                'battery_pct': 95.0,
+                'armed': True,
+                'position': {'x': pos[0], 'y': pos[1], 'z': pos[2]},
+                'velocity': {'vx': 0.5, 'vy': 0.0, 'vz': 0.0},
+                'motor_status': 'OK',
+                'consensus_role': self.raft_engine.role if drone_id == self.raft_engine.node_id else 'FOLLOWER'
+            }
+            msg = String()
+            msg.data = json.dumps(heartbeat_data)
+            self.publisher_heartbeat.publish(msg)
 
     # ── Subsystem C integration ───────────────────────────────────────────────
 

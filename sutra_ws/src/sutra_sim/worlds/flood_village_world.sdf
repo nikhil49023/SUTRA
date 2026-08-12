@@ -1,0 +1,337 @@
+<?xml version="1.0" ?>
+<!--
+  Project SUTRA — Flood Disaster Village Digital Twin World
+  =========================================================
+  Subsystems: A (GNC), B (Comms & Sim), C (Perception Edge AI), F (Ops CONOPS)
+  Author: Tech Lead Nikhil (Tech Architect & Lead ⚡)
+
+  Features:
+  - Kedarnath / Wayanad-inspired submerged village flood terrain (Blender OBJ mesh)
+  - WGS84 Georeferenced origin: Kedarnath valley (30.7352° N, 79.0669° E)
+  - 500Hz DART physics with Ogre2 rendering
+  - Murky flood-water plane (semi-transparent blue)
+  - 5-UAV swarm (Alpha–Epsilon) with RGB camera, IMU, odometry
+  - 3 survivor target markers (orange cylinders) partially submerged
+  - Overcast disaster scene lighting (diffuse grey sky)
+-->
+<sdf version="1.8">
+  <world name="flood_village_world">
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- Physics — 500Hz DART (matches G1 gate requirement)        -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <physics name="500hz" type="ignored">
+      <max_step_size>0.002</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- WGS84 — Kedarnath Valley Origin                           -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <world_frame_orientation>ENU</world_frame_orientation>
+      <latitude_deg>30.7352</latitude_deg>
+      <longitude_deg>79.0669</longitude_deg>
+      <elevation>3583.0</elevation>
+      <heading_deg>0.0</heading_deg>
+    </spherical_coordinates>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- Scene — Overcast flood disaster ambience                  -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <scene>
+      <!-- Overcast grey-blue flood sky -->
+      <ambient>0.35 0.38 0.42 1.0</ambient>
+      <background>0.52 0.60 0.68 1.0</background>
+      <shadows>true</shadows>
+      <grid>false</grid>
+    </scene>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- Gazebo System Plugins                                     -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <plugin filename="gz-sim-physics-system"
+            name="gz::sim::systems::Physics" />
+    <plugin filename="gz-sim-scene-broadcaster-system"
+            name="gz::sim::systems::SceneBroadcaster" />
+    <plugin filename="gz-sim-user-commands-system"
+            name="gz::sim::systems::UserCommands" />
+    <plugin filename="gz-sim-sensors-system"
+            name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-imu-system"
+            name="gz::sim::systems::Imu" />
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- Lighting — Overcast directional (no harsh shadows)        -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <light type="directional" name="overcast_sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 200 0 0 0</pose>
+      <!-- Muted overcast diffuse — mimics cloud-filtered sunlight -->
+      <diffuse>0.65 0.65 0.70 1</diffuse>
+      <specular>0.15 0.15 0.18 1</specular>
+      <direction>-0.3 0.2 -0.9</direction>
+    </light>
+
+    <!-- Subtle fill light from opposite side (flood sky reflection) -->
+    <light type="directional" name="flood_sky_fill">
+      <cast_shadows>false</cast_shadows>
+      <pose>0 0 50 0 0 0</pose>
+      <diffuse>0.20 0.25 0.35 1</diffuse>
+      <specular>0.05 0.05 0.08 1</specular>
+      <direction>0.3 -0.2 -0.7</direction>
+    </light>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- Terrain Base — Flat collision ground beneath the OBJ mesh -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <model name="terrain_base">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane><normal>0 0 1</normal><size>500 500</size></plane>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane><normal>0 0 1</normal><size>500 500</size></plane>
+          </geometry>
+          <!-- Rocky muddy terrain colour -->
+          <material>
+            <ambient>0.28 0.24 0.18 1</ambient>
+            <diffuse>0.38 0.32 0.22 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- 🏘️  Blender Submerged Village OBJ Mesh                   -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <model name="submerged_village_flood">
+      <static>true</static>
+      <pose>0 0 0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <mesh>
+              <uri>model://submerged_village_flood/meshes/submerged_village.obj</uri>
+              <scale>1 1 1</scale>
+            </mesh>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <mesh>
+              <uri>model://submerged_village_flood/meshes/submerged_village.obj</uri>
+              <scale>1 1 1</scale>
+            </mesh>
+          </geometry>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- 🌊 Flood Water Plane — Semi-transparent turbid floodwater -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <model name="flood_water_plane">
+      <static>true</static>
+      <!-- Water level at z=0.6m — partial submersion of village -->
+      <pose>0 0 0.6 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <plane><normal>0 0 1</normal><size>400 400</size></plane>
+          </geometry>
+          <material>
+            <!-- Murky brown-green floodwater, semi-transparent -->
+            <ambient>0.15 0.25 0.20 0.65</ambient>
+            <diffuse>0.18 0.32 0.25 0.65</diffuse>
+            <specular>0.40 0.50 0.45 0.5</specular>
+          </material>
+          <transparency>0.35</transparency>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- 🚨 Survivor Targets — Partially submerged (NDMA CONOPS)  -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+
+    <!-- Survivor Alpha — rooftop refuge -->
+    <model name="survivor_alpha">
+      <static>true</static>
+      <pose>18.0 12.0 1.8 0 0 0</pose>
+      <link name="link">
+        <collision name="c">
+          <geometry><cylinder><radius>0.4</radius><length>1.0</length></cylinder></geometry>
+        </collision>
+        <visual name="v">
+          <geometry><cylinder><radius>0.4</radius><length>1.0</length></cylinder></geometry>
+          <material>
+            <ambient>0.95 0.25 0.05 1</ambient>
+            <diffuse>1.00 0.35 0.10 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Survivor Beta — partially submerged building corner -->
+    <model name="survivor_beta">
+      <static>true</static>
+      <pose>-14.0 20.0 0.8 0 0 0</pose>
+      <link name="link">
+        <collision name="c">
+          <geometry><cylinder><radius>0.4</radius><length>1.0</length></cylinder></geometry>
+        </collision>
+        <visual name="v">
+          <geometry><cylinder><radius>0.4</radius><length>1.0</length></cylinder></geometry>
+          <material>
+            <ambient>0.95 0.25 0.05 1</ambient>
+            <diffuse>1.00 0.35 0.10 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Survivor Gamma — debris mound -->
+    <model name="survivor_gamma">
+      <static>true</static>
+      <pose>5.0 -18.0 1.2 0 0 0</pose>
+      <link name="link">
+        <collision name="c">
+          <geometry><cylinder><radius>0.4</radius><length>1.0</length></cylinder></geometry>
+        </collision>
+        <visual name="v">
+          <geometry><cylinder><radius>0.4</radius><length>1.0</length></cylinder></geometry>
+          <material>
+            <ambient>0.95 0.25 0.05 1</ambient>
+            <diffuse>1.00 0.35 0.10 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- 🚁 UAV Swarm — 5 Drones in Pentagon Formation at 12m AGL -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+
+    <!-- UAV Alpha — Lead (Red) -->
+    <model name="uav_alpha">
+      <pose>15.0 0.0 12.0 0 0 0</pose>
+      <link name="base_link">
+        <inertial>
+          <mass>1.5</mass>
+          <inertia>
+            <ixx>0.03475</ixx><ixy>0</ixy><ixz>0</ixz>
+            <iyy>0.03475</iyy><iyz>0</iyz>
+            <izz>0.0477</izz>
+          </inertia>
+        </inertial>
+        <collision name="c"><geometry><cylinder><radius>0.4</radius><length>0.15</length></cylinder></geometry></collision>
+        <visual name="v">
+          <geometry><cylinder><radius>0.4</radius><length>0.15</length></cylinder></geometry>
+          <material><ambient>0.9 0.1 0.1 1</ambient><diffuse>1.0 0.2 0.2 1</diffuse></material>
+        </visual>
+        <sensor name="imu_sensor" type="imu">
+          <always_on>1</always_on><update_rate>200</update_rate>
+          <topic>/uav_alpha/imu</topic>
+        </sensor>
+        <sensor name="camera_rgb" type="camera">
+          <update_rate>30</update_rate>
+          <topic>/uav_alpha/camera/image_raw</topic>
+          <camera>
+            <horizontal_fov>1.5708</horizontal_fov>
+            <image><width>1280</width><height>720</height><format>R8G8B8</format></image>
+            <clip><near>0.1</near><far>200</far></clip>
+          </camera>
+        </sensor>
+      </link>
+      <plugin filename="gz-sim-odometry-publisher-system"
+              name="gz::sim::systems::OdometryPublisher">
+        <dimensions>3</dimensions>
+      </plugin>
+    </model>
+
+    <!-- UAV Beta (Green) -->
+    <model name="uav_beta">
+      <pose>4.635 14.265 12.0 0 0 0</pose>
+      <link name="base_link">
+        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><iyy>0.03475</iyy><izz>0.0477</izz></inertia></inertial>
+        <collision name="c"><geometry><cylinder><radius>0.4</radius><length>0.15</length></cylinder></geometry></collision>
+        <visual name="v">
+          <geometry><cylinder><radius>0.4</radius><length>0.15</length></cylinder></geometry>
+          <material><ambient>0.1 0.9 0.1 1</ambient><diffuse>0.2 1.0 0.2 1</diffuse></material>
+        </visual>
+        <sensor name="imu_sensor" type="imu">
+          <always_on>1</always_on><update_rate>200</update_rate>
+          <topic>/uav_beta/imu</topic>
+        </sensor>
+      </link>
+      <plugin filename="gz-sim-odometry-publisher-system"
+              name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+    </model>
+
+    <!-- UAV Gamma (Blue) -->
+    <model name="uav_gamma">
+      <pose>-12.135 8.816 12.0 0 0 0</pose>
+      <link name="base_link">
+        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><iyy>0.03475</iyy><izz>0.0477</izz></inertia></inertial>
+        <collision name="c"><geometry><cylinder><radius>0.4</radius><length>0.15</length></cylinder></geometry></collision>
+        <visual name="v">
+          <geometry><cylinder><radius>0.4</radius><length>0.15</length></cylinder></geometry>
+          <material><ambient>0.1 0.1 0.9 1</ambient><diffuse>0.2 0.2 1.0 1</diffuse></material>
+        </visual>
+        <sensor name="imu_sensor" type="imu">
+          <always_on>1</always_on><update_rate>200</update_rate>
+          <topic>/uav_gamma/imu</topic>
+        </sensor>
+      </link>
+      <plugin filename="gz-sim-odometry-publisher-system"
+              name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+    </model>
+
+    <!-- UAV Delta (Yellow) -->
+    <model name="uav_delta">
+      <pose>-12.135 -8.816 12.0 0 0 0</pose>
+      <link name="base_link">
+        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><iyy>0.03475</iyy><izz>0.0477</izz></inertia></inertial>
+        <collision name="c"><geometry><cylinder><radius>0.4</radius><length>0.15</length></cylinder></geometry></collision>
+        <visual name="v">
+          <geometry><cylinder><radius>0.4</radius><length>0.15</length></cylinder></geometry>
+          <material><ambient>0.9 0.9 0.1 1</ambient><diffuse>1.0 1.0 0.2 1</diffuse></material>
+        </visual>
+        <sensor name="imu_sensor" type="imu">
+          <always_on>1</always_on><update_rate>200</update_rate>
+          <topic>/uav_delta/imu</topic>
+        </sensor>
+      </link>
+      <plugin filename="gz-sim-odometry-publisher-system"
+              name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+    </model>
+
+    <!-- UAV Epsilon (Magenta) -->
+    <model name="uav_epsilon">
+      <pose>4.635 -14.265 12.0 0 0 0</pose>
+      <link name="base_link">
+        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><iyy>0.03475</iyy><izz>0.0477</izz></inertia></inertial>
+        <collision name="c"><geometry><cylinder><radius>0.4</radius><length>0.15</length></cylinder></geometry></collision>
+        <visual name="v">
+          <geometry><cylinder><radius>0.4</radius><length>0.15</length></cylinder></geometry>
+          <material><ambient>0.9 0.1 0.9 1</ambient><diffuse>1.0 0.2 1.0 1</diffuse></material>
+        </visual>
+        <sensor name="imu_sensor" type="imu">
+          <always_on>1</always_on><update_rate>200</update_rate>
+          <topic>/uav_epsilon/imu</topic>
+        </sensor>
+      </link>
+      <plugin filename="gz-sim-odometry-publisher-system"
+              name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+    </model>
+
+  </world>
+</sdf>

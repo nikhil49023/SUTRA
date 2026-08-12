@@ -46,9 +46,10 @@ class SutraCvBridge:
     def __init__(self):
         self._native_bridge = None
         try:
-            from cv_bridge import CvBridge
-            self._native_bridge = CvBridge()
-        except Exception:
+            if not np.__version__.startswith("2."):
+                from cv_bridge import CvBridge
+                self._native_bridge = CvBridge()
+        except BaseException:
             self._native_bridge = None
 
     def imgmsg_to_cv2(self, img_msg: Any, desired_encoding: str = "passthrough") -> np.ndarray:

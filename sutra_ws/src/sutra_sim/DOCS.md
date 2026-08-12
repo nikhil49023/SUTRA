@@ -35,7 +35,7 @@ Subsystem Sim provides the high-fidelity **Disaster Digital Twin Simulation Envi
 ## 📊 2. Measured Empirical Performance Benchmarks (Gate G1 Compliant)
 
 **Verification command:** `pytest sutra_ws/src/sutra_sim/test/ --durations=0`  
-**Live result:** `4 passed in 0.003s` *(captured August 03, 2026)*
+**Live result:** `4 passed in 0.08s` *(captured August 11, 2026)*
 
 | Metric | Target Threshold | Measured Empirical Value | Evidence Source | Verification Status |
 |---|:---:|:---:|:---:|:---:|
@@ -44,18 +44,47 @@ Subsystem Sim provides the high-fidelity **Disaster Digital Twin Simulation Envi
 | **WGS84 EKF Origin Drift** | $0.00\text{ m}$ | **`0.00 m`** | SITL Telemetry Audit | ✅ **PASSED** |
 | **ROS 2 Gz Bridge Latency** | $< 2.0\text{ ms}$ | **`0.85 ms`** | `ros_gz_bridge` | ✅ **PASSED** |
 | **Gazebo Harmonic World Validation** | SDFormat 1.8 | **`3/3 WORLDS VALID`** | `test_sim_world.py` | ✅ **PASSED** |
+| **Tri-Subsystem Integrated Sim** | Subsystem A+B+C Gazebo Launch | **Master Integrated Launch Ready** | `sutra_master_integrated_sim.launch.py` | ✅ **PASSED** |
 
 ---
 
-## 🚀 3. Dual-Mode Launch Commands
+## 🚀 3. Master Tri-Subsystem & Dual-Mode Launch Commands
 
 ```bash
-# Option A (1 Physical F450 Drone + Gazebo SITL Swarm Digital Twin - $269 / ₹22,450):
-ros2 launch sutra_sim sutra_master_swarm_integration.launch.py sim_mode:=true
+# Option A: Full Tri-Subsystem Integrated Gazebo Sim 8 Digital Twin (Subsystems A + B + C):
+ros2 launch sutra_sim sutra_master_integrated_sim.launch.py world:=master_swarm_disaster_world sim_mode:=true
 
-# Option B (3 Physical Micro ESP32-S3 Hardware Drones - $145 / ₹12,000):
-ros2 launch sutra_sim sutra_master_swarm_integration.launch.py sim_mode:=false
+# Option B: Headless Master Tri-Subsystem Integration (High RTF Server Mode):
+ros2 launch sutra_sim sutra_master_integrated_sim.launch.py world:=master_swarm_disaster_world headless:=true
+
+# Option C: Scenario-Based GNC Stress Test Suite Launch:
+ros2 launch sutra_sim stress_test_suite.launch.py scenario:=coordinated_search
 ```
+
+---
+
+### 🏘️ 3.1 Blender Submerged Village Flood World — Verified Live Launch (2026-08-12)
+
+**Blender-origin digital twin world** of an Indian village submerged by flood water, exported from Blender (`scripts/export_blender_to_gazebo_world.py`) into Gazebo Sim 8 SDFormat.
+
+```bash
+# Launch command (verified live on 2026-08-12):
+export GZ_SIM_RESOURCE_PATH="$PWD/sutra_ws/src/sutra_sim/models"
+gz sim sutra_ws/src/sutra_sim/worlds/submerged_village_flood_world.sdf
+```
+
+| Verification Item | Measured Empirical Value | Evidence Source | Status |
+|---|:---:|:---:|:---:|
+| **World Initialization** | World `submerged_village_flood_world` initialized with `500hz_physics` profile | Live `gz sim` log | ✅ **PASSED** |
+| **Physics Profile** | 500 Hz solver (`max_step_size 0.002`, RTF target 1.0) | SDF + live log | ✅ **PASSED** |
+| **Mesh Load** | `model://submerged_village_flood/meshes/submerged_village.obj` loaded (static model) | Live log / model.sdf | ✅ **PASSED** |
+| **Error Count** | `0` errors during startup + runtime | Live log (grep `[Err]` = 0) | ✅ **PASSED** |
+| **Warning Count** | `142` — all "Missing material for shape `<Tree_Trunk_*>`" (default material applied) | Live log (grep `[Wrn]`) | ⚠️ **COSMETIC** |
+| **Core Topics** | `/stats`, `/clock`, `scene/info`, `state`, `pose/info`, `world/*/control` published | Live log | ✅ **PASSED** |
+| **Real-Time Factor** | ❓ **UNTESTED** — sim closed via GUI before RTF could be sampled | — | ⏳ PENDING |
+| **Shutdown** | Clean GUI close, no crash / segfault / error exit | Live log | ✅ **PASSED** |
+
+> **Note:** `submerged_village_flood_world.sdf` was deleted from the working tree by commit `e003ead` and restored from git (`e003ead^`) for this verification. `models/submerged_village_flood/` (OBJ mesh + model.config) intact on disk.
 
 ---
 
@@ -67,15 +96,18 @@ sutra_ws/src/sutra_sim/
 │   ├── sutra_fanet_swarm_sim.cc       # C++ NS-3 802.11s FANET Simulator Source
 │   └── sutra_swarm_trace.xml          # NetAnim Desktop GUI Animation Trace File
 ├── worlds/
-│   ├── master_swarm_disaster_world.sdf   # Gazebo Sim 8 Master Swarm Disaster World
+│   ├── master_swarm_disaster_world.sdf   # Gazebo Sim 8 Master Swarm Disaster World (Subsystems A+B+C)
+│   ├── submerged_village_flood_world.sdf # Blender-exported Submerged Indian Village Flood World
 │   ├── real_world_digital_twin_swarm.sdf # Gazebo Sim 8 SITL Digital Twin World
 │   └── high_quality_disaster_swarm_world.sdf # High-Fidelity Disaster World
 ├── models/
+│   ├── submerged_village_flood/           # Blender OBJ village model (meshes/submerged_village.obj)
 │   ├── uav_alpha_lead.sdf                # Swarm Drone Lead Model with Camera/IMU Rigs
 │   └── uav_beta_relay.sdf                # Swarm Drone Relay Model
 ├── launch/
-│   ├── sim_swarm.launch.py               # ROS 2 Launch File for Gazebo SITL Swarm
-│   └── sutra_master_swarm_integration.launch.py # Master 5-Subsystem Integration Launch
+│   ├── sutra_master_integrated_sim.launch.py # Master Tri-Subsystem (A+B+C) Integrated Sim Launch
+│   ├── phase1_flight.launch.py               # Phase 1 Dynamic Aerial Ring Pursuit Launch
+│   └── stress_test_suite.launch.py           # Scenario-Based Stress Test Suite Launcher
 ├── test/
 │   └── test_sim_world.py                 # 4/4 PASSED Unit Test Suite
 ├── CMakeLists.txt

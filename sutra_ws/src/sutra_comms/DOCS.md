@@ -1,6 +1,6 @@
 # 📡 Subsystem B — Comms & Digital Twin Simulation Master Specification
 
-[![PyTest Verification](https://img.shields.io/badge/PyTest-39%2F39%20PASSED-brightgreen.svg)]()
+[![PyTest Verification](https://img.shields.io/badge/PyTest-48%2F48%20PASSED-brightgreen.svg)]()
 [![Hero Feature](https://img.shields.io/badge/Hero_Feature-Deep_JSCC_Neural_Transceiver-cyan.svg)]()
 [![Gate G2 Compliance](https://img.shields.io/badge/Gate_G2-VERIFIED-brightgreen.svg)]()
 [![Dual Launch Ready](https://img.shields.io/badge/Dual_Launch-READY-brightgreen.svg)]()
@@ -30,7 +30,7 @@ In GPS-denied and communication-challenged disaster environments, conventional v
 
 ## 📊 2. Measured Benchmark Metrics & Verification Matrix
 
-> ℹ️ **BENCHMARK ENVIRONMENT NOTE**: All figures below represent empirical results measured on single-run workstation testbeds (`pytest sutra_ws/src/sutra_comms/test/` — **39 passed in 11.73s**).
+> ℹ️ **BENCHMARK ENVIRONMENT NOTE**: All figures below represent empirical results measured on single-run workstation testbeds (`pytest sutra_ws/src/sutra_comms/test/` — **48 passed in 8.48s** on 2026-08-12).
 
 
 | Metric | Measured Benchmark Value | Testbed / Source | Status |
@@ -42,6 +42,7 @@ In GPS-denied and communication-challenged disaster environments, conventional v
 | **10-UAV Link Matrix Compute Time** | **`~20.0 ms`** | `test_mesh.py` | ✅ **VERIFIED** |
 | **100-Node Swarm Topology Compute** | **`4,950 links in ~920 ms`** | `test_100_node_swarm_stress.py` | ✅ **VERIFIED** |
 | **Remote GCS WebSocket Latency** | **`< 5.0 ms`** | `test_gcs_gateway_bridge.py` | ✅ **VERIFIED** |
+| **Subsystem B Full Integration Gate** | **`5/5 integration tests passed`** | `test_subsystem_b_full_integration.py` | ✅ **VERIFIED** |
 | **Gazebo Physics Real-Time Factor** | **`1.000`** ($500\text{ Hz}$ solver) | Gazebo SITL Engine | ✅ **VERIFIED** |
 
 ---

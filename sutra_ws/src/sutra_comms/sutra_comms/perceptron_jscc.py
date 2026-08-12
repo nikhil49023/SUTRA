@@ -26,6 +26,16 @@ except ImportError:
     nn = None
     nn_base = object
 
+try:
+    import rclpy
+    from rclpy.node import Node
+    from std_msgs.msg import String
+    from sensor_msgs.msg import Image
+    RCLPY_AVAILABLE = True
+except ImportError:
+    RCLPY_AVAILABLE = False
+    Node = object
+
 
 class PerceptronSNREstimator(nn_base):
     """
@@ -44,6 +54,7 @@ class PerceptronSNREstimator(nn_base):
                 nn.Linear(16, 1)
             )
             self._init_weights()
+            self.device = torch.device("cpu")
 
     def _init_weights(self):
         if not TORCH_AVAILABLE:
@@ -72,9 +83,10 @@ class PerceptronSNREstimator(nn_base):
             tx_norm = (tx_power_dbm - 20.0) / 10.0
             freq_norm = (freq_ghz - 2.4) / 1.0
             shadow_norm = (shadow_db - 2.5) / 2.0
-            inp = torch.tensor([[dist_norm, tx_norm, freq_norm, shadow_norm]], dtype=torch.float32)
-            with torch.no_grad():
-                snr_delta = self.forward(inp).item()
+            dev = next(self.mlp.parameters()).device if hasattr(self, 'mlp') else torch.device("cpu")
+            inp = torch.tensor([[dist_norm, tx_norm, freq_norm, shadow_norm]], dtype=torch.float32, device=dev)
+            with torch.inference_mode():
+                snr_delta = float(self.forward(inp))
             snr_val = snr_analytical + snr_delta
             return round(max(0.0, snr_val), 2)
         else:
@@ -220,6 +232,11 @@ class PerceptronSemanticCommsPipeline:
     End-to-End Perceptron Semantic Communication Engine for Swarm Telemetry & Thermal Media.
     """
     def __init__(self):
+        if TORCH_AVAILABLE and torch.cuda.is_available():
+            self.device = torch.device("cuda:0")
+        else:
+            self.device = torch.device("cpu") if TORCH_AVAILABLE else None
+
         self.snr_estimator = PerceptronSNREstimator()
         self.encoder = PerceptronJSCCEncoder(in_features=512, bottleneck_dim=16)
         self.decoder = PerceptronJSCCDecoder(bottleneck_dim=16, out_features=512)
@@ -229,25 +246,35 @@ class PerceptronSemanticCommsPipeline:
             weights_path = os.path.abspath("sutra_ws/src/sutra_comms/models/universal_deep_jscc.pth")
             if os.path.exists(weights_path):
                 try:
-                    state_dict = torch.load(weights_path, map_location="cpu")
+                    state_dict = torch.load(weights_path, map_location=self.device)
                     print(f"✅ Loaded PyTorch Deep JSCC Weights from: {weights_path}")
                 except Exception:
                     pass
 
+            self.encoder.to(self.device)
+            self.decoder.to(self.device)
             self.encoder.eval()
             self.decoder.eval()
+            self._cached_raw_features = torch.randn(1, 512, device=self.device)
+            self._cached_noise_buffer = torch.empty((1, 16), device=self.device)
+            self._mse_cache = {}
 
     def process_semantic_transmission(self, image_size_kb: float, distance_m: float) -> Dict[str, float]:
         snr_db = self.snr_estimator.predict_snr(distance_m)
         
         if TORCH_AVAILABLE:
-            raw_features = torch.randn(1, 512)
-            with torch.no_grad():
-                encoded_symbols = self.encoder(raw_features)
-                noise_std = 1.0 / (10.0 ** (snr_db / 20.0) + 1e-5)
-                noisy_symbols = encoded_symbols + torch.randn_like(encoded_symbols) * noise_std
-                reconstructed_features = self.decoder(noisy_symbols)
-                mse = torch.mean((raw_features - reconstructed_features) ** 2).item()
+            snr_key = round(snr_db, 1)
+            if snr_key in self._mse_cache:
+                mse = self._mse_cache[snr_key]
+            else:
+                raw_features = self._cached_raw_features
+                with torch.inference_mode():
+                    encoded_symbols = self.encoder(raw_features)
+                    noise_std = 1.0 / (10.0 ** (snr_db / 20.0) + 1e-5)
+                    noisy_symbols = encoded_symbols + self._cached_noise_buffer.normal_() * noise_std
+                    reconstructed_features = self.decoder(noisy_symbols)
+                    mse = float(nn.functional.mse_loss(raw_features, reconstructed_features))
+                self._mse_cache[snr_key] = mse
         else:
             mse = max(0.01, 1.0 - snr_db / 30.0)
 
@@ -282,8 +309,8 @@ class PerceptronSemanticCommsPipeline:
         enc_path = os.path.join(output_dir, "jscc_encoder.onnx")
         dec_path = os.path.join(output_dir, "jscc_decoder.onnx")
 
-        dummy_features = torch.randn(1, 512, dtype=torch.float32)
-        dummy_symbols = torch.randn(1, 16, dtype=torch.float32)
+        dummy_features = torch.randn(1, 512, dtype=torch.float32, device=self.device if TORCH_AVAILABLE else None)
+        dummy_symbols = torch.randn(1, 16, dtype=torch.float32, device=self.device if TORCH_AVAILABLE else None)
 
         # Export Encoder
         torch.onnx.export(
@@ -371,40 +398,146 @@ class ONNXJSCTransceiver:
     """
     ONNX Runtime Hardware-Accelerated JSCC Transceiver Engine.
     Executes ONNX JSCC models on CUDA / NPU execution providers.
+    Falls back to PyTorch on cuda:0 if ONNX GPU provider is unavailable.
     """
     def __init__(self, encoder_path: str = "sutra_ws/src/sutra_comms/models/jscc_encoder.onnx",
                  decoder_path: str = "sutra_ws/src/sutra_comms/models/jscc_decoder.onnx"):
         self.encoder_path = resolve_model_path(encoder_path)
         self.decoder_path = resolve_model_path(decoder_path)
         self.onnx_available = False
-        
+        self.pytorch_encoder = None
+        self.pytorch_decoder = None
+
+        if TORCH_AVAILABLE and torch.cuda.is_available():
+            self.device = torch.device("cuda:0")
+        else:
+            self.device = torch.device("cpu") if TORCH_AVAILABLE else None
+
+        has_gpu_provider = False
         try:
             import onnxruntime as ort
-            if os.path.exists(self.encoder_path) and os.path.exists(self.decoder_path):
+            avail = ort.get_available_providers()
+            gpu_providers = {'CUDAExecutionProvider', 'TensorrtExecutionProvider', 'ROCMExecutionProvider'}
+            has_gpu_provider = any(p in avail for p in gpu_providers)
+
+            if has_gpu_provider and os.path.exists(self.encoder_path) and os.path.exists(self.decoder_path):
                 self.enc_session = ort.InferenceSession(self.encoder_path, providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
                 self.dec_session = ort.InferenceSession(self.decoder_path, providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
                 self.onnx_available = True
-                print("⚡ ONNX Runtime JSCC Transceiver initialized with NPU/CPU provider.")
+                print("⚡ ONNX Runtime JSCC Transceiver initialized with NPU/GPU provider.")
         except Exception as e:
-            print(f"ℹ️ ONNX Runtime unavailable or models missing, using PyTorch fallback: {e}")
+            print(f"ℹ️ ONNX Runtime GPU init failed: {e}")
+
+        if not self.onnx_available:
+            if not has_gpu_provider and TORCH_AVAILABLE and torch.cuda.is_available():
+                print(f"⚡ ONNX GPU provider not present. Using PyTorch fallback on {self.device}.")
+                self.pytorch_encoder = PerceptronJSCCEncoder(in_features=512, bottleneck_dim=16).to(self.device)
+                self.pytorch_decoder = PerceptronJSCCDecoder(bottleneck_dim=16, out_features=512).to(self.device)
+                self.pytorch_encoder.eval()
+                self.pytorch_decoder.eval()
+            elif os.path.exists(self.encoder_path) and os.path.exists(self.decoder_path):
+                try:
+                    import onnxruntime as ort
+                    self.enc_session = ort.InferenceSession(self.encoder_path, providers=['CPUExecutionProvider'])
+                    self.dec_session = ort.InferenceSession(self.decoder_path, providers=['CPUExecutionProvider'])
+                    self.onnx_available = True
+                    print("⚡ ONNX Runtime JSCC Transceiver initialized with CPU provider.")
+                except Exception:
+                    pass
+
+            if not self.onnx_available and self.pytorch_encoder is None and TORCH_AVAILABLE:
+                self.pytorch_encoder = PerceptronJSCCEncoder(in_features=512, bottleneck_dim=16).to(self.device)
+                self.pytorch_decoder = PerceptronJSCCDecoder(bottleneck_dim=16, out_features=512).to(self.device)
+                self.pytorch_encoder.to(self.device)
+                self.pytorch_decoder.to(self.device)
+                self.pytorch_encoder.eval()
+                self.pytorch_decoder.eval()
 
     def encode(self, features):
-        if self.onnx_available:
-            import onnxruntime as ort
-            np_inp = features.detach().cpu().numpy() if (TORCH_AVAILABLE and hasattr(features, 'detach')) else features
+        if self.onnx_available and hasattr(self, 'enc_session') and self.enc_session is not None:
+            np_inp = features.detach().cpu().numpy() if (TORCH_AVAILABLE and isinstance(features, torch.Tensor)) else features
             out = self.enc_session.run(None, {'features': np_inp})[0]
-            return torch.from_numpy(out) if TORCH_AVAILABLE else out
+            if TORCH_AVAILABLE:
+                res = torch.from_numpy(out)
+                if isinstance(features, torch.Tensor):
+                    res = res.to(features.device)
+                return res
+            return out
         else:
-            encoder = PerceptronJSCCEncoder()
-            return encoder(features)
+            if self.pytorch_encoder is None and TORCH_AVAILABLE:
+                self.pytorch_encoder = PerceptronJSCCEncoder(in_features=512, bottleneck_dim=16).to(self.device)
+                self.pytorch_encoder.eval()
+
+            if TORCH_AVAILABLE and isinstance(features, torch.Tensor):
+                orig_device = features.device
+                inp = features.to(self.device) if self.device is not None else features
+                with torch.no_grad():
+                    out = self.pytorch_encoder(inp)
+                return out.to(orig_device)
+            elif TORCH_AVAILABLE:
+                inp = torch.tensor(features, dtype=torch.float32, device=self.device)
+                with torch.no_grad():
+                    out = self.pytorch_encoder(inp)
+                return out
+            else:
+                return features
+
+
+class SutraPerceptronJsccNode(Node):
+    """ROS 2 Node wrapper for Perceptron Semantic Deep JSCC Transmission Engine."""
+    def __init__(self):
+        super().__init__('sutra_perceptron_jscc')
+        self.pipeline = PerceptronSemanticCommsPipeline()
+        self.pub_jscc_stream = self.create_publisher(String, '/sutra/comms/jscc_stream', 10)
+
+        # Subscriptions for live camera streams from Gazebo Sim bridge
+        self.sub_camera = self.create_subscription(
+            Image, '/uav_alpha/camera/image_raw', self._on_camera_frame, 10
+        )
+        self.sub_thermal = self.create_subscription(
+            Image, '/uav_alpha/thermal_camera/image_raw', self._on_thermal_frame, 10
+        )
+
+        # 1Hz timer for standalone simulation tick
+        self.timer = self.create_timer(1.0, self._timer_tick)
+        self.get_logger().info('⚡ SUTRA Perceptron Deep JSCC Neural Node Initialized.')
+
+    def _on_camera_frame(self, msg: Image):
+        res = self.pipeline.process_semantic_transmission(image_size_kb=512.0, distance_m=20.0)
+        res_msg = String()
+        res_msg.data = json.dumps({"source": "camera", "timestamp": rclpy.clock.Clock().now().nanoseconds / 1e9, "jscc_stats": res})
+        self.pub_jscc_stream.publish(res_msg)
+
+    def _on_thermal_frame(self, msg: Image):
+        res = self.pipeline.process_semantic_transmission(image_size_kb=256.0, distance_m=20.0)
+        res_msg = String()
+        res_msg.data = json.dumps({"source": "thermal", "timestamp": rclpy.clock.Clock().now().nanoseconds / 1e9, "jscc_stats": res})
+        self.pub_jscc_stream.publish(res_msg)
+
+    def _timer_tick(self):
+        res = self.pipeline.process_semantic_transmission(image_size_kb=512.0, distance_m=25.0)
+        res_msg = String()
+        res_msg.data = json.dumps({"source": "sim_ticker", "timestamp": rclpy.clock.Clock().now().nanoseconds / 1e9, "jscc_stats": res})
+        self.pub_jscc_stream.publish(res_msg)
+
+
+def main(args=None):
+    if RCLPY_AVAILABLE:
+        rclpy.init(args=args)
+        node = SutraPerceptronJsccNode()
+        try:
+            rclpy.spin(node)
+        except KeyboardInterrupt:
+            pass
+        finally:
+            node.destroy_node()
+            rclpy.shutdown()
+    else:
+        pipeline = PerceptronSemanticCommsPipeline()
+        res = pipeline.process_semantic_transmission(image_size_kb=512.0, distance_m=25.0)
+        print("Perceptron Deep JSCC Test Result:", json.dumps(res, indent=2))
 
 
 if __name__ == '__main__':
-    pipeline = PerceptronSemanticCommsPipeline()
-    res = pipeline.process_semantic_transmission(image_size_kb=512.0, distance_m=25.0)
-    print("Perceptron Deep JSCC Test Result:", json.dumps(res, indent=2))
-    
-    # Run ONNX export
-    paths = pipeline.export_onnx()
-    print("ONNX Export Result:", paths)
+    main()
 

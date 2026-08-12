@@ -11,6 +11,15 @@ ament_python_install_package(${PROJECT_NAME})
 
 install(PROGRAMS
   sutra_gnc/single_quadcopter_offboard_node.py
+  sutra_gnc/moving_target_ring_node.py
+  sutra_gnc/laptop_teleop_node.py
+  sutra_gnc/orca_avoidance.py
+  sutra_gnc/vio_localization.py
+  sutra_gnc/octomap_generator.py
+  sutra_gnc/stress_test_manager.py
+  sutra_gnc/motor_failure_fallback_node.py
+  sutra_gnc/coordinated_swarm_search_node.py
+  sutra_gnc/parallel_sim_manager.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

@@ -36,24 +36,28 @@ logging.basicConfig(level=logging.INFO, format='[GCS Bridge] %(levelname)s: %(me
 
 
 class SutraGcsGatewayBridge(Node):
-    def __init__(self, host: str = "0.0.0.0", port: int = 8765):
+    def __init__(self, host: str = "0.0.0.0", port: int = 9090):
         super().__init__("sutra_gcs_gateway_bridge")
-        self.host = host
-        self.port = port
+        
+        # Declare parameters to allow override via ros2 launch or CLI
+        self.declare_parameter("ws_port", port)
+        self.declare_parameter("ws_host", host)
+        self.host = self.get_parameter("ws_host").get_parameter_value().string_value or host
+        self.port = self.get_parameter("ws_port").get_parameter_value().integer_value or port
         self.ws_clients: Set[object] = set()
 
-        # Swarm State Cache (Indian Flood Disaster Site Coordinates: 20.5937 N, 78.9629 E)
+        # Swarm State Cache (San Francisco Georeferenced Disaster Site Coordinates: 37.774929 N, -122.419416 W)
         self.swarm_telemetry: Dict[str, dict] = {
-            "uav_alpha": {"lat": 20.593700, "lon": 78.962900, "alt": 15.0, "battery": 98.5, "status": "MISSION"},
-            "uav_beta":  {"lat": 20.593900, "lon": 78.963100, "alt": 18.0, "battery": 95.0, "status": "MISSION"},
-            "uav_gamma": {"lat": 20.593400, "lon": 78.962700, "alt": 20.0, "battery": 92.0, "status": "MISSION"},
-            "uav_delta": {"lat": 20.594100, "lon": 78.963300, "alt": 16.5, "battery": 97.0, "status": "MISSION"},
-            "uav_epsilon":{"lat": 20.593100, "lon": 78.962500, "alt": 22.0, "battery": 89.5, "status": "RELAY"}
+            "uav_alpha": {"lat": 37.774929, "lon": -122.419416, "alt": 15.0, "battery": 98.5, "status": "MISSION"},
+            "uav_beta":  {"lat": 37.775129, "lon": -122.419216, "alt": 18.0, "battery": 95.0, "status": "MISSION"},
+            "uav_gamma": {"lat": 37.774629, "lon": -122.419616, "alt": 20.0, "battery": 92.0, "status": "MISSION"},
+            "uav_delta": {"lat": 37.775329, "lon": -122.419016, "alt": 16.5, "battery": 97.0, "status": "MISSION"},
+            "uav_epsilon":{"lat": 37.774329, "lon": -122.419816, "alt": 22.0, "battery": 89.5, "status": "RELAY"}
         }
 
         self.survivor_alerts = [
-            {"id": 1, "type": "SURVIVOR", "lat": 20.593650, "lon": 78.962850, "alt": 15.0, "confidence": 0.948, "drone": "uav_alpha", "time": "11:00:15"},
-            {"id": 2, "type": "POSSIBLE_SURVIVOR", "lat": 20.593950, "lon": 78.963150, "alt": 18.2, "confidence": 0.785, "drone": "uav_beta", "time": "11:02:40"}
+            {"id": 1, "type": "SURVIVOR", "lat": 37.774880, "lon": -122.419350, "alt": 15.0, "confidence": 0.948, "drone": "uav_alpha", "time": "11:00:15"},
+            {"id": 2, "type": "POSSIBLE_SURVIVOR", "lat": 37.775180, "lon": -122.419050, "alt": 18.2, "confidence": 0.785, "drone": "uav_beta", "time": "11:02:40"}
         ]
 
         self.raft_consensus_status = {
@@ -64,18 +68,27 @@ class SutraGcsGatewayBridge(Node):
             "avg_latency_ms": 4.2
         }
 
-        # ROS 2 Subscriptions
+        # ROS 2 Subscriptions (Standardized topics across Subsystems B, C, D)
         self.sub_perception = self.create_subscription(
+            String, "/sutra/perception/targets", self._on_perception_target, 10
+        )
+        self.sub_perception_fused = self.create_subscription(
             String, "/sutra/perception/fused_targets", self._on_perception_target, 10
         )
         self.sub_raft = self.create_subscription(
             String, "/sutra/comms/raft_status", self._on_raft_status, 10
         )
+        self.sub_swarm_raft = self.create_subscription(
+            String, "/sutra/swarm/raft_consensus", self._on_raft_status, 10
+        )
         self.sub_telemetry = self.create_subscription(
             String, "/sutra/swarm/telemetry", self._on_swarm_telemetry, 10
         )
+        self.sub_heartbeats = self.create_subscription(
+            String, "/sutra/comms/heartbeats", self._on_heartbeat_telemetry, 10
+        )
 
-        # ROS 2 Publishers (Uplink to Swarm)
+        # ROS 2 Publishers (Uplink to Swarm & GNC)
         self.pub_rtl = self.create_publisher(String, "/sutra/cmd/rtl", 10)
         self.pub_waypoint = self.create_publisher(String, "/sutra/cmd/waypoint", 10)
 
@@ -90,15 +103,37 @@ class SutraGcsGatewayBridge(Node):
         self.get_logger().info(f"🚀 SUTRA GCS Gateway Bridge initialized on ws://{self.host}:{self.port}")
 
     def _on_perception_target(self, msg: String):
-        """Receive fused target alert from Subsystem C (Perception) -> Forward to GCS."""
+        """Receive target alert from Subsystem C (Perception) -> Forward to GCS."""
         try:
-            target = json.loads(msg.data)
-            self.survivor_alerts.insert(0, target)
-            if len(self.survivor_alerts) > 50:
-                self.survivor_alerts.pop()
-            self._broadcast_json({"topic": "SURVIVOR_ALERT", "data": target})
+            payload = json.loads(msg.data)
+            # Handle list payload under 'targets' or direct target dict
+            targets = payload.get('targets', [payload]) if isinstance(payload, dict) else [payload]
+            for target in targets:
+                if not isinstance(target, dict):
+                    continue
+                self.survivor_alerts.insert(0, target)
+                if len(self.survivor_alerts) > 50:
+                    self.survivor_alerts.pop()
+                self._broadcast_json({"topic": "SURVIVOR_ALERT", "data": target})
         except Exception as e:
             self.get_logger().error(f"Failed to parse perception target msg: {e}")
+
+    def _on_heartbeat_telemetry(self, msg: String):
+        """Receive heartbeat telemetry from Subsystem B mesh_node -> Update state cache."""
+        try:
+            hb = json.loads(msg.data)
+            drone_id = hb.get("drone_id", "uav_alpha")
+            if drone_id in self.swarm_telemetry:
+                pos = hb.get("position", {})
+                # Convert 3D local XY meters to approximate SF WGS84 offset
+                lat_deg_per_m = 1.0 / 111000.0
+                lon_deg_per_m = 1.0 / (111000.0 * math.cos(math.radians(37.774929)))
+                self.swarm_telemetry[drone_id]["lat"] = 37.774929 + pos.get("y", 0.0) * lat_deg_per_m
+                self.swarm_telemetry[drone_id]["lon"] = -122.419416 + pos.get("x", 0.0) * lon_deg_per_m
+                self.swarm_telemetry[drone_id]["alt"] = float(pos.get("z", 15.0))
+                self.swarm_telemetry[drone_id]["battery"] = float(hb.get("battery_pct", 95.0))
+        except Exception as e:
+            self.get_logger().error(f"Failed to parse heartbeat telemetry msg: {e}")
 
     def _on_raft_status(self, msg: String):
         """Receive SwarmRAFT consensus update from Subsystem B (Comms)."""

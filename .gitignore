@@ -33,6 +33,8 @@ htmlcov/
 .venv/
 venv/
 ENV/
+.venv-antigravity/
+scripts/.venv-antigravity/
 
 # Node.js / GCS Frontend
 node_modules/
