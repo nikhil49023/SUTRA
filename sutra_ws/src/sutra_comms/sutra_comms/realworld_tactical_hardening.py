@@ -120,6 +120,46 @@ class TacticalAesEncryptor:
             return nonce + hmac + plaintext
 
 
+class HardwareUartBridgeDaemon:
+    """Gap 6 Solution: High-Speed USB-UART Serial Daemon for physical ESP32 / SX1262 LoRa Radios."""
+    def __init__(self, port: str = "/dev/ttyUSB0", baudrate: int = 921600):
+        self.port = port
+        self.baudrate = baudrate
+        self.is_connected = False
+        self.serial_handle = None
+        self._init_serial()
+
+    def _init_serial(self):
+        try:
+            import serial
+            if os.path.exists(self.port):
+                self.serial_handle = serial.Serial(self.port, self.baudrate, timeout=0.1)
+                self.is_connected = True
+                print(f"⚡ Hardware UART Radio Bridge connected on {self.port} @ {self.baudrate} baud.")
+            else:
+                print(f"ℹ️ Hardware serial port {self.port} not present (running in software emulation).")
+        except Exception as e:
+            print(f"ℹ️ Serial hardware bridge init fallback: {e}")
+
+    def send_packet(self, packet_bytes: bytes) -> bool:
+        if self.is_connected and self.serial_handle is not None:
+            try:
+                self.serial_handle.write(packet_bytes)
+                return True
+            except Exception:
+                self.is_connected = False
+        return False
+
+    def read_packet(self, max_bytes: int = 256) -> Optional[bytes]:
+        if self.is_connected and self.serial_handle is not None:
+            try:
+                if self.serial_handle.in_waiting > 0:
+                    return self.serial_handle.read(min(max_bytes, self.serial_handle.in_waiting))
+            except Exception:
+                self.is_connected = False
+        return None
+
+
 class TacticalHardeningSuite:
     """Master Suite unifying all 6 Real-World Hardening Modules."""
     def __init__(self, node_id: str = "uav_alpha", node_index: int = 0):
@@ -127,6 +167,7 @@ class TacticalHardeningSuite:
         self.tdma = TdmaFrameScheduler(node_index=node_index)
         self.raft_quorum = DynamicQuorumRaftEngine(node_id, ["uav_alpha", "uav_beta", "uav_gamma", "uav_delta", "uav_epsilon"])
         self.crypto = TacticalAesEncryptor()
+        self.uart_bridge = HardwareUartBridgeDaemon()
 
     def process_telemetry_outbound(self, x: float, y: float, z: float, heading: float, raw_payload: bytes, is_lora: bool = False) -> Optional[bytes]:
         # 1. Delta Compression (Gap 1)
@@ -138,6 +179,10 @@ class TacticalHardeningSuite:
 
         # 3. AES-128 Encryption & Rolling Counter (Gap 5)
         encrypted_bytes = self.crypto.encrypt_payload(raw_payload)
+
+        # 4. Hardware Radio UART Transmission (Gap 6)
+        self.uart_bridge.send_packet(encrypted_bytes)
+
         return encrypted_bytes
 
 
@@ -148,3 +193,4 @@ if __name__ == "__main__":
     print("✅ Real-World Tactical Hardening Engine Loaded!")
     print(f"  • Telemetry Encrypted Payload Size: {len(enc)} bytes | Counter: {suite.crypto.tx_seq}")
     print(f"  • TDMA Current Slot Reserved: {suite.tdma.is_my_slot()}")
+    print(f"  • Hardware UART Serial Active: {suite.uart_bridge.is_connected}")
