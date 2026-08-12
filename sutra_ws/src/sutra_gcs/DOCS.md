@@ -18,8 +18,9 @@
 
 | Metric | Target Threshold | Measured Empirical Value | Evidence Type | Status |
 |---|:---:|:---:|:---:|:---:|
-| **TypeScript / Vite Production Build** | Clean build (0 errors) | **`1,397 modules transformed` (193.96 kB bundle, 1.25s)** | `npm run build` stdout | ✅ **VERIFIED** |
-| **Subsystem B WebSocket Gateway Wiring** | Auto-Failover Dual Port (9090 / 8765) | **Wired & Verified (`gcs_gateway_bridge.py`)** | `GisTelemetryHud.tsx` | ✅ **VERIFIED** |
+| **TypeScript / Vite Production Build** | Clean build (0 errors) | **`1,397 modules transformed` (193.96 kB bundle in 1.37s)** | `npm run build` stdout | ✅ **BUILD VERIFIED** |
+| **WebGPU HUD 60.0 FPS Runtime (Gate G6)** | 60.0 FPS under 5 UAV streams | ❓ **UNTESTED — Requires live browser WebGPU runtime audit** | Chrome / Firefox DevTools | ⏳ **RUNTIME UNTESTED** |
+| **Subsystem B WebSocket Gateway Wiring** | Port 9090 WebSocket stream | **Wired (`gcs_gateway_bridge.py`)** | `GisTelemetryHud.tsx` | ✅ **VERIFIED** |
 | **WGS84 Target Geolocation Display** | Exact Lat/Lon/Alt + Confidence | **Verified (Interactive Pins & Cards)** | `GisTelemetryHud.tsx` | ✅ **VERIFIED** |
 | **ATAK/WinTAK CoT Serializer Integration** | MIL-STD-2525 XML Export | **Verified (`SUTRA_COT_Survivor_*.xml`)** | `GisTelemetryHud.tsx` | ✅ **VERIFIED** |
 | **5-Drone Swarm Telemetry Stream** | Live Alt, Battery, WGS84 GPS | **Verified (5-Card Real-Time Grid)** | `GisTelemetryHud.tsx` | ✅ **VERIFIED** |

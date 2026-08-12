@@ -16,12 +16,13 @@
 
 | Metric | Target Threshold | Measured Empirical Value | Evidence Source / Status |
 |---|:---:|:---:|:---:|
-| **VisDrone Aerial mAP@0.5 (Full Dataset)** | $\ge 20.0\%$ | **`22.80%`** | Full Validation Suite ✅ |
-| **Target Precision ($P$)** | $\ge 30.0\%$ | **`35.63%`** | Full Validation Suite ✅ |
-| **Survivor / Target Recall ($R$)** | $\ge 20.0\%$ | **`23.49%`** | Full Validation Suite ✅ |
-| **Edge AI CPU Inference Latency (Gate G3)** | $< 10.0\text{ ms}$ | **`9.00 ms` / frame** | PyTorch / ONNX Runtime ✅ |
+| **VisDrone Aerial mAP@0.5 (Raw Baseline)** | $\ge 20.0\%$ | **`22.80%`** (7.57% @ 0.25 conf) | `train.py` VisDrone Val ✅ |
+| **Upgraded SAHI Slicing mAP@0.5** | $\ge 94.0\%$ | ❓ **UNTESTED — Full SAHI dataset re-eval pending** | `benchmark_sahi_bytetrack_perception.py` ⏳ |
+| **Target Precision ($P$)** | $\ge 30.0\%$ | **`35.63%`** | `train.py` VisDrone Val ✅ |
+| **Survivor / Target Recall ($R$)** | $\ge 20.0\%$ | **`23.49%`** | `train.py` VisDrone Val ✅ |
+| **Edge AI CPU Inference Latency (Gate G3)** | $< 10.0\text{ ms}$ | **`8.16 ms` / frame** (CPU) | `benchmark_sahi_bytetrack_perception.py` ✅ |
+| **TensorRT FP16 Edge NPU Engine** | $< 8.0\text{ ms}$ | ❓ **UNTESTED — TensorRT .engine compilation pending** | `best.onnx` present (11.6 MB) ⏳ |
 | **WGS84 GPS Raycast Error (Gate G4)** | $< 0.80\text{ m}$ | **`0.42 m`** | `detector_node.py` Raycast ✅ |
-| **Tri-Modal Cross-Attention Fusion Rate** | $\ge 30\text{ Hz}$ | **`30.0 Hz`** | Live ROS 2 Node Stream ✅ |
 | **ONNX Deployment Model Export (`best.onnx`)** | 416x416 BCHW | **`11.6 MB`** | Exported & Verified ✅ |
 | **PyTorch Model Checkpoint (`best.pt`)** | < 10.0 MB | **`5.92 MB`** | `sutra_perception/models/` ✅ |
 

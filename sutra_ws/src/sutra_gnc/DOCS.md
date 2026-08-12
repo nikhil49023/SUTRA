@@ -21,7 +21,7 @@
 | Metric | Production / SITL Target Threshold | Measured Empirical Value | Evidence Source | Status |
 |---|:---:|:---:|:---:|:---:|
 | **Parallel GNC Sim Execution** | Concurrent multi-threaded state fusion & ORCA tick | **`4 Worker Threads` @ 50.0Hz** | `parallel_sim_manager.py` | ✅ **VERIFIED** |
-| **Tri-Subsystem Integration (A+B+C)** | Closed-loop perception target -> Raft consensus -> Orbit retask | **Pass (141/141 total passed)** | `test_integrated_sim_abc.py` | ✅ **VERIFIED** |
+| **Tri-Subsystem Integration (A+B+C)** | Closed-loop perception target -> Raft consensus -> Orbit retask | **Pass (96/96 total passed in 8.39s)** | `test_integrated_sim_abc.py` | ✅ **VERIFIED** |
 | **3D Checkpoint Navigation Loop** | Infinite random 3D vector waypoint loop | **`< 2.5m` Proximity Trigger** | `moving_target_ring_node.py` | ✅ **VERIFIED** |
 | **OpenRobotics X3 UAV 3D Mesh** | Prebuilt Collada 3D Airframe & Rotors | **Loaded Cleanly** | `phase1_quadcopter_world.sdf` | ✅ **VERIFIED** |
 | **50Hz Twist Control Rate** | 50.0 Hz (20ms interval) | **50.0 Hz** | `single_quadcopter_offboard_node.py` | ✅ **VERIFIED** |

@@ -39,12 +39,11 @@ Subsystem Sim provides the high-fidelity **Disaster Digital Twin Simulation Envi
 
 | Metric | Target Threshold | Measured Empirical Value | Evidence Source | Verification Status |
 |---|:---:|:---:|:---:|:---:|
-| **Physics Solver Frequency** | $500\text{ Hz}$ | **`500 Hz`** | Gazebo Engine Stats | ✅ **PASSED** |
-| **Real-Time Factor (Gate G1)** | $\ge 0.995$ | **`1.000`** | `gazebo_get_world_stats` | ✅ **PASSED** |
-| **WGS84 EKF Origin Drift** | $0.00\text{ m}$ | **`0.00 m`** | SITL Telemetry Audit | ✅ **PASSED** |
-| **ROS 2 Gz Bridge Latency** | $< 2.0\text{ ms}$ | **`0.85 ms`** | `ros_gz_bridge` | ✅ **PASSED** |
-| **Gazebo Harmonic World Validation** | SDFormat 1.8 | **`3/3 WORLDS VALID`** | `test_sim_world.py` | ✅ **PASSED** |
-| **Tri-Subsystem Integrated Sim** | Subsystem A+B+C Gazebo Launch | **Master Integrated Launch Ready** | `sutra_master_integrated_sim.launch.py` | ✅ **PASSED** |
+| **Physics Solver Config** | $500\text{ Hz}$ | **`500 Hz` (`max_step_size 0.002`)** | SDF Physics Profile | ✅ **SDF VERIFIED** |
+| **Real-Time Factor (Gate G1)** | $\ge 0.995$ | ❓ **UNTESTED — PX4 / Gazebo SITL engine offline during test** | `gazebo_get_world_stats` | ⏳ **PENDING SITL** |
+| **WGS84 Georeferenced Origin** | $0.00\text{ m}$ drift | **`37.774929 N, -122.419416 W`** | SDF Georeference | ✅ **SDF VERIFIED** |
+| **Gazebo Harmonic World Validation** | SDFormat 1.8 | **`4/4 tests passed in 0.02s`** | `test_sim_world.py` | ✅ **PASSED** |
+| **Tri-Subsystem Integrated Launch** | Subsystem A+B+C Launch | **Launch script syntax valid** | `sutra_master_integrated_sim.launch.py` | ✅ **VERIFIED** |
 
 ---
 
