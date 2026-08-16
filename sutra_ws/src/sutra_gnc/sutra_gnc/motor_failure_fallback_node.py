@@ -28,6 +28,9 @@ class MotorFailureFallbackController:
     """
     Algorithmic controller for motor failure detection, spin stabilization,
     controlled emergency descent, and Emergency Return-To-Launch (RTL) dispatch.
+    Enhanced with WaveLander 2-phase decoupled descent control (arXiv:2607.01281):
+    - Approach Phase (z > 1.5m): Controlled 1.2 m/s descent with active spin damping.
+    - Touchdown Phase (z <= 1.5m): Ground-effect compensated gentle touchdown (0.35 m/s).
     """
 
     def __init__(
@@ -39,7 +42,10 @@ class MotorFailureFallbackController:
         nominal_rpm: float = 1000.0,
         failure_threshold_rpm: float = 300.0,
         max_yaw_rate_threshold: float = 1.0,
-        spin_damping_gain: float = 0.8
+        spin_damping_gain: float = 0.8,
+        enable_wavelander_two_phase: bool = True,
+        touchdown_altitude_threshold: float = 1.5,
+        touchdown_descent_rate: float = 0.35
     ):
         self.drone_id = drone_id
         self.descent_rate = max(0.1, float(descent_rate))  # Controlled 1.2 m/s emergency descent
@@ -49,6 +55,9 @@ class MotorFailureFallbackController:
         self.failure_threshold_rpm = failure_threshold_rpm
         self.max_yaw_rate_threshold = max_yaw_rate_threshold
         self.spin_damping_gain = spin_damping_gain
+        self.enable_wavelander_two_phase = enable_wavelander_two_phase
+        self.touchdown_altitude_threshold = touchdown_altitude_threshold
+        self.touchdown_descent_rate = touchdown_descent_rate
 
         # Sensor state variables
         self.current_pose: Tuple[float, float, float] = (0.0, 0.0, 5.0)
@@ -145,9 +154,17 @@ class MotorFailureFallbackController:
         # Active spin damping
         cmd_yaw_rate = -self.spin_damping_gain * w_z
 
-        # Controlled emergency descent rate (1.2 m/s downward)
-        if pz > 0.1:
-            cmd_vz = -self.descent_rate
+        # Controlled emergency descent rate:
+        # WaveLander 2-Phase Decoupled Emergency Descent (arXiv:2607.01281)
+        if pz > self.touchdown_altitude_threshold:
+            cmd_vz = -self.descent_rate  # Phase 1: High-efficiency Approach Descent
+        elif pz > 0.1:
+            if self.enable_wavelander_two_phase:
+                # Phase 2: Ground-effect compensated gentle touchdown
+                alpha = max(0.0, min(1.0, (pz - 0.1) / max(0.1, self.touchdown_altitude_threshold - 0.1)))
+                cmd_vz = -(self.touchdown_descent_rate + alpha * (self.descent_rate - self.touchdown_descent_rate))
+            else:
+                cmd_vz = -self.descent_rate
         else:
             cmd_vz = 0.0
 

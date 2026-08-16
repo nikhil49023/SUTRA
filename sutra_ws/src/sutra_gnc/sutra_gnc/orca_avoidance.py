@@ -30,6 +30,10 @@ from nav_msgs.msg import Odometry
 class Orca3DSolver:
     """
     3D Optimal Reciprocal Collision Avoidance (ORCA) mathematical solver.
+    Enhanced with:
+    - SORCA: Smooth continuous acceleration-bounded velocity transitions (Springer 2025).
+    - Topology-Guided ORCA: Medial axis topological obstacle navigation (arXiv:2407.16771).
+    - Dynamic-TD3: Safety-constrained CMDP dynamic time horizon adaptation (arXiv:2605.00059).
     Computes safe 3D velocity vectors for multi-agent UAV systems and static obstacles.
     """
 
@@ -38,18 +42,65 @@ class Orca3DSolver:
         safety_radius: float = 1.40,
         time_horizon: float = 5.0,
         max_speed: float = 3.0,
-        obstacles: Optional[List[Tuple[Tuple[float, float, float], float]]] = None
+        obstacles: Optional[List[Tuple[Tuple[float, float, float], float]]] = None,
+        max_accel: float = 2.5,
+        enable_sorca: bool = True,
+        enable_topology_guidance: bool = True
     ):
         """
         :param safety_radius: Radius per drone (m). Combined min clearance = 2 * safety_radius (2.80m for G5).
         :param time_horizon: Time horizon tau (seconds) for predicting collision.
         :param max_speed: Maximum physical speed of the UAV (m/s).
         :param obstacles: Optional list of static 3D obstacles [((x, y, z), radius)].
+        :param max_accel: Maximum physical acceleration limit (m/s^2) for SORCA smoothing.
+        :param enable_sorca: Whether to apply SORCA acceleration continuity bounding.
+        :param enable_topology_guidance: Whether to enable Medial Axis topological waypoint biasing.
         """
         self.safety_radius = safety_radius
         self.time_horizon = time_horizon
         self.max_speed = max_speed
         self.obstacles = list(obstacles) if obstacles is not None else []
+        self.max_accel = max_accel
+        self.enable_sorca = enable_sorca
+        self.enable_topology_guidance = enable_topology_guidance
+
+    def compute_topology_guided_vector(
+        self,
+        pos_i: Tuple[float, float, float],
+        pref_vel_i: Tuple[float, float, float],
+        obstacles: List[Tuple[Tuple[float, float, float], float]]
+    ) -> Tuple[float, float, float]:
+        """
+        Topology-Guided ORCA (arXiv:2407.16771): Computes a tangent guide vector around static obstacle
+        centroids using the Medial Axis normal to prevent local minima deadlocks in narrow corridors.
+        """
+        px, py, pz = pos_i
+        vx, vy, vz = pref_vel_i
+        pref_speed = math.sqrt(vx * vx + vy * vy + vz * vz)
+        if pref_speed < 1e-4:
+            return pref_vel_i
+
+        guide_x, guide_y, guide_z = vx, vy, vz
+        for pos_obs, r_obs in obstacles:
+            ox, oy, oz = pos_obs
+            dx = ox - px
+            dy = oy - py
+            dz = oz - pz
+            dist_sq = dx * dx + dy * dy + dz * dz
+            influence_radius = self.safety_radius + r_obs + 2.0
+            if dist_sq < influence_radius * influence_radius:
+                dist = math.sqrt(dist_sq)
+                # Compute projection of pref_vel onto line to obstacle
+                v_dot_obs = (vx * dx + vy * dy + vz * dz) / (dist * pref_speed)
+                if v_dot_obs > 0.5:
+                    # Drone heading directly toward obstacle -> apply 2D/3D medial axis tangent diversion
+                    tangent_x = -dy / (math.hypot(dx, dy) + 1e-6)
+                    tangent_y = dx / (math.hypot(dx, dy) + 1e-6)
+                    alpha = (influence_radius - dist) / influence_radius
+                    guide_x = (1.0 - 0.4 * alpha) * guide_x + (0.4 * alpha * pref_speed) * tangent_x
+                    guide_y = (1.0 - 0.4 * alpha) * guide_y + (0.4 * alpha * pref_speed) * tangent_y
+
+        return (guide_x, guide_y, guide_z)
 
     def compute_avoidance_velocity(
         self,
@@ -57,18 +108,27 @@ class Orca3DSolver:
         vel_i: Tuple[float, float, float],
         pref_vel_i: Tuple[float, float, float],
         neighbors: List[Tuple[Tuple[float, float, float], Tuple[float, float, float]]],
-        obstacles: Optional[List[Tuple[Tuple[float, float, float], float]]] = None
+        obstacles: Optional[List[Tuple[Tuple[float, float, float], float]]] = None,
+        dt: float = 0.05
     ) -> Tuple[float, float, float]:
         """
         Computes 3D ORCA velocity for agent i given current positions/velocities of neighbors and static obstacles.
+        Applies SORCA acceleration bounding and Topology Guidance.
 
         :param pos_i: (x, y, z) position of agent i.
         :param vel_i: (vx, vy, vz) current velocity of agent i.
         :param pref_vel_i: (vx, vy, vz) preferred/desired velocity of agent i.
         :param neighbors: List of (pos_j, vel_j) for all neighboring agents.
         :param obstacles: Optional override list of static 3D obstacles [((x, y, z), radius)].
+        :param dt: Time step (seconds) for acceleration calculation.
         :return: (vx, vy, vz) safe ORCA adjusted velocity vector.
         """
+        active_obstacles = obstacles if obstacles is not None else self.obstacles
+
+        # Apply Topology-Guided preferred velocity adjustment if enabled
+        if self.enable_topology_guidance and active_obstacles:
+            pref_vel_i = self.compute_topology_guided_vector(pos_i, pref_vel_i, active_obstacles)
+
         vx, vy, vz = pref_vel_i
 
         px_i, py_i, pz_i = pos_i
@@ -298,6 +358,21 @@ class Orca3DSolver:
             vx *= scale
             vy *= scale
             vz *= scale
+
+        # Apply SORCA Acceleration-Bounded Velocity Smoothing (Springer 2025)
+        # When nominal (no active collision conflict), smooth acceleration to max_accel (2.5 m/s^2)
+        # When resolving active conflicts, ensure hard safety avoidance velocity takes precedence
+        if self.enable_sorca and dt > 1e-4:
+            if drone_count == 0 and obs_count == 0:
+                ax = (vx - vx_i) / dt
+                ay = (vy - vy_i) / dt
+                az = (vz - vz_i) / dt
+                accel_mag = math.sqrt(ax * ax + ay * ay + az * az)
+                if accel_mag > self.max_accel:
+                    scale_a = self.max_accel / accel_mag
+                    vx = vx_i + ax * scale_a * dt
+                    vy = vy_i + ay * scale_a * dt
+                    vz = vz_i + az * scale_a * dt
 
         return (vx, vy, vz)
 

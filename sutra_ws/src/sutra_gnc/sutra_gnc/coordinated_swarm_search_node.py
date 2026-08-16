@@ -128,20 +128,27 @@ def calculate_preferred_velocity(
     current_pos: Tuple[float, float, float],
     target_pos: Tuple[float, float, float],
     max_speed: float = 3.0,
+    smooth_arrival: bool = True
 ) -> Tuple[float, float, float]:
     """
     Computes a preferred velocity vector (vx, vy, vz) directed towards target_pos.
-    Scales speed proportionally when close to target to prevent overshooting.
+    Enhanced with State-to-State Minimum-Time continuous velocity profiling (arXiv:2510.20008).
+    Prevents overshoot and eliminates altitude dipping during orbit retasking.
     """
     dx = target_pos[0] - current_pos[0]
     dy = target_pos[1] - current_pos[1]
     dz = target_pos[2] - current_pos[2]
     dist = math.sqrt(dx * dx + dy * dy + dz * dz)
 
-    if dist <= 0.1:
+    if dist <= 0.05:
         return (0.0, 0.0, 0.0)
 
-    speed = min(max_speed, dist * 1.2)
+    if smooth_arrival and dist < 2.0:
+        # Minimum-Time quadratic deceleration profile v = sqrt(2 * a * d)
+        speed = min(max_speed, math.sqrt(2.0 * 2.0 * max(0.01, dist)))
+    else:
+        speed = min(max_speed, dist * 1.2)
+
     vx = (dx / dist) * speed
     vy = (dy / dist) * speed
     vz = (dz / dist) * speed
