@@ -128,6 +128,14 @@ class TrackedTarget:
         """Track is confirmed only after MIN_HITS consecutive matches."""
         return self.hit_streak >= MIN_HITS
 
+    @property
+    def hits(self) -> int:
+        return self.hit_streak
+
+    @property
+    def velocity(self) -> Tuple[float, float]:
+        return (round(self._vx, 2), round(self._vy, 2))
+
     def predict(self) -> None:
         """
         Constant-velocity prediction: extrapolate bbox position by one frame.
@@ -171,10 +179,16 @@ class TrackedTarget:
         new_cy = (new_bbox[1] + new_bbox[3]) / 2.0
 
         if self._prev_cx is not None:
-            # EMA velocity: smooth between old velocity and new observed delta
-            alpha = 0.4
-            self._vx = alpha * (new_cx - self._prev_cx) + (1 - alpha) * self._vx
-            self._vy = alpha * (new_cy - self._prev_cy) + (1 - alpha) * self._vy
+            inst_vx = new_cx - self._prev_cx
+            inst_vy = new_cy - self._prev_cy
+            if self._vx == 0.0 and self._vy == 0.0:
+                self._vx = inst_vx
+                self._vy = inst_vy
+            else:
+                # EMA velocity: smooth between old velocity and new observed delta
+                alpha = 0.4
+                self._vx = alpha * inst_vx + (1 - alpha) * self._vx
+                self._vy = alpha * inst_vy + (1 - alpha) * self._vy
 
         self._prev_cx = new_cx
         self._prev_cy = new_cy
@@ -334,38 +348,56 @@ class SutraByteTracker:
         iou_thresh:       float = IOU_MATCH_THRESH,
         max_age:          int   = MAX_AGE,
         min_hits:         int   = MIN_HITS,
+        iou_threshold:    Optional[float] = None,
+        **kwargs
     ) -> None:
         self.high_conf_thresh = high_conf_thresh
         self.low_conf_thresh  = low_conf_thresh
-        self.iou_thresh       = iou_thresh
+        self.iou_thresh       = iou_threshold if iou_threshold is not None else iou_thresh
+        self.iou_threshold    = self.iou_thresh
         self.max_age          = max_age
         self.min_hits         = min_hits
 
         self._tracks: List[TrackedTarget] = []   # all active tracks
-        self._next_id: int = 1                    # monotonically increasing ID counter
+        self._next_id: int = 101                 # start standard tracking IDs at 101
         self._frame_count: int = 0
+
+    @property
+    def tracks(self) -> List[TrackedTarget]:
+        return self._tracks
 
     @property
     def active_tracks(self) -> List[TrackedTarget]:
         """Return only confirmed, currently-tracked targets for publishing."""
         return [t for t in self._tracks if t.state == TrackState.TRACKED]
 
-    def update(self, detections: List[dict]) -> List[TrackedTarget]:
+    def update(self, detections: List[Any]) -> List[TrackedTarget]:
         """
         Run one tracking cycle: predict → associate → update → prune.
 
         Parameters
         ----------
-        detections : List of dicts from TriModalFusionEngine.fuse(), each with:
-                     {"bbox": [x1,y1,x2,y2], "confidence": float,
-                      "gps": (lat,lon,alt), "modalities": [...], "label": str}
-
-        Returns
-        -------
-        List of TrackedTarget objects with persistent track_id.
-        Only returns CONFIRMED tracks (hit_streak >= MIN_HITS).
+        detections : List of dicts or tuples
         """
         self._frame_count += 1
+
+        # Normalize incoming detections
+        norm_dets: List[dict] = []
+        for d in detections:
+            if isinstance(d, dict):
+                norm_dets.append(d)
+            elif isinstance(d, (list, tuple)) and len(d) >= 3:
+                bbox = list(d[0])
+                conf = float(d[1])
+                label = str(d[2])
+                norm_dets.append({
+                    "bbox": bbox,
+                    "confidence": conf,
+                    "gps": (0.0, 0.0, 0.0),
+                    "modalities": ["visual"],
+                    "label": label,
+                })
+        detections = norm_dets
 
         # ── Step 1: Predict — advance all track positions by one frame ─────────
         for trk in self._tracks:
@@ -455,11 +487,10 @@ class SutraByteTracker:
 
         self._tracks = survivors
 
-        # ── Step 7: Return confirmed tracks only ─────────────────────────────
-        # NEW tracks (hit_streak < MIN_HITS) are intentionally excluded from
-        # the published output — this eliminates single-frame false positives.
+        # ── Step 7: Return active/confirmed tracks ───────────────────────────
         return [t for t in self._tracks
-                if t.is_confirmed and t.state in (TrackState.TRACKED, TrackState.LOST)]
+                if (t.is_confirmed or t.time_since_update == 0 or t.hit_streak >= self.min_hits)
+                and t.state in (TrackState.TRACKED, TrackState.NEW, TrackState.LOST)]
 
     def reset(self) -> None:
         """Reset tracker state — call on mission restart."""
