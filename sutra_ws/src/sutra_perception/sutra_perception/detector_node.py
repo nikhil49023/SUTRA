@@ -38,6 +38,9 @@ from sensor_msgs.msg import Image, LaserScan
 from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped
 
+# ByteTrack multi-object tracker (pure Python, no extra deps)
+from sutra_perception.bytetrack import SutraByteTracker, TrackedTarget, TrackState
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Robust ROS Image <-> OpenCV bridge with pure-Python NumPy fallback
 # ──────────────────────────────────────────────────────────────────────────────
@@ -101,6 +104,10 @@ try:
     YOLO_AVAILABLE = True
 except ImportError:
     YOLO_AVAILABLE = False
+
+# TensorRT is only available on Jetson / NVIDIA hardware with TRT installed.
+# The node auto-detects .engine vs .pt by file extension and sets this flag.
+TENSORRT_ENGINE_SUFFIX = ".engine"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # WGS-84 Origin — San Francisco Digital Twin (matches Gazebo SITL world)
@@ -472,19 +479,50 @@ class SutraDetectorNode(Node):
         # ── Optional bridges / models ──────────────────────────────────────────
         self._bridge: Optional[object] = SutraCvBridge()
         self._yolo:   Optional[object] = None
+        self._using_tensorrt: bool = False
 
         if YOLO_AVAILABLE:
             try:
-                self._yolo = YOLO(self._yolo_model_path)
-                self.get_logger().info(
-                    f"✅ YOLOv8-Nano loaded: {self._yolo_model_path}"
-                )
+                # Auto-detect TensorRT engine vs standard PyTorch model
+                if self._yolo_model_path.endswith(TENSORRT_ENGINE_SUFFIX):
+                    # TensorRT FP16 engine — ~4ms/frame on Jetson Orin NX
+                    # Engine must be pre-built via tensorrt_export.py on the
+                    # exact target hardware (GPU-architecture specific).
+                    self._yolo = YOLO(self._yolo_model_path)
+                    self._using_tensorrt = True
+                    self.get_logger().info(
+                        f"⚡ TensorRT FP16 engine loaded: {self._yolo_model_path}"
+                    )
+                else:
+                    # Standard PyTorch .pt model — ~50ms/frame
+                    self._yolo = YOLO(self._yolo_model_path)
+                    self._using_tensorrt = False
+                    self.get_logger().info(
+                        f"✅ YOLOv8-Nano PyTorch model loaded: {self._yolo_model_path}"
+                    )
+                    self.get_logger().info(
+                        "   TIP: Export to TensorRT for 12x speedup: "
+                        "python3 tensorrt_export.py --model best_sutra.pt"
+                    )
             except Exception as exc:
                 self.get_logger().warn(f"YOLO load failed ({exc}). Running in mock mode.")
         else:
             self.get_logger().warn(
                 "ultralytics not installed — running YOLO in mock mode."
             )
+
+        # ── ByteTrack Multi-Object Tracker ────────────────────────────────────
+        # Assigns persistent IDs (Survivor-101, Threat-002) across frames.
+        # Eliminates single-frame false positives via MIN_HITS=2 gate.
+        # Recovers occluded targets via two-pass association (ByteTrack ECCV 2022).
+        self._tracker = SutraByteTracker(
+            high_conf_thresh=0.50,   # Pass 1: confident detections
+            low_conf_thresh=0.15,    # Pass 2: recover occluded targets
+            iou_thresh=0.30,         # Minimum IoU for track association
+            max_age=30,              # Frames before track is deleted (=3s @ 10Hz)
+            min_hits=2,              # Consecutive matches before confirmed
+        )
+        self.get_logger().info("🔍 ByteTrack MOT tracker initialised (MAX_AGE=30, MIN_HITS=2)")
 
         # ── QoS ───────────────────────────────────────────────────────────────
         sensor_qos = QoSProfile(
@@ -781,8 +819,8 @@ class SutraDetectorNode(Node):
     # ──────────────────────────────────────────────────────────────────────────
 
     def _fusion_tick(self) -> None:
-        """Merge visual, thermal, radar detections → publish fused targets."""
-        fused: List[FusedTarget] = []
+        """Merge visual, thermal, radar detections → ByteTrack → publish."""
+        fused_dets: List[dict] = []   # intermediate list for tracker input
 
         # ── Step 1: seed with visual detections (highest information) ─────────
         for vdet in self._visual_detections:
@@ -814,14 +852,13 @@ class SutraDetectorNode(Node):
 
             score = min(score, 1.0)
             label = self._classify(vdet.label, score)
-            self._target_counter += 1
-            fused.append(FusedTarget(
-                target_id=self._target_counter,
-                label=label,
-                confidence=score,
-                gps=vdet.gps,
-                modalities=modalities,
-            ))
+            fused_dets.append({
+                "bbox":       [vdet.bbox.x1, vdet.bbox.y1, vdet.bbox.x2, vdet.bbox.y2],
+                "confidence": score,
+                "gps":        vdet.gps,
+                "modalities": modalities,
+                "label":      label,
+            })
 
         # ── Step 4: thermal-only detections (smoke / rubble scenarios) ────────
         for tblob in self._thermal_blobs:
@@ -842,35 +879,52 @@ class SutraDetectorNode(Node):
                 self._drone_alt, self._camera_hfov_deg,
             )
             gps = to_gps(ex, ny, 0.0, self._drone_lat, self._drone_lon, 0.0)
-            self._target_counter += 1
-            fused.append(FusedTarget(
-                target_id=self._target_counter,
-                label="POSSIBLE_SURVIVOR",
-                confidence=score,
-                gps=gps,
-                modalities=["thermal"],
-            ))
+            fused_dets.append({
+                "bbox":       [tblob.bbox.x1, tblob.bbox.y1, tblob.bbox.x2, tblob.bbox.y2],
+                "confidence": score,
+                "gps":        gps,
+                "modalities": ["thermal"],
+                "label":      "POSSIBLE_SURVIVOR",
+            })
+
+        # ── Step 5: ByteTrack — assign persistent IDs ─────────────────────────
+        # ByteTrack two-pass association (Zhang et al., ECCV 2022):
+        #   Pass 1: match high-conf detections to existing tracks
+        #   Pass 2: recover occluded targets via low-conf detections
+        # Only CONFIRMED tracks (hit_streak >= MIN_HITS=2) are returned.
+        # Single-frame false positives are silently filtered here.
+        tracked: List[TrackedTarget] = self._tracker.update(fused_dets)
 
         # ── Publish raw detection stream ───────────────────────────────────────
+        track_counts = self._tracker.get_track_count()
         raw_msg = String()
         raw_msg.data = json.dumps({
-            "visual":  len(self._visual_detections),
-            "thermal": len(self._thermal_blobs),
-            "radar":   len(self._radar_targets),
+            "visual":          len(self._visual_detections),
+            "thermal":         len(self._thermal_blobs),
+            "radar":           len(self._radar_targets),
+            "fused_raw":       len(fused_dets),
+            "tracked_confirmed": len(tracked),
+            "tracker_new":     track_counts.get("NEW", 0),
+            "tracker_tracked": track_counts.get("TRACKED", 0),
+            "tracker_lost":    track_counts.get("LOST", 0),
+            "using_tensorrt":  self._using_tensorrt,
         })
         self._pub_detections.publish(raw_msg)
 
-        # ── Publish fused targets ──────────────────────────────────────────────
-        if fused:
-            payload = json.dumps({"targets": [t.to_dict() for t in fused]})
+        # ── Publish tracked targets ────────────────────────────────────────────
+        if tracked:
+            payload = json.dumps({"targets": [t.to_dict() for t in tracked]})
             tgt_msg = String()
             tgt_msg.data = payload
             self._pub_targets.publish(tgt_msg)
-            for t in fused:
+            for t in tracked:
+                mode_str = self._using_tensorrt
                 self.get_logger().info(
-                    f"🎯 [{t.label}] conf={t.confidence:.2f} "
-                    f"GPS=({t.gps[0]:.6f}, {t.gps[1]:.6f}) "
-                    f"src={'+'.join(t.modalities)}"
+                    f"🎯 [{t.label}-{t.track_id:03d}] "
+                    f"conf={t.confidence:.2f} age={t.age}fr "
+                    f"GPS=({t.gps[0]:.6f},{t.gps[1]:.6f}) "
+                    f"src={'+'.join(t.modalities)} "
+                    f"{'⚡TRT' if self._using_tensorrt else '🐢PT'}"
                 )
 
     # ──────────────────────────────────────────────────────────────────────────
