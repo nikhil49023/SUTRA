@@ -182,8 +182,8 @@ class GazeboLiveSwarmSimDirector:
         print(f"  ✅ Concentric Surround Pattern Achieved around Survivor at ({self.survivor_pose[0]}, {self.survivor_pose[1]}):")
         for d in self.drones:
             dist_to_tgt = math.hypot(self.poses[d][0] - self.survivor_pose[0], self.poses[d][1] - self.survivor_pose[1])
-            print(f"     - {d}: Position=({self.poses[d][0]:.2f}, {self.poses[d][1]:.2f}, {self.poses[d][2]:.2f}) | Orbit Radius={dist_to_tgt:.2f}m")
-        print(f"  🛡️ Gate G5 Minimum Inter-UAV Clearance Observed: {self.min_clearance_observed:.2f}m (Hard Requirement >= 2.80m -> PASS)")
+        assert self.min_clearance_observed >= 3.50, f"Gate G5 Breach! Clearance {self.min_clearance_observed:.2f}m < tightened 3.50m"
+        print(f"  🛡️ Gate G5 Minimum Inter-UAV Clearance Observed: {self.min_clearance_observed:.2f}m (Tightened Requirement >= 3.50m -> PASS)")
 
         # ── STAGE 5: GCS DASHBOARD STREAMING & EMERGENCY RTL ──────────────────
         print_banner("STAGE 5: GCS HUD TELEMETRY STREAM & EMERGENCY RETURN-TO-LAUNCH (RTL)")

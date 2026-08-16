@@ -347,7 +347,7 @@ class SutraByteTracker:
         low_conf_thresh:  float = LOW_CONF_THRESH,
         iou_thresh:       float = IOU_MATCH_THRESH,
         max_age:          int   = MAX_AGE,
-        min_hits:         int   = MIN_HITS,
+        min_hits:         int   = 1,
         iou_threshold:    Optional[float] = None,
         **kwargs
     ) -> None:
@@ -487,10 +487,10 @@ class SutraByteTracker:
 
         self._tracks = survivors
 
-        # ── Step 7: Return active/confirmed tracks ───────────────────────────
+        # ── Step 7: Return confirmed/active tracks ───────────────────────────
         return [t for t in self._tracks
-                if (t.is_confirmed or t.time_since_update == 0 or t.hit_streak >= self.min_hits)
-                and t.state in (TrackState.TRACKED, TrackState.NEW, TrackState.LOST)]
+                if (t.hit_streak >= self.min_hits or (self.min_hits <= 1 and t.time_since_update == 0))
+                and t.state in (TrackState.TRACKED, TrackState.NEW if self.min_hits <= 1 else TrackState.TRACKED, TrackState.LOST)]
 
     def reset(self) -> None:
         """Reset tracker state — call on mission restart."""

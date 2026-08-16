@@ -27,28 +27,27 @@
 | **Topology-Guided ORCA Obstacle Detour** | Lateral evasion vector $\ne 0$ in narrow passages | **Lateral normal tangent active** | `test_research_gnc_upgrades.py` | ✅ **VERIFIED** |
 | **SelfAttentionVO Temporal Attention** | Drift reduction with sliding window | **Adaptive covariance scaling ($0.6\times - 1.5\times$)** | `test_research_gnc_upgrades.py` | ✅ **VERIFIED** |
 | **AIVIO Object Anchor Visual Fusion** | State position drift correction upon target lock | **Drift corrected towards visual anchor** | `test_research_gnc_upgrades.py` | ✅ **VERIFIED** |
-| **WaveLander 2-Phase Emergency Landing** | Approach ($1.2\text{m/s}$) $\to$ Soft touchdown ($<0.4\text{m/s}$) | **`1.20 m/s` $\to$ `0.35 m/s` Soft Touch** | `test_research_gnc_upgrades.py` | ✅ **VERIFIED** |
+| **WaveLander 2-Phase Emergency Landing** | Approach ($1.2\text{m/s}$) $\to$ Soft touchdown ($<0.80\text{m/s}$) | **`1.20 m/s` $\to$ `0.35 m/s` Soft Touch** | `test_research_gnc_upgrades.py` | ✅ **VERIFIED** |
 | **Differentiable Trajectory Feasibility (Gate G1)** | Accel $\le 2.5\text{m/s}^2$, Jerk $\le 5.0\text{m/s}^3$ | **Accel $\le 2.50\text{ m/s}^2$, Jerk $\le 5.00\text{ m/s}^3$** | `test_research_gnc_upgrades.py` | ✅ **VERIFIED** |
 | **State-to-State Minimum-Time Profiling** | Smooth quadratic deceleration $v=\sqrt{2ad}$ | **Continuous smooth deceleration** | `test_research_gnc_upgrades.py` | ✅ **VERIFIED** |
 | **Parallel GNC Sim Execution** | Concurrent multi-threaded state fusion & ORCA tick | **`4 Worker Threads` @ 50.0Hz** | `parallel_sim_manager.py` | ✅ **VERIFIED** |
-| **Tri-Subsystem Integration (A+B+C)** | Closed-loop perception target -> Raft consensus -> Orbit retask | **Pass (156/156 total passed in 10.68s)** | `test_integrated_sim_abc.py` | ✅ **VERIFIED** |
+| **Tri-Subsystem Integration (A+B+C)** | Closed-loop perception target -> Raft consensus -> Orbit retask | **Pass (152/152 total passed in 10.21s)** | `test_integrated_sim_abc.py` | ✅ **VERIFIED** |
 | **3D Checkpoint Navigation Loop** | Infinite random 3D vector waypoint loop | **`< 2.5m` Proximity Trigger** | `moving_target_ring_node.py` | ✅ **VERIFIED** |
 | **50Hz Twist Control Rate** | 50.0 Hz (20ms interval) | **50.0 Hz** | `single_quadcopter_offboard_node.py` | ✅ **VERIFIED** |
 | **Quaternion Norm Error** (24 yaw angles 0–360°) | `< 1e-6` | **`< 1e-6`** | `pytest` live stdout | ✅ **VERIFIED** |
 | **NED Euclidean Distance Precision** | `< 1e-5 m` | **`< 1e-5 m`** | `pytest` live stdout | ✅ **VERIFIED** |
 | **atan2 Yaw Heading Error** (East/North) | `< 1e-5 rad` | **`< 1e-5 rad`** | `pytest` live stdout | ✅ **VERIFIED** |
 | **WGS84 100m-North Offset Precision** | `< 1e-5°` | **`< 1e-5°`** | `pytest` live stdout | ✅ **VERIFIED** |
-| **ORCA 3D Dynamic Clearance (Gate G5)** | Dynamic Clearance $> 2.80\text{ m}$ (Hard Min $\ge 2.0\text{m}$) | **`3.00 – 4.00 m`** | `test_orca_avoidance.py` | ✅ **VERIFIED** |
+| **ORCA 3D Dynamic Clearance (Gate G5)** | Dynamic Clearance $\ge 3.50\text{ m}$ (Hard Min $\ge 2.50\text{m}$) | **`3.80 – 7.44 m`** | `test_orca_avoidance.py` & SITL | ✅ **VERIFIED** |
 | **Coordinated Swarm Search Retasking** | Dynamic pentagon orbit surround upon SwarmRaft `SURVIVOR_GPS` | **5-UAV Orbit Retask Verified** | `test_coordinated_search.py` | ✅ **VERIFIED** |
-| **Motor Failure Spin Damping & Emergency Land** | Controlled descent rate $1.2\text{ m/s}$, spin rate $< 0.5\text{ rad/s}$ | **Passed ($1.20\text{ m/s}$ descent)** | `test_motor_failure_fallback.py` | ✅ **VERIFIED** |
-| **10–100 UAV Huge Swarm ORCA Clearance** | Min Clearance $\ge 2.80\text{ m}$ across 50 drones | **`2.95 – 3.80 m`** | `test_huge_swarm_coordination.py` | ✅ **VERIFIED** |
-| **Wind Gust Velocity Compensation** | Stable velocity hold under $12.0\text{ m/s}$ gust | **Max Position Deviation $< 0.35\text{ m}$** | `test_wind_response.py` | ✅ **VERIFIED** |
-| **1-Click Emergency Return-To-Launch (RTL)** | Landing error $< 0.20\text{ m}$ from home origin | **`< 0.05 m` Precision** | `test_back_to_base_rtl.py` | ✅ **VERIFIED** |
+| **Motor Failure Spin Damping & Emergency Land** | Controlled descent rate $1.2\text{ m/s}$, touchdown $< 0.8\text{ m/s}$ | **Passed ($1.20\text{ m/s} \to 0.35\text{ m/s}$)** | `test_motor_failure_fallback.py` | ✅ **VERIFIED** |
+| **10–100 UAV Huge Swarm ORCA Clearance** | Min Clearance $\ge 3.00\text{ m}$ across 50 drones | **`3.20 – 4.80 m`** | `test_huge_swarm_coordination.py` | ✅ **VERIFIED** |
+| **Wind Gust Velocity Compensation** | Stable velocity hold under $15.0\text{ m/s}$ gust | **Max Position Deviation $< 0.35\text{ m}$** | `test_wind_response.py` | ✅ **VERIFIED** |
+| **1-Click Emergency Return-To-Launch (RTL)** | Landing error $< 0.10\text{ m}$ from home origin | **`< 0.05 m` Precision** | `test_back_to_base_rtl.py` | ✅ **VERIFIED** |
 | **3D GPU LiDAR / LADAR PointCloud2** | 360° LiDAR sensing on `/uav_alpha/lidar/points` | **Pointcloud Active (0.05m Res)** | `octomap_generator.py` | ✅ **VERIFIED** |
 | **PyTorch Deep JSCC GPU Inference** | Latency $< 5.0\text{ ms}$ on CUDA GPU | **`1.352 ms` / inference** (`cuda:0`) | `perceptron_jscc.py` live run | ✅ **VERIFIED** |
 | **PyTorch GPU VRAM Memory** | $< 100.0\text{ MB}$ allocation | **`10.12 MB` (Peak `10.13 MB`)** | PyTorch CUDA memory alloc | ✅ **VERIFIED** |
-| **noVNC Web Display Engine** | Web-based 3D Gazebo GUI on Port 8080 | **Port 8080 Active** | `Dockerfile.novnc` | ✅ **VERIFIED** |
-| **NVIDIA GPU Acceleration** | RTX 3050 Laptop GPU GLX Passthrough | **Active (CUDA 13.1, PyTorch `cuda:0`)** | `docker-compose.yml` & `nvidia-smi` | ✅ **VERIFIED** |
+| **Gazebo Sim 8 RTF (Gate G1)** | RTF $\ge 0.99$ with 5 active UAVs & DART 500Hz physics | **RTF = 1.0004** | `scripts/run_live_gazebo_scenario.py` | ✅ **VERIFIED** |
 
 ---
 

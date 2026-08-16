@@ -180,14 +180,14 @@ To maximize performance, accuracy, and code quality, ALL agents MUST actively ut
 
 ---
 
-## 🎯 Verification Gates G1–G6 Metric Reference (Simulation & Production Readiness)
-| Gate | Subsystem & Area | Legacy Target Metric | Upgraded Production & Simulation Readiness Criteria | Verification Tool / Command |
+## 🎯 Verification Gates G1–G6 Metric Reference (Simulation & Production Readiness — Tightened Industry Standard)
+| Gate | Subsystem & Area | Legacy Target Metric | Tightened Production & Simulation Readiness Criteria | Verification Tool / Command |
 |---|---|---|---|---|
-| **G1** | Subsystem A/B (Flight Controls & SITL Physics) | RTF ≥ 0.98 | **PX4 Offboard Trajectory RMSE < 0.15m (Horiz) / < 0.10m (Vert)** @ 50Hz setpoint rate; Gazebo Sim 8 RTF ≥ 0.98 with 5 active UAV dynamics | `pytest sutra_ws/src/sutra_gnc/test/` & Gazebo SITL telemetry logs |
-| **G2** | Subsystem B (Swarm Comms & Consensus) | Latency < 8ms, Packet Loss < 2% | **802.11s Mesh PDR ≥ 95% under 20% node churn & NLOS RF path loss**; SwarmRAFT Leader failover < 150ms with 0 log corruption | `pytest sutra_ws/src/sutra_comms/test/` & NS-3 / Mesh SITL test |
-| **G3** | Subsystem C (Edge AI Perception Engine) | mAP@0.5 ≥ 94%, Latency < 10ms | **TensorRT FP16 Latency < 8ms (≥ 60 FPS)**; Tri-Modal mAP@0.5 ≥ 94.5% across thermal/RGB under foliage & dynamic payload noise | `pytest sutra_ws/src/sutra_perception/test/` & `yolo val` |
-| **G4** | Subsystem C (Target Geolocation & Raycast) | WGS84 Error < 0.8m | **Terrain-Corrected DEM WGS84 Error < 0.8m** under simulated drone tilt (±10° roll/pitch) & VIO drift at 30m AGL | `pytest sutra_ws/src/sutra_perception/test/` |
-| **G5** | Subsystem A (ORCA 3D Swarm Avoidance) | Safety Buffer > 2.8m | **Dynamic 3D Multi-Drone Min Clearance ≥ 2.8m (Hard Min ≥ 2.0m)** during 5-drone crossing trajectories under 2.5m/s² acceleration limits | `pytest sutra_ws/src/sutra_gnc/test/` |
-| **G6** | Subsystem D (3D GIS GCS HUD & Telemetry) | Build Check / Framerate = 60 FPS | **WebGPU Telemetry HUD Locked 60.0 FPS** under 5 live UAV streams; Emergency RTL WebSocket Command-to-Execution delay < 25ms | `cd sutra_ws/src/sutra_gcs && npm run build` & GCS performance bench |
+| **G1** | Subsystem A/B (Flight Controls & SITL Physics) | RTF ≥ 0.98 | **PX4 Offboard Trajectory RMSE < 0.08m (Horiz) / < 0.05m (Vert)** @ 50Hz setpoint rate; **Gazebo Sim 8 RTF ≥ 0.99** with 5 active UAV dynamics & dynamic wind shear (≥ 10 m/s) | `pytest sutra_ws/src/sutra_gnc/test/` & Gazebo SITL telemetry logs |
+| **G2** | Subsystem B (Swarm Comms & Consensus) | Latency < 8ms, Packet Loss < 2% | **802.11s Mesh PDR ≥ 98% under 30% node churn & -85 dBm NLOS RF path loss**; **SwarmRAFT Leader failover < 100ms** with 0 log corruption; **Deep JSCC Compression ≥ 95% with PSNR ≥ 38.0 dB** under -5 dB jamming | `pytest sutra_ws/src/sutra_comms/test/` & NS-3 / Mesh SITL test |
+| **G3** | Subsystem C (Edge AI Perception Engine) | mAP@0.5 ≥ 94%, Latency < 10ms | **TensorRT FP16 Latency < 5.0ms (≥ 120 FPS pipeline throughput)**; **Tri-Modal mAP@0.5 ≥ 96.0%** across thermal blackout & dynamic payload noise; **ByteTrack MOT ID switches ≤ 1** across 50 frames | `pytest sutra_ws/src/sutra_perception/test/` & `yolo val` |
+| **G4** | Subsystem C (Target Geolocation & Raycast) | WGS84 Error < 0.8m | **Terrain-Corrected DEM WGS84 Error < 0.40m** under simulated drone tilt (±25° roll/pitch) & VIO altitude drift at 30m AGL | `pytest sutra_ws/src/sutra_perception/test/` |
+| **G5** | Subsystem A (ORCA 3D Swarm Avoidance) | Safety Buffer > 2.8m | **Dynamic 3D Multi-Drone Min Clearance ≥ 3.50m (Hard Min ≥ 2.50m)** during 5-drone crossing trajectories under 3.0m/s² acceleration limits; **Avoidance computation < 1.0ms/UAV** | `pytest sutra_ws/src/sutra_gnc/test/` |
+| **G6** | Subsystem D (3D GIS GCS HUD & Telemetry) | Build Check / Framerate = 60 FPS | **WebGPU Telemetry HUD Locked 60.0 FPS** under 10 live UAV streams; **Emergency RTL WebSocket Command-to-Execution delay < 10.0ms** under 20 concurrent GCS clients with 0 dropped frames | `cd sutra_ws/src/sutra_gcs && npm run build` & GCS performance bench |
 
 
