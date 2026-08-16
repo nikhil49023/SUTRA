@@ -26,6 +26,7 @@ from __future__ import annotations
 import json
 import math
 import time
+import threading
 from dataclasses import dataclass, field
 from typing import Any, List, Optional, Tuple
 
@@ -392,8 +393,8 @@ class SutraDetectorNode(Node):
         self._thermal_blobs:      List[ThermalBlob]     = []
         self._radar_targets:      List[RadarTarget]     = []
         self._target_counter:     int                   = 0
+        self._state_lock:         threading.Lock        = threading.Lock()
         self._img_w: int = 640
-
         self._img_h: int = 480
 
         # ── Optional bridges / models ──────────────────────────────────────────
@@ -519,32 +520,24 @@ class SutraDetectorNode(Node):
             pass
 
     def _pose_callback(self, msg: String) -> None:
-
         """Receive drone telemetry JSON from Subsystem A (sim/fallback mode)."""
         try:
             data = json.loads(msg.data)
-            self._drone_lat = float(data.get("lat", self._drone_lat))
-            self._drone_lon = float(data.get("lon", self._drone_lon))
-            self._drone_alt = float(data.get("alt", self._drone_alt))
-            self._drone_yaw = float(data.get("yaw", self._drone_yaw))
+            with self._state_lock:
+                self._drone_lat = float(data.get("lat", self._drone_lat))
+                self._drone_lon = float(data.get("lon", self._drone_lon))
+                self._drone_alt = float(data.get("alt", self._drone_alt))
+                self._drone_yaw = float(data.get("yaw", self._drone_yaw))
         except (json.JSONDecodeError, KeyError, TypeError):
             pass  # keep previous values
 
     def _pose_stamped_callback(self, msg: PoseStamped) -> None:
-        """Receive drone pose from Subsystem A via geometry_msgs/PoseStamped.
-
-        Subsystem A (Rohith) publishes PoseStamped on /sutra/gnc/pose_stamped.
-        Position: x=East(m), y=North(m), z=Alt(m) in local NED frame.
-        We convert to GPS using to_gps() with the SITL origin.
-        """
+        """Receive drone pose from Subsystem A via geometry_msgs/PoseStamped."""
         x = msg.pose.position.x
         y = msg.pose.position.y
         z = msg.pose.position.z
         # Convert NED position → GPS
         lat, lon, alt = to_gps(x, y, z)
-        self._drone_lat = lat
-        self._drone_lon = lon
-        self._drone_alt = alt
 
         # Extract roll, pitch, yaw from quaternion (q_x, q_y, q_z, q_w)
         qx = msg.pose.orientation.x
@@ -555,20 +548,27 @@ class SutraDetectorNode(Node):
         # Roll (x-axis rotation)
         sinr_cosp = 2.0 * (qw * qx + qy * qz)
         cosr_cosp = 1.0 - 2.0 * (qx * qx + qy * qy)
-        self._drone_roll = math.atan2(sinr_cosp, cosr_cosp)
+        roll = math.atan2(sinr_cosp, cosr_cosp)
 
         # Pitch (y-axis rotation)
         sinp = 2.0 * (qw * qy - qz * qx)
         if abs(sinp) >= 1.0:
-            self._drone_pitch = math.copysign(math.pi / 2.0, sinp)
+            pitch = math.copysign(math.pi / 2.0, sinp)
         else:
-            self._drone_pitch = math.asin(sinp)
+            pitch = math.asin(sinp)
 
         # Yaw (z-axis rotation)
         siny_cosp = 2.0 * (qw * qz + qx * qy)
         cosy_cosp = 1.0 - 2.0 * (qy * qy + qz * qz)
-        self._drone_yaw = math.atan2(siny_cosp, cosy_cosp)
+        yaw = math.atan2(siny_cosp, cosy_cosp)
 
+        with self._state_lock:
+            self._drone_lat = lat
+            self._drone_lon = lon
+            self._drone_alt = alt
+            self._drone_roll = roll
+            self._drone_pitch = pitch
+            self._drone_yaw = yaw
 
     def _rgb_callback(self, msg: Image) -> None:
         """Process RGB camera frame — run YOLOv8-Nano detection."""
@@ -579,8 +579,11 @@ class SutraDetectorNode(Node):
         except Exception:
             return
 
-        self._img_h, self._img_w = frame.shape[:2]
-        self._visual_detections = self._run_yolo(frame)
+        h, w = frame.shape[:2]
+        detections = self._run_yolo(frame)
+        with self._state_lock:
+            self._img_h, self._img_w = h, w
+            self._visual_detections = detections
 
     def _thermal_callback(self, msg: Image) -> None:
         """Process thermal camera frame — detect hot-spot blobs."""
@@ -592,11 +595,15 @@ class SutraDetectorNode(Node):
         except Exception:
             return
 
-        self._thermal_blobs = self._detect_thermal_blobs(raw)
+        blobs = self._detect_thermal_blobs(raw)
+        with self._state_lock:
+            self._thermal_blobs = blobs
 
     def _radar_callback(self, msg: LaserScan) -> None:
         """Process 2-D radar sweep — cluster returns into targets."""
-        self._radar_targets = self._cluster_radar(msg)
+        targets = self._cluster_radar(msg)
+        with self._state_lock:
+            self._radar_targets = targets
 
     # ──────────────────────────────────────────────────────────────────────────
     # Sensor processing helpers
@@ -740,22 +747,32 @@ class SutraDetectorNode(Node):
 
     def _fusion_tick(self) -> None:
         """Merge visual, thermal, radar detections → ByteTrack → publish."""
+        with self._state_lock:
+            v_dets = list(self._visual_detections)
+            t_blobs = list(self._thermal_blobs)
+            r_targets = list(self._radar_targets)
+            drone_alt = self._drone_alt
+            drone_lat = self._drone_lat
+            drone_lon = self._drone_lon
+            img_w = self._img_w
+            img_h = self._img_h
+
         fused_dets: List[dict] = []   # intermediate list for tracker input
 
         # ── Step 1: seed with visual detections (highest information) ─────────
-        for vdet in self._visual_detections:
+        for vdet in v_dets:
             if vdet.gps is None:
                 continue
             score = vdet.confidence * W_VISUAL
             modalities = ["visual"]
             ev, nv = pixel_to_ned(
                 vdet.bbox.cx, vdet.bbox.cy,
-                self._img_w, self._img_h,
-                self._drone_alt, self._camera_hfov_deg,
+                img_w, img_h,
+                drone_alt, self._camera_hfov_deg,
             )
 
             # ── Step 2: thermal confirmation ──────────────────────────────────
-            for tblob in self._thermal_blobs:
+            for tblob in t_blobs:
                 iou = vdet.bbox.iou(tblob.bbox)
                 if iou > 0.15:
                     score += tblob.mean_intensity * W_THERMAL
@@ -763,7 +780,7 @@ class SutraDetectorNode(Node):
                     break  # one confirmation per visual detection
 
             # ── Step 3: radar confirmation ────────────────────────────────────
-            for rtgt in self._radar_targets:
+            for rtgt in r_targets:
                 dist_m = math.hypot(ev - rtgt.east_m, nv - rtgt.north_m)
                 if dist_m < 3.0:   # within 3 m ground radius
                     score += W_RADAR
@@ -781,12 +798,12 @@ class SutraDetectorNode(Node):
             })
 
         # ── Step 4: thermal-only detections (smoke / rubble scenarios) ────────
-        for tblob in self._thermal_blobs:
+        for tblob in t_blobs:
             already_fused = any(
                 tblob.bbox.iou(BBox(
                     d.bbox.x1, d.bbox.y1, d.bbox.x2, d.bbox.y2
                 )) > 0.15
-                for d in self._visual_detections
+                for d in v_dets
             )
             if already_fused:
                 continue
@@ -795,10 +812,10 @@ class SutraDetectorNode(Node):
                 continue
             ex, ny = pixel_to_ned(
                 tblob.bbox.cx, tblob.bbox.cy,
-                self._img_w, self._img_h,
-                self._drone_alt, self._camera_hfov_deg,
+                img_w, img_h,
+                drone_alt, self._camera_hfov_deg,
             )
-            gps = to_gps(ex, ny, 0.0, self._drone_lat, self._drone_lon, 0.0)
+            gps = to_gps(ex, ny, 0.0, drone_lat, drone_lon, 0.0)
             fused_dets.append({
                 "bbox":       [tblob.bbox.x1, tblob.bbox.y1, tblob.bbox.x2, tblob.bbox.y2],
                 "confidence": score,
@@ -819,9 +836,9 @@ class SutraDetectorNode(Node):
         track_counts = self._tracker.get_track_count()
         raw_msg = String()
         raw_msg.data = json.dumps({
-            "visual":          len(self._visual_detections),
-            "thermal":         len(self._thermal_blobs),
-            "radar":           len(self._radar_targets),
+            "visual":          len(v_dets),
+            "thermal":         len(t_blobs),
+            "radar":           len(r_targets),
             "fused_raw":       len(fused_dets),
             "tracked_confirmed": len(tracked),
             "tracker_new":     track_counts.get("NEW", 0),

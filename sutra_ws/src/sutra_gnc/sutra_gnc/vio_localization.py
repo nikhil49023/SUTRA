@@ -17,6 +17,7 @@ from typing import Tuple, Optional
 
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, ReliabilityPolicy
 from geometry_msgs.msg import Pose, Point, Quaternion, Vector3, Twist, PoseStamped
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu, NavSatFix
@@ -192,24 +193,30 @@ class VIOLocalizationNode(Node):
             String, "/vio/status", 10
         )
 
+        # Sensor Data QoS (Best-Effort) per ros2-gazebo-industry standard
+        sensor_qos = QoSProfile(depth=5, reliability=ReliabilityPolicy.BEST_EFFORT)
+
         # Subscriptions
+        self.sub_imu_raw = self.create_subscription(
+            Imu, f"/{self.drone_id}/imu", self._imu_cb, sensor_qos
+        )
         self.sub_imu = self.create_subscription(
-            Imu, f"/{self.drone_id}/imu/data", self._imu_cb, 10
+            Imu, f"/{self.drone_id}/imu/data", self._imu_cb, sensor_qos
         )
         self.sub_imu_fallback = self.create_subscription(
-            Imu, "/imu/data", self._imu_cb, 10
+            Imu, "/imu/data", self._imu_cb, sensor_qos
         )
         self.sub_vio_cam = self.create_subscription(
-            Odometry, f"/{self.drone_id}/camera/odom", self._vio_cam_cb, 10
+            Odometry, f"/{self.drone_id}/camera/odom", self._vio_cam_cb, sensor_qos
         )
         self.sub_vio_cam_fallback = self.create_subscription(
-            Odometry, "/camera/odom", self._vio_cam_cb, 10
+            Odometry, "/camera/odom", self._vio_cam_cb, sensor_qos
         )
         self.sub_gps = self.create_subscription(
-            NavSatFix, f"/{self.drone_id}/gps/fix", self._gps_cb, 10
+            NavSatFix, f"/{self.drone_id}/gps/fix", self._gps_cb, sensor_qos
         )
         self.sub_gps_fallback = self.create_subscription(
-            NavSatFix, "/gps/fix", self._gps_cb, 10
+            NavSatFix, "/gps/fix", self._gps_cb, sensor_qos
         )
 
         # 50Hz State Output Timer

@@ -18,7 +18,8 @@ from typing import Dict, List, Tuple, Optional
 
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist
+from rclpy.qos import QoSProfile, ReliabilityPolicy
+from geometry_msgs.msg import Twist, TwistStamped
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu
 from std_msgs.msg import String, Float32MultiArray, Bool
@@ -251,21 +252,24 @@ class MotorFailureFallbackNode(Node):
             Twist, f"/{drone_id}/cmd_vel", 10
         )
         self.pub_gazebo_twist = self.create_publisher(
-            Twist, f"/{drone_id}/gazebo/command/twist", 10
+            TwistStamped, f"/{drone_id}/gazebo/command/twist", 10
         )
         self.pub_status = self.create_publisher(
             String, f"/{drone_id}/rtl_status", 10
         )
 
+        # Sensor Data QoS (Best-Effort) per ros2-gazebo-industry standard
+        sensor_qos = QoSProfile(depth=5, reliability=ReliabilityPolicy.BEST_EFFORT)
+
         # Subscriptions
         self.sub_odom = self.create_subscription(
-            Odometry, f"/{drone_id}/odometry", self._odom_cb, 10
+            Odometry, f"/{drone_id}/odometry", self._odom_cb, sensor_qos
         )
         self.sub_odom_fallback = self.create_subscription(
-            Odometry, f"/model/{drone_id}/odometry", self._odom_cb, 10
+            Odometry, f"/model/{drone_id}/odometry", self._odom_cb, sensor_qos
         )
         self.sub_imu = self.create_subscription(
-            Imu, f"/{drone_id}/imu", self._imu_cb, 10
+            Imu, f"/{drone_id}/imu", self._imu_cb, sensor_qos
         )
         self.sub_motor_rpm = self.create_subscription(
             Float32MultiArray, f"/{drone_id}/motor_rpm", self._motor_rpm_cb, 10
@@ -306,7 +310,13 @@ class MotorFailureFallbackNode(Node):
         twist.angular.z = cmd_yaw_rate
 
         self.pub_cmd_vel.publish(twist)
-        self.pub_gazebo_twist.publish(twist)
+
+        # Publish TwistStamped for Gazebo Sim bridge
+        ts_msg = TwistStamped()
+        ts_msg.header.stamp = self.get_clock().now().to_msg()
+        ts_msg.header.frame_id = "base_link"
+        ts_msg.twist = twist
+        self.pub_gazebo_twist.publish(ts_msg)
 
         status_dict = self.controller.get_status_summary()
         status_msg = String()

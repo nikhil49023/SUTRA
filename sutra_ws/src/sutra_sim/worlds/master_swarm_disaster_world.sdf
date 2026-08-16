@@ -14,9 +14,10 @@ Features:
 <sdf version="1.8">
   <world name="master_swarm_disaster_world">
     
-    <physics name="500hz" type="ignored">
+    <physics name="500hz" type="dart">
       <max_step_size>0.002</max_step_size>
       <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>500</real_time_update_rate>
     </physics>
 
     <!-- WGS84 Georeferenced Coordinates -->
@@ -38,7 +39,9 @@ Features:
     </scene>
 
     <!-- Essential Gazebo Sim System Plugins -->
-    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics" />
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics">
+      <engine>dart</engine>
+    </plugin>
     <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster" />
     <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands" />
     <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
@@ -131,8 +134,21 @@ Features:
           <material><ambient>0.9 0.1 0.1 1</ambient><diffuse>1.0 0.2 0.2 1</diffuse></material>
         </visual>
         <sensor name="imu_sensor" type="imu">
-          <always_on>1</always_on><update_rate>200</update_rate>
+          <always_on>1</always_on>
+          <update_rate>200</update_rate>
           <topic>/uav_alpha/imu</topic>
+          <imu>
+            <angular_velocity>
+              <x><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></x>
+              <y><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></y>
+              <z><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></z>
+            </angular_velocity>
+            <linear_acceleration>
+              <x><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></x>
+              <y><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></y>
+              <z><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></z>
+            </linear_acceleration>
+          </imu>
         </sensor>
         <sensor name="camera_rgb" type="camera">
           <update_rate>30</update_rate>
@@ -144,6 +160,12 @@ Features:
           </camera>
         </sensor>
       </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name>
+        <topic>/uav_alpha/gazebo/command/twist</topic>
+        <initial_linear>0 0 0</initial_linear>
+        <initial_angular>0 0 0</initial_angular>
+      </plugin>
       <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
         <dimensions>3</dimensions>
       </plugin>
@@ -160,10 +182,29 @@ Features:
           <material><ambient>0.1 0.9 0.1 1</ambient><diffuse>0.2 1.0 0.2 1</diffuse></material>
         </visual>
         <sensor name="imu_sensor" type="imu">
-          <always_on>1</always_on><update_rate>200</update_rate>
+          <always_on>1</always_on>
+          <update_rate>200</update_rate>
           <topic>/uav_beta/imu</topic>
+          <imu>
+            <angular_velocity>
+              <x><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></x>
+              <y><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></y>
+              <z><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></z>
+            </angular_velocity>
+            <linear_acceleration>
+              <x><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></x>
+              <y><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></y>
+              <z><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></z>
+            </linear_acceleration>
+          </imu>
         </sensor>
       </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name>
+        <topic>/uav_beta/gazebo/command/twist</topic>
+        <initial_linear>0 0 0</initial_linear>
+        <initial_angular>0 0 0</initial_angular>
+      </plugin>
       <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
     </model>
 
@@ -178,10 +219,29 @@ Features:
           <material><ambient>0.1 0.1 0.9 1</ambient><diffuse>0.2 0.2 1.0 1</diffuse></material>
         </visual>
         <sensor name="imu_sensor" type="imu">
-          <always_on>1</always_on><update_rate>200</update_rate>
+          <always_on>1</always_on>
+          <update_rate>200</update_rate>
           <topic>/uav_gamma/imu</topic>
+          <imu>
+            <angular_velocity>
+              <x><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></x>
+              <y><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></y>
+              <z><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></z>
+            </angular_velocity>
+            <linear_acceleration>
+              <x><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></x>
+              <y><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></y>
+              <z><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></z>
+            </linear_acceleration>
+          </imu>
         </sensor>
       </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name>
+        <topic>/uav_gamma/gazebo/command/twist</topic>
+        <initial_linear>0 0 0</initial_linear>
+        <initial_angular>0 0 0</initial_angular>
+      </plugin>
       <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
     </model>
 
@@ -196,10 +256,29 @@ Features:
           <material><ambient>0.9 0.9 0.1 1</ambient><diffuse>1.0 1.0 0.2 1</diffuse></material>
         </visual>
         <sensor name="imu_sensor" type="imu">
-          <always_on>1</always_on><update_rate>200</update_rate>
+          <always_on>1</always_on>
+          <update_rate>200</update_rate>
           <topic>/uav_delta/imu</topic>
+          <imu>
+            <angular_velocity>
+              <x><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></x>
+              <y><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></y>
+              <z><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></z>
+            </angular_velocity>
+            <linear_acceleration>
+              <x><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></x>
+              <y><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></y>
+              <z><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></z>
+            </linear_acceleration>
+          </imu>
         </sensor>
       </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name>
+        <topic>/uav_delta/gazebo/command/twist</topic>
+        <initial_linear>0 0 0</initial_linear>
+        <initial_angular>0 0 0</initial_angular>
+      </plugin>
       <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
     </model>
 
@@ -214,10 +293,29 @@ Features:
           <material><ambient>0.9 0.1 0.9 1</ambient><diffuse>1.0 0.2 1.0 1</diffuse></material>
         </visual>
         <sensor name="imu_sensor" type="imu">
-          <always_on>1</always_on><update_rate>200</update_rate>
+          <always_on>1</always_on>
+          <update_rate>200</update_rate>
           <topic>/uav_epsilon/imu</topic>
+          <imu>
+            <angular_velocity>
+              <x><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></x>
+              <y><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></y>
+              <z><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></z>
+            </angular_velocity>
+            <linear_acceleration>
+              <x><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></x>
+              <y><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></y>
+              <z><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></z>
+            </linear_acceleration>
+          </imu>
         </sensor>
       </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name>
+        <topic>/uav_epsilon/gazebo/command/twist</topic>
+        <initial_linear>0 0 0</initial_linear>
+        <initial_angular>0 0 0</initial_angular>
+      </plugin>
       <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
     </model>
 

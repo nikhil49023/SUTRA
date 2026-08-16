@@ -29,6 +29,7 @@ except ImportError:
 try:
     import rclpy
     from rclpy.node import Node
+    from rclpy.qos import QoSProfile, ReliabilityPolicy
     from std_msgs.msg import String
     from sensor_msgs.msg import Image
     RCLPY_AVAILABLE = True
@@ -490,12 +491,13 @@ class SutraPerceptronJsccNode(Node):
         self.pipeline = PerceptronSemanticCommsPipeline()
         self.pub_jscc_stream = self.create_publisher(String, '/sutra/comms/jscc_stream', 10)
 
-        # Subscriptions for live camera streams from Gazebo Sim bridge
+        # Subscriptions for live camera streams from Gazebo Sim bridge (Sensor Data QoS)
+        sensor_qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
         self.sub_camera = self.create_subscription(
-            Image, '/uav_alpha/camera/image_raw', self._on_camera_frame, 10
+            Image, '/uav_alpha/camera/image_raw', self._on_camera_frame, sensor_qos
         )
         self.sub_thermal = self.create_subscription(
-            Image, '/uav_alpha/thermal_camera/image_raw', self._on_thermal_frame, 10
+            Image, '/uav_alpha/thermal_camera/image_raw', self._on_thermal_frame, sensor_qos
         )
 
         # 1Hz timer for standalone simulation tick

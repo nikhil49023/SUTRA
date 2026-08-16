@@ -18,6 +18,7 @@ from typing import Tuple
 from enum import Enum
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, ReliabilityPolicy
 from geometry_msgs.msg import TwistStamped, PoseStamped, Pose, Twist
 from nav_msgs.msg import Odometry
 from std_msgs.msg import String
@@ -132,11 +133,12 @@ class SingleQuadcopterOffboardNode(Node):
         )
 
         # ── Subscriptions ─────────────────────────────────────────────────────
+        sensor_qos = QoSProfile(depth=5, reliability=ReliabilityPolicy.BEST_EFFORT)
         self.sub_odom = self.create_subscription(
-            Odometry, f"/model/{self.drone_id}/odometry", self._odom_callback, 10
+            Odometry, f"/model/{self.drone_id}/odometry", self._odom_callback, sensor_qos
         )
         self.sub_pose = self.create_subscription(
-            Pose, f"/model/{self.drone_id}/pose", self._pose_callback, 10
+            Pose, f"/model/{self.drone_id}/pose", self._pose_callback, sensor_qos
         )
         self.sub_target_ring = self.create_subscription(
             PoseStamped, "/sutra/target_ring/pose", self._target_ring_callback, 10

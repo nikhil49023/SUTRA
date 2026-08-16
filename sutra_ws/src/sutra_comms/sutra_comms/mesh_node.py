@@ -497,7 +497,9 @@ def main(args=None):
     rclpy.init(args=args)
     node = SutraMeshNode()
     try:
-        rclpy.spin_once(node, timeout_sec=0.1)
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
     finally:
         node.destroy_node()
         rclpy.shutdown()

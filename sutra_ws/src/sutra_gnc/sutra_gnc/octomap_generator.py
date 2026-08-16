@@ -18,6 +18,7 @@ from typing import Dict, List, Tuple, Set, Union
 import numpy as np
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import PointCloud2, PointField
 from visualization_msgs.msg import Marker, MarkerArray
 from geometry_msgs.msg import Point
@@ -150,21 +151,24 @@ class OctoMapGeneratorNode(Node):
             MarkerArray, f"/{self.drone_id}/octomap_markers", 10
         )
 
+        # Sensor Data QoS (Best-Effort) per ros2-gazebo-industry standard
+        sensor_qos = QoSProfile(depth=5, reliability=ReliabilityPolicy.BEST_EFFORT)
+
         # Subscriptions
         self.sub_cloud = self.create_subscription(
-            PointCloud2, f"/{self.drone_id}/points", self._cloud_cb, 10
+            PointCloud2, f"/{self.drone_id}/points", self._cloud_cb, sensor_qos
         )
         self.sub_cloud_fallback = self.create_subscription(
-            PointCloud2, "/uav_alpha/points", self._cloud_cb, 10
+            PointCloud2, "/uav_alpha/points", self._cloud_cb, sensor_qos
         )
         self.sub_lidar = self.create_subscription(
-            PointCloud2, f"/{self.drone_id}/lidar/points", self._cloud_cb, 10
+            PointCloud2, f"/{self.drone_id}/lidar/points", self._cloud_cb, sensor_qos
         )
         self.sub_lidar_fallback = self.create_subscription(
-            PointCloud2, "/uav_alpha/lidar/points", self._cloud_cb, 10
+            PointCloud2, "/uav_alpha/lidar/points", self._cloud_cb, sensor_qos
         )
         self.sub_cloud_gen_fallback = self.create_subscription(
-            PointCloud2, "/points", self._cloud_cb, 10
+            PointCloud2, "/points", self._cloud_cb, sensor_qos
         )
 
         self.get_logger().info(
