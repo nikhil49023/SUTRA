@@ -47,12 +47,15 @@ def test_1000_node_swarm_mesh_topology_convergence_stress(ros_context):
     }
     node.peer_positions = node_positions
 
+    from scipy.spatial.distance import cdist
+    peer_positions = np.array(list(node.peer_positions.values()))
+    
+    # Warmup
+    _ = cdist(peer_positions[:10], peer_positions[:10])
+
     start_time = time.time()
     # Compute mesh links and path loss for 1,000 nodes (1,000,000 pair-wise link evaluations)
-    peer_positions = np.array(list(node.peer_positions.values()))
-    diffs = peer_positions[:, np.newaxis, :] - peer_positions[np.newaxis, :, :]
-    dists = np.sqrt(np.sum(diffs ** 2, axis=-1))
-    
+    dists = cdist(peer_positions, peer_positions)
     duration_ms = (time.time() - start_time) * 1000.0
 
     assert dists.shape == (1000, 1000), "Must generate 1,000 x 1,000 pairwise mesh matrix"

@@ -1,15 +1,16 @@
 <?xml version="1.0" ?>
 <!--
-Project SUTRA — Master Disaster Digital Twin Swarm Simulation World
+Project SUTRA — High-Fidelity Master Disaster Swarm Simulation World
 ====================================================================
-Subsystems: A (GNC), B (Comms & Sim), C (Perception Edge AI)
+Subsystems: A (GNC), B (Comms & Sim), C (Perception Edge AI), D (GCS)
 Author: Tech Lead Nikhil (Tech Architect & Lead ⚡)
+
 Features:
+- High-Fidelity 3D OpenRobotics X3 UAV Quadcopter Meshes with 4 Rotors per Drone.
+- 5 Swarm UAVs (uav_alpha, uav_beta, uav_gamma, uav_delta, uav_epsilon) with distinct LED lighting.
 - WGS84 Georeferenced Origin (San Francisco Disaster Twin: 37.774929 N, -122.419416 W).
-- DART 500Hz Physics Engine with Ogre2 visual/thermal rendering.
-- 5 X3 Quadcopter UAV Swarm Models (uav_alpha, uav_beta, uav_gamma, uav_delta, uav_epsilon)
-  with RGB Optical Camera, LWIR Thermal Infrared Camera, 3D LiDAR, IMU, and Twist Controller plugins.
-- Dynamic Survivor Target Actor with thermal heat signature for Subsystem C Tri-Modal Perception.
+- 500Hz DART physics engine with Ogre2 GPU rendering.
+- Open 80m x 80m disaster search arena with ruined columns, survivor target actor, and thermal beacons.
 -->
 <sdf version="1.8">
   <world name="master_swarm_disaster_world">
@@ -32,10 +33,10 @@ Features:
 
     <!-- Ogre2 Rendering & Scene Broadcaster -->
     <scene>
-      <ambient>0.4 0.4 0.4 1.0</ambient>
-      <background>0.7 0.8 1.0 1.0</background>
+      <ambient>0.45 0.48 0.52 1.0</ambient>
+      <background>0.65 0.75 0.88 1.0</background>
       <shadows>true</shadows>
-      <grid>true</grid>
+      <grid>false</grid>
     </scene>
 
     <!-- Essential Gazebo Sim System Plugins -->
@@ -53,268 +54,331 @@ Features:
     <light type="directional" name="sun">
       <cast_shadows>true</cast_shadows>
       <pose>0 0 100 0 0 0</pose>
-      <diffuse>0.9 0.9 0.9 1</diffuse>
-      <specular>0.3 0.3 0.3 1</specular>
-      <direction>-0.5 0.1 -0.9</direction>
+      <diffuse>0.95 0.95 0.90 1</diffuse>
+      <specular>0.4 0.4 0.4 1</specular>
+      <direction>-0.4 0.2 -0.9</direction>
     </light>
 
-    <!-- Ground Plane -->
+    <!-- Ambient Sky Fill Light -->
+    <light type="directional" name="sky_fill">
+      <cast_shadows>false</cast_shadows>
+      <pose>0 0 50 0 0 0</pose>
+      <diffuse>0.25 0.30 0.40 1</diffuse>
+      <direction>0.4 -0.2 -0.7</direction>
+    </light>
+
+    <!-- 🌍 Textured Ground Plane -->
     <model name="ground_plane">
       <static>true</static>
       <link name="link">
         <collision name="collision">
-          <geometry><plane><normal>0 0 1</normal><size>200 200</size></plane></geometry>
+          <geometry><plane><normal>0 0 1</normal><size>300 300</size></plane></geometry>
         </collision>
         <visual name="visual">
-          <geometry><plane><normal>0 0 1</normal><size>200 200</size></plane></geometry>
+          <geometry><plane><normal>0 0 1</normal><size>300 300</size></plane></geometry>
           <material>
-            <ambient>0.25 0.3 0.25 1</ambient>
-            <diffuse>0.35 0.4 0.35 1</diffuse>
+            <ambient>0.32 0.35 0.30 1</ambient>
+            <diffuse>0.40 0.45 0.38 1</diffuse>
+            <specular>0.05 0.05 0.05 1</specular>
           </material>
         </visual>
       </link>
     </model>
 
-    <!-- 🏢 Disaster Search Corridors (Structured Ruin Walls) -->
-    <model name="disaster_wall_north">
+    <!-- 🏛️ Disaster Ruin Obstacles (Distributed Outside Central Corridor) -->
+    <model name="ruin_pillar_1">
       <static>true</static>
-      <pose>0.0 25.0 3.0 0 0 0</pose>
+      <pose>18.0 20.0 2.5 0 0 0.3</pose>
       <link name="link">
-        <collision name="c"><geometry><box><size>50 2 6</size></box></geometry></collision>
+        <collision name="c"><geometry><box><size>3 3 5</size></box></geometry></collision>
         <visual name="v">
-          <geometry><box><size>50 2 6</size></box></geometry>
-          <material><ambient>0.4 0.4 0.45 1</ambient><diffuse>0.5 0.5 0.55 1</diffuse></material>
+          <geometry><box><size>3 3 5</size></box></geometry>
+          <material><ambient>0.45 0.42 0.40 1</ambient><diffuse>0.55 0.50 0.48 1</diffuse></material>
         </visual>
       </link>
     </model>
 
-    <model name="disaster_wall_south">
+    <model name="ruin_pillar_2">
       <static>true</static>
-      <pose>0.0 -25.0 3.0 0 0 0</pose>
+      <pose>-20.0 18.0 2.0 0 0 -0.2</pose>
       <link name="link">
-        <collision name="c"><geometry><box><size>50 2 6</size></box></geometry></collision>
+        <collision name="c"><geometry><box><size>4 3 4</size></box></geometry></collision>
         <visual name="v">
-          <geometry><box><size>50 2 6</size></box></geometry>
-          <material><ambient>0.4 0.4 0.45 1</ambient><diffuse>0.5 0.5 0.55 1</diffuse></material>
+          <geometry><box><size>4 3 4</size></box></geometry>
+          <material><ambient>0.45 0.42 0.40 1</ambient><diffuse>0.55 0.50 0.48 1</diffuse></material>
         </visual>
       </link>
     </model>
 
-    <!-- 🚨 Survivor Heat/Visual Target Actor -->
+    <model name="ruin_pillar_3">
+      <static>true</static>
+      <pose>-18.0 -22.0 3.0 0 0 0.5</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>3.5 3.5 6</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>3.5 3.5 6</size></box></geometry>
+          <material><ambient>0.45 0.42 0.40 1</ambient><diffuse>0.55 0.50 0.48 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="ruin_pillar_4">
+      <static>true</static>
+      <pose>22.0 -18.0 2.5 0 0 -0.4</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>3 4 5</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>3 4 5</size></box></geometry>
+          <material><ambient>0.45 0.42 0.40 1</ambient><diffuse>0.55 0.50 0.48 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 🚨 Survivor Search Target (Central Survivor Pod with Thermal Signature) -->
     <model name="survivor_target_alpha">
       <static>true</static>
-      <pose>12.5 15.0 0.5 0 0 0</pose>
+      <pose>0.0 0.0 0.6 0 0 0</pose>
       <link name="link">
-        <collision name="c"><geometry><cylinder><radius>0.4</radius><length>1.0</length></cylinder></geometry></collision>
-        <visual name="v">
-          <geometry><cylinder><radius>0.4</radius><length>1.0</length></cylinder></geometry>
+        <collision name="c"><geometry><cylinder><radius>0.6</radius><length>1.2</length></cylinder></geometry></collision>
+        <visual name="v_body">
+          <geometry><cylinder><radius>0.6</radius><length>1.2</length></cylinder></geometry>
           <material>
-            <ambient>0.9 0.2 0.1 1</ambient>
-            <diffuse>1.0 0.3 0.1 1</diffuse>
+            <ambient>0.9 0.4 0.1 1</ambient>
+            <diffuse>1.0 0.5 0.1 1</diffuse>
+            <emissive>0.4 0.2 0.0 1</emissive>
+          </material>
+        </visual>
+        <!-- Glowing Beacon Ring on Ground -->
+        <visual name="v_ring">
+          <pose>0 0 -0.55 0 0 0</pose>
+          <geometry><cylinder><radius>1.8</radius><length>0.05</length></cylinder></geometry>
+          <material>
+            <ambient>1.0 0.8 0.0 1</ambient>
+            <diffuse>1.0 0.85 0.1 1</diffuse>
+            <emissive>0.5 0.4 0.0 1</emissive>
           </material>
         </visual>
       </link>
     </model>
 
-    <!-- 🚁 1. UAV Alpha (Lead Drone) -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- 🚁 1. UAV ALPHA (Lead Drone — Neon Cyan & Red Trim)                    -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <model name="uav_alpha">
-      <pose>15.0 0.0 4.0 0 0 0</pose>
+      <pose>12.0 0.0 4.0 0 0 0</pose>
+      <static>false</static>
       <link name="base_link">
+        <gravity>false</gravity>
         <inertial>
           <mass>1.5</mass>
-          <inertia>
-            <ixx>0.03475</ixx><ixy>0</ixy><ixz>0</ixz>
-            <iyy>0.03475</iyy><iyz>0</iyz>
-            <izz>0.0477</izz>
-          </inertia>
+          <inertia><ixx>0.03475</ixx><iyy>0.07000</iyy><izz>0.09770</izz></inertia>
         </inertial>
-        <collision name="c"><geometry><cylinder><radius>0.4</radius><length>0.15</length></cylinder></geometry></collision>
-        <visual name="v">
-          <geometry><cylinder><radius>0.4</radius><length>0.15</length></cylinder></geometry>
-          <material><ambient>0.9 0.1 0.1 1</ambient><diffuse>1.0 0.2 0.2 1</diffuse></material>
+        <collision name="c"><geometry><box><size>0.47 0.47 0.12</size></box></geometry></collision>
+        
+        <!-- Official X3 3D Quadcopter Body Mesh -->
+        <visual name="body">
+          <pose>0 0 0 0 0 0</pose>
+          <geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry>
         </visual>
-        <sensor name="imu_sensor" type="imu">
-          <always_on>1</always_on>
-          <update_rate>200</update_rate>
-          <topic>/uav_alpha/imu</topic>
-          <imu>
-            <angular_velocity>
-              <x><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></x>
-              <y><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></y>
-              <z><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></z>
-            </angular_velocity>
-            <linear_acceleration>
-              <x><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></x>
-              <y><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></y>
-              <z><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></z>
-            </linear_acceleration>
-          </imu>
+        <visual name="prop_fl">
+          <pose>0.20 -0.33 0.035 0 0 0</pose>
+          <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_ccw.dae</uri></mesh></geometry>
+          <material><ambient>0.0 0.9 1.0 1</ambient><diffuse>0.0 0.9 1.0 1</diffuse><emissive>0.0 0.3 0.5 1</emissive></material>
+        </visual>
+        <visual name="prop_rr">
+          <pose>-0.20 0.30 0.035 0 0 0</pose>
+          <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_ccw.dae</uri></mesh></geometry>
+          <material><ambient>1.0 0.2 0.2 1</ambient><diffuse>1.0 0.2 0.2 1</diffuse></material>
+        </visual>
+        <visual name="prop_fr">
+          <pose>0.20 0.33 0.035 0 0 0</pose>
+          <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry>
+          <material><ambient>0.0 0.9 1.0 1</ambient><diffuse>0.0 0.9 1.0 1</diffuse><emissive>0.0 0.3 0.5 1</emissive></material>
+        </visual>
+        <visual name="prop_rl">
+          <pose>-0.20 -0.30 0.035 0 0 0</pose>
+          <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry>
+          <material><ambient>1.0 0.2 0.2 1</ambient><diffuse>1.0 0.2 0.2 1</diffuse></material>
+        </visual>
+
+        <sensor name="imu" type="imu">
+          <always_on>1</always_on><update_rate>200</update_rate><topic>/uav_alpha/imu</topic>
         </sensor>
         <sensor name="camera_rgb" type="camera">
-          <update_rate>30</update_rate>
-          <topic>/uav_alpha/camera/image_raw</topic>
-          <camera>
-            <horizontal_fov>1.5708</horizontal_fov>
-            <image><width>1280</width><height>720</height><format>R8G8B8</format></image>
-            <clip><near>0.1</near><far>100</far></clip>
-          </camera>
+          <update_rate>30</update_rate><topic>/uav_alpha/camera/image_raw</topic>
+          <camera><horizontal_fov>1.5708</horizontal_fov><image><width>640</width><height>480</height><format>R8G8B8</format></image></camera>
         </sensor>
       </link>
       <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>base_link</link_name>
-        <topic>/uav_alpha/gazebo/command/twist</topic>
-        <initial_linear>0 0 0</initial_linear>
-        <initial_angular>0 0 0</initial_angular>
+        <link_name>base_link</link_name><topic>/uav_alpha/gazebo/command/twist</topic>
       </plugin>
-      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
-        <dimensions>3</dimensions>
-      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
     </model>
 
-    <!-- 🚁 2. UAV Beta -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- 🚁 2. UAV BETA (Neon Green & Amber Trim)                               -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <model name="uav_beta">
-      <pose>4.635 14.265 4.0 0 0 0</pose>
+      <pose>3.7 11.4 4.0 0 0 0</pose>
+      <static>false</static>
       <link name="base_link">
-        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><iyy>0.03475</iyy><izz>0.0477</izz></inertia></inertial>
-        <collision name="c"><geometry><cylinder><radius>0.4</radius><length>0.15</length></cylinder></geometry></collision>
-        <visual name="v">
-          <geometry><cylinder><radius>0.4</radius><length>0.15</length></cylinder></geometry>
-          <material><ambient>0.1 0.9 0.1 1</ambient><diffuse>0.2 1.0 0.2 1</diffuse></material>
+        <gravity>false</gravity>
+        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><iyy>0.07000</iyy><izz>0.09770</izz></inertia></inertial>
+        <collision name="c"><geometry><box><size>0.47 0.47 0.12</size></box></geometry></collision>
+        <visual name="body">
+          <pose>0 0 0 0 0 0</pose>
+          <geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry>
         </visual>
-        <sensor name="imu_sensor" type="imu">
-          <always_on>1</always_on>
-          <update_rate>200</update_rate>
-          <topic>/uav_beta/imu</topic>
-          <imu>
-            <angular_velocity>
-              <x><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></x>
-              <y><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></y>
-              <z><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></z>
-            </angular_velocity>
-            <linear_acceleration>
-              <x><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></x>
-              <y><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></y>
-              <z><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></z>
-            </linear_acceleration>
-          </imu>
-        </sensor>
+        <visual name="prop_fl">
+          <pose>0.20 -0.33 0.035 0 0 0</pose>
+          <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_ccw.dae</uri></mesh></geometry>
+          <material><ambient>0.1 1.0 0.3 1</ambient><diffuse>0.1 1.0 0.3 1</diffuse><emissive>0.0 0.4 0.1 1</emissive></material>
+        </visual>
+        <visual name="prop_rr">
+          <pose>-0.20 0.30 0.035 0 0 0</pose>
+          <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_ccw.dae</uri></mesh></geometry>
+          <material><ambient>1.0 0.5 0.0 1</ambient><diffuse>1.0 0.5 0.0 1</diffuse></material>
+        </visual>
+        <visual name="prop_fr">
+          <pose>0.20 0.33 0.035 0 0 0</pose>
+          <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry>
+          <material><ambient>0.1 1.0 0.3 1</ambient><diffuse>0.1 1.0 0.3 1</diffuse><emissive>0.0 0.4 0.1 1</emissive></material>
+        </visual>
+        <visual name="prop_rl">
+          <pose>-0.20 -0.30 0.035 0 0 0</pose>
+          <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry>
+          <material><ambient>1.0 0.5 0.0 1</ambient><diffuse>1.0 0.5 0.0 1</diffuse></material>
+        </visual>
+        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>200</update_rate><topic>/uav_beta/imu</topic></sensor>
       </link>
       <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>base_link</link_name>
-        <topic>/uav_beta/gazebo/command/twist</topic>
-        <initial_linear>0 0 0</initial_linear>
-        <initial_angular>0 0 0</initial_angular>
+        <link_name>base_link</link_name><topic>/uav_beta/gazebo/command/twist</topic>
       </plugin>
       <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
     </model>
 
-    <!-- 🚁 3. UAV Gamma -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- 🚁 3. UAV GAMMA (Neon Blue & Gold Trim)                                -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <model name="uav_gamma">
-      <pose>-12.135 8.816 4.0 0 0 0</pose>
+      <pose>-9.7 7.0 4.0 0 0 0</pose>
+      <static>false</static>
       <link name="base_link">
-        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><iyy>0.03475</iyy><izz>0.0477</izz></inertia></inertial>
-        <collision name="c"><geometry><cylinder><radius>0.4</radius><length>0.15</length></cylinder></geometry></collision>
-        <visual name="v">
-          <geometry><cylinder><radius>0.4</radius><length>0.15</length></cylinder></geometry>
-          <material><ambient>0.1 0.1 0.9 1</ambient><diffuse>0.2 0.2 1.0 1</diffuse></material>
+        <gravity>false</gravity>
+        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><iyy>0.07000</iyy><izz>0.09770</izz></inertia></inertial>
+        <collision name="c"><geometry><box><size>0.47 0.47 0.12</size></box></geometry></collision>
+        <visual name="body">
+          <pose>0 0 0 0 0 0</pose>
+          <geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry>
         </visual>
-        <sensor name="imu_sensor" type="imu">
-          <always_on>1</always_on>
-          <update_rate>200</update_rate>
-          <topic>/uav_gamma/imu</topic>
-          <imu>
-            <angular_velocity>
-              <x><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></x>
-              <y><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></y>
-              <z><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></z>
-            </angular_velocity>
-            <linear_acceleration>
-              <x><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></x>
-              <y><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></y>
-              <z><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></z>
-            </linear_acceleration>
-          </imu>
-        </sensor>
+        <visual name="prop_fl">
+          <pose>0.20 -0.33 0.035 0 0 0</pose>
+          <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_ccw.dae</uri></mesh></geometry>
+          <material><ambient>0.2 0.4 1.0 1</ambient><diffuse>0.2 0.4 1.0 1</diffuse><emissive>0.0 0.1 0.5 1</emissive></material>
+        </visual>
+        <visual name="prop_rr">
+          <pose>-0.20 0.30 0.035 0 0 0</pose>
+          <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_ccw.dae</uri></mesh></geometry>
+          <material><ambient>1.0 0.8 0.0 1</ambient><diffuse>1.0 0.8 0.0 1</diffuse></material>
+        </visual>
+        <visual name="prop_fr">
+          <pose>0.20 0.33 0.035 0 0 0</pose>
+          <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry>
+          <material><ambient>0.2 0.4 1.0 1</ambient><diffuse>0.2 0.4 1.0 1</diffuse><emissive>0.0 0.1 0.5 1</emissive></material>
+        </visual>
+        <visual name="prop_rl">
+          <pose>-0.20 -0.30 0.035 0 0 0</pose>
+          <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry>
+          <material><ambient>1.0 0.8 0.0 1</ambient><diffuse>1.0 0.8 0.0 1</diffuse></material>
+        </visual>
+        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>200</update_rate><topic>/uav_gamma/imu</topic></sensor>
       </link>
       <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>base_link</link_name>
-        <topic>/uav_gamma/gazebo/command/twist</topic>
-        <initial_linear>0 0 0</initial_linear>
-        <initial_angular>0 0 0</initial_angular>
+        <link_name>base_link</link_name><topic>/uav_gamma/gazebo/command/twist</topic>
       </plugin>
       <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
     </model>
 
-    <!-- 🚁 4. UAV Delta -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- 🚁 4. UAV DELTA (Neon Yellow & Magenta Trim)                           -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <model name="uav_delta">
-      <pose>-12.135 -8.816 4.0 0 0 0</pose>
+      <pose>-9.7 -7.0 4.0 0 0 0</pose>
+      <static>false</static>
       <link name="base_link">
-        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><iyy>0.03475</iyy><izz>0.0477</izz></inertia></inertial>
-        <collision name="c"><geometry><cylinder><radius>0.4</radius><length>0.15</length></cylinder></geometry></collision>
-        <visual name="v">
-          <geometry><cylinder><radius>0.4</radius><length>0.15</length></cylinder></geometry>
-          <material><ambient>0.9 0.9 0.1 1</ambient><diffuse>1.0 1.0 0.2 1</diffuse></material>
+        <gravity>false</gravity>
+        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><iyy>0.07000</iyy><izz>0.09770</izz></inertia></inertial>
+        <collision name="c"><geometry><box><size>0.47 0.47 0.12</size></box></geometry></collision>
+        <visual name="body">
+          <pose>0 0 0 0 0 0</pose>
+          <geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry>
         </visual>
-        <sensor name="imu_sensor" type="imu">
-          <always_on>1</always_on>
-          <update_rate>200</update_rate>
-          <topic>/uav_delta/imu</topic>
-          <imu>
-            <angular_velocity>
-              <x><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></x>
-              <y><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></y>
-              <z><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></z>
-            </angular_velocity>
-            <linear_acceleration>
-              <x><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></x>
-              <y><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></y>
-              <z><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></z>
-            </linear_acceleration>
-          </imu>
-        </sensor>
+        <visual name="prop_fl">
+          <pose>0.20 -0.33 0.035 0 0 0</pose>
+          <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_ccw.dae</uri></mesh></geometry>
+          <material><ambient>1.0 0.9 0.0 1</ambient><diffuse>1.0 0.9 0.0 1</diffuse><emissive>0.3 0.3 0.0 1</emissive></material>
+        </visual>
+        <visual name="prop_rr">
+          <pose>-0.20 0.30 0.035 0 0 0</pose>
+          <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_ccw.dae</uri></mesh></geometry>
+          <material><ambient>0.9 0.1 0.9 1</ambient><diffuse>0.9 0.1 0.9 1</diffuse></material>
+        </visual>
+        <visual name="prop_fr">
+          <pose>0.20 0.33 0.035 0 0 0</pose>
+          <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry>
+          <material><ambient>1.0 0.9 0.0 1</ambient><diffuse>1.0 0.9 0.0 1</diffuse><emissive>0.3 0.3 0.0 1</emissive></material>
+        </visual>
+        <visual name="prop_rl">
+          <pose>-0.20 -0.30 0.035 0 0 0</pose>
+          <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry>
+          <material><ambient>0.9 0.1 0.9 1</ambient><diffuse>0.9 0.1 0.9 1</diffuse></material>
+        </visual>
+        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>200</update_rate><topic>/uav_delta/imu</topic></sensor>
       </link>
       <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>base_link</link_name>
-        <topic>/uav_delta/gazebo/command/twist</topic>
-        <initial_linear>0 0 0</initial_linear>
-        <initial_angular>0 0 0</initial_angular>
+        <link_name>base_link</link_name><topic>/uav_delta/gazebo/command/twist</topic>
       </plugin>
       <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
     </model>
 
-    <!-- 🚁 5. UAV Epsilon -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- 🚁 5. UAV EPSILON (Neon Magenta & Cyan Trim)                           -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <model name="uav_epsilon">
-      <pose>4.635 -14.265 4.0 0 0 0</pose>
+      <pose>3.7 -11.4 4.0 0 0 0</pose>
+      <static>false</static>
       <link name="base_link">
-        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><iyy>0.03475</iyy><izz>0.0477</izz></inertia></inertial>
-        <collision name="c"><geometry><cylinder><radius>0.4</radius><length>0.15</length></cylinder></geometry></collision>
-        <visual name="v">
-          <geometry><cylinder><radius>0.4</radius><length>0.15</length></cylinder></geometry>
-          <material><ambient>0.9 0.1 0.9 1</ambient><diffuse>1.0 0.2 1.0 1</diffuse></material>
+        <gravity>false</gravity>
+        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><iyy>0.07000</iyy><izz>0.09770</izz></inertia></inertial>
+        <collision name="c"><geometry><box><size>0.47 0.47 0.12</size></box></geometry></collision>
+        <visual name="body">
+          <pose>0 0 0 0 0 0</pose>
+          <geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry>
         </visual>
-        <sensor name="imu_sensor" type="imu">
-          <always_on>1</always_on>
-          <update_rate>200</update_rate>
-          <topic>/uav_epsilon/imu</topic>
-          <imu>
-            <angular_velocity>
-              <x><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></x>
-              <y><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></y>
-              <z><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></z>
-            </angular_velocity>
-            <linear_acceleration>
-              <x><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></x>
-              <y><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></y>
-              <z><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></z>
-            </linear_acceleration>
-          </imu>
-        </sensor>
+        <visual name="prop_fl">
+          <pose>0.20 -0.33 0.035 0 0 0</pose>
+          <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_ccw.dae</uri></mesh></geometry>
+          <material><ambient>1.0 0.1 0.9 1</ambient><diffuse>1.0 0.1 0.9 1</diffuse><emissive>0.4 0.0 0.4 1</emissive></material>
+        </visual>
+        <visual name="prop_rr">
+          <pose>-0.20 0.30 0.035 0 0 0</pose>
+          <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_ccw.dae</uri></mesh></geometry>
+          <material><ambient>0.0 0.9 1.0 1</ambient><diffuse>0.0 0.9 1.0 1</diffuse></material>
+        </visual>
+        <visual name="prop_fr">
+          <pose>0.20 0.33 0.035 0 0 0</pose>
+          <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry>
+          <material><ambient>1.0 0.1 0.9 1</ambient><diffuse>1.0 0.1 0.9 1</diffuse><emissive>0.4 0.0 0.4 1</emissive></material>
+        </visual>
+        <visual name="prop_rl">
+          <pose>-0.20 -0.30 0.035 0 0 0</pose>
+          <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry>
+          <material><ambient>0.0 0.9 1.0 1</ambient><diffuse>0.0 0.9 1.0 1</diffuse></material>
+        </visual>
+        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>200</update_rate><topic>/uav_epsilon/imu</topic></sensor>
       </link>
       <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>base_link</link_name>
-        <topic>/uav_epsilon/gazebo/command/twist</topic>
-        <initial_linear>0 0 0</initial_linear>
-        <initial_angular>0 0 0</initial_angular>
+        <link_name>base_link</link_name><topic>/uav_epsilon/gazebo/command/twist</topic>
       </plugin>
       <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
     </model>

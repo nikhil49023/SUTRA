@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project SUTRA — Hackathon Mastery & Learning Compendium</title>
+  <!-- Google Fonts: Plus Jakarta Sans, Playfair Display, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,400;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Earthy Color Palette */
+      --bg-canvas: #FAF7F2;
+      --bg-surface: #FFFFFF;
+      --bg-subtle: #F3EFEA;
+      --bg-stone: #EAE3D8;
+      
+      --bg-terracotta-subtle: #FDF3EE;
+      --bg-sage-subtle: #EFF6F0;
+      --bg-ochre-subtle: #FEF8EC;
+      --bg-slate-subtle: #EEF5F8;
+      --bg-clay-subtle: #F7EFE9;
+      
+      --text-primary: #1E1B18;
+      --text-secondary: #423B36;
+      --text-muted: #73695E;
+      --text-faint: #998E82;
+      
+      --border-subtle: #E5DDD0;
+      --border-stone: #D3C7B5;
+      --border-dark: #7D7061;
+      
+      --terracotta: #C85A32;
+      --terracotta-dark: #9C3D1B;
+      --terracotta-border: #E8A88E;
+      
+      --sage: #2D6A4F;
+      --sage-dark: #1E4734;
+      --sage-border: #95D5B2;
+      
+      --ochre: #C47D15;
+      --ochre-dark: #8F590A;
+      --ochre-border: #E9C46A;
+      
+      --slate-teal: #2B5C70;
+      --slate-teal-dark: #1A3945;
+      --slate-teal-border: #8ECAE6;
+      
+      --clay: #A2593E;
+      --espresso: #261D15;
+    }
+
+    @page {
+      size: A4;
+      margin: 9.5mm 11.5mm 9.5mm 11.5mm;
+      @bottom-right {
+        content: "Project SUTRA • Smart Horizon 2026 — Page " counter(page) " of " counter(pages);
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 7.5pt;
+        color: #73695E;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 8.6pt;
+      line-height: 1.44;
+      color: var(--text-primary);
+      background-color: var(--bg-canvas);
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      padding: 0;
+      margin: 0 auto;
+    }
+
+    .page-container {
+      width: 100%;
+      min-height: 100%;
+      box-sizing: border-box;
+      padding-bottom: 4px;
+    }
+
+    .page-break {
+      page-break-before: always;
+      break-before: page;
+    }
+
+    .avoid-break {
+      break-inside: avoid-page;
+      page-break-inside: avoid;
+    }
+
+    /* Typography */
+    h1, h2, h3, h4 {
+      color: var(--espresso);
+      font-family: 'Playfair Display', Georgia, serif;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    h1 {
+      font-size: 17.5pt;
+      line-height: 1.15;
+    }
+
+    h2 {
+      font-size: 11.2pt;
+      line-height: 1.25;
+      margin-top: 4px;
+      margin-bottom: 5px;
+      padding-bottom: 2.5px;
+      border-bottom: 1.5px solid var(--border-stone);
+      break-after: avoid;
+      page-break-after: avoid;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    h3 {
+      font-size: 9.5pt;
+      margin-bottom: 3px;
+      break-after: avoid;
+      page-break-after: avoid;
+    }
+
+    h4 {
+      font-size: 8.2pt;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+    }
+
+    p {
+      margin-bottom: 5px;
+      color: var(--text-secondary);
+      orphans: 3;
+      widows: 3;
+    }
+
+    a {
+      color: var(--slate-teal);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7.6pt;
+      background-color: var(--bg-stone);
+      padding: 1px 4px;
+      border-radius: 3px;
+      color: var(--terracotta-dark);
+    }
+
+    /* Header & Hero */
+    .hero-banner {
+      background: linear-gradient(135deg, #261D15 0%, #382C21 100%);
+      color: #FAF7F2;
+      border-radius: 9px;
+      padding: 14px 17px;
+      margin-bottom: 9px;
+      border: 1px solid var(--border-dark);
+      box-shadow: 0 3px 10px rgba(38, 29, 21, 0.1);
+      break-inside: avoid-page;
+      page-break-inside: avoid;
+    }
+
+    .hero-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(243, 239, 234, 0.18);
+      padding-bottom: 5px;
+      margin-bottom: 7px;
+    }
+
+    .hero-badge-container {
+      display: flex;
+      gap: 6px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 7px;
+      border-radius: 14px;
+      font-size: 6.8pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-terracotta {
+      background-color: var(--bg-terracotta-subtle);
+      color: var(--terracotta-dark);
+      border: 1px solid var(--terracotta-border);
+    }
+
+    .badge-sage {
+      background-color: var(--bg-sage-subtle);
+      color: var(--sage-dark);
+      border: 1px solid var(--sage-border);
+    }
+
+    .badge-ochre {
+      background-color: var(--bg-ochre-subtle);
+      color: var(--ochre-dark);
+      border: 1px solid var(--ochre-border);
+    }
+
+    .badge-slate {
+      background-color: var(--bg-slate-subtle);
+      color: var(--slate-teal-dark);
+      border: 1px solid var(--slate-teal-border);
+    }
+
+    .badge-hero {
+      background-color: rgba(233, 196, 106, 0.2);
+      color: #E9C46A;
+      border: 1px solid #E9C46A;
+    }
+
+    .hero-title {
+      color: #FAF7F2;
+      font-size: 16pt;
+      margin-bottom: 2px;
+    }
+
+    .hero-subtitle {
+      color: #D3C7B5;
+      font-size: 8.6pt;
+      font-weight: 500;
+      margin-bottom: 7px;
+      font-style: italic;
+    }
+
+    .hero-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      background: rgba(0, 0, 0, 0.22);
+      border-radius: 5px;
+      padding: 6px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .hero-meta-item span {
+      display: block;
+      font-size: 6.6pt;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #998E82;
+    }
+
+    .hero-meta-item strong {
+      font-size: 7.6pt;
+      color: #FAF7F2;
+    }
+
+    /* Cards & Containers */
+    .card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin-bottom: 7px;
+      break-inside: avoid-page;
+      page-break-inside: avoid;
+    }
+
+    .card-terracotta {
+      border-left: 3.5px solid var(--terracotta);
+      background-color: #FCFAF8;
+    }
+
+    .card-sage {
+      border-left: 3.5px solid var(--sage);
+      background-color: #F8FAF8;
+    }
+
+    .card-ochre {
+      border-left: 3.5px solid var(--ochre);
+      background-color: #FCFAF5;
+    }
+
+    .card-slate {
+      border-left: 3.5px solid var(--slate-teal);
+      background-color: #F8FAFC;
+    }
+
+    .callout-box {
+      border-radius: 6px;
+      padding: 7px 9px;
+      margin: 6px 0;
+      break-inside: avoid-page;
+      page-break-inside: avoid;
+    }
+
+    .callout-warning {
+      background-color: var(--bg-terracotta-subtle);
+      border: 1px solid var(--terracotta-border);
+      border-left: 4px solid var(--terracotta);
+    }
+
+    .callout-info {
+      background-color: var(--bg-slate-subtle);
+      border: 1px solid var(--slate-teal-border);
+      border-left: 4px solid var(--slate-teal);
+    }
+
+    .callout-success {
+      background-color: var(--bg-sage-subtle);
+      border: 1px solid var(--sage-border);
+      border-left: 4px solid var(--sage);
+    }
+
+    .callout-liberty {
+      background-color: #FBF7F0;
+      border: 1px solid var(--ochre-border);
+      border-left: 4px solid var(--ochre);
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 7.7pt;
+      margin: 3px 0 5px 0;
+      background-color: var(--bg-surface);
+      border-radius: 5px;
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+      break-inside: avoid-page;
+      page-break-inside: avoid;
+    }
+
+    thead th {
+      background-color: var(--bg-stone);
+      color: var(--espresso);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 6.7pt;
+      letter-spacing: 0.05em;
+      padding: 5px 7px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-stone);
+    }
+
+    tbody td {
+      padding: 4px 7px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      vertical-align: middle;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr:nth-child(even) {
+      background-color: #FAF8F5;
+    }
+
+    /* Grid Layouts */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+      margin-bottom: 5px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 5px;
+      margin-bottom: 5px;
+    }
+
+    /* Section Numbers */
+    .section-num {
+      display: inline-block;
+      width: 17px;
+      height: 17px;
+      line-height: 17px;
+      background-color: var(--terracotta);
+      color: #FFFFFF;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 700;
+      font-size: 6.8pt;
+      text-align: center;
+      border-radius: 50%;
+      margin-right: 4px;
+    }
+
+    /* Member Badges & Colors */
+    .member-tag {
+      font-weight: 700;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 6.8pt;
+      display: inline-block;
+    }
+
+    .tag-nikhil { background-color: #E8F0FE; color: #1A56DB; border: 1px solid #B4C6FC; }
+    .tag-vedanth { background-color: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; }
+    .tag-siva { background-color: #E0F2FE; color: #0369A1; border: 1px solid #BAE6FD; }
+    .tag-harika { background-color: #F3E8FF; color: #6B21A8; border: 1px solid #DDD6FE; }
+    .tag-rohith { background-color: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; }
+
+    .link-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      background-color: var(--bg-stone);
+      padding: 1px 4px;
+      border-radius: 6px;
+      font-size: 6.8pt;
+      color: var(--slate-teal);
+      border: 1px solid var(--border-stone);
+      font-weight: 600;
+    }
+
+    .doc-footer {
+      border-top: 1.5px solid var(--border-stone);
+      padding-top: 4px;
+      margin-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 7pt;
+      color: var(--text-muted);
+      break-inside: avoid-page;
+      page-break-inside: avoid;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ================= PAGE 1 ================= -->
+  <div class="page-container">
+    <!-- HERO HEADER -->
+    <div class="hero-banner avoid-break">
+      <div class="hero-top">
+        <div class="hero-badge-container">
+          <span class="badge badge-hero">⚡ Project SUTRA</span>
+          <span class="badge badge-hero">Smart Horizon 2026</span>
+        </div>
+        <span class="badge badge-hero">✨ Flexible Study Blueprint</span>
+      </div>
+      <h1 class="hero-title">Hackathon Mastery & Learning Compendium</h1>
+      <div class="hero-subtitle">Curated Resource Vault, Autonomous Learning Freedom, Jury Defense Strategy, and Subsystem Deliverables</div>
+      
+      <div class="hero-meta-grid">
+        <div class="hero-meta-item">
+          <span>Event</span>
+          <strong>Smart Horizon 48H Hackathon</strong>
+        </div>
+        <div class="hero-meta-item">
+          <span>Grand Finale</span>
+          <strong>Sept 3–5, 2026 @ NHCE BLR</strong>
+        </div>
+        <div class="hero-meta-item">
+          <span>Team Strategy</span>
+          <strong>Full Study Autonomy</strong>
+        </div>
+        <div class="hero-meta-item">
+          <span>Core Directive</span>
+          <strong>Deliverable Mastery & Defense</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIBERTY & OPTIONALITY CALLOUT -->
+    <div class="callout-box callout-liberty avoid-break">
+      <h3 style="color: var(--ochre-dark); font-size: 8.5pt; margin-bottom: 2px;">
+        💡 Autonomous Learning Freedom: Recommended & Normalized Reference Blueprint
+      </h3>
+      <p style="margin: 0; color: var(--text-secondary); font-size: 7.6pt;">
+        <strong>To All Team Members:</strong> All resources, recommended hours, and topic suggestions in this document are <strong>completely optional reference baselines</strong>. As teammates have already been proactively self-learning over time, you are <strong>100% encouraged and empowered to follow your own preferred courses, documentation, or study rhythm</strong>. There is no rigid daily timetable. The only shared mission is satisfying your <strong>subsystem deliverables and conceptual mastery</strong> so that our team can effortlessly explain, code, and defend our architecture live on stage.
+      </p>
+    </div>
+
+    <!-- SECTION 1: THE CRITICAL REALITY & ANTI-PLAGIARISM DIRECTIVE -->
+    <div class="avoid-break">
+      <h2><span class="section-num">1</span> The Hackathon Reality: Why First-Principles Defense is Essential</h2>
+      
+      <div class="callout-box callout-warning">
+        <h3 style="color: var(--terracotta-dark); font-size: 8.2pt; margin-bottom: 2px;">
+          ⚠️ Official Rule Alert: Strict Scrutiny on Copy-Pasted & Black-Box AI Code
+        </h3>
+        <p style="margin: 0; color: var(--terracotta-dark); font-size: 7.5pt;">
+          <strong>Smart Horizon Rules (Sections 5.2, 5.3, 6.1 & 6.2):</strong> All solutions must be developed live during the 48-hour event. <em>"Reuse of previously developed projects, codebases, or prototypes is not allowed... Plagiarism will result in immediate disqualification."</em>
+        </p>
+      </div>
+
+      <div class="card card-terracotta" style="margin-bottom: 6px;">
+        <h3 style="color: var(--espresso); font-size: 8.7pt; margin-bottom: 3px;">🎯 The "Jury Viva" Reality: Defending AI-Assisted Work Confidently</h3>
+        <p style="font-size: 7.7pt; margin-bottom: 4px;">
+          AI assistants are incredible tools during preparation, but <strong>the jury will aggressively interrogate each teammate during live viva evaluations</strong>. Judges will inspect Git commit trails, test line-by-line understanding, and ask team members to adjust parameters or rewrite algorithms live on stage.
+        </p>
+        
+        <div class="grid-3" style="margin-bottom: 0;">
+          <div style="background-color: var(--bg-canvas); padding: 4px 6px; border-radius: 4px; border: 1px solid var(--border-subtle);">
+            <strong style="color: var(--terracotta); font-size: 7pt; display: block; text-transform: uppercase;">1. Line-by-Line Fluency</strong>
+            <span style="font-size: 7pt; color: var(--text-secondary);">Understand every import, ROS2 callback, tensor operation, and packet structure in your module.</span>
+          </div>
+          <div style="background-color: var(--bg-canvas); padding: 4px 6px; border-radius: 4px; border: 1px solid var(--border-subtle);">
+            <strong style="color: var(--ochre); font-size: 7pt; display: block; text-transform: uppercase;">2. Live Code Adaptations</strong>
+            <span style="font-size: 7pt; color: var(--text-secondary);">When a judge asks to modify a timeout, add a geofence, or alter a setpoint rate, execute it live.</span>
+          </div>
+          <div style="background-color: var(--bg-canvas); padding: 4px 6px; border-radius: 4px; border: 1px solid var(--border-subtle);">
+            <strong style="color: var(--sage); font-size: 7pt; display: block; text-transform: uppercase;">3. Empirical Integrity</strong>
+            <span style="font-size: 7pt; color: var(--text-secondary);">Present live captured terminal benchmarks (pytest stdout, Gazebo RTF, topic hz) rather than synthetic mocks.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2: SUTRA 5-SUBSYSTEM OVERVIEW & TEAM ROLES -->
+    <div class="avoid-break">
+      <h2><span class="section-num">2</span> Project SUTRA Architecture & Subsystem Assignments</h2>
+      <p style="font-size: 7.7pt; margin-bottom: 3px;">
+        Project SUTRA (Swarm Unified Tactical Reconnaissance Architecture) coordinates autonomous drone swarms for GPS-denied search and rescue. Each teammate leads one core subsystem:
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Subsystem</th>
+            <th>Lead Member</th>
+            <th>Core Tech Stack</th>
+            <th>Primary Mission Objective</th>
+            <th>Key System Interface</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Subsystem A: GNC & Control</strong></td>
+            <td><span class="member-tag tag-nikhil">Nikhil (Lead)</span></td>
+            <td>PX4 Autopilot, ROS2, ORCA 3D, VIO</td>
+            <td>50Hz trajectory control, GPS-denied avoidance</td>
+            <td><code>/sutra/gnc/{id}/pose_stamped</code></td>
+          </tr>
+          <tr>
+            <td><strong>Subsystem B: Comms & Sim</strong></td>
+            <td><span class="member-tag tag-nikhil">Nikhil (Lead)</span></td>
+            <td>802.11s Mesh, SwarmRAFT, Gazebo Sim 8</td>
+            <td>&lt;100ms consensus failover, digital twin SITL</td>
+            <td><code>/sutra/comms/mesh_heartbeat</code></td>
+          </tr>
+          <tr>
+            <td><strong>Subsystem C: AI Perception</strong></td>
+            <td><span class="member-tag tag-vedanth">Vedanth Sai Ram</span></td>
+            <td>YOLOv8-Nano, TensorRT, PyTorch, WGS84</td>
+            <td>Edge survivor/threat detection & raycasting</td>
+            <td><code>/sutra/perception/targets</code></td>
+          </tr>
+          <tr>
+            <td><strong>Subsystem D: 3D GIS GCS</strong></td>
+            <td><span class="member-tag tag-siva">Siva Kesava</span></td>
+            <td>Flask, WebSockets, Leaflet.js, REST APIs</td>
+            <td>Live tactical telemetry HUD & 1-click RTL</td>
+            <td><code>ws://0.0.0.0:9090</code></td>
+          </tr>
+          <tr>
+            <td><strong>Subsystem E: Verification</strong></td>
+            <td><span class="member-tag tag-harika">Harika</span></td>
+            <td>pytest, CI/CD, DOCS.md, Deck Design</td>
+            <td>G1–G6 verification gates & empirical audit</td>
+            <td><code>pytest sutra_ws/src/*/test/</code></td>
+          </tr>
+          <tr>
+            <td><strong>Subsystem F: Tactical Ops</strong></td>
+            <td><span class="member-tag tag-rohith">Rohith Kumar</span></td>
+            <td>NDMA CONOPS, SOPs, Kedarnath Case Study</td>
+            <td>Disaster scenario profiles & rescue defense</td>
+            <td><code>docs/conops/DOCS.md</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- ================= PAGE 2 ================= -->
+  <div class="page-container">
+    <div class="avoid-break">
+      <h2><span class="section-num">3</span> Curated Domain Resource Vault (Part 1: Core Systems)</h2>
+      <p style="font-size: 7.7pt; margin-bottom: 4px;">
+        <em>Choose resources that match your personal learning style (video walkthroughs, structured courses, or official API documentation).</em>
+      </p>
+
+      <!-- 1. Python Fundamentals -->
+      <div class="card card-ochre">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+          <h3 style="color: var(--espresso); font-size: 9pt;">🐍 1. Python Fundamentals & Core Software Engineering</h3>
+          <span class="badge badge-ochre">Universal Skill</span>
+        </div>
+        <p style="font-size: 7.4pt; margin-bottom: 3px;">Crucial for writing clean ROS2 nodes, test fixtures, Flask routes, and AI inference scripts without syntax friction.</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Resource Name</th>
+              <th>Type / Creator</th>
+              <th>Duration</th>
+              <th>Focus / Strengths</th>
+              <th>Link</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Python Tutorials for Beginners</strong></td>
+              <td>YouTube (Dave Gray)</td>
+              <td>7 hrs (72 vids)</td>
+              <td>Clear, beginner-to-intermediate pacing & practical tasks</td>
+              <td><a href="https://www.youtube.com/playlist?list=PL0Zuz27SZ-6MQri81d012LwP5jvFZ_scc" class="link-pill">Watch Playlist ↗</a></td>
+            </tr>
+            <tr>
+              <td><strong>Python Tutorials 2024</strong></td>
+              <td>YouTube (Indently)</td>
+              <td>12 hrs (72 vids)</td>
+              <td>Modern Python 3.12 features, typing, OOP, and patterns</td>
+              <td><a href="https://www.youtube.com/playlist?list=PL4KX3oEgJcfeKzc-v2nD-KzTSELlNyafC" class="link-pill">Watch Playlist ↗</a></td>
+            </tr>
+            <tr>
+              <td><strong>CS50's Intro to Programming with Python</strong></td>
+              <td>Harvard University (edX)</td>
+              <td>Self-Paced</td>
+              <td>Gold standard university curriculum (functions, OOP, regex)</td>
+              <td><a href="https://cs50.harvard.edu/python/" class="link-pill">Enroll Free ↗</a></td>
+            </tr>
+            <tr>
+              <td><strong>Python for Everybody</strong></td>
+              <td>Univ. of Michigan (Coursera)</td>
+              <td>Self-Paced</td>
+              <td>Data structures, JSON handling, REST API integration</td>
+              <td><a href="https://www.coursera.org/specializations/python" class="link-pill">Enroll Free ↗</a></td>
+            </tr>
+            <tr>
+              <td><strong>Automate the Boring Stuff with Python</strong></td>
+              <td>Al Sweigart (Free Book)</td>
+              <td>Read / Practice</td>
+              <td>Practical scripting, file I/O, parsing, and automation</td>
+              <td><a href="https://automatetheboringstuff.com/" class="link-pill">Read Book ↗</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 2. ROS2 Robotics Middleware -->
+      <div class="card card-slate">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+          <h3 style="color: var(--espresso); font-size: 9pt;">🤖 2. ROS 2 Robotics Middleware (Humble / Jazzy)</h3>
+          <span class="badge badge-slate">Nikhil, Vedanth, Siva</span>
+        </div>
+        <p style="font-size: 7.4pt; margin-bottom: 3px;">The backbone of SUTRA inter-node communication, pub/sub QoS profiles, services, actions, and multicasting.</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Resource Name</th>
+              <th>Type / Creator</th>
+              <th>Duration</th>
+              <th>Focus / Strengths</th>
+              <th>Link</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>ROS 2 for Beginners - 2025</strong></td>
+              <td>YouTube (The Construct)</td>
+              <td>8 hrs (10 vids)</td>
+              <td>Hands-on guide to ROS2 workspaces, nodes, and QoS</td>
+              <td><a href="https://www.youtube.com/playlist?list=PLj8MsNPZPCTAXIVjg_XwoXmIEjFBAn4m_" class="link-pill">Watch Playlist ↗</a></td>
+            </tr>
+            <tr>
+              <td><strong>Learn ROS2 Jazzy Crash Course 2025</strong></td>
+              <td>YouTube (The Construct)</td>
+              <td>4 hrs (1 vid)</td>
+              <td>Fast-paced complete overview of ROS2 concepts and tooling</td>
+              <td><a href="https://www.youtube.com/watch?v=Se5pvRlTX8s" class="link-pill">Watch Video ↗</a></td>
+            </tr>
+            <tr>
+              <td><strong>Official ROS 2 Humble Documentation</strong></td>
+              <td>Open Robotics</td>
+              <td>Docs / Tutorials</td>
+              <td>Definitive reference for custom interfaces, launch files, rclpy</td>
+              <td><a href="https://docs.ros.org/en/humble/" class="link-pill">Read Docs ↗</a></td>
+            </tr>
+            <tr>
+              <td><strong>Robotic Manipulation (MIT 6.800)</strong></td>
+              <td>MIT OpenCourseWare</td>
+              <td>Lecture Series</td>
+              <td>Deep mathematical foundation of spatial transforms & control</td>
+              <td><a href="https://ocw.mit.edu/courses/6-800-robotic-manipulation-fall-2023/" class="link-pill">Explore Course ↗</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 3. Gazebo Simulation & PX4 -->
+      <div class="card card-sage">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+          <h3 style="color: var(--espresso); font-size: 9pt;">🌐 3. Gazebo Sim 8 Digital Twin & PX4 Drone Autopilot</h3>
+          <span class="badge badge-sage">Nikhil (Lead), Vedanth</span>
+        </div>
+        <p style="font-size: 7.4pt; margin-bottom: 3px;">Essential for building disaster digital twins, multi-drone physics simulation, and offboard MAVLink/MAVSDK control.</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Resource Name</th>
+              <th>Type / Creator</th>
+              <th>Duration</th>
+              <th>Focus / Strengths</th>
+              <th>Link</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Gazebo Simulator Tutorials</strong></td>
+              <td>YouTube (Robotogeddon)</td>
+              <td>4 hrs (9 vids)</td>
+              <td>SDF model creation, sensor plugins, world physics configuration</td>
+              <td><a href="https://www.youtube.com/playlist?list=PLNw2RD-1J5YYvFGiMafRD_axHrBUGvuIg" class="link-pill">Watch Playlist ↗</a></td>
+            </tr>
+            <tr>
+              <td><strong>Official Gazebo Sim Tutorials</strong></td>
+              <td>Gazebo Sim (Official)</td>
+              <td>3 hrs (8 vids)</td>
+              <td>Modern Gazebo Garden/Harmonic bridges to ROS 2</td>
+              <td><a href="https://www.youtube.com/playlist?list=PL6FI-gIL5jiEd4Hv-NIAuO2Cbbs27UpAM" class="link-pill">Watch Playlist ↗</a></td>
+            </tr>
+            <tr>
+              <td><strong>PX4 Drone Programming Series</strong></td>
+              <td>YouTube (RIIS LLC)</td>
+              <td>8 hrs (22 vids)</td>
+              <td>MAVLink, offboard position setpoints, SITL setup</td>
+              <td><a href="https://www.youtube.com/playlist?list=PLRjRm87eNjpE" class="link-pill">Watch Playlist ↗</a></td>
+            </tr>
+            <tr>
+              <td><strong>PX4 Autopilot Developer Guide</strong></td>
+              <td>PX4 Community</td>
+              <td>Docs</td>
+              <td>Offboard mode, uORB architecture, ROS 2 micro-XRCE-DDS bridge</td>
+              <td><a href="https://docs.px4.io/main/en/" class="link-pill">Read Docs ↗</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- ================= PAGE 3 ================= -->
+  <div class="page-container">
+    <div class="avoid-break">
+      <h2><span class="section-num">3</span> Curated Domain Resource Vault (Part 2: AI, Web & Elite Courses)</h2>
+
+      <!-- 4. Deep Learning & YOLO -->
+      <div class="card card-terracotta">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+          <h3 style="color: var(--espresso); font-size: 9pt;">👁️ 4. Deep Learning, PyTorch & Edge Object Detection (YOLOv8)</h3>
+          <span class="badge badge-terracotta">Vedanth (Lead), Harika</span>
+        </div>
+        <p style="font-size: 7.4pt; margin-bottom: 3px;">Powers Subsystem C's survivor/threat classification, TensorRT edge inference, and tri-modal fusion.</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Resource Name</th>
+              <th>Type / Creator</th>
+              <th>Duration</th>
+              <th>Focus / Strengths</th>
+              <th>Link</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>YOLOv8 Full Tutorial Series</strong></td>
+              <td>YouTube (Code With Aarohi)</td>
+              <td>4 hrs (15+ vids)</td>
+              <td>Custom dataset training, model export, real-time webcam inference</td>
+              <td><a href="https://www.youtube.com/playlist?list=PLv8Cp2NvcY8ClWpGlPJ9tmBmUhlA94Umy" class="link-pill">Watch Playlist ↗</a></td>
+            </tr>
+            <tr>
+              <td><strong>PyTorch for Beginners (Deep Learning)</strong></td>
+              <td>YouTube Series</td>
+              <td>4 hrs (10 vids)</td>
+              <td>Tensors, autograd, custom neural network modules, DataLoader</td>
+              <td><a href="https://www.youtube.com/playlist?list=PLcQVY5V2UY4KzVIok0mWdp-zigfdOKZI-" class="link-pill">Watch Playlist ↗</a></td>
+            </tr>
+            <tr>
+              <td><strong>Practical Deep Learning for Coders</strong></td>
+              <td>fast.ai (Jeremy Howard)</td>
+              <td>7 Weeks (Free)</td>
+              <td>Top-down intuitive approach to computer vision and embeddings</td>
+              <td><a href="https://course.fast.ai/" class="link-pill">Enroll Free ↗</a></td>
+            </tr>
+            <tr>
+              <td><strong>CS231n: Deep Learning for Computer Vision</strong></td>
+              <td>Stanford University</td>
+              <td>Self-Paced</td>
+              <td>Gold standard vision theory (CNN architectures, attention, detection)</td>
+              <td><a href="https://cs231n.stanford.edu/" class="link-pill">Explore Course ↗</a></td>
+            </tr>
+            <tr>
+              <td><strong>Ultralytics YOLOv8 Documentation</strong></td>
+              <td>Ultralytics Official</td>
+              <td>Docs</td>
+              <td>Direct export commands to TensorRT FP16/INT8 engines</td>
+              <td><a href="https://docs.ultralytics.com/" class="link-pill">Read Docs ↗</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 5. Flask, WebSockets & Leaflet.js -->
+      <div class="card card-slate">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+          <h3 style="color: var(--espresso); font-size: 9pt;">🗺️ 5. Web Frameworks (Flask), WebSockets & Leaflet.js Mapping</h3>
+          <span class="badge badge-slate">Siva (Lead), Nikhil</span>
+        </div>
+        <p style="font-size: 7.4pt; margin-bottom: 3px;">Powers Subsystem D's 3D/2D GIS Ground Control Station (GCS) and low-latency telemetry streaming.</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Resource Name</th>
+              <th>Type / Creator</th>
+              <th>Duration</th>
+              <th>Focus / Strengths</th>
+              <th>Link</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Flask Tutorial Series</strong></td>
+              <td>YouTube (NeuralNine)</td>
+              <td>4 hrs (10 vids)</td>
+              <td>Clean, modern Flask routing, templates, API responses, blueprints</td>
+              <td><a href="https://www.youtube.com/playlist?list=PL7yh-TELLS1EyAye_UMnlsTGKxg8uatkM" class="link-pill">Watch Playlist ↗</a></td>
+            </tr>
+            <tr>
+              <td><strong>Leaflet from Basic to Advance</strong></td>
+              <td>YouTube (GeoDev)</td>
+              <td>8 hrs (29 vids)</td>
+              <td>Custom markers, geoJSON polygons, search corridors, real-time updates</td>
+              <td><a href="https://www.youtube.com/playlist?list=PLyWyQBSWLw1NH1wsA0wkSMTlQ45P0AqCj" class="link-pill">Watch Playlist ↗</a></td>
+            </tr>
+            <tr>
+              <td><strong>Leaflet JS Tutorial 101</strong></td>
+              <td>YouTube (MapTiler)</td>
+              <td>3 hrs (8 vids)</td>
+              <td>Rapid mapping setup, tile providers, custom overlay integration</td>
+              <td><a href="https://www.youtube.com/playlist?list=PLGHe6Moaz52PUNP4DtIshALDogSURIlYB" class="link-pill">Watch Playlist ↗</a></td>
+            </tr>
+            <tr>
+              <td><strong>The Flask Mega-Tutorial</strong></td>
+              <td>Miguel Grinberg</td>
+              <td>Blog / Book</td>
+              <td>The most comprehensive production guide to Flask web apps</td>
+              <td><a href="https://blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-i-hello-world" class="link-pill">Read Tutorial ↗</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 6. Git, Testing, CONOPS & Elite Courses -->
+      <div class="card card-sage">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+          <h3 style="color: var(--espresso); font-size: 9pt;">🌿 6. Git, Pytest Verification, CONOPS & Elite University Vault</h3>
+          <span class="badge badge-sage">Harika, Rohith, All</span>
+        </div>
+        <p style="font-size: 7.4pt; margin-bottom: 3px;">Ensures repository hygiene, empirical test proofs, field rescue CONOPS narratives, and top-tier theory.</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Resource Name</th>
+              <th>Type / Creator</th>
+              <th>Duration</th>
+              <th>Focus / Strengths</th>
+              <th>Link</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Git Mastery: From Beginner to Pro</strong></td>
+              <td>YouTube (DevOps w/ Prashant)</td>
+              <td>4 hrs (12 vids)</td>
+              <td>Feature branching, stash, rebase, merge conflict resolution</td>
+              <td><a href="https://www.youtube.com/playlist?list=PLzpJO-82rjC6HroQhA16mZ2EOR4G9b1vN" class="link-pill">Watch Playlist ↗</a></td>
+            </tr>
+            <tr>
+              <td><strong>pytest Testing Framework Guide</strong></td>
+              <td>Official Docs / RealPython</td>
+              <td>3 hrs</td>
+              <td>Test discovery, fixtures, mocking, execution timing (--durations)</td>
+              <td><a href="https://docs.pytest.org/en/stable/" class="link-pill">Read Docs ↗</a></td>
+            </tr>
+            <tr>
+              <td><strong>Deep Learning (MIT 6.7960)</strong></td>
+              <td>MIT OpenCourseWare</td>
+              <td>Fall 2024</td>
+              <td>Deep neural networks, visual transformers, loss landscapes</td>
+              <td><a href="https://ocw.mit.edu/courses/6-7960-deep-learning-fall-2024/" class="link-pill">Enroll Free ↗</a></td>
+            </tr>
+            <tr>
+              <td><strong>NDMA Disaster Management Guidelines</strong></td>
+              <td>Govt of India (NDMA)</td>
+              <td>Case Studies</td>
+              <td>Kedarnath flood & Wayanad landslide search corridor standard SOPs</td>
+              <td><a href="https://ndma.gov.in/" class="link-pill">NDMA Portal ↗</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- ================= PAGE 4 ================= -->
+  <div class="page-container">
+    <div class="avoid-break">
+      <h2><span class="section-num">4</span> Subsystem Deliverables & Capability Readiness (Per Teammate)</h2>
+      <p style="font-size: 7.7pt; margin-bottom: 5px;">
+        Each teammate is free to structure their own study rhythm. The goal is satisfying these core technical capabilities and deliverables:
+      </p>
+
+      <!-- NIKHIL -->
+      <div class="card card-slate" style="margin-bottom: 6px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+          <div><span class="member-tag tag-nikhil" style="font-size: 7.5pt;">NIKHIL — Tech Architect & Subsystem A+B Lead</span></div>
+          <span style="font-size: 7pt; font-weight: 700; color: var(--slate-teal);">Autonomous Pace</span>
+        </div>
+        <p style="font-size: 7.4pt; margin-bottom: 3px;"><strong>Mission Focus:</strong> ROS2 QoS, ORCA 3D collision avoidance mathematics, PX4 offboard control, and SwarmRAFT consensus.</p>
+        
+        <div class="grid-2" style="margin-bottom: 0;">
+          <div style="background-color: var(--bg-canvas); padding: 4px 6px; border-radius: 4px; border: 1px solid var(--border-subtle);">
+            <strong style="font-size: 7pt; color: var(--espresso); display: block;">Recommended Reference Topics:</strong>
+            <ul style="font-size: 7pt; color: var(--text-secondary); margin-left: 12px; margin-top: 1px;">
+              <li>ROS 2 Humble pub/sub & QoS profiles (The Construct)</li>
+              <li>PX4 MAVLink offboard 50Hz setpoints (RIIS LLC)</li>
+              <li>Gazebo Sim 8 SDF digital twins & sensor plugins</li>
+              <li>ORCA 3D reciprocal velocity obstacle geometry</li>
+            </ul>
+          </div>
+          <div style="background-color: var(--bg-canvas); padding: 4px 6px; border-radius: 4px; border: 1px solid var(--border-subtle);">
+            <strong style="font-size: 7pt; color: var(--espresso); display: block;">Target Subsystem Deliverables:</strong>
+            <ul style="font-size: 7pt; color: var(--text-secondary); margin-left: 12px; margin-top: 1px;">
+              <li>Explain ROS2 node lifecycles & custom messages from first principles</li>
+              <li>Derive 3D ORCA velocity obstacle cones on whiteboard</li>
+              <li>Demonstrate 5-drone Gazebo SITL swarm with &lt;100ms failover</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- VEDANTH -->
+      <div class="card card-terracotta" style="margin-bottom: 6px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+          <div><span class="member-tag tag-vedanth" style="font-size: 7.5pt;">VEDANTH SAI RAM — AI Perception Lead (Subsystem C)</span></div>
+          <span style="font-size: 7pt; font-weight: 700; color: var(--terracotta);">Autonomous Pace</span>
+        </div>
+        <p style="font-size: 7.4pt; margin-bottom: 3px;"><strong>Mission Focus:</strong> PyTorch tensor mechanics, custom YOLOv8 training, TensorRT FP16 serialization, and DEM GPS raycasting.</p>
+        
+        <div class="grid-2" style="margin-bottom: 0;">
+          <div style="background-color: var(--bg-canvas); padding: 4px 6px; border-radius: 4px; border: 1px solid var(--border-subtle);">
+            <strong style="font-size: 7pt; color: var(--espresso); display: block;">Recommended Reference Topics:</strong>
+            <ul style="font-size: 7pt; color: var(--text-secondary); margin-left: 12px; margin-top: 1px;">
+              <li>YOLOv8 custom training & export (Code With Aarohi)</li>
+              <li>PyTorch autograd, DataLoader, and tensor dimensions</li>
+              <li>fast.ai computer vision & attention techniques</li>
+              <li>ROS 2 cv_bridge & image transport streaming</li>
+            </ul>
+          </div>
+          <div style="background-color: var(--bg-canvas); padding: 4px 6px; border-radius: 4px; border: 1px solid var(--border-subtle);">
+            <strong style="font-size: 7pt; color: var(--espresso); display: block;">Target Subsystem Deliverables:</strong>
+            <ul style="font-size: 7pt; color: var(--text-secondary); margin-left: 12px; margin-top: 1px;">
+              <li>Train lightweight survivor/threat detection model</li>
+              <li>Derive camera raycast equation to WGS84 GPS on DEM</li>
+              <li>Achieve TensorRT FP16 edge inference &lt;5ms per frame</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- SIVA -->
+      <div class="card card-slate" style="margin-bottom: 6px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+          <div><span class="member-tag tag-siva" style="font-size: 7.5pt;">SIVA KESAVA — GCS Lead (Subsystem D)</span></div>
+          <span style="font-size: 7pt; font-weight: 700; color: var(--slate-teal);">Autonomous Pace</span>
+        </div>
+        <p style="font-size: 7.4pt; margin-bottom: 3px;"><strong>Mission Focus:</strong> Build a clean, responsive Flask + Leaflet.js Ground Control Station dashboard with WebSocket telemetry.</p>
+        
+        <div class="grid-2" style="margin-bottom: 0;">
+          <div style="background-color: var(--bg-canvas); padding: 4px 6px; border-radius: 4px; border: 1px solid var(--border-subtle);">
+            <strong style="font-size: 7pt; color: var(--espresso); display: block;">Recommended Reference Topics:</strong>
+            <ul style="font-size: 7pt; color: var(--text-secondary); margin-left: 12px; margin-top: 1px;">
+              <li>Flask routing, templates, and REST API blueprints (NeuralNine)</li>
+              <li>Leaflet.js custom markers, geoJSON overlays (GeoDev)</li>
+              <li>Flask-SocketIO real-time swarm telemetry streaming</li>
+              <li>Responsive tactical UI layout & status badge components</li>
+            </ul>
+          </div>
+          <div style="background-color: var(--bg-canvas); padding: 4px 6px; border-radius: 4px; border: 1px solid var(--border-subtle);">
+            <strong style="font-size: 7pt; color: var(--espresso); display: block;">Target Subsystem Deliverables:</strong>
+            <ul style="font-size: 7pt; color: var(--text-secondary); margin-left: 12px; margin-top: 1px;">
+              <li>Build live Flask server rendering active multi-UAV map</li>
+              <li>Stream real-time coordinate packets over WebSockets</li>
+              <li>Implement 1-Click Emergency RTL command & corridor display</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- HARIKA -->
+      <div class="card card-ochre" style="margin-bottom: 6px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+          <div><span class="member-tag tag-harika" style="font-size: 7.5pt;">HARIKA — Docs, Verification & Presentation Lead (Subsystem E)</span></div>
+          <span style="font-size: 7pt; font-weight: 700; color: var(--ochre);">Autonomous Pace</span>
+        </div>
+        <p style="font-size: 7.4pt; margin-bottom: 3px;"><strong>Mission Focus:</strong> Master pytest suites, empirical benchmarking standards (G1–G6), technical DOCS.md syncing, and pitch design.</p>
+        
+        <div class="grid-2" style="margin-bottom: 0;">
+          <div style="background-color: var(--bg-canvas); padding: 4px 6px; border-radius: 4px; border: 1px solid var(--border-subtle);">
+            <strong style="font-size: 7pt; color: var(--espresso); display: block;">Recommended Reference Topics:</strong>
+            <ul style="font-size: 7pt; color: var(--text-secondary); margin-left: 12px; margin-top: 1px;">
+              <li>Python core scripting & test writing (Dave Gray)</li>
+              <li>pytest fixtures, parameterization, and execution timing</li>
+              <li>MIT 6.7960 / Stanford CS231n deep learning theory foundations</li>
+              <li>Git feature branching, PR review, and commit hygiene</li>
+            </ul>
+          </div>
+          <div style="background-color: var(--bg-canvas); padding: 4px 6px; border-radius: 4px; border: 1px solid var(--border-subtle);">
+            <strong style="font-size: 7pt; color: var(--espresso); display: block;">Target Subsystem Deliverables:</strong>
+            <ul style="font-size: 7pt; color: var(--text-secondary); margin-left: 12px; margin-top: 1px;">
+              <li>Write comprehensive pytest unit test suites for SUTRA algorithms</li>
+              <li>Audit all DOCS.md benchmark tables against captured live stdout</li>
+              <li>Design master pitch presentation deck with visual system diagrams</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROHITH -->
+      <div class="card card-sage" style="margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+          <div><span class="member-tag tag-rohith" style="font-size: 7.5pt;">ROHITH KUMAR — Tactical Operations Lead (Subsystem F)</span></div>
+          <span style="font-size: 7pt; font-weight: 700; color: var(--sage);">Autonomous Pace</span>
+        </div>
+        <p style="font-size: 7.4pt; margin-bottom: 3px;"><strong>Mission Focus:</strong> Lead NDMA rescue CONOPS, field deployment SOPs, pre-flight safety checklists, and tactical storytelling.</p>
+        
+        <div class="grid-2" style="margin-bottom: 0;">
+          <div style="background-color: var(--bg-canvas); padding: 4px 6px; border-radius: 4px; border: 1px solid var(--border-subtle);">
+            <strong style="font-size: 7pt; color: var(--espresso); display: block;">Recommended Reference Topics:</strong>
+            <ul style="font-size: 7pt; color: var(--text-secondary); margin-left: 12px; margin-top: 1px;">
+              <li>Disaster case studies (Kedarnath floods & Wayanad landslides)</li>
+              <li>NDMA search and rescue protocols & geofence exclusion zones</li>
+              <li>Markdown authoring for operational SOPs and pre-flight logs</li>
+              <li>Operational narrative building for jury defense & presentation</li>
+            </ul>
+          </div>
+          <div style="background-color: var(--bg-canvas); padding: 4px 6px; border-radius: 4px; border: 1px solid var(--border-subtle);">
+            <strong style="font-size: 7pt; color: var(--espresso); display: block;">Target Subsystem Deliverables:</strong>
+            <ul style="font-size: 7pt; color: var(--text-secondary); margin-left: 12px; margin-top: 1px;">
+              <li>Draft complete NDMA CONOPS for Kedarnath & Wayanad search corridors</li>
+              <li>Create Pre-Flight Safety & Telemetry checklists in Markdown</li>
+              <li>Deliver 3-minute operational rescue mission narrative to the jury</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- ================= PAGE 5 ================= -->
+  <div class="page-container">
+    <div class="avoid-break">
+      <h2><span class="section-num">5</span> End-to-End Swarm Pipeline, Offline Prep & Defense Strategy</h2>
+      
+      <!-- END-TO-END DATA FLOW WALKTHROUGH -->
+      <div class="card card-slate" style="margin-bottom: 6px;">
+        <h3 style="color: var(--espresso); font-size: 8.8pt; margin-bottom: 3px;">🔄 SUTRA End-to-End Search & Rescue Data Pipeline (Must Master for Viva)</h3>
+        <p style="font-size: 7.2pt; margin-bottom: 3px;">Every team member must be able to trace how a survivor sighting propagates across all 5 subsystems live:</p>
+        
+        <div style="background-color: var(--bg-canvas); padding: 5px 8px; border-radius: 4px; border: 1px solid var(--border-subtle); font-size: 7.1pt; line-height: 1.4;">
+          <strong>1. Optical Acquisition:</strong> Onboard FLIR RGB/Thermal camera publishes ROS2 image message ➔<br>
+          <strong>2. Edge AI Detection (Subsystem C):</strong> YOLOv8-Nano TensorRT processes frame (&lt;5ms) ➔ Bounding box extracted ➔<br>
+          <strong>3. Geolocation Raycast (Subsystem C):</strong> Drone attitude quaternion + pinhole camera raycast onto DEM terrain ➔ WGS84 GPS (lat/lon/alt) generated ➔<br>
+          <strong>4. Mesh Broadcast (Subsystem B):</strong> Deep JSCC compressed payload broadcast over 802.11s Wi-Fi mesh to swarm peers ➔<br>
+          <strong>5. Distributed Consensus (Subsystem B):</strong> SwarmRAFT leader logs survivor location into replicated swarm state machine ➔<br>
+          <strong>6. Collision Avoidance & Routing (Subsystem A):</strong> ORCA 3D repels other drones from search circle while assigning rescue loiter waypoint ➔<br>
+          <strong>7. Tactical Display & Action (Subsystem D & F):</strong> Telemetry pushed over WebSocket to GCS HUD ➔ Leaflet map drops pulse marker ➔ NDMA rescue SOP triggered.
+        </div>
+      </div>
+
+      <!-- OFFLINE SURVIVAL & PRE-CACHING CHECKLIST -->
+      <div class="grid-2" style="margin-bottom: 6px;">
+        <div class="card card-slate" style="margin-bottom: 0; padding: 6px 8px;">
+          <h3 style="color: var(--slate-teal-dark); font-size: 8pt; margin-bottom: 2px;">💾 48-Hour Offline Caching Protocol</h3>
+          <ul style="font-size: 7pt; color: var(--text-secondary); margin-left: 12px;">
+            <li>Pre-install full ROS 2 Humble & Gazebo Sim binaries</li>
+            <li>Download PyTorch wheels & TensorRT FP16 models</li>
+            <li>Cache NPM node_modules & Leaflet tile map tiles</li>
+            <li>Keep offline HTML docs (MDN, ROS 2 docs, OpenCV)</li>
+          </ul>
+        </div>
+        <div class="card card-sage" style="margin-bottom: 0; padding: 6px 8px;">
+          <h3 style="color: var(--sage-dark); font-size: 8pt; margin-bottom: 2px;">🏆 Jury Scoring Criteria (Smart Horizon)</h3>
+          <ul style="font-size: 7pt; color: var(--text-secondary); margin-left: 12px;">
+            <li><strong>Innovation & Tech Approach (30%):</strong> Swarm novelty</li>
+            <li><strong>Hardware/SITL Feasibility (25%):</strong> Real physics simulation</li>
+            <li><strong>Swarm Fault Tolerance (20%):</strong> Consensus & ORCA</li>
+            <li><strong>NDMA Social Impact (15%):</strong> Rescue utility</li>
+            <li><strong>Code & Defense Viva (10%):</strong> Line-by-line fluency</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- SECTION 6: MINIMUM VIABLE DEFENSE (MVD) & TOP JURY TRAP QUESTIONS -->
+      <h2><span class="section-num">6</span> Minimum Viable Defense (MVD) — Top 7 Jury Trap Questions</h2>
+      <p style="font-size: 7.5pt; margin-bottom: 3px;">
+        Every teammate must be able to answer these core technical questions from first principles:
+      </p>
+
+      <div class="card card-terracotta" style="margin-bottom: 5px; padding: 6px 8px;">
+        <div style="margin-bottom: 3px;">
+          <strong style="color: var(--terracotta-dark); font-size: 7.5pt;">Q1: "Why use ORCA 3D instead of simple Artificial Potential Fields (APF)?"</strong>
+          <p style="font-size: 7pt; margin: 1px 0 3px 0;">
+            <em>Answer:</em> APF suffers from local minima traps and oscillation. ORCA computes collision-free velocity obstacles geometrically with mathematical reciprocity guarantees, preventing deadlock among 5+ drones.
+          </p>
+        </div>
+
+        <div style="margin-bottom: 3px;">
+          <strong style="color: var(--terracotta-dark); font-size: 7.5pt;">Q2: "What happens when 2 drones lose Wi-Fi mesh connectivity?"</strong>
+          <p style="font-size: 7pt; margin: 1px 0 3px 0;">
+            <em>Answer:</em> SwarmRAFT consensus uses distributed heartbeat timers. Sub-swarms without quorum (N/2 + 1) transition to autonomous localized search and failsafe to last rendezvous waypoints.
+          </p>
+        </div>
+
+        <div style="margin-bottom: 3px;">
+          <strong style="color: var(--terracotta-dark); font-size: 7.5pt;">Q3: "How do you calculate accurate GPS lat/long from a 2D bounding box?"</strong>
+          <p style="font-size: 7pt; margin: 1px 0 3px 0;">
+            <em>Answer:</em> Using pinhole camera inverse projection with drone attitude quaternions (roll/pitch/yaw from VIO) to project an optical ray onto DEM terrain, converting intersection to WGS84 GPS.
+          </p>
+        </div>
+
+        <div style="margin-bottom: 3px;">
+          <strong style="color: var(--terracotta-dark); font-size: 7.5pt;">Q4: "Why use Flask + Leaflet instead of heavy COTS software like QGroundControl?"</strong>
+          <p style="font-size: 7pt; margin: 1px 0 3px 0;">
+            <em>Answer:</em> SUTRA GCS is a custom tactical multi-UAV dashboard providing real-time multi-agent swarm overlays, automated search polygon partitioning, and zero-install browser accessibility for NDMA field teams.
+          </p>
+        </div>
+
+        <div style="margin-bottom: 3px;">
+          <strong style="color: var(--terracotta-dark); font-size: 7.5pt;">Q5: "How do you ensure safety under hardware or communication failure?"</strong>
+          <p style="font-size: 7pt; margin: 1px 0 3px 0;">
+            <em>Answer:</em> Tiered failsafes: Layer 1 is 1-click Emergency RTL over WebSocket; Layer 2 is onboard PX4 geofence/battery auto-land; Layer 3 is NDMA physical exclusion zones.
+          </p>
+        </div>
+
+        <div style="margin-bottom: 3px;">
+          <strong style="color: var(--terracotta-dark); font-size: 7.5pt;">Q6: "How do you prove your system achieves &lt;5ms perception and &lt;100ms failover?"</strong>
+          <p style="font-size: 7pt; margin: 1px 0 3px 0;">
+            <em>Answer:</em> Strict empirical verification suites capturing live <code>pytest --durations</code> stdout, ROS 2 <code>topic hz</code> logs, and TensorRT profiling logs rather than synthetic estimates.
+          </p>
+        </div>
+
+        <div>
+          <strong style="color: var(--terracotta-dark); font-size: 7.5pt;">Q7: "Did you generate all this code with an AI LLM during prep?"</strong>
+          <p style="font-size: 7pt; margin: 1px 0 0 0;">
+            <em>Answer:</em> AI served as an interactive research assistant for documentation review. The architecture, mathematical modeling, test suites, and integration nodes are deeply understood, implemented, and defended from first principles.
+          </p>
+        </div>
+      </div>
+
+      <!-- SECTION 7: GRAND FINALE LOGISTICS & PLEDGE -->
+      <div class="grid-2" style="margin-bottom: 4px;">
+        <div class="card card-slate" style="margin-bottom: 0; padding: 5px 7px;">
+          <h3 style="color: var(--slate-teal-dark); font-size: 7.8pt; margin-bottom: 1px;">📍 Event Logistics (Smart Horizon 2026)</h3>
+          <ul style="font-size: 6.8pt; color: var(--text-secondary); margin-left: 10px;">
+            <li><strong>Venue:</strong> NHCE Bengaluru | Sep 3–5, 2026 (48H Offline)</li>
+            <li><strong>Attendance:</strong> All 5 team members present continuously</li>
+            <li><strong>Hardware:</strong> Laptops, power strips, USB cables, offline caches</li>
+          </ul>
+        </div>
+
+        <div class="card card-sage" style="margin-bottom: 0; padding: 5px 7px;">
+          <h3 style="color: var(--sage-dark); font-size: 7.8pt; margin-bottom: 1px;">📦 Mandatory Submission Deliverables</h3>
+          <ul style="font-size: 6.8pt; color: var(--text-secondary); margin-left: 10px;">
+            <li><strong>1. Source Code:</strong> Clean repo with tools & deps listed</li>
+            <li><strong>2. Docs & Demo:</strong> DOCS.md, test logs, SITL swarm + GCS</li>
+            <li><strong>3. Deck & CONOPS:</strong> Slides, math novelty, rescue plans</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- PLEDGE CARD -->
+      <div class="callout-box callout-success" style="margin-top: 3px; margin-bottom: 3px; padding: 4px 7px;">
+        <strong style="color: var(--sage-dark); font-size: 7.3pt; display: block;">🤝 SUTRA Team Hackathon Commitment</strong>
+        <span style="font-size: 6.8pt; color: var(--sage-dark);">
+          "We commit to mastering our individual subsystems, coding with integrity, and presenting an undeniable, fully original, empirical search-and-rescue swarm system to the Smart Horizon 2026 jury."
+        </span>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="doc-footer">
+      <div><strong>Project SUTRA</strong> — Autonomous Swarm Reconnaissance</div>
+      <div>Smart Horizon 2026 Master Learning Compendium</div>
+      <div>Authored by: Nikhil (Tech Lead) & Team</div>
+    </div>
+  </div>
+
+</body>
+</html>

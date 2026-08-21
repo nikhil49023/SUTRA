@@ -30,6 +30,13 @@ def launch_setup(context, *args, **kwargs):
     resource_paths = f"{sim_dir}:{models_dir}:{worlds_dir}:" + os.environ.get("GZ_SIM_RESOURCE_PATH", "")
     os.environ["GZ_SIM_RESOURCE_PATH"] = resource_paths
     os.environ["IGN_GAZEBO_RESOURCE_PATH"] = resource_paths
+    os.environ["GZ_IP"] = "127.0.0.1"
+    os.environ["GZ_PARTITION"] = "sutra_sim"
+
+    ws_dir = os.path.abspath(os.path.join(sim_dir, "..", ".."))
+    cdds_xml = os.path.join(ws_dir, "cyclonedds.xml")
+    if os.path.exists(cdds_xml):
+        os.environ["CYCLONEDDS_URI"] = f"file://{cdds_xml}"
 
     world_arg = context.perform_substitution(LaunchConfiguration('world'))
     headless_str = context.perform_substitution(LaunchConfiguration('headless'))
@@ -125,7 +132,7 @@ def launch_setup(context, *args, **kwargs):
 
     jscc_node = Node(
         package="sutra_comms",
-        executable="perceptron_jscc",
+        executable="perceptron_jscc.py",
         name="sutra_perceptron_jscc",
         output="screen",
         parameters=[{"use_sim_time": True}],
@@ -142,7 +149,7 @@ def launch_setup(context, *args, **kwargs):
     # ── Subsystem C Node (Perception) ─────────────────────────────────────────
     detector_node = Node(
         package="sutra_perception",
-        executable="detector_node",
+        executable="detector_node.py",
         name="sutra_detector_node",
         output="screen",
         parameters=[{

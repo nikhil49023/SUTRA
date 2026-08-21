@@ -207,20 +207,21 @@ def parse_survivor_gps_event(
     if "lat" in data and "lon" in data:
         lat = float(data["lat"])
         lon = float(data["lon"])
-        alt = float(data.get("alt", 4.0))
+        alt = float(data.get("alt", 0.0))
 
-        # If values are already in local offset meter scale (< 1000m)
+        # Check if coordinates are WGS84 GPS degrees around the georeferenced origin
+        if abs(lat - origin_lat) < 5.0 and abs(lon - origin_lon) < 5.0:
+            earth_radius_m = 6_378_137.0
+            d_lat = math.radians(lat - origin_lat)
+            d_lon = math.radians(lon - origin_lon)
+            y = d_lat * earth_radius_m
+            x = d_lon * (earth_radius_m * math.cos(math.radians(origin_lat)))
+            z = alt - origin_alt
+            return (round(x, 3), round(y, 3), round(z, 3))
+
+        # Fallback for synthetic/local meter scale test payloads
         if abs(lat) < 1000.0 and abs(lon) < 1000.0:
             return (lat, lon, alt)
-
-        # Convert WGS84 GPS to local Cartesian offset (x, y, z)
-        earth_radius_m = 6_378_137.0
-        d_lat = math.radians(lat - origin_lat)
-        d_lon = math.radians(lon - origin_lon)
-        y = d_lat * earth_radius_m
-        x = d_lon * (earth_radius_m * math.cos(math.radians(origin_lat)))
-        z = alt - origin_alt
-        return (round(x, 3), round(y, 3), round(z, 3))
 
     return None
 

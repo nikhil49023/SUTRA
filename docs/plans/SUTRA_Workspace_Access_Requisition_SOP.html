@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TEAM OFFGRID — Software Collaboration Workspace Requisition & Technical SOP</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* -------------------------------------------------------------
+       EARTHY CORPORATE LUXURY COLOR PALETTE
+       ------------------------------------------------------------- */
+    :root {
+      --bg-canvas: #FDFBF7;
+      --bg-card: #FAF6EF;
+      --bg-card-alt: #F4EDE0;
+      --bg-highlight: #EFE6D5;
+      
+      --terracotta: #A84224;
+      --terracotta-dark: #872E15;
+      --terracotta-light: #F9EAE4;
+      --terracotta-border: #E8B4A2;
+      
+      --sienna: #8B5E3C;
+      --ochre: #B87822;
+      --ochre-light: #FBF2E3;
+      --ochre-border: #E8CD9E;
+      
+      --sage: #385E4E;
+      --sage-dark: #244034;
+      --sage-light: #E7EFEA;
+      --sage-border: #A9C9B7;
+      
+      --espresso: #1E1815;
+      --charcoal: #332B25;
+      --muted: #6B5E52;
+      --faint: #9A8D80;
+      
+      --border-warm: #E2D7C7;
+      --border-dark: #C9BBA7;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 10mm 12mm 12mm 12mm;
+    }
+
+    body {
+      background-color: var(--bg-canvas);
+      color: var(--charcoal);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 8.8pt;
+      line-height: 1.5;
+      letter-spacing: -0.01em;
+    }
+
+    .page-break {
+      page-break-before: always;
+      break-before: page;
+    }
+
+    .avoid-break {
+      break-inside: avoid-page;
+      page-break-inside: avoid;
+    }
+
+    h1, h2, h3, h4, .section-header {
+      break-after: avoid;
+      page-break-after: avoid;
+    }
+
+    p, li, td {
+      orphans: 3;
+      widows: 3;
+    }
+
+    .font-cinzel { font-family: 'Cinzel', serif; letter-spacing: 0.04em; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+    /* -------------------------------------------------------------
+       HEADER & REQUISITION BLOCK
+       ------------------------------------------------------------- */
+    .corp-header {
+      border-bottom: 2px solid var(--espresso);
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .corp-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-emblem {
+      width: 46px;
+      height: 46px;
+      background: linear-gradient(135deg, var(--terracotta-dark), var(--terracotta));
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 3px 8px rgba(135, 46, 21, 0.25);
+    }
+
+    .brand-title {
+      font-family: 'Cinzel', serif;
+      font-size: 14.5pt;
+      font-weight: 800;
+      color: var(--espresso);
+      line-height: 1.1;
+      letter-spacing: 0.05em;
+    }
+
+    .brand-tagline {
+      font-size: 7.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--sienna);
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .doc-meta-table {
+      text-align: right;
+      font-size: 7.2pt;
+      color: var(--muted);
+      border-collapse: collapse;
+    }
+
+    .doc-meta-table td { padding: 1px 4px; }
+    .doc-meta-table .meta-label {
+      font-weight: 600;
+      color: var(--espresso);
+      text-transform: uppercase;
+    }
+
+    .badge-requisition {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 3px;
+      font-size: 6.8pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background: var(--terracotta-light);
+      color: var(--terracotta-dark);
+      border: 1px solid var(--terracotta-border);
+    }
+
+    /* Memorandum Box */
+    .memo-banner {
+      background: linear-gradient(135deg, #FAF4EB, #F2E7D5);
+      border: 1px solid var(--border-dark);
+      border-left: 5px solid var(--terracotta);
+      border-radius: 4px;
+      padding: 9px 12px;
+      margin-bottom: 10px;
+    }
+
+    .memo-grid {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      column-gap: 10px;
+      row-gap: 2.5px;
+      font-size: 7.6pt;
+      margin-bottom: 5px;
+    }
+
+    .memo-label {
+      font-weight: 700;
+      color: var(--espresso);
+      text-transform: uppercase;
+      font-family: 'Cinzel', serif;
+      font-size: 7pt;
+    }
+
+    .memo-subject {
+      font-family: 'Cinzel', serif;
+      font-size: 10.2pt;
+      font-weight: 800;
+      color: var(--espresso);
+      line-height: 1.25;
+      margin-top: 3px;
+      border-top: 1px solid var(--border-warm);
+      padding-top: 4px;
+    }
+
+    /* KPI Highlights Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-warm);
+      border-radius: 4px;
+      padding: 7px 9px;
+      position: relative;
+    }
+
+    .kpi-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      border-top-left-radius: 4px;
+      border-top-right-radius: 4px;
+    }
+
+    .kpi-card.kpi-time::before { background: var(--terracotta); }
+    .kpi-card.kpi-scale::before { background: var(--sage); }
+    .kpi-card.kpi-prize::before { background: var(--ochre); }
+    .kpi-card.kpi-event::before { background: var(--sienna); }
+
+    .kpi-label {
+      font-size: 6.6pt;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+
+    .kpi-value {
+      font-family: 'Cinzel', serif;
+      font-size: 11pt;
+      font-weight: 800;
+      color: var(--espresso);
+      line-height: 1.1;
+    }
+
+    .kpi-subtext {
+      font-size: 6.6pt;
+      color: var(--muted);
+      margin-top: 2px;
+      line-height: 1.2;
+    }
+
+    /* Section Headers */
+    .section-title {
+      font-family: 'Cinzel', serif;
+      font-size: 9.5pt;
+      font-weight: 700;
+      color: var(--espresso);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1.5px solid var(--border-dark);
+      padding-bottom: 3px;
+      margin-top: 8px;
+      margin-bottom: 7px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .section-num {
+      background: var(--espresso);
+      color: var(--bg-canvas);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 6.8pt;
+      padding: 1px 5px;
+      border-radius: 2px;
+      font-weight: 700;
+    }
+
+    /* Feature & Architecture Grid */
+    .arch-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .arch-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-warm);
+      border-radius: 4px;
+      padding: 8px 10px;
+    }
+
+    .arch-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+      padding-bottom: 3px;
+      border-bottom: 1px solid var(--border-warm);
+    }
+
+    .arch-header h4 {
+      font-family: 'Cinzel', serif;
+      font-size: 7.6pt;
+      font-weight: 700;
+      color: var(--espresso);
+      text-transform: uppercase;
+    }
+
+    .arch-desc {
+      font-size: 7.2pt;
+      color: var(--charcoal);
+      line-height: 1.35;
+    }
+
+    /* Complications & Necessity Table */
+    .sop-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 7.5pt;
+      margin-bottom: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-warm);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .sop-table th {
+      background: var(--bg-highlight);
+      color: var(--espresso);
+      font-family: 'Cinzel', serif;
+      font-size: 7.2pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      text-align: left;
+      padding: 6px 9px;
+      border-bottom: 1.5px solid var(--border-dark);
+    }
+
+    .sop-table td {
+      padding: 6px 9px;
+      border-bottom: 1px solid var(--border-warm);
+      color: var(--charcoal);
+      vertical-align: top;
+    }
+
+    .sop-table tr:last-child td { border-bottom: none; }
+    .sop-table tr:nth-child(even) td { background: rgba(244, 237, 224, 0.35); }
+
+    .role-tag {
+      display: inline-block;
+      padding: 1px 5px;
+      border-radius: 2px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 6.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .tag-nikhil { background: #FDE8E4; color: #9A2C18; border: 1px solid #EAA396; }
+    .tag-vedanth { background: #E8F0EA; color: #1E4F38; border: 1px solid #B0CEBD; }
+    .tag-siva { background: #EEF3FA; color: #2A4870; border: 1px solid #B2C7E0; }
+    .tag-harika { background: #F6EDE4; color: #73451F; border: 1px solid #D6BBA5; }
+    .tag-rohith { background: #F5EBE6; color: #6E382A; border: 1px solid #D4A99C; }
+
+    /* Timeline 3 Phase Cards */
+    .timeline-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .phase-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-warm);
+      border-radius: 4px;
+      padding: 9px 11px;
+      position: relative;
+    }
+
+    .phase-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 6.6pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--sienna);
+      margin-bottom: 1px;
+    }
+
+    .phase-title {
+      font-family: 'Cinzel', serif;
+      font-size: 8.2pt;
+      font-weight: 700;
+      color: var(--espresso);
+      line-height: 1.2;
+      margin-bottom: 4px;
+      padding-bottom: 3px;
+      border-bottom: 1px solid var(--border-warm);
+    }
+
+    .phase-date {
+      font-size: 6.8pt;
+      color: var(--terracotta);
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    .phase-items {
+      list-style: none;
+      font-size: 7.1pt;
+      color: var(--charcoal);
+    }
+
+    .phase-items li {
+      margin-bottom: 3px;
+      padding-left: 10px;
+      position: relative;
+      line-height: 1.32;
+    }
+
+    .phase-items li::before {
+      content: "▪";
+      position: absolute;
+      left: 0;
+      color: var(--ochre);
+      font-size: 7.5pt;
+    }
+
+    .req-banner-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-warm);
+      border-left: 4px solid var(--terracotta);
+      border-radius: 4px;
+      padding: 12px 16px;
+      margin-top: 10px;
+    }
+
+    .page-footer {
+      border-top: 1px solid var(--border-warm);
+      padding-top: 6px;
+      margin-top: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 6.8pt;
+      color: var(--faint);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="doc-container">
+
+    <!-- =============================================================
+         CORPORATE HEADER & REQUISITION METADATA
+         ============================================================= -->
+    <header class="corp-header avoid-break">
+      <div class="corp-brand">
+        <div class="brand-emblem">
+          <!-- Institutional Shield / Swarm SVG -->
+          <svg width="28" height="28" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <polygon points="24,4 42,14 42,34 24,44 6,34 6,14" stroke="#FAF6EF" stroke-width="2.5" fill="none" opacity="0.6"/>
+            <polygon points="24,11 36,18 36,30 24,37 12,30 12,18" stroke="#FAF6EF" stroke-width="2" fill="rgba(250,246,239,0.15)"/>
+            <circle cx="24" cy="24" r="4" fill="#FAF6EF"/>
+            <line x1="24" y1="4" x2="24" y2="11" stroke="#FAF6EF" stroke-width="2"/>
+            <line x1="42" y1="14" x2="36" y2="18" stroke="#FAF6EF" stroke-width="2"/>
+            <line x1="42" y1="34" x2="36" y2="30" stroke="#FAF6EF" stroke-width="2"/>
+            <line x1="24" y1="44" x2="24" y2="37" stroke="#FAF6EF" stroke-width="2"/>
+            <line x1="6" y1="34" x2="12" y2="30" stroke="#FAF6EF" stroke-width="2"/>
+            <line x1="6" y1="14" x2="12" y2="18" stroke="#FAF6EF" stroke-width="2"/>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title">TEAM OFFGRID</div>
+          <div class="brand-tagline">Project SUTRA • Swarm Unified Tactical Reconnaissance Architecture</div>
+        </div>
+      </div>
+
+      <div>
+        <table class="doc-meta-table">
+          <tr>
+            <td class="meta-label">Requisition ID:</td>
+            <td class="font-mono">OFFGRID-REQ-WS-2026-V3</td>
+          </tr>
+          <tr>
+            <td class="meta-label">Submission Date:</td>
+            <td class="font-mono">21 August 2026</td>
+          </tr>
+          <tr>
+            <td class="meta-label">Status / Priority:</td>
+            <td><span class="badge-requisition">Urgent Requisition</span></td>
+          </tr>
+          <tr>
+            <td class="meta-label">Team Lead:</td>
+            <td>Nikhil (Tech Architect)</td>
+          </tr>
+        </table>
+      </div>
+    </header>
+
+    <!-- =============================================================
+         FORMAL MEMORANDUM BANNER
+         ============================================================= -->
+    <div class="memo-banner avoid-break">
+      <div class="memo-grid">
+        <div class="memo-label">TO:</div>
+        <div>The Head of Department (HOD) & Infrastructure / Lab Administration</div>
+        <div class="memo-label">FROM:</div>
+        <div><strong>Team OFFGRID</strong> (Finalist Team, Smart Horizon 48-Hour International Hackathon 2026)</div>
+        <div class="memo-label">WINDOW:</div>
+        <div><strong>21st August 2026 → 1st September 2026 (11.5 Effective Working Days)</strong></div>
+      </div>
+      <div class="memo-subject">
+        REQUISITION: Dedicated Software Collaboration Workspace for Multi-Subsystem Swarm Architecture Integration
+      </div>
+    </div>
+
+    <!-- =============================================================
+         CRITICAL KPI SNAPSHOT
+         ============================================================= -->
+    <div class="kpi-grid avoid-break">
+      <div class="kpi-card kpi-time">
+        <div class="kpi-label">Remaining Prep Window</div>
+        <div class="kpi-value">11.5 Days</div>
+        <div class="kpi-subtext">Aug 21 PM → Sept 1 (Sept 2 Travel)</div>
+      </div>
+      <div class="kpi-card kpi-scale">
+        <div class="kpi-label">Architecture Scale</div>
+        <div class="kpi-value">6 Subsystems</div>
+        <div class="kpi-subtext">Multi-UAV Autonomous Swarm</div>
+      </div>
+      <div class="kpi-card kpi-prize">
+        <div class="kpi-label">Hackathon Prize Pool</div>
+        <div class="kpi-value">₹23.75 Lakhs</div>
+        <div class="kpi-subtext">Representing Institution Nationally</div>
+      </div>
+      <div class="kpi-card kpi-event">
+        <div class="kpi-label">Grand Finale Event</div>
+        <div class="kpi-value">Sept 3–5</div>
+        <div class="kpi-subtext">NHCE Campus, Bengaluru</div>
+      </div>
+    </div>
+
+    <!-- =============================================================
+         SECTION 1: PROJECT SUTRA CORE ARCHITECTURAL STRENGTHS
+         ============================================================= -->
+    <div class="section-title avoid-break">
+      <span class="section-num">01</span> Project SUTRA: Deep-Tech Architectural Strengths & Scope
+    </div>
+
+    <p style="font-size: 7.6pt; color: var(--charcoal); margin-bottom: 7px;" class="avoid-break">
+      Developed by <strong>Team OFFGRID</strong>, <strong>Project SUTRA</strong> is an enterprise-grade autonomous multi-drone reconnaissance swarm engineered for disaster search and rescue in GPS-denied and communication-degraded environments. The system brings together 6 advanced, deep-tech research pillars:
+    </p>
+
+    <div class="arch-grid avoid-break">
+      <!-- Pillar 1 -->
+      <div class="arch-card">
+        <div class="arch-header">
+          <!-- Navigation Icon SVG -->
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A84224" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+          <h4>Autonomous GNC & ORCA 3D</h4>
+        </div>
+        <div class="arch-desc">
+          PX4 offboard 50Hz trajectory control, Visual-Inertial Odometry (VIO) for GPS-denied localization, and ORCA 3D reciprocal collision avoidance maintaining ≥3.5m clearance.
+        </div>
+      </div>
+
+      <!-- Pillar 2 -->
+      <div class="arch-card">
+        <div class="arch-header">
+          <!-- Mesh Comms Icon SVG -->
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#385E4E" stroke-width="2.5"><path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>
+          <h4>SwarmRAFT & Deep JSCC</h4>
+        </div>
+        <div class="arch-desc">
+          802.11s Wi-Fi mesh routing, SwarmRAFT distributed consensus (&lt;100ms leader failover), and Deep JSCC neural image compression with PSNR ≥38.0 dB under severe RF jamming.
+        </div>
+      </div>
+
+      <!-- Pillar 3 -->
+      <div class="arch-card">
+        <div class="arch-header">
+          <!-- AI Vision Icon SVG -->
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B87822" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/></svg>
+          <h4>Tri-Modal Edge Perception</h4>
+        </div>
+        <div class="arch-desc">
+          YOLOv8-Nano TensorRT inference (&lt;5ms latency), Tri-Modal fusion (Visual, Thermal FLIR, mmWave Radar), and DEM raycast WGS84 target geolocator (&lt;0.4m error).
+        </div>
+      </div>
+    </div>
+
+    <!-- =============================================================
+         SECTION 2: TECHNICAL COMPLICATIONS & THE NEED FOR COLLOCATION
+         ============================================================= -->
+    <div class="section-title avoid-break">
+      <span class="section-num">02</span> Technical Complications & The Critical Need for Collocation
+    </div>
+
+    <p style="font-size: 7.5pt; color: var(--charcoal); margin-bottom: 7px;" class="avoid-break">
+      Integrating a 6-subsystem distributed robotics architecture across separate developer machines involves critical multi-threaded network bottlenecks that cannot be resolved asynchronously over chat:
+    </p>
+
+    <table class="sop-table avoid-break">
+      <thead>
+        <tr>
+          <th style="width: 26%;">Subsystem Coupling</th>
+          <th style="width: 38%;">Underlying Technical Complication</th>
+          <th style="width: 36%;">Why In-Person Collocation is Mandatory</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>GNC ↔ Perception Loop</strong><br><span style="font-size: 6.5pt; color: var(--muted);">(Subsystems A & C)</span></td>
+          <td>High-rate ROS 2 DDS camera feeds and 6-DoF pose transformation matrices must sync at 50Hz for real-time DEM target raycasting.</td>
+          <td>Simultaneous multi-monitor debugging of sensor pipelines and coordinate frame transforms side-by-side.</td>
+        </tr>
+        <tr>
+          <td><strong>Swarm Mesh ↔ WebGPU GCS</strong><br><span style="font-size: 6.5pt; color: var(--muted);">(Subsystems B & D)</span></td>
+          <td>WebSocket telemetry serialization under 5 live UAV streams requires tight synchronization to maintain 60.0 FPS HUD rendering.</td>
+          <td>Instant packet schema calibration and zero-latency WebSocket socket verification between frontend and backend leads.</td>
+        </tr>
+        <tr>
+          <td><strong>11.5-Day Sprint Compression</strong><br><span style="font-size: 6.5pt; color: var(--muted);">(All 6 Subsystems)</span></td>
+          <td>Asynchronous chat delays (2–3 hours per integration roadblock) create fatal schedule drift before the September 2nd travel deadline.</td>
+          <td>Instant 5-minute problem resolution, daily synchronized merge war-rooms, and unified end-to-end verification.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- =============================================================
+         PAGE BREAK FOR ROADMAP, MATRIX & REQUISITION
+         ============================================================= -->
+    <div class="page-break"></div>
+
+    <!-- Page 2 Top Header -->
+    <header class="corp-header avoid-break" style="padding-bottom: 6px; margin-bottom: 12px;">
+      <div class="corp-brand">
+        <div class="brand-title" style="font-size: 11pt;">TEAM OFFGRID — WORKSPACE REQUISITION & SOP</div>
+      </div>
+      <div class="font-mono" style="font-size: 7.2pt; color: var(--muted);">
+        Ref: OFFGRID-REQ-WS-2026-V3 • Page 2 of 2
+      </div>
+    </header>
+
+    <!-- =============================================================
+         SECTION 3: 11.5-DAY SPRINT ACCOUNTABILITY ROADMAP
+         ============================================================= -->
+    <div class="section-title avoid-break">
+      <span class="section-num">03</span> 11.5-Day Sprint Roadmap & Deliverable Commitments
+    </div>
+
+    <div class="timeline-grid avoid-break">
+      <!-- Phase 1 -->
+      <div class="phase-card">
+        <div class="phase-tag">Phase 1 • 4.0 Days</div>
+        <div class="phase-title">Module Hardening</div>
+        <div class="phase-date">Aug 21 PM – Aug 24</div>
+        <ul class="phase-items">
+          <li>Resolve PyTorch / TensorRT runtime import conflicts.</li>
+          <li><strong>Sat, Aug 22</strong>: Attend official NHCE Pre-Event Online Briefing.</li>
+          <li>PX4 50Hz setpoints & SwarmRAFT consensus unit tests.</li>
+          <li>WebGPU 3D GCS frontend WebSocket client initialization.</li>
+        </ul>
+      </div>
+
+      <!-- Phase 2 -->
+      <div class="phase-card">
+        <div class="phase-tag">Phase 2 • 4.0 Days</div>
+        <div class="phase-title">5-UAV SITL Swarm Loop</div>
+        <div class="phase-date">Aug 25 – Aug 28</div>
+        <ul class="phase-items">
+          <li>GNC flight setpoints feed camera frames to Perception node.</li>
+          <li>Perception publishes compressed target alerts over Mesh.</li>
+          <li>GCS displays real-time 3D drone positions & 1-Click RTL.</li>
+          <li>5-Drone Gazebo Sim 8 digital twin run with ORCA 3D avoidance.</li>
+        </ul>
+      </div>
+
+      <!-- Phase 3 -->
+      <div class="phase-card">
+        <div class="phase-tag">Phase 3 • 3.5 Days</div>
+        <div class="phase-title">Gate Audits & Freeze</div>
+        <div class="phase-date">Aug 29 – Sept 1 (18:00)</div>
+        <ul class="phase-items">
+          <li>Live Gate Audits G1–G6 verification against real pytest runs.</li>
+          <li>Update <code>DOCS.md</code> strictly with measured statistics.</li>
+          <li>2x Timed Mock Presentations & Jury Defense Rehearsals.</li>
+          <li><strong>Sept 1, 18:00 IST</strong>: Hard Code Freeze & 3x USB backup drives.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Subsystem Leadership Grid -->
+    <table class="sop-table avoid-break">
+      <thead>
+        <tr>
+          <th style="width: 18%;">Team Member</th>
+          <th style="width: 22%;">Assigned Subsystem</th>
+          <th style="width: 42%;">Specific Software Milestone (by Sept 1 Freeze)</th>
+          <th style="width: 18%;">Test Verification</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Nikhil</strong></td>
+          <td><span class="role-tag tag-nikhil">Subsystems A + B</span><br><span style="font-size: 6.5pt; color: var(--muted);">GNC, Comms & Sim</span></td>
+          <td>PX4 50Hz offboard setpoints, ORCA 3D collision avoidance, SwarmRAFT consensus, Gazebo Sim 8 digital twin.</td>
+          <td><code>pytest sutra_gnc/</code><br><code>pytest sutra_comms/</code></td>
+        </tr>
+        <tr>
+          <td><strong>Vedanth</strong></td>
+          <td><span class="role-tag tag-vedanth">Subsystem C</span><br><span style="font-size: 6.5pt; color: var(--muted);">Edge Perception</span></td>
+          <td>YOLOv8-Nano TensorRT edge detector (&lt;5ms), Tri-Modal fusion, DEM terrain raycast WGS84 target geolocator.</td>
+          <td><code>pytest sutra_perception/</code></td>
+        </tr>
+        <tr>
+          <td><strong>Siva</strong></td>
+          <td><span class="role-tag tag-siva">Subsystem D</span><br><span style="font-size: 6.5pt; color: var(--muted);">3D GIS GCS</span></td>
+          <td>WebGPU 60 FPS HUD, 3D Mapbox satellite drone tracking, WebSocket telemetry listener, Emergency 1-Click RTL.</td>
+          <td><code>npm run build</code><br>(in <code>sutra_gcs/</code>)</td>
+        </tr>
+        <tr>
+          <td><strong>Harika</strong></td>
+          <td><span class="role-tag tag-harika">Subsystem E</span><br><span style="font-size: 6.5pt; color: var(--muted);">Docs & Audits</span></td>
+          <td>Automated test suites, G1–G6 benchmark audit sync in <code>DOCS.md</code>, Master Pitch Deck visual formatting, PDF packages.</td>
+          <td><code>pytest</code> full run & doc audit</td>
+        </tr>
+        <tr>
+          <td><strong>Rohith</strong></td>
+          <td><span class="role-tag tag-rohith">Subsystem F</span><br><span style="font-size: 6.5pt; color: var(--muted);">Tactical Ops</span></td>
+          <td>NDMA search patterns (Kedarnath flood / Wayanad landslide), Pre-flight SOP, operational rescue storytelling narrative.</td>
+          <td>CONOPS audit in <code>docs/conops/</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- =============================================================
+         SECTION 4: WORKSPACE ALLOCATION REQUISITION
+         ============================================================= -->
+    <div class="section-title avoid-break">
+      <span class="section-num">04</span> Workspace Allocation Requisition
+    </div>
+
+    <div class="req-banner-box avoid-break">
+      <p style="font-size: 8pt; color: var(--espresso); line-height: 1.5; font-weight: 500;">
+        As registered finalists of <strong>Team OFFGRID</strong> representing the institution at the <strong>Smart Horizon 48-Hour International Hackathon 2026 Grand Finale</strong>, we formally requisition immediate administrative allocation of a dedicated software collaboration workspace for the duration of <strong>21st August 2026 to 1st September 2026</strong>. This space is required for intensive multi-subsystem swarm integration, real-time ROS 2 simulation verification, and end-to-end mission rehearsal prior to team departure.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <footer class="page-footer avoid-break">
+      <div>REF: OFFGRID-REQ-WS-2026-V3 • SOFTWARE WORKSPACE REQUISITION & SOP</div>
+      <div>Official Requisition by Team OFFGRID • Project SUTRA • Smart Horizon 2026</div>
+    </footer>
+
+  </div>
+
+</body>
+</html>
