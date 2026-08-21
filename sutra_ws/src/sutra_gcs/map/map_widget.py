@@ -1,6 +1,6 @@
 """
 Smart Horizon GCS — Tactical Persistent QPainter Map Widget
-Subsystem: Map Layer
+Subsystem: Map Layer (Phases 2 & 3)
 """
 
 import math
@@ -14,29 +14,34 @@ from PySide6.QtGui import (
     QMouseEvent,
     QPaintEvent,
     QPainter,
-    QPainterPath,
     QPen,
     QPolygonF,
     QWheelEvent,
 )
 from PySide6.QtWidgets import QWidget
 
+from mission.mission_manager import get_mission_manager
+from mission.waypoint import Waypoint
 from services.event_bus import EventBus, EventNames, get_event_bus
 from state.application_state import ApplicationState, StateStore, get_state_store
 from state.fleet_state import DroneState, FleetState
-from state.mission_state import Waypoint
+
 from .map_camera import MapCamera
 from .map_controller import MapController
 from .map_state_adapter import MapStateAdapter
+from .route_renderer import RouteRenderer
+from .waypoint_renderer import WaypointRenderer
 
 
 class MapWidget(QWidget):
     """
     Persistent, high-performance tactical GIS map canvas rendered with QPainter.
-    Maintains persistent camera and multi-agent flight tracking across UI tab transitions.
+    Supports interactive multi-agent tracking, draw-waypoint mode, drag-waypoint manipulation,
+    and automatic route calculation.
     """
 
     drone_selected = Signal(str)
+    waypoint_selected = Signal(str)
     center_changed = Signal(float, float)
 
     def __init__(
@@ -54,19 +59,25 @@ class MapWidget(QWidget):
         self.adapter = MapStateAdapter(self.state_store, self.camera)
         self.controller = MapController(self.camera, self.state_store, self.event_bus)
 
-        # Mouse Interaction State
-        self._dragging = False
+        # Mouse & Mode States
+        self._dragging_camera = False
+        self._dragged_wp_id: Optional[str] = None
         self._last_mouse_pos = QPointF()
-        self._hover_drone_id: Optional[str] = None
+        self.draw_mode = False  # If True, map clicks add new waypoints
 
-        # Enable mouse tracking for interactive hover states
+        # Enable mouse tracking for interactive hover & responsive dragging
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.StrongFocus)
 
         # Repaint timer (60Hz animation loop)
         self.render_timer = QTimer(self)
         self.render_timer.timeout.connect(self._on_render_tick)
-        self.render_timer.start(16)  # ~60 FPS
+        self.render_timer.start(16)
+
+    def set_draw_mode(self, enabled: bool) -> None:
+        """Toggles interactive click-to-add waypoint mode."""
+        self.draw_mode = enabled
+        self.setCursor(Qt.CrossCursor if enabled else Qt.ArrowCursor)
 
     def _on_render_tick(self) -> None:
         # If follow_drone is active, center on selected drone
@@ -94,13 +105,33 @@ class MapWidget(QWidget):
         # 3. Geofence & Danger Zones
         self._draw_geofence_boundary(painter, w, h)
 
-        # 4. Mission Route Lines & Waypoints
-        self._draw_routes_and_waypoints(painter, w, h)
+        # 4. Mission Route Lines (HOME -> WP1 -> WP2 ...)
+        mission_state = self.state_store.get_state().mission_state
+        RouteRenderer.render_route(
+            painter=painter,
+            camera=self.camera,
+            waypoints=mission_state.waypoints,
+            home_lat=mission_state.home_latitude,
+            home_lon=mission_state.home_longitude,
+            active_index=mission_state.active_waypoint_index,
+            width=w,
+            height=h,
+        )
 
-        # 5. Multi-UAV Swarm Fleet
+        # 5. Mission Waypoints Markers
+        WaypointRenderer.render_waypoints(
+            painter=painter,
+            camera=self.camera,
+            waypoints=mission_state.waypoints,
+            selected_wp_id=mission_state.selected_waypoint_id,
+            width=w,
+            height=h,
+        )
+
+        # 6. Multi-UAV Swarm Fleet
         self._draw_drones(painter, w, h)
 
-        # 6. Tactical Overlays (Compass, Scale, Crosshairs)
+        # 7. Tactical Overlays (Compass, Scale, Crosshairs, Draw Mode Banner)
         self._draw_hud_overlays(painter, w, h)
 
     def _draw_grid(self, painter: QPainter, w: int, h: int) -> None:
@@ -121,8 +152,11 @@ class MapWidget(QWidget):
         painter.drawLine(w // 2, h // 2 - 15, w // 2, h // 2 + 15)
 
     def _draw_geofence_boundary(self, painter: QPainter, w: int, h: int) -> None:
-        """Renders the 500m geofence safety boundary circle."""
-        sx, sy = self.camera.geo_to_screen(37.774929, -122.419416, w, h)
+        """Renders the 500m geofence safety boundary circle around home."""
+        mission_state = self.state_store.get_state().mission_state
+        sx, sy = self.camera.geo_to_screen(
+            mission_state.home_latitude, mission_state.home_longitude, w, h
+        )
         scale = 0.03 * (2.0 ** (self.camera.zoom - 10.0))
         radius_px = 500.0 * scale
 
@@ -130,47 +164,11 @@ class MapWidget(QWidget):
         painter.setBrush(QBrush(QColor(239, 68, 68, 12)))
         painter.drawEllipse(QPointF(sx, sy), radius_px, radius_px)
 
-    def _draw_routes_and_waypoints(self, painter: QPainter, w: int, h: int) -> None:
-        """Renders active mission waypoints and flight path polyline."""
-        mission_state = self.state_store.get_state().mission_state
-        wps = mission_state.waypoints or self.controller.waypoints
-
-        if not wps:
-            return
-
-        points = [
-            QPointF(*self.camera.geo_to_screen(wp.latitude, wp.longitude, w, h))
-            for wp in wps
-        ]
-
-        # Draw Route Lines
-        if len(points) > 1:
-            route_pen = QPen(QColor(0, 242, 254, 200), 2, Qt.SolidLine)
-            painter.setPen(route_pen)
-            for i in range(len(points) - 1):
-                painter.drawLine(points[i], points[i + 1])
-
-        # Draw Waypoint Markers
-        font = QFont("monospace", 8, QFont.Bold)
-        painter.setFont(font)
-        for i, (pt, wp) in enumerate(zip(points, wps)):
-            painter.setPen(QPen(QColor(0, 242, 254), 1.5))
-            painter.setBrush(QBrush(QColor(11, 17, 30, 220)))
-            painter.drawEllipse(pt, 9, 9)
-
-            painter.setPen(QPen(QColor(248, 250, 252)))
-            painter.drawText(
-                QRectF(pt.x() - 9, pt.y() - 9, 18, 18),
-                Qt.AlignCenter,
-                str(wp.index),
-            )
-
     def _draw_drones(self, painter: QPainter, w: int, h: int) -> None:
         """Renders all multi-UAV drones from FleetState."""
         fleet_state = self.state_store.get_state().fleet_state
         drones = fleet_state.get_all_drones()
 
-        # If no drones in state yet, render default fleet for tactical demo
         if not drones:
             drones = [
                 DroneState(
@@ -183,30 +181,11 @@ class MapWidget(QWidget):
                     altitude=25.0,
                     battery=94.0,
                 ),
-                DroneState(
-                    drone_id="drone_bravo",
-                    callsign="BRAVO (WING)",
-                    latitude=self.camera.latitude + 0.0003,
-                    longitude=self.camera.longitude + 0.0004,
-                    heading=45.0,
-                    altitude=24.0,
-                    battery=91.0,
-                ),
-                DroneState(
-                    drone_id="drone_charlie",
-                    callsign="CHARLIE (SCOUT)",
-                    latitude=self.camera.latitude - 0.0003,
-                    longitude=self.camera.longitude + 0.0004,
-                    heading=45.0,
-                    altitude=26.0,
-                    battery=88.0,
-                ),
             ]
 
         for drone in drones:
             sx, sy = self.camera.geo_to_screen(drone.latitude, drone.longitude, w, h)
             is_selected = drone.drone_id == self.camera.selected_drone_id
-            is_hover = drone.drone_id == self._hover_drone_id
 
             painter.save()
             painter.translate(sx, sy)
@@ -232,8 +211,6 @@ class MapWidget(QWidget):
                 QPointF(-9, 9),
             ])
             painter.drawPolygon(poly)
-
-            # Restore rotation for text label orientation
             painter.restore()
 
             # Drone Callsign & Battery Tag
@@ -242,19 +219,23 @@ class MapWidget(QWidget):
             tag_text = f"[{drone.callsign.split()[0]}] {int(drone.battery)}%"
             if drone.is_leader:
                 tag_text = f"★ {tag_text}"
-            painter.drawText(
-                QRectF(sx - 50, sy + 14, 100, 16),
-                Qt.AlignCenter,
-                tag_text,
-            )
+            painter.drawText(QRectF(sx - 50, sy + 14, 100, 16), Qt.AlignCenter, tag_text)
 
     def _draw_hud_overlays(self, painter: QPainter, w: int, h: int) -> None:
-        """Draws tactical compass rose, coordinates badge, and zoom level."""
+        """Draws tactical compass rose, coordinates badge, scale bar, and draw mode banner."""
         # Top-Left Coordinates & Camera Readout
         painter.setFont(QFont("monospace", 8))
         painter.setPen(QPen(QColor(0, 242, 254)))
         info_str = f"LAT: {self.camera.latitude:.6f}° | LON: {self.camera.longitude:.6f}° | ZOOM: {self.camera.zoom:.1f}"
         painter.drawText(12, 20, info_str)
+
+        # Draw Waypoint Mode Banner
+        if self.draw_mode:
+            painter.setFont(QFont("monospace", 9, QFont.Bold))
+            painter.setPen(QPen(QColor(0, 242, 254)))
+            painter.setBrush(QBrush(QColor(0, 242, 254, 30)))
+            painter.drawRect(QRectF(12, 30, 220, 24))
+            painter.drawText(QRectF(12, 30, 220, 24), Qt.AlignCenter, "✏️ DRAW WAYPOINT MODE (CLICK MAP)")
 
         # Scale Bar
         painter.setPen(QPen(QColor(148, 163, 184), 1.5))
@@ -272,34 +253,87 @@ class MapWidget(QWidget):
         painter.drawLine(cx, cy, cx, cy - 12)
         painter.drawText(QRectF(cx - 6, cy - 26, 12, 12), Qt.AlignCenter, "N")
 
+    def fit_route(self) -> None:
+        """Calculates bounding box of mission waypoints and centers/zooms camera."""
+        mission_state = self.state_store.get_state().mission_state
+        pts = [(mission_state.home_latitude, mission_state.home_longitude)]
+        for wp in mission_state.waypoints:
+            pts.append((wp.latitude, wp.longitude))
+
+        if not pts:
+            return
+
+        lats = [p[0] for p in pts]
+        lons = [p[1] for p in pts]
+
+        center_lat = (max(lats) + min(lats)) / 2.0
+        center_lon = (max(lons) + min(lons)) / 2.0
+
+        self.controller.set_center(center_lat, center_lon)
+        self.controller.set_zoom(16.0)
+
     # ── Mouse & Touch Event Handlers ─────────────────────────────────────────
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.LeftButton:
-            self._dragging = True
-            self._last_mouse_pos = event.position()
-
-            # Check drone click selection
+            pos = event.position()
+            self._last_mouse_pos = pos
             w, h = self.width(), self.height()
+
+            # 1. Check if clicking on an existing Waypoint (to select / start drag)
+            mission_mgr = get_mission_manager()
+            clicked_wp_id = None
+            for wp in mission_mgr.get_waypoints():
+                sx, sy = self.camera.geo_to_screen(wp.latitude, wp.longitude, w, h)
+                if math.hypot(pos.x() - sx, pos.y() - sy) <= 15.0:
+                    clicked_wp_id = wp.id
+                    break
+
+            if clicked_wp_id:
+                self._dragged_wp_id = clicked_wp_id
+                mission_mgr.select_waypoint(clicked_wp_id)
+                self.waypoint_selected.emit(clicked_wp_id)
+                return
+
+            # 2. Check if Draw Mode is active -> Add Waypoint at click location
+            if self.draw_mode:
+                click_lat, click_lon = self.camera.screen_to_geo(pos.x(), pos.y(), w, h)
+                wp = mission_mgr.add_waypoint(click_lat, click_lon)
+                self.waypoint_selected.emit(wp.id)
+                return
+
+            # 3. Check if clicking on a Drone
             fleet = self.state_store.get_state().fleet_state
             clicked_drone = None
-
             for drone in fleet.get_all_drones():
                 sx, sy = self.camera.geo_to_screen(drone.latitude, drone.longitude, w, h)
-                dist = math.hypot(event.position().x() - sx, event.position().y() - sy)
-                if dist <= 20:
+                if math.hypot(pos.x() - sx, pos.y() - sy) <= 20.0:
                     clicked_drone = drone.drone_id
                     break
 
             if clicked_drone:
                 self.controller.select_drone(clicked_drone)
                 self.drone_selected.emit(clicked_drone)
+                return
+
+            # 4. Otherwise, start panning map camera
+            self._dragging_camera = True
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        if self._dragging:
-            delta = event.position() - self._last_mouse_pos
-            self._last_mouse_pos = event.position()
+        pos = event.position()
+        w, h = self.width(), self.height()
 
-            # Pan map camera
+        # Handle Waypoint Dragging
+        if self._dragged_wp_id:
+            new_lat, new_lon = self.camera.screen_to_geo(pos.x(), pos.y(), w, h)
+            mission_mgr = get_mission_manager()
+            mission_mgr.move_waypoint(self._dragged_wp_id, new_lat, new_lon)
+            return
+
+        # Handle Map Panning
+        if self._dragging_camera:
+            delta = pos - self._last_mouse_pos
+            self._last_mouse_pos = pos
+
             scale = 0.03 * (2.0 ** (self.camera.zoom - 10.0))
             if scale == 0:
                 scale = 1.0
@@ -319,12 +353,12 @@ class MapWidget(QWidget):
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.LeftButton:
-            self._dragging = False
+            self._dragging_camera = False
+            self._dragged_wp_id = None
 
     def wheelEvent(self, event: QWheelEvent) -> None:
         """Zoom in and out via mouse wheel."""
         delta = event.angleDelta().y()
         zoom_step = 0.25 if delta > 0 else -0.25
         self.controller.set_zoom(self.camera.zoom + zoom_step)
-        self.adapter.sync_to_state()
         event.accept()

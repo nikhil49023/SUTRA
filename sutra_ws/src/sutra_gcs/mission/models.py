@@ -1,46 +1,49 @@
 """
-SUTRA GCS — Mission & Waypoint Data Models
+Smart Horizon GCS — Mission Aggregate Model & Status Enum
+Subsystem: Mission Engine (Phase 3)
 """
 
+import time
+import uuid
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional
 from enum import Enum
+from typing import List, Optional
+
+from .waypoint import Waypoint, WaypointCommand
 
 
-class MissionAction(str, Enum):
-    WAYPOINT = "WAYPOINT"
-    TAKEOFF = "TAKEOFF"
-    LOITER = "LOITER"
-    LAND = "LAND"
-    RTL = "RTL"
-    SURVEY_GRID = "SURVEY_GRID"
+class MissionStatus(str, Enum):
+    """
+    Planning status of the mission flight plan.
+    """
+
+    EMPTY = "EMPTY"
+    PLANNING = "PLANNING"
+    VALIDATING = "VALIDATING"
+    READY = "READY"
+    INVALID = "INVALID"
 
 
-@dataclass
-class Waypoint:
-    index: int
-    lat: float
-    lon: float
-    alt_agl: float = 20.0
-    speed_mps: float = 5.0
-    action: MissionAction = MissionAction.WAYPOINT
-    hold_time_sec: float = 0.0
+@dataclass(frozen=True)
+class Mission:
+    """
+    Strongly typed immutable mission domain object.
+    """
 
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "index": self.index,
-            "lat": self.lat,
-            "lon": self.lon,
-            "alt": self.alt_agl,
-            "speed": self.speed_mps,
-            "action": self.action.value,
-            "hold_time": self.hold_time_sec
-        }
-
-
-@dataclass
-class MissionPlan:
-    id: str = "mission_01"
-    name: str = "Tactical SAR Route"
+    mission_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    name: str = "Tactical Search Grid"
+    description: str = "Autonomous UAV Search and Reconnaissance Corridor"
     waypoints: List[Waypoint] = field(default_factory=list)
-    auto_start: bool = True
+    home_latitude: float = 37.774929
+    home_longitude: float = -122.419416
+    default_altitude: float = 25.0
+    default_speed: float = 5.0
+    created_at: float = field(default_factory=time.time)
+    updated_at: float = field(default_factory=time.time)
+    active_waypoint: int = 1
+    status: MissionStatus = MissionStatus.EMPTY
+    selected_waypoint_id: Optional[str] = None
+
+
+# Backward compatibility alias
+MissionAction = WaypointCommand

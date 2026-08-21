@@ -63,16 +63,16 @@ class DashboardView(QWidget):
         main_layout.addLayout(cards_layout)
 
         # 2. Central Map Area (Embeds the persistent map)
-        map_frame = QFrame()
-        map_frame.setObjectName("panel")
-        map_frame.setStyleSheet(
+        self.map_frame = QFrame()
+        self.map_frame.setObjectName("panel")
+        self.map_frame.setStyleSheet(
             "QFrame#panel { background-color: #050811; border: 1px solid #1e293b; border-radius: 4px; }"
         )
-        map_layout = QVBoxLayout(map_frame)
-        map_layout.setContentsMargins(0, 0, 0, 0)
-        map_layout.addWidget(self.map_widget)
+        self.map_layout = QVBoxLayout(self.map_frame)
+        self.map_layout.setContentsMargins(0, 0, 0, 0)
+        self.map_layout.addWidget(self.map_widget)
 
-        main_layout.addWidget(map_frame, stretch=1)
+        main_layout.addWidget(self.map_frame, stretch=1)
 
         # Subscribe to State Store
         self._unsub_state = self.state_store.subscribe(self._on_state_updated)

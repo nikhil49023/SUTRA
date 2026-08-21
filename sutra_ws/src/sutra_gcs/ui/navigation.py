@@ -41,8 +41,9 @@ class NavigationController:
         self.stack.addWidget(self.dashboard_view)
         self.views["dashboard"] = self.dashboard_view
 
-        # 2. Mission Planning View
-        self.mission_view = self._create_placeholder_view("MISSION PLANNING & CORRIDOR WAYPOINTS")
+        # 2. Mission Planning View (Shares the persistent map)
+        from .mission import MissionPanel
+        self.mission_view = MissionPanel(self.map_widget, self.state_store)
         self.stack.addWidget(self.mission_view)
         self.views["mission"] = self.mission_view
 
@@ -100,8 +101,15 @@ class NavigationController:
         return container
 
     def switch_view(self, view_key: str) -> bool:
-        """Switches the active stack widget to the designated module."""
+        """Switches the active stack widget to the designated module, reparenting the persistent map if necessary."""
         if view_key in self.views:
+            if view_key == "dashboard":
+                if hasattr(self.dashboard_view, "map_layout"):
+                    self.dashboard_view.map_layout.addWidget(self.map_widget)
+            elif view_key == "mission":
+                if hasattr(self.mission_view, "map_container_layout"):
+                    self.mission_view.map_container_layout.addWidget(self.map_widget)
+
             self.stack.setCurrentWidget(self.views[view_key])
             return True
         return False

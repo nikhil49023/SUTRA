@@ -54,6 +54,9 @@ class MissionState:
     mission_name: str = "Default Mission"
     state: MissionStateEnum = MissionStateEnum.IDLE
     waypoints: List[Waypoint] = field(default_factory=list)
+    home_latitude: float = 37.774929
+    home_longitude: float = -122.419416
+    selected_waypoint_id: Optional[str] = None
     active_waypoint_index: int = 0
     mission_progress: float = 0.0
     distance_remaining: float = 0.0

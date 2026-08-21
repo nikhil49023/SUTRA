@@ -110,10 +110,32 @@ class RightInspector(QFrame):
 
     def _on_state_updated(self, state: ApplicationState) -> None:
         selected_drone_id = state.map_state.selected_drone_id
+        selected_wp_id = state.mission_state.selected_waypoint_id
         fleet = state.fleet_state
 
+        if selected_wp_id:
+            # 1. WAYPOINT SELECTED CONTEXT
+            wp = None
+            for w in state.mission_state.waypoints:
+                if w.id == selected_wp_id:
+                    wp = w
+                    break
+            if wp:
+                self.header_title.setText(f"INSPECTOR: WP{wp.index:02d} [{wp.command.value}]")
+                self.telem_card.update_telemetry(
+                    alt_agl=wp.altitude,
+                    speed=wp.speed,
+                    climb=0.0,
+                    heading=wp.heading,
+                    battery=100.0,
+                    pitch=0.0,
+                    roll=0.0,
+                )
+                self._render_waypoint_attributes(wp, state.mission_state)
+                return
+
         if selected_drone_id and fleet.get_drone(selected_drone_id):
-            # 1. DRONE SELECTED CONTEXT
+            # 2. DRONE SELECTED CONTEXT
             drone = fleet.get_drone(selected_drone_id)
             self.header_title.setText(f"INSPECTOR: {drone.callsign.upper()}")
 
@@ -128,7 +150,7 @@ class RightInspector(QFrame):
             )
             self._render_drone_attributes(drone)
         else:
-            # 2. SYSTEM OVERVIEW CONTEXT
+            # 3. SYSTEM OVERVIEW CONTEXT
             self.header_title.setText("INSPECTOR: SWARM OVERVIEW")
             telem = state.telemetry_state
             self.telem_card.update_telemetry(
@@ -141,6 +163,49 @@ class RightInspector(QFrame):
                 roll=telem.roll,
             )
             self._render_system_attributes(state)
+
+    def _render_waypoint_attributes(self, wp, mission_state) -> None:
+        from mission.route_calculator import RouteCalculator
+        self._clear_attributes()
+
+        wps = mission_state.waypoints
+        idx = wp.index - 1
+
+        prev_dist = 0.0
+        if idx == 0:
+            prev_dist = RouteCalculator.calculate_distance(
+                mission_state.home_latitude, mission_state.home_longitude, wp.latitude, wp.longitude
+            )
+        elif idx > 0:
+            prev_dist = RouteCalculator.calculate_distance(
+                wps[idx - 1].latitude, wps[idx - 1].longitude, wp.latitude, wp.longitude
+            )
+
+        next_dist = 0.0
+        if idx < len(wps) - 1:
+            next_dist = RouteCalculator.calculate_distance(
+                wp.latitude, wp.longitude, wps[idx + 1].latitude, wps[idx + 1].longitude
+            )
+
+        attrs = [
+            ("WP ID", f"WP{wp.index:02d}"),
+            ("COMMAND", wp.command.value),
+            ("COORDINATES", f"{wp.latitude:.6f}, {wp.longitude:.6f}"),
+            ("ALTITUDE", f"{wp.altitude:.1f} m AGL"),
+            ("SPEED", f"{wp.speed:.1f} m/s"),
+            ("HEADING", f"{wp.heading:.0f}°"),
+            ("HOLD TIME", f"{wp.hold_time:.1f} s"),
+            ("ACCEPT RADIUS", f"{wp.acceptance_radius:.1f} m"),
+            ("DIST FROM PREV", f"{prev_dist:.1f} m"),
+            ("DIST TO NEXT", f"{next_dist:.1f} m"),
+        ]
+        for r, (k, v) in enumerate(attrs):
+            k_lbl = QLabel(k)
+            k_lbl.setStyleSheet("color: #64748b; font-size: 8px; font-weight: bold;")
+            v_lbl = QLabel(str(v))
+            v_lbl.setStyleSheet("color: #f8fafc; font-size: 10px; font-weight: bold;")
+            self.attr_layout.addWidget(k_lbl, r, 0)
+            self.attr_layout.addWidget(v_lbl, r, 1)
 
     def _render_drone_attributes(self, drone: DroneState) -> None:
         self._clear_attributes()
