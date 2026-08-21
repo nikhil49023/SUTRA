@@ -1,31 +1,65 @@
 """
-SUTRA GCS — Mission State Store
+Smart Horizon GCS — Mission State & Lifecycle Model
+Subsystem: State Management
 """
 
-from typing import List, Dict, Any, Optional
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import List, Optional
 
 
+class MissionStateEnum(str, Enum):
+    """
+    Standard lifecycle states for autonomous mission execution.
+    """
+
+    IDLE = "IDLE"
+    PLANNING = "PLANNING"
+    VALIDATING = "VALIDATING"
+    READY = "READY"
+    UPLOADING = "UPLOADING"
+    ARMING = "ARMING"
+    TAKEOFF = "TAKEOFF"
+    MISSION = "MISSION"
+    HOLD = "HOLD"
+    RTL = "RTL"
+    LANDING = "LANDING"
+    COMPLETE = "COMPLETE"
+    ABORTED = "ABORTED"
+    EMERGENCY = "EMERGENCY"
+
+
+@dataclass(frozen=True)
+class Waypoint:
+    """
+    3D Spatial waypoint setpoint.
+    """
+
+    index: int
+    latitude: float
+    longitude: float
+    altitude_agl: float = 20.0
+    speed_mps: float = 5.0
+    hold_time_sec: float = 0.0
+    action: str = "WAYPOINT"
+
+
+@dataclass(frozen=True)
 class MissionState:
-    """Tracks currently loaded mission, active waypoint index, and progress."""
+    """
+    Type-safe immutable representation of current mission configuration and flight progress.
+    """
 
-    def __init__(self):
-        self.active_waypoints: List[Dict[str, Any]] = []
-        self.current_wp_index: int = 0
-        self.is_running: bool = False
-        self.progress_pct: float = 0.0
-        self.total_distance_m: float = 0.0
-        self.estimated_flight_time_sec: float = 0.0
-
-    def set_waypoints(self, wps: List[Dict[str, Any]]) -> None:
-        self.active_waypoints = wps
-        self.current_wp_index = 0
-        self.progress_pct = 0.0
-
-    def clear(self) -> None:
-        self.active_waypoints = []
-        self.current_wp_index = 0
-        self.is_running = False
-        self.progress_pct = 0.0
-
-
-mission_state = MissionState()
+    mission_id: str = ""
+    mission_name: str = "Default Mission"
+    state: MissionStateEnum = MissionStateEnum.IDLE
+    waypoints: List[Waypoint] = field(default_factory=list)
+    active_waypoint_index: int = 0
+    mission_progress: float = 0.0
+    distance_remaining: float = 0.0
+    estimated_time_remaining: float = 0.0
+    estimated_battery_required: float = 0.0
+    risk_level: str = "LOW"
+    validation_status: str = "UNVALIDATED"
+    mission_started_at: Optional[float] = None
+    mission_completed_at: Optional[float] = None

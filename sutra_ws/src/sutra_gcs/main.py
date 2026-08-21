@@ -1,168 +1,193 @@
 """
-SUTRA GCS — Master Entry Point
-Swarm Unified Tactical Reconnaissance Architecture — Ground Control Station
+Smart Horizon GCS — Main Application Entry Point & Lifecycle Coordinator
+Phase 1: Foundation, Centralized State Management & Event Bus
 """
 
-import sys
+import logging
 import os
-import time
-import json
-import threading
-from typing import Generator
-from flask import Flask, Response, jsonify, request, render_template, send_from_directory
-from flask_cors import CORS
+import sys
+from typing import Optional
 
-# Add root package to sys.path
-pkg_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.dirname(pkg_dir))
-sys.path.insert(0, pkg_dir)
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtWidgets import (
+    QApplication,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
-from config.settings import settings
-from services.event_bus import event_bus
-from services.logging_service import logger_service
-from services.persistence import persistence
-from state.application_state import app_state
-from state.fleet_state import fleet_state
-from fleet.fleet_manager import fleet_manager
-from fleet.formation_engine import formation_engine
-from geofence.service import geofence_service
-from geofence.validator import geofence_validator
-from mission.validator import mission_validator
-from mission.planner import mission_planner
-from gis.elevation import elevation_profiler
-from gis.line_of_sight import los_analyzer
-from gis.rf_analysis import rf_analyzer
-from gis.weather import weather_engine
-from ai.threat_detection import threat_detector
-from ai.mission_advisor import mission_advisor
-from communication.mavlink_encoder import mavlink_encoder
-from communication.mavlink_parser import mavlink_parser
-
-# Local Flask web templates & static assets
-template_dir = os.path.join(pkg_dir, "templates")
-static_dir = os.path.join(pkg_dir, "static")
-
-app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
-CORS(app)
+from config.settings import Settings, get_settings
+from services.event_bus import Event, EventBus, EventNames, get_event_bus
+from services.logging_service import get_logger, setup_logging
+from state.application_state import (
+    ApplicationState,
+    StateStore,
+    get_state_store,
+)
 
 
-@app.route("/")
-def index():
-    return render_template("index.html")
+class GCSMainWindow(QMainWindow):
+    """
+    Minimal Phase 1 verification window proving that the PySide6 UI loop,
+    centralized reactive state store, and event bus operate with thread-safe data flow.
+    """
+
+    def __init__(self, state_store: StateStore, event_bus: EventBus, settings: Settings) -> None:
+        super().__init__()
+        self.state_store = state_store
+        self.event_bus = event_bus
+        self.settings = settings
+        self.logger = get_logger("main_window")
+
+        self.setWindowTitle(f"{settings.APP_NAME} — v{settings.APP_VERSION} [Phase 1 Foundation]")
+        self.resize(750, 480)
+
+        # Central Widget & Layout
+        central_widget = QWidget(self)
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(12)
+
+        # Header Title
+        title_label = QLabel(f"🚁 {settings.APP_NAME.upper()}")
+        title_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #00f2fe;")
+        main_layout.addWidget(title_label)
+
+        sub_label = QLabel(
+            "Phase 1 Verification: Centralized Reactive State Store & Production Event Bus"
+        )
+        sub_label.setStyleSheet("font-size: 12px; color: #94a3b8;")
+        main_layout.addWidget(sub_label)
+
+        # Status Cards Container
+        status_frame = QFrame()
+        status_frame.setStyleSheet(
+            "background-color: #0b111e; border: 1px solid #1e293b; border-radius: 6px; padding: 12px;"
+        )
+        status_layout = QVBoxLayout(status_frame)
+
+        self.app_status_lbl = QLabel(f"Application Status: {self.state_store.get_state().application_status}")
+        self.app_status_lbl.setStyleSheet("color: #10b981; font-weight: bold;")
+        status_layout.addWidget(self.app_status_lbl)
+
+        self.user_lbl = QLabel(f"Operator Clearance: {self.state_store.get_state().current_user}")
+        self.user_lbl.setStyleSheet("color: #e2e8f0;")
+        status_layout.addWidget(self.user_lbl)
+
+        self.sim_mode_lbl = QLabel(f"Simulation Mode: {'ENABLED' if settings.SIMULATION_MODE else 'DISABLED'}")
+        self.sim_mode_lbl.setStyleSheet("color: #38bdf8;")
+        status_layout.addWidget(self.sim_mode_lbl)
+
+        self.event_count_lbl = QLabel("Events Received via EventBus: 0")
+        self.event_count_lbl.setStyleSheet("color: #f59e0b;")
+        status_layout.addWidget(self.event_count_lbl)
+
+        main_layout.addWidget(status_frame)
+
+        # Action Buttons
+        btn_layout = QHBoxLayout()
+        self.emit_btn = QPushButton("📡 Emit Test Event (telemetry.updated)")
+        self.emit_btn.setStyleSheet(
+            "background-color: #1e293b; color: #00f2fe; border: 1px solid #00f2fe; border-radius: 4px; padding: 8px 16px; font-weight: bold;"
+        )
+        self.emit_btn.clicked.connect(self._on_emit_clicked)
+        btn_layout.addWidget(self.emit_btn)
+
+        self.close_btn = QPushButton("🛑 Clean Shutdown")
+        self.close_btn.setStyleSheet(
+            "background-color: #7f1d1d; color: #fecaca; border: 1px solid #ef4444; border-radius: 4px; padding: 8px 16px; font-weight: bold;"
+        )
+        self.close_btn.clicked.connect(self.close)
+        btn_layout.addWidget(self.close_btn)
+
+        main_layout.addLayout(btn_layout)
+        main_layout.addStretch()
+
+        # Wire Subscriptions
+        self._event_count = 0
+        self._unsub_state = self.state_store.subscribe(self._on_state_changed)
+        self._unsub_events = self.event_bus.subscribe("*", self._on_event_received)
+
+        self.logger.info("GCSMainWindow initialized successfully", extra={"source": "ui"})
+
+    def _on_emit_clicked(self) -> None:
+        self.event_bus.emit(
+            EventNames.TELEMETRY_UPDATED,
+            payload={"battery": 98.5, "alt": 25.0},
+            source="ui_test_button",
+        )
+
+    def _on_event_received(self, event: Event) -> None:
+        self._event_count += 1
+        self.event_count_lbl.setText(
+            f"Events Received via EventBus: {self._event_count} (Last: '{event.event_name}')"
+        )
+
+    def _on_state_changed(self, new_state: ApplicationState) -> None:
+        self.app_status_lbl.setText(f"Application Status: {new_state.application_status}")
+        self.user_lbl.setText(f"Operator Clearance: {new_state.current_user}")
+
+    def closeEvent(self, event) -> None:
+        """Handles graceful clean shutdown on window close."""
+        self.logger.info("Initiating clean shutdown...", extra={"source": "system"})
+
+        # Emit system shutdown event
+        self.event_bus.emit(EventNames.SYSTEM_SHUTDOWN, source="ui_close")
+
+        # Unsubscribe handlers
+        if hasattr(self, "_unsub_state"):
+            self._unsub_state()
+        if hasattr(self, "_unsub_events"):
+            self._unsub_events()
+
+        # Clear subscriptions
+        self.state_store.clear_subscribers()
+        self.event_bus.clear()
+
+        # Flush logs
+        logging.shutdown()
+        event.accept()
 
 
-@app.route("/api/fleet", methods=["GET"])
-def api_fleet():
-    return jsonify(fleet_manager.get_fleet_telemetry())
+def main() -> int:
+    """
+    Main application bootstrap entry point.
+    """
+    # 1. Load settings
+    settings = get_settings()
 
+    # 2. Initialize centralized logging
+    setup_logging(settings.LOG_LEVEL)
+    logger = get_logger("bootstrap")
+    logger.info(
+        f"Starting {settings.APP_NAME} v{settings.APP_VERSION}...",
+        extra={"source": "bootstrap"},
+    )
 
-@app.route("/api/arm", methods=["POST"])
-def api_arm():
-    fleet_manager.arm_fleet()
-    logger_service.info("OPERATOR", "Swarm armed for offboard flight")
-    return jsonify({"status": "ARMED", "code": 200})
+    # 3. Instantiate centralized State Store and Event Bus
+    state_store = get_state_store()
+    event_bus = get_event_bus()
 
+    # 4. Initialize PySide6 GUI Application
+    # Allow running offscreen in headless/CI environments
+    if os.getenv("QT_QPA_PLATFORM") is None and not os.getenv("DISPLAY"):
+        os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
-@app.route("/api/takeoff", methods=["POST"])
-def api_takeoff():
-    data = request.get_json() or {}
-    alt = float(data.get("altitude", 15.0))
-    fleet_manager.takeoff_fleet(alt)
-    logger_service.info("OPERATOR", f"Swarm takeoff initiated to {alt}m AGL")
-    return jsonify({"status": "TAKEOFF_INITIATED", "altitude": alt, "code": 200})
+    app = QApplication(sys.argv)
+    app.setApplicationName(settings.APP_NAME)
+    app.setApplicationVersion(settings.APP_VERSION)
 
+    window = GCSMainWindow(state_store, event_bus, settings)
+    window.show()
 
-@app.route("/api/rtl", methods=["POST"])
-def api_rtl():
-    fleet_manager.rtl_fleet()
-    logger_service.info("OPERATOR", "Swarm Return-to-Launch (RTL) initiated")
-    return jsonify({"status": "RTL_ENGAGED", "code": 200})
-
-
-@app.route("/api/emergency_stop", methods=["POST"])
-def api_emergency():
-    fleet_manager.emergency_all_stop()
-    logger_service.error("SAFETY", "EMERGENCY ALL-STOP DISPATCHED")
-    return jsonify({"status": "EMERGENCY_SHUTDOWN", "code": 200})
-
-
-@app.route("/api/formation", methods=["POST"])
-def api_formation():
-    data = request.get_json() or {}
-    f_name = data.get("formation", "V_FORMATION")
-    res = formation_engine.set_formation(f_name)
-    logger_service.info("SWARM", f"Reconfigured formation to {f_name}")
-    return jsonify(res)
-
-
-@app.route("/api/gis/rf_los", methods=["GET"])
-def api_rf_los():
-    telemetry = fleet_manager.get_fleet_telemetry()
-    active_d = telemetry["drones"].get(fleet_state.active_drone_id, {})
-    d_lat = active_d.get("lat", settings.origin.lat)
-    d_lon = active_d.get("lon", settings.origin.lon)
-    d_alt = active_d.get("alt_msl", 65.0)
-
-    profile = elevation_profiler.sample_path(settings.origin.lat, settings.origin.lon, d_lat, d_lon, num_samples=20)
-    los_res = los_analyzer.check_los(profile, settings.origin.alt_msl, d_alt)
-    dist_m = profile[-1]["distance_m"] if profile else 100.0
-    fresnel_r = rf_analyzer.calculate_fresnel_radius(dist_m / 2.0, dist_m / 2.0, 2.4)
-    rssi = rf_analyzer.estimate_rssi(dist_m)
-
-    return jsonify({
-        "total_distance_m": dist_m,
-        "is_los_clear": los_res["clear"],
-        "min_clearance_m": los_res["min_clearance_m"],
-        "fresnel_radius_m": round(fresnel_r, 2),
-        "estimated_rssi_dbm": rssi,
-        "profile": profile
-    })
-
-
-@app.route("/api/gis/weather", methods=["GET"])
-def api_weather():
-    return jsonify(weather_engine.get_conditions())
-
-
-@app.route("/api/ai/detections", methods=["GET"])
-def api_detections():
-    telemetry = fleet_manager.get_fleet_telemetry()
-    active_d = telemetry["drones"].get(fleet_state.active_drone_id, {})
-    return jsonify({
-        "detections": threat_detector.get_detections(active_d.get("lat", 0.0), active_d.get("lon", 0.0)),
-        "threat_risk_score": 18.5,
-        "threat_level": "NOMINAL"
-    })
-
-
-@app.route("/api/security/audit_logs", methods=["GET"])
-def api_audit_logs():
-    return jsonify({"logs": logger_service.get_recent(50)})
-
-
-@app.route("/api/telemetry/stream")
-def sse_telemetry_stream():
-    def event_stream() -> Generator[str, None, None]:
-        while True:
-            telemetry = fleet_manager.get_fleet_telemetry()
-            payload = json.dumps(telemetry)
-            yield f"data: {payload}\n\n"
-            time.sleep(0.1)  # 10 Hz
-
-    return Response(event_stream(), mimetype="text/event-stream")
-
-
-def main():
-    print("\n" + "=" * 78)
-    print("🚁 SUTRA GCS — SWARM UNIFIED TACTICAL RECONNAISSANCE ARCHITECTURE")
-    print("   Pure Python Modular Architecture (Subsystem D & GNC)")
-    print("=" * 78)
-    print(f"📡 Serving Dashboard on: http://localhost:{settings.network.http_port}")
-    print("🕹️ 4-Drone Swarm Physics: Active (20 Hz thread)")
-    print("🛡️ Gate G5 ORCA 3D Safety Clearance: Active (> 2.8m)")
-    print("=" * 78 + "\n")
-    app.run(host=settings.network.http_host, port=settings.network.http_port, debug=False, threaded=True)
+    logger.info("Application event loop started.", extra={"source": "bootstrap"})
+    return app.exec()
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

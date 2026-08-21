@@ -1,22 +1,27 @@
 """
-SUTRA GCS — Map and GIS View State
+Smart Horizon GCS — Map & GIS Viewport State Model
+Subsystem: State Management
 """
 
-from typing import Dict, Any, List
+from dataclasses import dataclass, field
+from typing import List, Optional
 
 
+@dataclass(frozen=True)
 class MapState:
-    """Tracks map zoom, center, active layer, and overlay visibility."""
+    """
+    Persistent map camera, layer visibility, and selection state.
+    """
 
-    def __init__(self):
-        self.center_lat: float = 37.774929
-        self.center_lon: float = -122.419416
-        self.zoom: int = 17
-        self.active_layer: str = "dark"
-        self.show_breadcrumbs: bool = True
-        self.show_sar_targets: bool = True
-        self.show_geofence: bool = True
-        self.show_fresnel_cone: bool = True
-
-
-map_state = MapState()
+    latitude: float = 37.774929
+    longitude: float = -122.419416
+    zoom: float = 16.0
+    bearing: float = 0.0
+    pitch: float = 0.0
+    active_style: str = "dark"
+    visible_layers: List[str] = field(
+        default_factory=lambda: ["drones", "waypoints", "geofence", "breadcrumbs"]
+    )
+    follow_drone: bool = False
+    selected_drone_id: Optional[str] = None
+    selected_geofence_id: Optional[str] = None

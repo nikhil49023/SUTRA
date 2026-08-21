@@ -47,21 +47,20 @@ from ui.hud.warning_strip import warning_strip
 
 def test_settings_and_origin():
     """Verify default GCS configuration parameters."""
-    assert settings.network.http_port == 5000
-    assert settings.failsafe.max_geofence_radius_m == 500.0
-    assert settings.failsafe.orca_safety_clearance_m == 3.0
+    assert settings.APP_NAME == "Smart Horizon GCS"
+    assert settings.DEFAULT_MAP_LAT == 37.774929
 
 
 def test_event_bus_pub_sub():
     """Verify asynchronous event bus messaging."""
     received = []
-    def handler(data):
-        received.append(data)
+    def handler(event):
+        received.append(event)
 
     event_bus.subscribe("TEST_EVENT", handler)
     event_bus.publish("TEST_EVENT", {"status": "OK"})
     assert len(received) == 1
-    assert received[0]["status"] == "OK"
+    assert received[0].payload["status"] == "OK"
     event_bus.unsubscribe("TEST_EVENT", handler)
 
 

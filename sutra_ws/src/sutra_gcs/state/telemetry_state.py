@@ -1,27 +1,46 @@
 """
-SUTRA GCS — Telemetry State Store
+Smart Horizon GCS — Telemetry State Model
+Subsystem: State Management
 """
 
 import time
-from typing import Dict, Any, Optional
+from dataclasses import dataclass, field
+from typing import Optional
 
 
+@dataclass(frozen=True)
 class TelemetryState:
-    """Stores high-rate telemetry snapshots for UI rendering."""
+    """
+    Type-safe immutable representation of real-time aircraft telemetry.
+    """
 
-    def __init__(self):
-        self.last_update_ts: float = time.time()
-        self.snapshots: Dict[str, Dict[str, Any]] = {}
+    drone_id: str = "drone_alpha"
+    timestamp: float = field(default_factory=time.time)
+    latitude: float = 0.0
+    longitude: float = 0.0
+    altitude_msl: float = 0.0
+    altitude_agl: float = 0.0
+    ground_speed: float = 0.0
+    air_speed: float = 0.0
+    heading: float = 0.0
+    pitch: float = 0.0
+    roll: float = 0.0
+    yaw: float = 0.0
+    vertical_speed: float = 0.0
+    battery_percent: float = 100.0
+    battery_voltage: float = 25.2
+    battery_current: float = 0.0
+    temperature: float = 25.0
+    satellites: int = 0
+    hdop: float = 1.0
+    gps_fix: int = 3
+    rssi: float = -60.0
+    latency_ms: float = 10.0
+    flight_mode: str = "MANUAL"
 
-    def update_drone_telemetry(self, drone_id: str, data: Dict[str, Any]) -> None:
-        self.snapshots[drone_id] = data
-        self.last_update_ts = time.time()
-
-    def get_telemetry(self, drone_id: str) -> Optional[Dict[str, Any]]:
-        return self.snapshots.get(drone_id)
-
-    def get_all(self) -> Dict[str, Dict[str, Any]]:
-        return self.snapshots
+    def is_valid(self) -> bool:
+        """Returns True if the telemetry packet has valid non-zero geodetic fix."""
+        return abs(self.latitude) > 0.0001 or abs(self.longitude) > 0.0001
 
 
 telemetry_state = TelemetryState()
