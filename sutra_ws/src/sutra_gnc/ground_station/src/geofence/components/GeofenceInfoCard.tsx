@@ -1,1 +1,0 @@
-// Geofence Info Card Component

@@ -1,1 +1,0 @@
-// Geofence Render Renderer
