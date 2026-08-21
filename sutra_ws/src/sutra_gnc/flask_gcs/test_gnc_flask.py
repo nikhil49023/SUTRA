@@ -162,3 +162,16 @@ def test_security_rbac_authorization():
     # Audit logs
     logs = sec.get_audit_logs()
     assert len(logs) >= 1
+
+
+def test_hardware_telemetry_adapter():
+    """Verify hardware adapter connects and reports diagnostics."""
+    from hardware_adapter import HardwareTelemetryAdapter
+    adapter = HardwareTelemetryAdapter(host="127.0.0.1", port=14545)
+    ok = adapter.connect()
+    assert ok is True
+    diag = adapter.get_link_diagnostics()
+    assert "interface" in diag
+    assert diag["is_connected"] is True
+    adapter.disconnect()
+    assert adapter.is_connected is False

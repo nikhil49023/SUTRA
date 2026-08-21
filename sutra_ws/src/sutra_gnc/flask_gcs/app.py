@@ -16,6 +16,7 @@ from gis_engine import GISEngine
 from replay_engine import FlightReplayEngine
 from security import SecurityManager, UserRole
 from mavlink_bridge import MAVLinkBridge
+from hardware_adapter import HardwareTelemetryAdapter
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 CORS(app)
@@ -26,6 +27,8 @@ ai_bridge = AIPerceptionBridge(origin_lat=37.774929, origin_lon=-122.419416)
 gis_engine = GISEngine(origin_lat=37.774929, origin_lon=-122.419416)
 replay_engine = FlightReplayEngine()
 security_manager = SecurityManager()
+hw_adapter = HardwareTelemetryAdapter(host="127.0.0.1", port=14540)
+hw_adapter.connect()
 
 
 # ── 1. MAIN UI ROUTE ─────────────────────────────────────────────────────────
