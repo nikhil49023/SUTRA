@@ -38,9 +38,9 @@ from ai.mission_advisor import mission_advisor
 from communication.mavlink_encoder import mavlink_encoder
 from communication.mavlink_parser import mavlink_parser
 
-# Path to shared Flask web templates & static assets in flask_gcs
-template_dir = os.path.join(os.path.dirname(pkg_dir), "sutra_gnc", "flask_gcs", "templates")
-static_dir = os.path.join(os.path.dirname(pkg_dir), "sutra_gnc", "flask_gcs", "static")
+# Local Flask web templates & static assets
+template_dir = os.path.join(pkg_dir, "templates")
+static_dir = os.path.join(pkg_dir, "static")
 
 app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 CORS(app)
