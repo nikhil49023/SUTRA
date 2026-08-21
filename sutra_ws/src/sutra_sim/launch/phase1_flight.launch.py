@@ -20,16 +20,28 @@ def generate_launch_description():
     models_dir = os.path.join(sim_dir, "models")
     world_path = os.path.join(sim_dir, "worlds", "phase1_quadcopter_world.sdf")
 
+    # Set CycloneDDS & Gazebo Transport loopback bindings
+    cyclonedds_path = "/home/nikhil/Desktop/Project SUTRA/sutra_ws/cyclonedds.xml"
+    if os.path.exists(cyclonedds_path):
+        os.environ["CYCLONEDDS_URI"] = f"file://{cyclonedds_path}"
+    os.environ["GZ_IP"] = "127.0.0.1"
+    os.environ["GZ_PARTITION"] = "sutra_sim"
+
     # Set Gazebo resource paths for 3D model meshes
     resource_paths = f"{sim_dir}:{models_dir}:" + os.environ.get("GZ_SIM_RESOURCE_PATH", "")
     os.environ["GZ_SIM_RESOURCE_PATH"] = resource_paths
     os.environ["IGN_GAZEBO_RESOURCE_PATH"] = resource_paths
 
-
     headless_arg = DeclareLaunchArgument(
         "headless",
         default_value="false",
         description="Run Gazebo headless (true for server only, false for GUI)",
+    )
+
+    mode_arg = DeclareLaunchArgument(
+        "mode",
+        default_value="MANUAL_TELEOP",
+        description="Initial flight mode: MANUAL_TELEOP or AUTONOMOUS_RING_PURSUIT",
     )
 
     # ── Gazebo Sim 8 Engine ───────────────────────────────────────────────────
@@ -62,6 +74,12 @@ def generate_launch_description():
             "/model/uav_alpha/pose@geometry_msgs/msg/Pose[gz.msgs.Pose",
             # IMU Telemetry: Gazebo -> ROS 2
             "/uav_alpha/imu@sensor_msgs/msg/Imu[gz.msgs.IMU",
+            # 3D GPU LiDAR Points: Gazebo -> ROS 2
+            "/uav_alpha/lidar/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked",
+            # RGB Camera Feed: Gazebo -> ROS 2
+            "/uav_alpha/camera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image",
+            # Thermal Camera Feed: Gazebo -> ROS 2
+            "/uav_alpha/thermal/image_raw@sensor_msgs/msg/Image[gz.msgs.Image",
             # Target Ring Pose: ROS 2 -> Gazebo
             "/model/ring_target/pose@geometry_msgs/msg/Pose]gz.msgs.Pose",
         ],
@@ -85,7 +103,8 @@ def generate_launch_description():
         parameters=[{
             "drone_id": "uav_alpha",
             "cruise_speed": 3.0,
-            "takeoff_altitude": 5.0,
+            "takeoff_altitude": 4.0,
+            "initial_mode": LaunchConfiguration("mode"),
             "use_sim_time": True,
         }],
     )
@@ -95,6 +114,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         headless_arg,
+        mode_arg,
         LogInfo(
             msg=(
                 "🚁 PHASE 1: DYNAMIC AERIAL RING PURSUIT & LAPTOP TELEOP SIMULATION LAUNCH\n"
