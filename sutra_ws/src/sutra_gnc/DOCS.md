@@ -1,9 +1,10 @@
 # 🚁 Subsystem A — GNC & Flight Control Master Specification
 
-[![PyTest Verification](https://img.shields.io/badge/PyTest-52%2F52%20PASSED-brightgreen.svg)]()
-[![Full Workspace PyTest](https://img.shields.io/badge/Full_Workspace-156%2F156%20PASSED-brightgreen.svg)]()
+[![PyTest Verification](https://img.shields.io/badge/PyTest-60%2F60%20PASSED-brightgreen.svg)]()
+[![Full Workspace PyTest](https://img.shields.io/badge/Full_Workspace-164%2F164%20PASSED-brightgreen.svg)]()
 [![Gate G5 Compliance](https://img.shields.io/badge/Gate_G5-VERIFIED-brightgreen.svg)]()
 [![Gate G1 Compliance](https://img.shields.io/badge/Gate_G1-VERIFIED-brightgreen.svg)]()
+[![PX4 MicroXRCE-DDS](https://img.shields.io/badge/PX4_MicroXRCE--DDS-VERIFIED-brightgreen.svg)]()
 [![Dual-Mode Launch](https://img.shields.io/badge/Dual--Mode_Launch-READY-brightgreen.svg)]()
 [![3D Simulation](https://img.shields.io/badge/Prebuilt_X3_UAV-VERIFIED-cyan.svg)]()
 
@@ -18,11 +19,15 @@
 ## 📊 1. Measured Empirical Benchmarks & Performance Metrics (Simulation & Production Readiness)
 
 **Verification command:** `pytest sutra_ws/src/sutra_gnc/test/ --durations=10`  
-**Live result:** `52 passed, 1 warning in 3.35s` *(captured August 16, 2026)*  
-**Full Workspace Suite:** `pytest sutra_ws/src/sutra_*/test/` $\to$ **`156 passed, 13 warnings in 10.68s`**
+**Live result:** `60 passed, 1 warning in 2.84s` *(captured August 21, 2026)*  
+**Full Workspace Suite:** `pytest sutra_ws/src/sutra_*/test/` $\to$ **`164 passed, 13 warnings in 10.82s`**
 
 | Metric | Production / SITL Target Threshold | Measured Empirical Value | Evidence Source | Status |
 |---|:---:|:---:|:---:|:---:|
+| **PX4 MicroXRCE-DDS Setpoints (Gate G1)** | Accel $\le 2.50\text{ m/s}^2$, Jerk $\le 5.0\text{ m/s}^3$ @ 50Hz | **Accel $\le 2.50\text{ m/s}^2$, Jerk $\le 5.00\text{ m/s}^3$** | `test_px4_offboard_controller.py` | ✅ **VERIFIED** |
+| **PX4 Warmup Heartbeat Protocol** | 10 cycles @ 10Hz before mode switch | **10 Heartbeats $\to$ ARMING $\to$ OFFBOARD** | `test_px4_offboard_controller.py` | ✅ **VERIFIED** |
+| **PX4 Odometry Failsafe Timeout** | Dropout $> 500\text{ms} \to$ Emergency Land | **Triggered at $> 500\text{ms}$** | `test_px4_offboard_controller.py` | ✅ **VERIFIED** |
+| **NED $\leftrightarrow$ ENU Coordinate Precision** | Precision error $< 1\times 10^{-5}\text{ m}$ | **$< 1\times 10^{-6}\text{ m}$** | `test_px4_offboard_controller.py` | ✅ **VERIFIED** |
 | **SORCA Continuous Acceleration (Gate G5)** | Max Accel $\le 2.50\text{ m/s}^2$ | **$\le 2.50\text{ m/s}^2$ Bounded** | `test_research_gnc_upgrades.py` | ✅ **VERIFIED** |
 | **Topology-Guided ORCA Obstacle Detour** | Lateral evasion vector $\ne 0$ in narrow passages | **Lateral normal tangent active** | `test_research_gnc_upgrades.py` | ✅ **VERIFIED** |
 | **SelfAttentionVO Temporal Attention** | Drift reduction with sliding window | **Adaptive covariance scaling ($0.6\times - 1.5\times$)** | `test_research_gnc_upgrades.py` | ✅ **VERIFIED** |
@@ -91,6 +96,7 @@ sutra_gnc (ROS 2 Package) & sutra_sim (Simulation Package)
 ├── launch/
 │   └── phase1_flight.launch.py            # Master 1-click launcher (Gazebo + Bridges + Flight Nodes)
 ├── sutra_gnc/
+│   ├── px4_offboard_controller.py         # Native PX4 MicroXRCE-DDS Offboard Flight Controller (50Hz)
 │   ├── single_quadcopter_offboard_node.py # 50Hz Dual-Mode Offboard Pursuit & Teleop Node
 │   ├── moving_target_ring_node.py         # Dynamic Infinite Checkpoint Ring & Marker Generator
 │   ├── laptop_teleop_node.py              # Live Keyboard Teleop & Mode Switcher
