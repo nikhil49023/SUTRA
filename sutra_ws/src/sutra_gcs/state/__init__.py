@@ -8,6 +8,7 @@ from .fleet_state import FleetState, DroneState
 from .map_state import MapState
 from .alert_state import AlertState, Alert, AlertSeverity
 from .application_state import ApplicationState, StateStore, get_state_store
+from .geofence_state import GeofenceState
 
 __all__ = [
     "TelemetryState",
@@ -20,6 +21,7 @@ __all__ = [
     "AlertState",
     "Alert",
     "AlertSeverity",
+    "GeofenceState",
     "ApplicationState",
     "StateStore",
     "get_state_store",

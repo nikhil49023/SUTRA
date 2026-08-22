@@ -11,6 +11,7 @@ from typing import Callable, List, Optional
 
 from .alert_state import AlertState
 from .fleet_state import FleetState
+from .geofence_state import GeofenceState
 from .map_state import MapState
 from .mission_state import MissionState
 from .telemetry_state import TelemetryState
@@ -29,6 +30,7 @@ class ApplicationState:
     fleet_state: FleetState = field(default_factory=FleetState)
     map_state: MapState = field(default_factory=MapState)
     alert_state: AlertState = field(default_factory=AlertState)
+    geofence_state: GeofenceState = field(default_factory=GeofenceState)
 
     application_status: str = "READY"
     backend_connected: bool = True

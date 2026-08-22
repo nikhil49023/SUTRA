@@ -47,8 +47,9 @@ class NavigationController:
         self.stack.addWidget(self.mission_view)
         self.views["mission"] = self.mission_view
 
-        # 3. GIS Intelligence View
-        self.gis_view = self._create_placeholder_view("GIS TOPOGRAPHY & RF FRESNEL ANALYSIS")
+        # 3. GIS Intelligence & Geofence View (Shares the persistent map)
+        from .geofence import GeofencePanel
+        self.gis_view = GeofencePanel(self.map_widget, self.state_store)
         self.stack.addWidget(self.gis_view)
         self.views["gis"] = self.gis_view
 
@@ -78,26 +79,12 @@ class NavigationController:
         return DashboardView(self.map_widget, self.state_store)
 
     def _create_placeholder_view(self, title: str) -> QWidget:
-        """Standardized modular view container with header and action cards."""
         container = QWidget()
         layout = QVBoxLayout(container)
-        layout.setContentsMargins(16, 16, 16, 16)
-        layout.setSpacing(12)
-
-        hdr = QLabel(f"🌐 {title}")
-        hdr.setStyleSheet("color: #00f2fe; font-size: 14px; font-weight: 800; border-bottom: 1px solid #1e293b; padding-bottom: 8px;")
-        layout.addWidget(hdr)
-
-        card = QFrame()
-        card.setStyleSheet("background-color: #0b111e; border: 1px solid #1e293b; border-radius: 6px; padding: 16px;")
-        c_layout = QVBoxLayout(card)
-        
-        info = QLabel("Subsystem view active. The central MapWidget remains persistently loaded in memory.")
-        info.setStyleSheet("color: #94a3b8; font-size: 11px;")
-        c_layout.addWidget(info)
-
-        layout.addWidget(card)
-        layout.addStretch()
+        lbl = QLabel(f"[{title}] — SUBSYSTEM ACTIVE")
+        lbl.setAlignment(Qt.AlignCenter)
+        lbl.setStyleSheet("color: #64748b; font-size: 14px; font-weight: bold;")
+        layout.addWidget(lbl)
         return container
 
     def switch_view(self, view_key: str) -> bool:
@@ -109,6 +96,9 @@ class NavigationController:
             elif view_key == "mission":
                 if hasattr(self.mission_view, "map_container_layout"):
                     self.mission_view.map_container_layout.addWidget(self.map_widget)
+            elif view_key == "gis":
+                if hasattr(self.gis_view, "map_container_layout"):
+                    self.gis_view.map_container_layout.addWidget(self.map_widget)
 
             self.stack.setCurrentWidget(self.views[view_key])
             return True

@@ -111,10 +111,26 @@ class RightInspector(QFrame):
     def _on_state_updated(self, state: ApplicationState) -> None:
         selected_drone_id = state.map_state.selected_drone_id
         selected_wp_id = state.mission_state.selected_waypoint_id
+        selected_geo = state.geofence_state.get_selected()
         fleet = state.fleet_state
 
+        if selected_geo:
+            # 1. GEOFENCE SELECTED CONTEXT
+            self.header_title.setText(f"INSPECTOR: {selected_geo.name.upper()} [{selected_geo.zone_type.value}]")
+            self.telem_card.update_telemetry(
+                alt_agl=selected_geo.altitude_max,
+                speed=0.0,
+                climb=0.0,
+                heading=0.0,
+                battery=100.0,
+                pitch=0.0,
+                roll=0.0,
+            )
+            self._render_geofence_attributes(selected_geo, state.mission_state)
+            return
+
         if selected_wp_id:
-            # 1. WAYPOINT SELECTED CONTEXT
+            # 2. WAYPOINT SELECTED CONTEXT
             wp = None
             for w in state.mission_state.waypoints:
                 if w.id == selected_wp_id:
@@ -135,7 +151,7 @@ class RightInspector(QFrame):
                 return
 
         if selected_drone_id and fleet.get_drone(selected_drone_id):
-            # 2. DRONE SELECTED CONTEXT
+            # 3. DRONE SELECTED CONTEXT
             drone = fleet.get_drone(selected_drone_id)
             self.header_title.setText(f"INSPECTOR: {drone.callsign.upper()}")
 
@@ -150,7 +166,7 @@ class RightInspector(QFrame):
             )
             self._render_drone_attributes(drone)
         else:
-            # 3. SYSTEM OVERVIEW CONTEXT
+            # 4. SYSTEM OVERVIEW CONTEXT
             self.header_title.setText("INSPECTOR: SWARM OVERVIEW")
             telem = state.telemetry_state
             self.telem_card.update_telemetry(
@@ -226,19 +242,30 @@ class RightInspector(QFrame):
             self.attr_layout.addWidget(k_lbl, r, 0)
             self.attr_layout.addWidget(v_lbl, r, 1)
 
-    def _render_system_attributes(self, state: ApplicationState) -> None:
+    def _render_geofence_attributes(self, g, mission_state) -> None:
+        from geofence.geometry import GeofenceGeometry
+        from geofence.models import GeometryType
         self._clear_attributes()
-        drones = state.fleet_state.get_all_drones()
-        mission = state.mission_state
+
+        if g.geometry_type == GeometryType.CIRCLE:
+            area_m2 = 3.14159 * (g.radius ** 2)
+            perim_m = 2 * 3.14159 * g.radius
+        elif g.coordinates and len(g.coordinates) >= 3:
+            area_m2 = GeofenceGeometry.calculate_area(g.coordinates)
+            perim_m = GeofenceGeometry.calculate_perimeter(g.coordinates)
+        else:
+            area_m2 = 0.0
+            perim_m = 0.0
 
         attrs = [
-            ("TOTAL DRONES", f"{len(drones)} Units"),
-            ("MISSION ID", mission.mission_name),
-            ("MISSION STATE", mission.state.value),
-            ("PROGRESS", f"{mission.mission_progress:.1f}%"),
-            ("RISK LEVEL", mission.risk_level),
-            ("VALIDATION", mission.validation_status),
-            ("CLEARANCE", state.current_user),
+            ("ZONE NAME", g.name),
+            ("CATEGORY", g.zone_type.value),
+            ("GEOMETRY", g.geometry_type.value),
+            ("SURFACE AREA", f"{area_m2:.0f} m²" if area_m2 < 1000000 else f"{area_m2/1000000:.2f} km²"),
+            ("PERIMETER", f"{perim_m:.0f} m"),
+            ("ALTITUDE WINDOW", f"{g.altitude_min:.0f}m - {g.altitude_max:.0f}m AGL"),
+            ("ENFORCED", "ACTIVE" if g.enabled else "INACTIVE"),
+            ("VISIBLE", "VISIBLE" if g.visible else "HIDDEN"),
         ]
         for r, (k, v) in enumerate(attrs):
             k_lbl = QLabel(k)

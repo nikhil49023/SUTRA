@@ -102,5 +102,15 @@ class MissionValidator:
         if total_dist_m > 25000.0:  # 25km range warning
             warnings.append(f"Mission distance ({total_dist_m/1000:.1f} km) exceeds typical single-battery range.")
 
+        # 5. Geofence Airspace Safety Audit
+        from state.application_state import get_state_store
+        from geofence.validator import GeofenceValidator
+        geofences = get_state_store().get_state().geofence_state.geofences
+        if geofences:
+            geo_res = GeofenceValidator.validate_mission_geofences(mission, geofences)
+            errors.extend(geo_res.errors)
+            warnings.extend(geo_res.warnings)
+            info.extend(geo_res.info)
+
         is_valid = len(errors) == 0
         return ValidationReport(valid=is_valid, errors=errors, warnings=warnings, info=info)

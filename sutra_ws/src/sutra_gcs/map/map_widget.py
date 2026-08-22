@@ -1,6 +1,6 @@
 """
 Smart Horizon GCS — Tactical Persistent QPainter Map Widget
-Subsystem: Map Layer (Phases 2 & 3)
+Subsystem: Map Layer (Phases 2, 3 & 4)
 """
 
 import math
@@ -20,12 +20,17 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QWidget
 
+from geofence.controller import get_geofence_controller
+from geofence.geometry import GeofenceGeometry
+from geofence.models import GeometryType
+from geofence.service import get_geofence_service
 from mission.mission_manager import get_mission_manager
 from mission.waypoint import Waypoint
 from services.event_bus import EventBus, EventNames, get_event_bus
 from state.application_state import ApplicationState, StateStore, get_state_store
 from state.fleet_state import DroneState, FleetState
 
+from .geofence_renderer import GeofenceRenderer
 from .map_camera import MapCamera
 from .map_controller import MapController
 from .map_state_adapter import MapStateAdapter
@@ -37,11 +42,12 @@ class MapWidget(QWidget):
     """
     Persistent, high-performance tactical GIS map canvas rendered with QPainter.
     Supports interactive multi-agent tracking, draw-waypoint mode, drag-waypoint manipulation,
-    and automatic route calculation.
+    geofence polygon drawing, rubber-band live preview, and vertex drag handles.
     """
 
     drone_selected = Signal(str)
     waypoint_selected = Signal(str)
+    geofence_selected = Signal(str)
     center_changed = Signal(float, float)
 
     def __init__(
@@ -62,8 +68,9 @@ class MapWidget(QWidget):
         # Mouse & Mode States
         self._dragging_camera = False
         self._dragged_wp_id: Optional[str] = None
+        self._dragged_vertex: Optional[Tuple[str, int]] = None  # (geofence_id, vertex_idx)
         self._last_mouse_pos = QPointF()
-        self.draw_mode = False  # If True, map clicks add new waypoints
+        self.draw_mode = False  # Waypoint draw mode
 
         # Enable mouse tracking for interactive hover & responsive dragging
         self.setMouseTracking(True)
@@ -102,8 +109,15 @@ class MapWidget(QWidget):
         # 2. Tactical Coordinate Grid
         self._draw_grid(painter, w, h)
 
-        # 3. Geofence & Danger Zones
-        self._draw_geofence_boundary(painter, w, h)
+        # 3. Geofence Subsystem Shaded Layers & Live Drawing Previews
+        geofence_state = self.state_store.get_state().geofence_state
+        GeofenceRenderer.render(
+            painter=painter,
+            camera=self.camera,
+            geofence_state=geofence_state,
+            width=w,
+            height=h,
+        )
 
         # 4. Mission Route Lines (HOME -> WP1 -> WP2 ...)
         mission_state = self.state_store.get_state().mission_state
@@ -150,19 +164,6 @@ class MapWidget(QWidget):
         painter.setPen(reticle_pen)
         painter.drawLine(w // 2 - 15, h // 2, w // 2 + 15, h // 2)
         painter.drawLine(w // 2, h // 2 - 15, w // 2, h // 2 + 15)
-
-    def _draw_geofence_boundary(self, painter: QPainter, w: int, h: int) -> None:
-        """Renders the 500m geofence safety boundary circle around home."""
-        mission_state = self.state_store.get_state().mission_state
-        sx, sy = self.camera.geo_to_screen(
-            mission_state.home_latitude, mission_state.home_longitude, w, h
-        )
-        scale = 0.03 * (2.0 ** (self.camera.zoom - 10.0))
-        radius_px = 500.0 * scale
-
-        painter.setPen(QPen(QColor(239, 68, 68, 160), 1.5, Qt.DashLine))
-        painter.setBrush(QBrush(QColor(239, 68, 68, 12)))
-        painter.drawEllipse(QPointF(sx, sy), radius_px, radius_px)
 
     def _draw_drones(self, painter: QPainter, w: int, h: int) -> None:
         """Renders all multi-UAV drones from FleetState."""
@@ -222,20 +223,28 @@ class MapWidget(QWidget):
             painter.drawText(QRectF(sx - 50, sy + 14, 100, 16), Qt.AlignCenter, tag_text)
 
     def _draw_hud_overlays(self, painter: QPainter, w: int, h: int) -> None:
-        """Draws tactical compass rose, coordinates badge, scale bar, and draw mode banner."""
+        """Draws tactical compass rose, coordinates badge, scale bar, and draw mode banners."""
         # Top-Left Coordinates & Camera Readout
         painter.setFont(QFont("monospace", 8))
         painter.setPen(QPen(QColor(0, 242, 254)))
         info_str = f"LAT: {self.camera.latitude:.6f}° | LON: {self.camera.longitude:.6f}° | ZOOM: {self.camera.zoom:.1f}"
         painter.drawText(12, 20, info_str)
 
-        # Draw Waypoint Mode Banner
-        if self.draw_mode:
+        # Draw Mode Banners
+        geofence_state = self.state_store.get_state().geofence_state
+        if geofence_state.drawing_mode:
+            painter.setFont(QFont("monospace", 9, QFont.Bold))
+            painter.setPen(QPen(QColor(239, 68, 68)))
+            painter.setBrush(QBrush(QColor(239, 68, 68, 40)))
+            banner_text = f"🛡️ DRAWING GEOFENCE: {geofence_state.active_zone_type.value} {geofence_state.active_geometry_type.value} (CLICK MAP)"
+            painter.drawRect(QRectF(12, 30, 420, 24))
+            painter.drawText(QRectF(12, 30, 420, 24), Qt.AlignCenter, banner_text)
+        elif self.draw_mode:
             painter.setFont(QFont("monospace", 9, QFont.Bold))
             painter.setPen(QPen(QColor(0, 242, 254)))
             painter.setBrush(QBrush(QColor(0, 242, 254, 30)))
-            painter.drawRect(QRectF(12, 30, 220, 24))
-            painter.drawText(QRectF(12, 30, 220, 24), Qt.AlignCenter, "✏️ DRAW WAYPOINT MODE (CLICK MAP)")
+            painter.drawRect(QRectF(12, 30, 260, 24))
+            painter.drawText(QRectF(12, 30, 260, 24), Qt.AlignCenter, "✏️ DRAW WAYPOINT MODE (CLICK MAP)")
 
         # Scale Bar
         painter.setPen(QPen(QColor(148, 163, 184), 1.5))
@@ -278,8 +287,25 @@ class MapWidget(QWidget):
             pos = event.position()
             self._last_mouse_pos = pos
             w, h = self.width(), self.height()
+            click_lat, click_lon = self.camera.screen_to_geo(pos.x(), pos.y(), w, h)
 
-            # 1. Check if clicking on an existing Waypoint (to select / start drag)
+            # 1. Check if in Geofence Drawing Mode -> Click adds a geofence vertex
+            geofence_state = self.state_store.get_state().geofence_state
+            if geofence_state.drawing_mode:
+                ctrl = get_geofence_controller()
+                ctrl.add_drawing_point(click_lat, click_lon)
+                return
+
+            # 2. Check if clicking on a selected Geofence Vertex (to start dragging)
+            selected_geo = geofence_state.get_selected()
+            if selected_geo and selected_geo.geometry_type == GeometryType.POLYGON:
+                for idx, (v_lat, v_lon) in enumerate(selected_geo.coordinates):
+                    sx, sy = self.camera.geo_to_screen(v_lat, v_lon, w, h)
+                    if math.hypot(pos.x() - sx, pos.y() - sy) <= 12.0:
+                        self._dragged_vertex = (selected_geo.id, idx)
+                        return
+
+            # 3. Check if clicking on an existing Waypoint (to select / start drag)
             mission_mgr = get_mission_manager()
             clicked_wp_id = None
             for wp in mission_mgr.get_waypoints():
@@ -294,14 +320,21 @@ class MapWidget(QWidget):
                 self.waypoint_selected.emit(clicked_wp_id)
                 return
 
-            # 2. Check if Draw Mode is active -> Add Waypoint at click location
+            # 4. Check if clicking inside an existing Geofence to select it
+            for g in geofence_state.geofences:
+                if g.visible and g.coordinates and len(g.coordinates) >= 3:
+                    if GeofenceGeometry.contains_point(g.coordinates, click_lat, click_lon):
+                        get_geofence_service().select_geofence(g.id)
+                        self.geofence_selected.emit(g.id)
+                        return
+
+            # 5. Check if Waypoint Draw Mode is active -> Add Waypoint
             if self.draw_mode:
-                click_lat, click_lon = self.camera.screen_to_geo(pos.x(), pos.y(), w, h)
                 wp = mission_mgr.add_waypoint(click_lat, click_lon)
                 self.waypoint_selected.emit(wp.id)
                 return
 
-            # 3. Check if clicking on a Drone
+            # 6. Check if clicking on a Drone
             fleet = self.state_store.get_state().fleet_state
             clicked_drone = None
             for drone in fleet.get_all_drones():
@@ -315,21 +348,32 @@ class MapWidget(QWidget):
                 self.drone_selected.emit(clicked_drone)
                 return
 
-            # 4. Otherwise, start panning map camera
+            # 7. Otherwise, start panning map camera
             self._dragging_camera = True
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         pos = event.position()
         w, h = self.width(), self.height()
+        geo_lat, geo_lon = self.camera.screen_to_geo(pos.x(), pos.y(), w, h)
 
-        # Handle Waypoint Dragging
-        if self._dragged_wp_id:
-            new_lat, new_lon = self.camera.screen_to_geo(pos.x(), pos.y(), w, h)
-            mission_mgr = get_mission_manager()
-            mission_mgr.move_waypoint(self._dragged_wp_id, new_lat, new_lon)
+        # 1. Update Rubber-Band Live Geofence Preview Point
+        geofence_state = self.state_store.get_state().geofence_state
+        if geofence_state.drawing_mode:
+            get_geofence_controller().update_preview_point(geo_lat, geo_lon)
+
+        # 2. Handle Geofence Vertex Dragging
+        if self._dragged_vertex:
+            g_id, v_idx = self._dragged_vertex
+            get_geofence_controller().move_vertex(g_id, v_idx, geo_lat, geo_lon)
             return
 
-        # Handle Map Panning
+        # 3. Handle Waypoint Dragging
+        if self._dragged_wp_id:
+            mission_mgr = get_mission_manager()
+            mission_mgr.move_waypoint(self._dragged_wp_id, geo_lat, geo_lon)
+            return
+
+        # 4. Handle Map Panning
         if self._dragging_camera:
             delta = pos - self._last_mouse_pos
             self._last_mouse_pos = pos
@@ -355,6 +399,7 @@ class MapWidget(QWidget):
         if event.button() == Qt.LeftButton:
             self._dragging_camera = False
             self._dragged_wp_id = None
+            self._dragged_vertex = None
 
     def wheelEvent(self, event: QWheelEvent) -> None:
         """Zoom in and out via mouse wheel."""
