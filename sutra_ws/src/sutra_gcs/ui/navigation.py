@@ -71,12 +71,18 @@ class NavigationController:
         self.stack.addWidget(self.live_ops_view)
         self.views["live_ops"] = self.live_ops_view
 
-        # 7. AI Intel View
+        # 7. Tactical HUD / PFD Workspace
+        from .hud import TacticalHUD
+        self.hud_view = TacticalHUD(self.state_store)
+        self.stack.addWidget(self.hud_view)
+        self.views["hud"] = self.hud_view
+
+        # 8. AI Intel View
         self.ai_view = self._create_placeholder_view("AI THREAT DETECTION & BYTE-TRACK SAR")
         self.stack.addWidget(self.ai_view)
         self.views["ai"] = self.ai_view
 
-        # 8. Settings View
+        # 9. Settings View
         self.settings_view = self._create_placeholder_view("SYSTEM CONFIGURATION & HARDWARE LINK")
         self.stack.addWidget(self.settings_view)
         self.views["settings"] = self.settings_view

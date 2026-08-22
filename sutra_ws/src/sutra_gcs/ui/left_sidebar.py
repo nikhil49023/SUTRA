@@ -24,6 +24,7 @@ class LeftSidebar(QFrame):
 
     NAV_ITEMS = [
         ("DASHBOARD", "dashboard", "📊"),
+        ("TACTICAL HUD", "hud", "🛩️"),
         ("MISSION", "mission", "🗺️"),
         ("GEOFENCE", "geofence", "🛡️"),
         ("GIS INTEL", "gis", "🌐"),
