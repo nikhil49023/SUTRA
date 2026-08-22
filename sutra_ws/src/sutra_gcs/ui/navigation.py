@@ -58,8 +58,9 @@ class NavigationController:
         self.stack.addWidget(self.fleet_view)
         self.views["fleet"] = self.fleet_view
 
-        # 5. Live Operations View
-        self.live_ops_view = self._create_placeholder_view("LIVE TACTICAL TELEOPERATION")
+        # 5. Live Operations & Execution View (Shares the persistent map)
+        from .mission import MissionExecutionPanel
+        self.live_ops_view = MissionExecutionPanel(self.map_widget, self.state_store)
         self.stack.addWidget(self.live_ops_view)
         self.views["live_ops"] = self.live_ops_view
 
@@ -99,6 +100,9 @@ class NavigationController:
             elif view_key == "gis":
                 if hasattr(self.gis_view, "map_container_layout"):
                     self.gis_view.map_container_layout.addWidget(self.map_widget)
+            elif view_key == "live_ops":
+                if hasattr(self.live_ops_view, "map_container_layout"):
+                    self.live_ops_view.map_container_layout.addWidget(self.map_widget)
 
             self.stack.setCurrentWidget(self.views[view_key])
             return True

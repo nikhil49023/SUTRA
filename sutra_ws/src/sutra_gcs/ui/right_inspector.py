@@ -275,6 +275,32 @@ class RightInspector(QFrame):
             self.attr_layout.addWidget(k_lbl, r, 0)
             self.attr_layout.addWidget(v_lbl, r, 1)
 
+    def _render_system_attributes(self, state: ApplicationState) -> None:
+        self._clear_attributes()
+        drones = state.fleet_state.get_all_drones()
+        mission = state.mission_state
+        telem = state.telemetry_state
+        geofences = state.geofence_state.geofences
+
+        attrs = [
+            ("FLIGHT MODE", mission.state.value),
+            ("PROGRESS", f"{mission.mission_progress:.1f}%"),
+            ("MISSION ID", mission.mission_name),
+            ("WAYPOINTS", f"{len(mission.waypoints)} Setpoints"),
+            ("BATTERY", f"{telem.battery_percent:.1f}%"),
+            ("RISK LEVEL", mission.risk_level),
+            ("AIRSPACE ZONES", f"{len(geofences)} Active"),
+            ("GPS FIX", f"3D DGPS ({telem.gps_satellites} Sats)"),
+            ("LINK QUALITY", f"{telem.rssi_percent:.0f}% RSSI"),
+        ]
+        for r, (k, v) in enumerate(attrs):
+            k_lbl = QLabel(k)
+            k_lbl.setStyleSheet("color: #64748b; font-size: 8px; font-weight: bold;")
+            v_lbl = QLabel(str(v))
+            v_lbl.setStyleSheet("color: #f8fafc; font-size: 10px; font-weight: bold;")
+            self.attr_layout.addWidget(k_lbl, r, 0)
+            self.attr_layout.addWidget(v_lbl, r, 1)
+
     def _clear_attributes(self) -> None:
         while self.attr_layout.count():
             item = self.attr_layout.takeAt(0)

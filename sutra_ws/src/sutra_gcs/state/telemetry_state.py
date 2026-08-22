@@ -42,5 +42,15 @@ class TelemetryState:
         """Returns True if the telemetry packet has valid non-zero geodetic fix."""
         return abs(self.latitude) > 0.0001 or abs(self.longitude) > 0.0001
 
+    @property
+    def gps_satellites(self) -> int:
+        return self.satellites
+
+    @property
+    def rssi_percent(self) -> float:
+        if self.rssi <= 0:
+            return max(0.0, min(100.0, (self.rssi + 100.0) * 2.0))
+        return self.rssi
+
 
 telemetry_state = TelemetryState()
