@@ -10,6 +10,7 @@ from .alert_state import AlertState, Alert, AlertSeverity
 from .application_state import ApplicationState, StateStore, get_state_store
 from .geofence_state import GeofenceState
 from .gis_state import GISState
+from .communication_state import CommunicationState, ConnectionState
 
 __all__ = [
     "TelemetryState",
@@ -24,6 +25,8 @@ __all__ = [
     "AlertSeverity",
     "GeofenceState",
     "GISState",
+    "CommunicationState",
+    "ConnectionState",
     "ApplicationState",
     "StateStore",
     "get_state_store",

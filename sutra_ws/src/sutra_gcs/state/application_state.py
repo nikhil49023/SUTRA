@@ -10,6 +10,7 @@ from dataclasses import dataclass, field, replace
 from typing import Callable, List, Optional
 
 from .alert_state import AlertState
+from .communication_state import CommunicationState
 from .fleet_state import FleetState
 from .geofence_state import GeofenceState
 from .gis_state import GISState
@@ -33,6 +34,7 @@ class ApplicationState:
     alert_state: AlertState = field(default_factory=AlertState)
     geofence_state: GeofenceState = field(default_factory=GeofenceState)
     gis_state: GISState = field(default_factory=GISState)
+    communication_state: CommunicationState = field(default_factory=CommunicationState)
 
     application_status: str = "READY"
     backend_connected: bool = True

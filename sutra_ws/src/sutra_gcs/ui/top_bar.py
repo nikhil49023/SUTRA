@@ -165,6 +165,16 @@ class TopBar(QFrame):
         telem = state.telemetry_state
         self.gps_lbl.setText(f"GPS: {telem.satellites} SAT (FIX: {telem.gps_fix}D)")
 
+        # Update Comms from CommunicationState
+        comm = state.communication_state
+        ws_status = comm.websocket_state.value
+        lat_str = f"{comm.latency_ms:.0f}ms" if comm.latency_ms > 0 else "OK"
+        comms_col = "#10b981" if ws_status in ("CONNECTED", "READY") or comm.connection_mode == "SIMULATION" else ("#f59e0b" if ws_status == "RECONNECTING" else "#ef4444")
+        self.comms_lbl.setText(f"WS: {ws_status} ({lat_str})")
+        self.comms_lbl.setStyleSheet(
+            f"color: {comms_col}; font-size: 10px; font-weight: bold; background-color: #0b111e; border: 1px solid #1e293b; padding: 3px 8px; border-radius: 3px;"
+        )
+
     def _on_emergency_clicked(self) -> None:
         """Triggers emergency safety interlock."""
         self.logger.critical("EMERGENCY ALL-STOP TRIGGERED FROM TOPBAR", extra={"source": "top_bar"})
