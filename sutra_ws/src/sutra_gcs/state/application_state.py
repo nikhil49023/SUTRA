@@ -9,6 +9,7 @@ import threading
 from dataclasses import dataclass, field, replace
 from typing import Callable, List, Optional
 
+from .ai_state import AIState
 from .alert_state import AlertState
 from .communication_state import CommunicationState
 from .fleet_state import FleetState
@@ -35,6 +36,7 @@ class ApplicationState:
     geofence_state: GeofenceState = field(default_factory=GeofenceState)
     gis_state: GISState = field(default_factory=GISState)
     communication_state: CommunicationState = field(default_factory=CommunicationState)
+    ai_state: AIState = field(default_factory=AIState)
 
     application_status: str = "READY"
     backend_connected: bool = True

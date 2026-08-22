@@ -11,6 +11,7 @@ from .application_state import ApplicationState, StateStore, get_state_store
 from .geofence_state import GeofenceState
 from .gis_state import GISState
 from .communication_state import CommunicationState, ConnectionState
+from .ai_state import AIState, AIMode, AIAnalysisStatus, BatteryPrediction, ETAPrediction, RouteRiskReport, FailurePrediction, ThreatItem, RecommendationItem, TrackedTarget, AssistantMessage
 
 __all__ = [
     "TelemetryState",
@@ -27,6 +28,17 @@ __all__ = [
     "GISState",
     "CommunicationState",
     "ConnectionState",
+    "AIState",
+    "AIMode",
+    "AIAnalysisStatus",
+    "BatteryPrediction",
+    "ETAPrediction",
+    "RouteRiskReport",
+    "FailurePrediction",
+    "ThreatItem",
+    "RecommendationItem",
+    "TrackedTarget",
+    "AssistantMessage",
     "ApplicationState",
     "StateStore",
     "get_state_store",

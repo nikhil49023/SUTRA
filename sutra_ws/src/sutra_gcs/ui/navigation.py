@@ -77,8 +77,9 @@ class NavigationController:
         self.stack.addWidget(self.hud_view)
         self.views["hud"] = self.hud_view
 
-        # 8. AI Intel View
-        self.ai_view = self._create_placeholder_view("AI THREAT DETECTION & BYTE-TRACK SAR")
+        # 8. AI Decision Support & Intel Workspace
+        from .ai import AIPanel
+        self.ai_view = AIPanel(self.state_store)
         self.stack.addWidget(self.ai_view)
         self.views["ai"] = self.ai_view
 

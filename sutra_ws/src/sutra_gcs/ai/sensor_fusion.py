@@ -25,4 +25,7 @@ class SensorFusionEngine:
         }
 
 
+# Backward compatibility singleton & alias
+SensorFusion = SensorFusionEngine
 sensor_fusion = SensorFusionEngine()
+
