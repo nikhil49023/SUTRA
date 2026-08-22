@@ -53,8 +53,9 @@ class NavigationController:
         self.stack.addWidget(self.gis_view)
         self.views["gis"] = self.gis_view
 
-        # 4. Fleet Management View
-        self.fleet_view = self._create_placeholder_view("FLEET SWARM COORDINATION & KINEMATICS")
+        # 4. Fleet Management View (Shares the persistent map)
+        from .fleet import FleetPanel
+        self.fleet_view = FleetPanel(self.map_widget, self.state_store)
         self.stack.addWidget(self.fleet_view)
         self.views["fleet"] = self.fleet_view
 
@@ -100,6 +101,9 @@ class NavigationController:
             elif view_key == "gis":
                 if hasattr(self.gis_view, "map_container_layout"):
                     self.gis_view.map_container_layout.addWidget(self.map_widget)
+            elif view_key == "fleet":
+                if hasattr(self.fleet_view, "map_container_layout"):
+                    self.fleet_view.map_container_layout.addWidget(self.map_widget)
             elif view_key == "live_ops":
                 if hasattr(self.live_ops_view, "map_container_layout"):
                     self.live_ops_view.map_container_layout.addWidget(self.map_widget)

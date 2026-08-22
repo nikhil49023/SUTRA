@@ -167,60 +167,17 @@ class MapWidget(QWidget):
 
     def _draw_drones(self, painter: QPainter, w: int, h: int) -> None:
         """Renders all multi-UAV drones from FleetState."""
+        from .fleet_renderer import FleetRenderer
         fleet_state = self.state_store.get_state().fleet_state
-        drones = fleet_state.get_all_drones()
+        selected_id = self.camera.selected_drone_id
 
-        if not drones:
-            drones = [
-                DroneState(
-                    drone_id="drone_alpha",
-                    callsign="ALPHA (LEADER)",
-                    is_leader=True,
-                    latitude=self.camera.latitude,
-                    longitude=self.camera.longitude,
-                    heading=45.0,
-                    altitude=25.0,
-                    battery=94.0,
-                ),
-            ]
-
-        for drone in drones:
-            sx, sy = self.camera.geo_to_screen(drone.latitude, drone.longitude, w, h)
-            is_selected = drone.drone_id == self.camera.selected_drone_id
-
-            painter.save()
-            painter.translate(sx, sy)
-
-            # Selection Highlight Aura
-            if is_selected:
-                painter.setPen(QPen(QColor(0, 242, 254, 180), 2, Qt.DashLine))
-                painter.setBrush(QBrush(QColor(0, 242, 254, 30)))
-                painter.drawEllipse(QPointF(0, 0), 24, 24)
-
-            # Rotate canvas for heading indicator
-            painter.rotate(drone.heading)
-
-            # Aircraft Icon (Tactical Quadcopter Triangle)
-            drone_color = QColor(0, 242, 254) if drone.is_leader else QColor(56, 189, 248)
-            painter.setPen(QPen(drone_color, 2))
-            painter.setBrush(QBrush(QColor(11, 17, 30, 240)))
-
-            poly = QPolygonF([
-                QPointF(0, -12),
-                QPointF(9, 9),
-                QPointF(0, 5),
-                QPointF(-9, 9),
-            ])
-            painter.drawPolygon(poly)
-            painter.restore()
-
-            # Drone Callsign & Battery Tag
-            painter.setFont(QFont("monospace", 8, QFont.Bold))
-            painter.setPen(QPen(QColor(248, 250, 252)))
-            tag_text = f"[{drone.callsign.split()[0]}] {int(drone.battery)}%"
-            if drone.is_leader:
-                tag_text = f"★ {tag_text}"
-            painter.drawText(QRectF(sx - 50, sy + 14, 100, 16), Qt.AlignCenter, tag_text)
+        FleetRenderer.render_fleet(
+            painter=painter,
+            fleet_state=fleet_state,
+            lat_to_screen_y=lambda lat: self.camera.geo_to_screen(lat, self.camera.longitude, w, h)[1],
+            lon_to_screen_x=lambda lon: self.camera.geo_to_screen(self.camera.latitude, lon, w, h)[0],
+            selected_drone_id=selected_id,
+        )
 
     def _draw_hud_overlays(self, painter: QPainter, w: int, h: int) -> None:
         """Draws tactical compass rose, coordinates badge, scale bar, and draw mode banners."""
