@@ -12,6 +12,7 @@ from typing import Callable, List, Optional
 from .alert_state import AlertState
 from .fleet_state import FleetState
 from .geofence_state import GeofenceState
+from .gis_state import GISState
 from .map_state import MapState
 from .mission_state import MissionState
 from .telemetry_state import TelemetryState
@@ -31,6 +32,7 @@ class ApplicationState:
     map_state: MapState = field(default_factory=MapState)
     alert_state: AlertState = field(default_factory=AlertState)
     geofence_state: GeofenceState = field(default_factory=GeofenceState)
+    gis_state: GISState = field(default_factory=GISState)
 
     application_status: str = "READY"
     backend_connected: bool = True

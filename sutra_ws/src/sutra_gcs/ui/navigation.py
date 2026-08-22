@@ -47,30 +47,36 @@ class NavigationController:
         self.stack.addWidget(self.mission_view)
         self.views["mission"] = self.mission_view
 
-        # 3. GIS Intelligence & Geofence View (Shares the persistent map)
+        # 3. Geofence & Airspace Safety View (Shares the persistent map)
         from .geofence import GeofencePanel
-        self.gis_view = GeofencePanel(self.map_widget, self.state_store)
+        self.geofence_view = GeofencePanel(self.map_widget, self.state_store)
+        self.stack.addWidget(self.geofence_view)
+        self.views["geofence"] = self.geofence_view
+
+        # 4. GIS Intelligence & Tactical Topography View (Shares the persistent map)
+        from .gis import GISPanel
+        self.gis_view = GISPanel(self.map_widget, self.state_store)
         self.stack.addWidget(self.gis_view)
         self.views["gis"] = self.gis_view
 
-        # 4. Fleet Management View (Shares the persistent map)
+        # 5. Fleet Management View (Shares the persistent map)
         from .fleet import FleetPanel
         self.fleet_view = FleetPanel(self.map_widget, self.state_store)
         self.stack.addWidget(self.fleet_view)
         self.views["fleet"] = self.fleet_view
 
-        # 5. Live Operations & Execution View (Shares the persistent map)
+        # 6. Live Operations & Execution View (Shares the persistent map)
         from .mission import MissionExecutionPanel
         self.live_ops_view = MissionExecutionPanel(self.map_widget, self.state_store)
         self.stack.addWidget(self.live_ops_view)
         self.views["live_ops"] = self.live_ops_view
 
-        # 6. AI Intel View
+        # 7. AI Intel View
         self.ai_view = self._create_placeholder_view("AI THREAT DETECTION & BYTE-TRACK SAR")
         self.stack.addWidget(self.ai_view)
         self.views["ai"] = self.ai_view
 
-        # 7. Settings View
+        # 8. Settings View
         self.settings_view = self._create_placeholder_view("SYSTEM CONFIGURATION & HARDWARE LINK")
         self.stack.addWidget(self.settings_view)
         self.views["settings"] = self.settings_view
@@ -98,6 +104,9 @@ class NavigationController:
             elif view_key == "mission":
                 if hasattr(self.mission_view, "map_container_layout"):
                     self.mission_view.map_container_layout.addWidget(self.map_widget)
+            elif view_key == "geofence":
+                if hasattr(self.geofence_view, "map_container_layout"):
+                    self.geofence_view.map_container_layout.addWidget(self.map_widget)
             elif view_key == "gis":
                 if hasattr(self.gis_view, "map_container_layout"):
                     self.gis_view.map_container_layout.addWidget(self.map_widget)

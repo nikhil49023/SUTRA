@@ -224,7 +224,19 @@ class RightInspector(QFrame):
             self.attr_layout.addWidget(v_lbl, r, 1)
 
     def _render_drone_attributes(self, drone: DroneState) -> None:
+        from gis.elevation_service import elevation_service
+        from gis.ground_clearance import ground_clearance_analyzer
+        from gis.rf_coverage import rf_coverage_analyzer
+        from gis.weather_service import weather_service
+
         self._clear_attributes()
+        elev = elevation_service.get_elevation(drone.latitude, drone.longitude)
+        clr = ground_clearance_analyzer.check_position_clearance(
+            drone.drone_id, drone.latitude, drone.longitude, drone.altitude
+        )
+        rf_link = rf_coverage_analyzer.analyze_link(max(10.0, drone.altitude * 20.0))
+        w_data = weather_service.get_weather(drone.latitude, drone.longitude)
+
         attrs = [
             ("CALLSIGN", drone.callsign),
             ("ROLE", drone.role),
@@ -233,12 +245,23 @@ class RightInspector(QFrame):
             ("POSITION", f"{drone.latitude:.5f}, {drone.longitude:.5f}"),
             ("SWARM LEADER", "YES (APEX)" if drone.is_leader else "NO (FOLLOWER)"),
             ("FORMATION", drone.formation),
+            ("TERRAIN ELEV", f"{elev:.1f} m MSL"),
+            ("GROUND CLEARANCE", f"{clr.clearance_m:.1f} m ({clr.status.value})"),
+            ("LOS TO GCS", "VISIBLE (UNOBSTRUCTED)" if clr.status != "CRITICAL" else "WARNING"),
+            ("RF LINK QUALITY", f"{rf_link.link_quality} ({rf_link.link_margin_db:.1f} dB)"),
+            ("WEATHER ENVELOPE", f"{w_data.condition} ({w_data.wind_speed_mps:.1f} m/s)"),
         ]
         for r, (k, v) in enumerate(attrs):
             k_lbl = QLabel(k)
             k_lbl.setStyleSheet("color: #64748b; font-size: 8px; font-weight: bold;")
             v_lbl = QLabel(str(v))
             v_lbl.setStyleSheet("color: #f8fafc; font-size: 10px; font-weight: bold;")
+            if "CRITICAL" in str(v) or "BLOCKED" in str(v):
+                v_lbl.setStyleSheet("color: #ef4444; font-size: 10px; font-weight: bold;")
+            elif "WARNING" in str(v) or "DEGRADED" in str(v):
+                v_lbl.setStyleSheet("color: #f59e0b; font-size: 10px; font-weight: bold;")
+            elif "VISIBLE" in str(v) or "SAFE" in str(v) or "EXCELLENT" in str(v):
+                v_lbl.setStyleSheet("color: #10b981; font-size: 10px; font-weight: bold;")
             self.attr_layout.addWidget(k_lbl, r, 0)
             self.attr_layout.addWidget(v_lbl, r, 1)
 

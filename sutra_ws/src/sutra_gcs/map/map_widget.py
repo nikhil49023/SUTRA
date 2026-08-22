@@ -142,10 +142,25 @@ class MapWidget(QWidget):
             height=h,
         )
 
-        # 6. Multi-UAV Swarm Fleet
+        # 6. Tactical GIS Overlays (LOS, RF Heatmap, Search Grid, Measurements)
+        from .los_renderer import LOSRenderer
+        from .rf_renderer import RFRenderer
+        from .grid_renderer import GridRenderer
+        from .elevation_renderer import ElevationRenderer
+
+        gis_state = self.state_store.get_state().gis_state
+        lat_to_y = lambda lat: self.camera.geo_to_screen(lat, self.camera.longitude, w, h)[1]
+        lon_to_x = lambda lon: self.camera.geo_to_screen(self.camera.latitude, lon, w, h)[0]
+
+        RFRenderer.render_rf(painter, gis_state, lat_to_y, lon_to_x)
+        GridRenderer.render_grid(painter, gis_state, lat_to_y, lon_to_x)
+        LOSRenderer.render_los(painter, gis_state, lat_to_y, lon_to_x)
+        ElevationRenderer.render_measurements(painter, gis_state, lat_to_y, lon_to_x)
+
+        # 7. Multi-UAV Swarm Fleet
         self._draw_drones(painter, w, h)
 
-        # 7. Tactical Overlays (Compass, Scale, Crosshairs, Draw Mode Banner)
+        # 8. Tactical Overlays (Compass, Scale, Crosshairs, Draw Mode Banner)
         self._draw_hud_overlays(painter, w, h)
 
     def _draw_grid(self, painter: QPainter, w: int, h: int) -> None:
