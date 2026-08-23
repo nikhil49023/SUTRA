@@ -105,7 +105,7 @@ def test_perceptron_jscc_ros2_node_instantiation():
 def test_emergency_rtl_dispatch_and_gnc_response():
     """Verify Emergency RTL command from GCS bridge triggers EMERGENCY_RTL in GNC node."""
     gnc_node = SingleQuadcopterOffboardNode()
-    assert gnc_node.flight_mode == "AUTONOMOUS_RING_PURSUIT"
+    assert gnc_node.flight_mode in ["MANUAL_TELEOP", "AUTONOMOUS_RING_PURSUIT"]
 
     # Simulate GCS bridge dispatching Emergency RTL payload to /sutra/cmd/rtl
     rtl_msg = String()

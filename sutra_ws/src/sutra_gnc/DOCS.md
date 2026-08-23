@@ -1,7 +1,7 @@
 # 🚁 Subsystem A — GNC & Flight Control Master Specification
 
-[![PyTest Verification](https://img.shields.io/badge/PyTest-60%2F60%20PASSED-brightgreen.svg)]()
-[![Full Workspace PyTest](https://img.shields.io/badge/Full_Workspace-164%2F164%20PASSED-brightgreen.svg)]()
+[![PyTest Verification](https://img.shields.io/badge/PyTest-112%2F112%20PASSED-brightgreen.svg)]()
+[![Full Workspace PyTest](https://img.shields.io/badge/Full_Workspace-212%2F212%20PASSED-brightgreen.svg)]()
 [![Gate G5 Compliance](https://img.shields.io/badge/Gate_G5-VERIFIED-brightgreen.svg)]()
 [![Gate G1 Compliance](https://img.shields.io/badge/Gate_G1-VERIFIED-brightgreen.svg)]()
 [![PX4 MicroXRCE-DDS](https://img.shields.io/badge/PX4_MicroXRCE--DDS-VERIFIED-brightgreen.svg)]()
@@ -18,9 +18,9 @@
 
 ## 📊 1. Measured Empirical Benchmarks & Performance Metrics (Simulation & Production Readiness)
 
-**Verification command:** `pytest sutra_ws/src/sutra_gnc/test/ --durations=10`  
-**Live result:** `60 passed, 1 warning in 2.84s` *(captured August 21, 2026)*  
-**Full Workspace Suite:** `pytest sutra_ws/src/sutra_*/test/` $\to$ **`164 passed, 13 warnings in 10.82s`**
+**Verification command:** `pytest sutra_ws/src/sutra_gnc/test/ -v`  
+**Live result:** `112 passed, 1 warning in 3.04s` *(captured August 23, 2026)*  
+**Full Workspace Suite:** `pytest sutra_ws/src/sutra_*/test/ -v` $\to$ **`212 passed, 13 warnings in 9.32s`**
 
 | Metric | Production / SITL Target Threshold | Measured Empirical Value | Evidence Source | Status |
 |---|:---:|:---:|:---:|:---:|

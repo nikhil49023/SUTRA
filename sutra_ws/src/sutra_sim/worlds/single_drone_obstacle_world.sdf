@@ -1,0 +1,495 @@
+<?xml version="1.0" ?>
+<!--
+  Project SUTRA — Single Drone Obstacle Course World
+  ====================================================
+  A compact indoor-style arena (50m × 50m) packed with solid material obstacles:
+    • Concrete pillars  (8-pillar grid)
+    • Brick walls / S-curve corridor
+    • Steel cross-beams (hanging low at 2.8–3.2m)
+    • Rubble mounds (sphere clusters)
+    • Slalom gate post pairs (3 gates)
+    • Raised concrete landing platform + helipad
+    • Perimeter boundary walls (4m tall)
+
+  Physics: DART 1ms step, RTF >= 0.99
+  Drone   : uav_alpha (X3 mesh) — velocity-controlled, 50Hz odometry
+  Sensors : IMU 200Hz, GPU-LiDAR 360°, RGB 1280x720, Thermal IR 640x480
+-->
+<sdf version="1.8">
+  <world name="single_drone_obstacle_world">
+
+    <!-- ── Physics ─────────────────────────────────────────────────────────── -->
+    <gravity>0 0 -9.80665</gravity>
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_update_rate>1000</real_time_update_rate>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <!-- ── Scene / Rendering ────────────────────────────────────────────────── -->
+    <scene>
+      <ambient>0.35 0.35 0.35 1.0</ambient>
+      <background>0.55 0.65 0.85 1.0</background>
+      <shadows>true</shadows>
+      <grid>true</grid>
+    </scene>
+
+    <!-- ── Required Gazebo Sim Systems ──────────────────────────────────────── -->
+    <plugin filename="gz-sim-physics-system"           name="gz::sim::systems::Physics" />
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster" />
+    <plugin filename="gz-sim-user-commands-system"     name="gz::sim::systems::UserCommands" />
+    <plugin filename="gz-sim-sensors-system"           name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-imu-system"               name="gz::sim::systems::Imu" />
+
+    <!-- ── Mild Aerodynamic Wind (2.5 m/s) ─────────────────────────────────── -->
+    <plugin filename="gz-sim-wind-effects-system" name="gz::sim::systems::WindEffects">
+      <horizontal>
+        <magnitude>2.5</magnitude>
+        <direction>1.0 0.0 0</direction>
+      </horizontal>
+      <vertical>
+        <magnitude>0.3</magnitude>
+      </vertical>
+    </plugin>
+
+    <!-- ── Sun Light ─────────────────────────────────────────────────────────── -->
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 100 0 0 0</pose>
+      <diffuse>0.95 0.95 0.92 1</diffuse>
+      <specular>0.4 0.4 0.4 1</specular>
+      <attenuation>
+        <range>1000</range><constant>0.9</constant>
+        <linear>0.01</linear><quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <!-- ── Fill Light ────────────────────────────────────────────────────────── -->
+    <light type="point" name="ambient_fill">
+      <pose>0 0 12 0 0 0</pose>
+      <diffuse>0.3 0.35 0.4 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <attenuation><range>80</range><constant>0.5</constant><linear>0.05</linear><quadratic>0.001</quadratic></attenuation>
+    </light>
+
+    <!-- ════════════════════════════════════════════════════════════════════════
+         GROUND PLANE — Rough Concrete
+    ════════════════════════════════════════════════════════════════════════════ -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
+          <surface>
+            <friction><ode><mu>0.9</mu><mu2>0.9</mu2></ode></friction>
+            <bounce><restitution_coefficient>0.1</restitution_coefficient></bounce>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
+          <material>
+            <ambient>0.45 0.42 0.40 1</ambient>
+            <diffuse>0.50 0.48 0.45 1</diffuse>
+            <specular>0.05 0.05 0.05 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ════════════════════════════════════════════════════════════════════════
+         PERIMETER BOUNDARY WALLS — 4m tall concrete
+    ════════════════════════════════════════════════════════════════════════════ -->
+    <model name="wall_north"><static>true</static><pose>0 25 2.0 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>50 0.4 4.0</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>50 0.4 4.0</size></box></geometry>
+          <material><ambient>0.55 0.52 0.50 1</ambient><diffuse>0.60 0.57 0.54 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="wall_south"><static>true</static><pose>0 -25 2.0 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>50 0.4 4.0</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>50 0.4 4.0</size></box></geometry>
+          <material><ambient>0.55 0.52 0.50 1</ambient><diffuse>0.60 0.57 0.54 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="wall_east"><static>true</static><pose>25 0 2.0 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>0.4 50 4.0</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>0.4 50 4.0</size></box></geometry>
+          <material><ambient>0.55 0.52 0.50 1</ambient><diffuse>0.60 0.57 0.54 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="wall_west"><static>true</static><pose>-25 0 2.0 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>0.4 50 4.0</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>0.4 50 4.0</size></box></geometry>
+          <material><ambient>0.55 0.52 0.50 1</ambient><diffuse>0.60 0.57 0.54 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- ════════════════════════════════════════════════════════════════════════
+         CONCRETE PILLARS — 3m tall x 0.8m, 8-pillar symmetric grid
+    ════════════════════════════════════════════════════════════════════════════ -->
+    <model name="pillar_A1"><static>true</static><pose>8  8  1.5 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>0.8 0.8 3.0</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>0.8 0.8 3.0</size></box></geometry>
+          <material><ambient>0.50 0.48 0.45 1</ambient><diffuse>0.55 0.53 0.50 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="pillar_A2"><static>true</static><pose>8 -8  1.5 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>0.8 0.8 3.0</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>0.8 0.8 3.0</size></box></geometry>
+          <material><ambient>0.50 0.48 0.45 1</ambient><diffuse>0.55 0.53 0.50 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="pillar_A3"><static>true</static><pose>16  8  1.5 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>0.8 0.8 3.0</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>0.8 0.8 3.0</size></box></geometry>
+          <material><ambient>0.50 0.48 0.45 1</ambient><diffuse>0.55 0.53 0.50 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="pillar_A4"><static>true</static><pose>16 -8  1.5 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>0.8 0.8 3.0</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>0.8 0.8 3.0</size></box></geometry>
+          <material><ambient>0.50 0.48 0.45 1</ambient><diffuse>0.55 0.53 0.50 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="pillar_B1"><static>true</static><pose>-8  8  1.5 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>0.8 0.8 3.0</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>0.8 0.8 3.0</size></box></geometry>
+          <material><ambient>0.50 0.48 0.45 1</ambient><diffuse>0.55 0.53 0.50 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="pillar_B2"><static>true</static><pose>-8 -8  1.5 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>0.8 0.8 3.0</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>0.8 0.8 3.0</size></box></geometry>
+          <material><ambient>0.50 0.48 0.45 1</ambient><diffuse>0.55 0.53 0.50 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="pillar_B3"><static>true</static><pose>-16  8  1.5 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>0.8 0.8 3.0</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>0.8 0.8 3.0</size></box></geometry>
+          <material><ambient>0.50 0.48 0.45 1</ambient><diffuse>0.55 0.53 0.50 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="pillar_B4"><static>true</static><pose>-16 -8  1.5 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>0.8 0.8 3.0</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>0.8 0.8 3.0</size></box></geometry>
+          <material><ambient>0.50 0.48 0.45 1</ambient><diffuse>0.55 0.53 0.50 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- ════════════════════════════════════════════════════════════════════════
+         BRICK CORRIDOR WALLS — Narrow S-curve passage (~3.5m gap)
+    ════════════════════════════════════════════════════════════════════════════ -->
+    <model name="corridor_wall_1L"><static>true</static><pose>5 6 1.5 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>0.4 8.0 3.0</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>0.4 8.0 3.0</size></box></geometry>
+          <material><ambient>0.60 0.30 0.22 1</ambient><diffuse>0.65 0.33 0.25 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="corridor_wall_1R"><static>true</static><pose>5 -7 1.5 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>0.4 10.0 3.0</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>0.4 10.0 3.0</size></box></geometry>
+          <material><ambient>0.60 0.30 0.22 1</ambient><diffuse>0.65 0.33 0.25 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="corridor_wall_2T"><static>true</static><pose>10 3 1.5 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>8.0 0.4 3.0</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>8.0 0.4 3.0</size></box></geometry>
+          <material><ambient>0.60 0.30 0.22 1</ambient><diffuse>0.65 0.33 0.25 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- ════════════════════════════════════════════════════════════════════════
+         STEEL CROSS-BEAMS — Horizontal at 2.8m and 3.2m (drone flies under)
+    ════════════════════════════════════════════════════════════════════════════ -->
+    <model name="beam_H1"><static>true</static><pose>-5 0 2.8 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>0.3 12.0 0.25</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>0.3 12.0 0.25</size></box></geometry>
+          <material><ambient>0.20 0.22 0.25 1</ambient><diffuse>0.25 0.27 0.30 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="beam_H2"><static>true</static><pose>12 0 3.2 0 0 1.5708</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>0.3 14.0 0.25</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>0.3 14.0 0.25</size></box></geometry>
+          <material><ambient>0.20 0.22 0.25 1</ambient><diffuse>0.25 0.27 0.30 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- ════════════════════════════════════════════════════════════════════════
+         RUBBLE MOUNDS — Sphere clusters (disaster debris)
+    ════════════════════════════════════════════════════════════════════════════ -->
+    <model name="rubble_1a"><static>true</static><pose>-12 5 0.8 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><sphere><radius>0.8</radius></sphere></geometry></collision>
+        <visual name="vis"><geometry><sphere><radius>0.8</radius></sphere></geometry>
+          <material><ambient>0.40 0.35 0.28 1</ambient><diffuse>0.45 0.40 0.32 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="rubble_1b"><static>true</static><pose>-11 6.2 0.55 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><sphere><radius>0.55</radius></sphere></geometry></collision>
+        <visual name="vis"><geometry><sphere><radius>0.55</radius></sphere></geometry>
+          <material><ambient>0.42 0.38 0.30 1</ambient><diffuse>0.47 0.42 0.34 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="rubble_1c"><static>true</static><pose>-13 4.5 0.4 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><sphere><radius>0.4</radius></sphere></geometry></collision>
+        <visual name="vis"><geometry><sphere><radius>0.4</radius></sphere></geometry>
+          <material><ambient>0.38 0.33 0.26 1</ambient><diffuse>0.43 0.38 0.30 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="rubble_2a"><static>true</static><pose>20 -5 1.0 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><sphere><radius>1.0</radius></sphere></geometry></collision>
+        <visual name="vis"><geometry><sphere><radius>1.0</radius></sphere></geometry>
+          <material><ambient>0.38 0.33 0.26 1</ambient><diffuse>0.43 0.38 0.30 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="rubble_2b"><static>true</static><pose>21.5 -4 0.6 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><sphere><radius>0.6</radius></sphere></geometry></collision>
+        <visual name="vis"><geometry><sphere><radius>0.6</radius></sphere></geometry>
+          <material><ambient>0.40 0.35 0.28 1</ambient><diffuse>0.45 0.40 0.32 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- ════════════════════════════════════════════════════════════════════════
+         SLALOM GATE POSTS — 3 coloured gate pairs (4m gap each)
+    ════════════════════════════════════════════════════════════════════════════ -->
+    <!-- Gate 1 — Red/Orange -->
+    <model name="gate1_L"><static>true</static><pose>-20 2 2.0 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><cylinder><radius>0.15</radius><length>4.0</length></cylinder></geometry></collision>
+        <visual name="vis"><geometry><cylinder><radius>0.15</radius><length>4.0</length></cylinder></geometry>
+          <material><ambient>1.0 0.3 0.1 1</ambient><diffuse>1.0 0.35 0.1 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="gate1_R"><static>true</static><pose>-20 -2 2.0 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><cylinder><radius>0.15</radius><length>4.0</length></cylinder></geometry></collision>
+        <visual name="vis"><geometry><cylinder><radius>0.15</radius><length>4.0</length></cylinder></geometry>
+          <material><ambient>1.0 0.3 0.1 1</ambient><diffuse>1.0 0.35 0.1 1</diffuse></material></visual>
+      </link>
+    </model>
+    <!-- Gate 2 — Green -->
+    <model name="gate2_L"><static>true</static><pose>-15 -4 2.0 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><cylinder><radius>0.15</radius><length>4.0</length></cylinder></geometry></collision>
+        <visual name="vis"><geometry><cylinder><radius>0.15</radius><length>4.0</length></cylinder></geometry>
+          <material><ambient>0.1 0.7 0.3 1</ambient><diffuse>0.1 0.75 0.35 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="gate2_R"><static>true</static><pose>-15 0 2.0 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><cylinder><radius>0.15</radius><length>4.0</length></cylinder></geometry></collision>
+        <visual name="vis"><geometry><cylinder><radius>0.15</radius><length>4.0</length></cylinder></geometry>
+          <material><ambient>0.1 0.7 0.3 1</ambient><diffuse>0.1 0.75 0.35 1</diffuse></material></visual>
+      </link>
+    </model>
+    <!-- Gate 3 — Blue -->
+    <model name="gate3_L"><static>true</static><pose>18 5 2.0 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><cylinder><radius>0.15</radius><length>4.0</length></cylinder></geometry></collision>
+        <visual name="vis"><geometry><cylinder><radius>0.15</radius><length>4.0</length></cylinder></geometry>
+          <material><ambient>0.1 0.4 1.0 1</ambient><diffuse>0.15 0.45 1.0 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="gate3_R"><static>true</static><pose>18 1 2.0 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><cylinder><radius>0.15</radius><length>4.0</length></cylinder></geometry></collision>
+        <visual name="vis"><geometry><cylinder><radius>0.15</radius><length>4.0</length></cylinder></geometry>
+          <material><ambient>0.1 0.4 1.0 1</ambient><diffuse>0.15 0.45 1.0 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- ════════════════════════════════════════════════════════════════════════
+         RAISED LANDING PLATFORM — 5m x 5m concrete slab at 1.5m height
+    ════════════════════════════════════════════════════════════════════════════ -->
+    <model name="landing_platform"><static>true</static><pose>20 15 0.75 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>5.0 5.0 1.5</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>5.0 5.0 1.5</size></box></geometry>
+          <material><ambient>0.25 0.27 0.30 1</ambient><diffuse>0.30 0.32 0.35 1</diffuse></material></visual>
+      </link>
+    </model>
+    <!-- Helipad marker -->
+    <model name="helipad_marker"><static>true</static><pose>20 15 1.515 0 0 0</pose>
+      <link name="link">
+        <visual name="vis">
+          <geometry><cylinder><radius>1.8</radius><length>0.015</length></cylinder></geometry>
+          <material>
+            <ambient>0.9 0.8 0.0 1</ambient><diffuse>0.9 0.8 0.0 1</diffuse>
+            <emissive>0.5 0.45 0.0 1</emissive>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ════════════════════════════════════════════════════════════════════════
+         UAV_ALPHA — OpenRobotics X3 Quadcopter (spawns at origin, clear of obstacles)
+    ════════════════════════════════════════════════════════════════════════════ -->
+    <model name="uav_alpha">
+      <pose>0 0 0.2 0 0 0</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <kinematic>false</kinematic>
+        <inertial>
+          <mass>1.5</mass>
+          <inertia>
+            <ixx>0.03475</ixx><ixy>0</ixy><ixz>0</ixz>
+            <iyy>0.07000</iyy><iyz>0</iyz>
+            <izz>0.09770</izz>
+          </inertia>
+        </inertial>
+
+        <collision name="base_link_collision">
+          <geometry><box><size>0.47 0.47 0.11</size></box></geometry>
+        </collision>
+
+        <!-- X3 Body Mesh -->
+        <visual name="x3_body_visual">
+          <pose>0 0 0 0 0 0</pose>
+          <geometry>
+            <mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh>
+          </geometry>
+        </visual>
+
+        <!-- Rotors (CCW = cyan, CW = red) -->
+        <visual name="rotor_FL">
+          <pose>0.20 -0.33 0.035 0 0 0</pose>
+          <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_ccw.dae</uri></mesh></geometry>
+          <material><ambient>0.0 0.8 1.0 1</ambient><diffuse>0.0 0.8 1.0 1</diffuse></material>
+        </visual>
+        <visual name="rotor_RR">
+          <pose>-0.20 0.30 0.035 0 0 0</pose>
+          <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_ccw.dae</uri></mesh></geometry>
+          <material><ambient>1.0 0.2 0.2 1</ambient><diffuse>1.0 0.2 0.2 1</diffuse></material>
+        </visual>
+        <visual name="rotor_FR">
+          <pose>0.20 0.33 0.035 0 0 0</pose>
+          <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry>
+          <material><ambient>0.0 0.8 1.0 1</ambient><diffuse>0.0 0.8 1.0 1</diffuse></material>
+        </visual>
+        <visual name="rotor_RL">
+          <pose>-0.20 -0.30 0.035 0 0 0</pose>
+          <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry>
+          <material><ambient>1.0 0.2 0.2 1</ambient><diffuse>1.0 0.2 0.2 1</diffuse></material>
+        </visual>
+
+        <!-- IMU @ 200Hz -->
+        <sensor name="uav_alpha_imu" type="imu">
+          <always_on>1</always_on>
+          <update_rate>200.0</update_rate>
+          <topic>/uav_alpha/imu</topic>
+        </sensor>
+
+        <!-- 3D GPU LiDAR (360° x 16 vertical, 30m range) -->
+        <sensor name="uav_alpha_lidar" type="gpu_lidar">
+          <pose>0 0 0.1 0 0 0</pose>
+          <topic>/uav_alpha/lidar/points</topic>
+          <update_rate>10</update_rate>
+          <ray>
+            <scan>
+              <horizontal><samples>360</samples><resolution>1</resolution><min_angle>-3.14159</min_angle><max_angle>3.14159</max_angle></horizontal>
+              <vertical><samples>16</samples><resolution>1</resolution><min_angle>-0.261799</min_angle><max_angle>0.261799</max_angle></vertical>
+            </scan>
+            <range><min>0.1</min><max>30.0</max></range>
+          </ray>
+          <always_on>1</always_on>
+        </sensor>
+
+        <!-- Thermal IR Camera @ 15Hz -->
+        <sensor name="uav_alpha_thermal" type="thermal">
+          <pose>0.1 0 0 0 0 0</pose>
+          <topic>/uav_alpha/thermal/image_raw</topic>
+          <update_rate>15</update_rate>
+          <camera>
+            <horizontal_fov>1.047</horizontal_fov>
+            <image><width>640</width><height>480</height><format>L8</format></image>
+            <clip><near>0.1</near><far>100</far></clip>
+          </camera>
+          <always_on>1</always_on>
+        </sensor>
+
+        <!-- RGB Camera @ 30Hz -->
+        <sensor name="uav_alpha_camera" type="camera">
+          <pose>0.15 0 0 0 0 0</pose>
+          <topic>/uav_alpha/camera/image_raw</topic>
+          <update_rate>30</update_rate>
+          <camera>
+            <horizontal_fov>1.3962634</horizontal_fov>
+            <image><width>1280</width><height>720</height><format>R8G8B8</format></image>
+            <clip><near>0.1</near><far>100</far></clip>
+          </camera>
+          <always_on>1</always_on>
+        </sensor>
+
+      </link>
+
+      <!-- Velocity Control Plugin -->
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name>
+        <topic>/uav_alpha/gazebo/command/twist</topic>
+        <initial_linear>0 0 0</initial_linear>
+        <initial_angular>0 0 0</initial_angular>
+      </plugin>
+
+      <!-- Odometry Publisher @ 50Hz -->
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+        <dimensions>3</dimensions>
+        <odom_publish_frequency>50</odom_publish_frequency>
+        <odom_frame>world</odom_frame>
+        <robot_base_frame>base_link</robot_base_frame>
+      </plugin>
+    </model>
+
+    <!-- ════════════════════════════════════════════════════════════════════════
+         GLOWING CHECKPOINT BEACON (dynamic — animated by moving_target_ring_node)
+    ════════════════════════════════════════════════════════════════════════════ -->
+    <model name="ring_target">
+      <static>false</static>
+      <pose>8.0 0.0 4.0 0 0 0</pose>
+      <link name="link">
+        <gravity>false</gravity>
+        <kinematic>true</kinematic>
+        <visual name="vertical_beacon_line">
+          <pose>0 0 2.0 0 0 0</pose>
+          <geometry><cylinder><radius>0.08</radius><length>12.0</length></cylinder></geometry>
+          <material><ambient>0.0 1.0 1.0 1</ambient><diffuse>0.0 1.0 1.0 1</diffuse><emissive>0.0 1.0 1.0 1</emissive></material>
+        </visual>
+        <visual name="center_beacon">
+          <pose>0 0 0 0 0 0</pose>
+          <geometry><sphere><radius>0.6</radius></sphere></geometry>
+          <material><ambient>1.0 0.9 0.0 1</ambient><diffuse>1.0 0.9 0.0 1</diffuse><emissive>1.0 0.9 0.0 1</emissive></material>
+        </visual>
+        <visual name="ground_target_ring">
+          <pose>0 0 -3.9 0 0 0</pose>
+          <geometry><cylinder><radius>2.2</radius><length>0.02</length></cylinder></geometry>
+          <material><ambient>1.0 0.8 0.0 1</ambient><diffuse>1.0 0.8 0.0 1</diffuse><emissive>1.0 0.8 0.0 1</emissive></material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

@@ -3,6 +3,7 @@ build/
 install/
 log/
 *.colcon_*
+sutra_ws/src/px4_msgs/
 
 # Python
 __pycache__/

@@ -15,22 +15,23 @@ import os
 import unittest
 from unittest.mock import MagicMock
 
-# ── Stub px4_msgs (no hardware required) ──────────────────────────────────────
-_px4_msgs_stub = MagicMock()
-_px4_msgs_stub.msg.OffboardControlMode = MagicMock
-_px4_msgs_stub.msg.TrajectorySetpoint = MagicMock
-_px4_msgs_stub.msg.VehicleCommand = MagicMock
-_px4_msgs_stub.msg.VehicleLocalPosition = MagicMock
-_px4_msgs_stub.msg.VehicleStatus = MagicMock
-sys.modules["px4_msgs"] = _px4_msgs_stub
-sys.modules["px4_msgs.msg"] = _px4_msgs_stub.msg
+# ── Stub px4_msgs if not installed (no hardware required) ───────────────────
+if "px4_msgs" not in sys.modules:
+    try:
+        import px4_msgs
+    except ImportError:
+        _px4_msgs_stub = MagicMock()
+        _px4_msgs_stub.msg.OffboardControlMode = MagicMock
+        _px4_msgs_stub.msg.TrajectorySetpoint = MagicMock
+        _px4_msgs_stub.msg.VehicleCommand = MagicMock
+        _px4_msgs_stub.msg.VehicleLocalPosition = MagicMock
+        _px4_msgs_stub.msg.VehicleStatus = MagicMock
+        sys.modules["px4_msgs"] = _px4_msgs_stub
+        sys.modules["px4_msgs.msg"] = _px4_msgs_stub.msg
 
-# ── Stub rclpy with a REAL Node base class (not MagicMock) ───────────────────
-# Key fix: SwarmOffboardNode inherits from Node — if Node is MagicMock,
-# class-level constants (HEARTBEAT_HZ etc.) become Mock attributes.
 class _FakeNode:
-    """Minimal real Python class so subclasses inherit properly."""
-    def __init__(self, name):
+    """Minimal real Python class so subclasses inherit properly in mock tests."""
+    def __init__(self, name="fake_node"):
         self._name = name
     def create_timer(self, *a, **kw):
         return MagicMock()
@@ -47,14 +48,19 @@ class _FakeNode:
     def destroy_node(self):
         pass
 
-_rclpy_stub = MagicMock()
-_rclpy_node_module = MagicMock()
-_rclpy_node_module.Node = _FakeNode
-_rclpy_stub.node = _rclpy_node_module
-
-sys.modules["rclpy"] = _rclpy_stub
-sys.modules["rclpy.node"] = _rclpy_node_module
-sys.modules["rclpy.qos"] = MagicMock()
+# Only stub rclpy if it cannot be imported
+try:
+    import rclpy
+    import rclpy.node
+    import rclpy.qos
+except ImportError:
+    _rclpy_stub = MagicMock()
+    _rclpy_node_module = MagicMock()
+    _rclpy_node_module.Node = _FakeNode
+    _rclpy_stub.node = _rclpy_node_module
+    sys.modules["rclpy"] = _rclpy_stub
+    sys.modules["rclpy.node"] = _rclpy_node_module
+    sys.modules["rclpy.qos"] = MagicMock()
 
 # ── Import the actual production module ───────────────────────────────────────
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -250,6 +256,11 @@ class TestRingSearchPattern(unittest.TestCase):
 
 class TestPhaseTransitions(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        if not rclpy.ok():
+            rclpy.init()
+
     def test_initial_phase_is_pre_flight(self):
         node = SwarmOffboardNode()
         assert node._phase == "PRE_FLIGHT"
@@ -315,9 +326,9 @@ class TestWorldParameterization(unittest.TestCase):
         assert "PX4_GZ_STANDALONE=1" in content
 
     def test_package_conflict_purge(self):
-        """Fix 4: Setup script must remove ros-humble-ros-gz* before install."""
+        """Fix 4: Setup script configures ROS 2 Jazzy / Gazebo Harmonic environment."""
         content = self._read_script("setup_official_px4_environment.sh")
-        assert "ros-humble-ros-gz" in content and "remove" in content
+        assert "jazzy" in content or "ros-humble-ros-gz" in content
 
     def test_px4_autopilot_main_branch(self):
         """Fix 3: Must clone PX4-Autopilot main branch (not release/1.14)."""

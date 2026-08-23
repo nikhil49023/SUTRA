@@ -29,10 +29,23 @@ class DynamicCheckpointRingNode(Node):
         self.declare_parameter("checkpoint_radius", 2.5)
         self.declare_parameter("drone_id", "uav_alpha")
         self.declare_parameter("min_distance_between_rings", 8.0)
+        # Arena bounds — override per-launch to match world perimeter walls
+        self.declare_parameter("arena_x_min", 4.0)
+        self.declare_parameter("arena_x_max", 22.0)
+        self.declare_parameter("arena_y_min", -12.0)
+        self.declare_parameter("arena_y_max", 12.0)
+        self.declare_parameter("arena_z_min", 3.5)
+        self.declare_parameter("arena_z_max", 7.5)
 
         self.threshold = float(self.get_parameter("checkpoint_radius").value)
         self.drone_id = self.get_parameter("drone_id").value
         self.min_dist = float(self.get_parameter("min_distance_between_rings").value)
+        self.arena_x_min = float(self.get_parameter("arena_x_min").value)
+        self.arena_x_max = float(self.get_parameter("arena_x_max").value)
+        self.arena_y_min = float(self.get_parameter("arena_y_min").value)
+        self.arena_y_max = float(self.get_parameter("arena_y_max").value)
+        self.arena_z_min = float(self.get_parameter("arena_z_min").value)
+        self.arena_z_max = float(self.get_parameter("arena_z_max").value)
 
         # Initial Checkpoint Position
         self.curr_ring_x = 8.0
@@ -106,11 +119,11 @@ class DynamicCheckpointRingNode(Node):
             self.has_drone_pose = True
 
     def _generate_next_checkpoint(self):
-        """Generates a new random 3D vector coordinate in bounded flight space."""
+        """Generates a new random 3D vector coordinate within the configured arena bounds."""
         while True:
-            new_x = random.uniform(4.0, 22.0)
-            new_y = random.uniform(-12.0, 12.0)
-            new_z = random.uniform(3.5, 7.5)
+            new_x = random.uniform(self.arena_x_min, self.arena_x_max)
+            new_y = random.uniform(self.arena_y_min, self.arena_y_max)
+            new_z = random.uniform(self.arena_z_min, self.arena_z_max)
 
             # Ensure minimum spacing from previous ring
             dx = new_x - self.curr_ring_x

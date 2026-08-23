@@ -320,12 +320,16 @@ class PX4OffboardControllerNode(Node):
                 VehicleOdometry as Px4VehicleOdometry,
                 VehicleStatus as Px4VehicleStatus
             )
-            self._msg_offboard_mode = Px4OffboardControlMode
-            self._msg_trajectory_setpoint = Px4TrajectorySetpoint
-            self._msg_vehicle_command = Px4VehicleCommand
-            self._has_px4_msgs = True
-            self.get_logger().info(f"✅ [{self.drone_id}] Native px4_msgs dynamically loaded.")
-        except ImportError:
+            if hasattr(Px4OffboardControlMode, "_TYPE_SUPPORT"):
+                self._msg_offboard_mode = Px4OffboardControlMode
+                self._msg_trajectory_setpoint = Px4TrajectorySetpoint
+                self._msg_vehicle_command = Px4VehicleCommand
+                self._has_px4_msgs = True
+                self.get_logger().info(f"✅ [{self.drone_id}] Native px4_msgs dynamically loaded.")
+            else:
+                self._has_px4_msgs = False
+                self.get_logger().info(f"ℹ️ [{self.drone_id}] Operating in Universal Standalone DTO mode.")
+        except Exception:
             self._has_px4_msgs = False
             self.get_logger().info(f"ℹ️ [{self.drone_id}] Operating in Universal Standalone DTO mode.")
 

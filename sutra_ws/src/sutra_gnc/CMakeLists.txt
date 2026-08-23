@@ -22,6 +22,8 @@ install(PROGRAMS
   sutra_gnc/parallel_sim_manager.py
   sutra_gnc/px4_offboard_controller.py
   sutra_gnc/px4_swarm_offboard_node.py
+  sutra_gnc/swarm_fixed_path_node.py
+  sutra_gnc/sutra_rviz_bridge.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

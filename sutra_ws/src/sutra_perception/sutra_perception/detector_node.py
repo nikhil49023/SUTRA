@@ -97,6 +97,20 @@ class SutraCvBridge:
 
 CV_BRIDGE_AVAILABLE = True
 
+try:
+    import torch
+    TORCH_AVAILABLE = True
+    # Limit PyTorch CPU thread flooding on multi-core systems
+    torch.set_num_threads(2)
+except ImportError:
+    TORCH_AVAILABLE = False
+
+try:
+    # Limit OpenCV worker threads to prevent CPU saturation
+    cv2.setNumThreads(2)
+except Exception:
+    pass
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Gracefully handle optional ultralytics (not needed in unit-test context)
 # ──────────────────────────────────────────────────────────────────────────────
@@ -401,28 +415,29 @@ class SutraDetectorNode(Node):
         self._bridge: Optional[object] = SutraCvBridge()
         self._yolo:   Optional[object] = None
         self._using_tensorrt: bool = False
+        self._device: str = "cuda:0" if (TORCH_AVAILABLE and torch.cuda.is_available()) else "cpu"
 
         if YOLO_AVAILABLE:
             try:
                 # Auto-detect TensorRT engine vs standard PyTorch model
                 if self._yolo_model_path.endswith(TENSORRT_ENGINE_SUFFIX):
-                    # TensorRT FP16 engine — ~4ms/frame on Jetson Orin NX
-                    # Engine must be pre-built via tensorrt_export.py on the
-                    # exact target hardware (GPU-architecture specific).
+                    # TensorRT FP16 engine — ~4ms/frame on Jetson / RTX GPU
                     self._yolo = YOLO(self._yolo_model_path)
                     self._using_tensorrt = True
                     self.get_logger().info(
-                        f"⚡ TensorRT FP16 engine loaded: {self._yolo_model_path}"
+                        f"⚡ TensorRT FP16 engine loaded: {self._yolo_model_path} on {self._device}"
                     )
                 else:
-                    # Standard PyTorch .pt model — ~50ms/frame
+                    # Standard PyTorch .pt model on GPU/CPU
                     self._yolo = YOLO(self._yolo_model_path)
+                    if self._device != "cpu":
+                        self._yolo.to(self._device)
                     self._using_tensorrt = False
                     self.get_logger().info(
-                        f"✅ YOLOv8-Nano PyTorch model loaded: {self._yolo_model_path}"
+                        f"✅ YOLOv8-Nano model loaded on [{self._device}]: {self._yolo_model_path}"
                     )
                     self.get_logger().info(
-                        "   TIP: Export to TensorRT for 12x speedup: "
+                        "   TIP: Export to TensorRT for max GPU throughput: "
                         "python3 tensorrt_export.py --model best_sutra.pt"
                     )
             except Exception as exc:
@@ -617,7 +632,13 @@ class SutraDetectorNode(Node):
             return detections
 
         try:
-            results = self._yolo(frame, conf=YOLO_CONF_THRESHOLD, verbose=False)
+            results = self._yolo(
+                frame,
+                conf=YOLO_CONF_THRESHOLD,
+                device=self._device,
+                half=(self._device != "cpu"),
+                verbose=False
+            )
         except Exception as exc:
             self.get_logger().warn(f"YOLO inference error: {exc}")
             return detections
