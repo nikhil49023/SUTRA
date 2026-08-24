@@ -1,11 +1,12 @@
 """
 Smart Horizon GCS — Centralized Application State & Reactive State Store
-Subsystem: State Management
+Subsystem: State Management (Phase 12 Hardening)
 """
 
 import copy
 import logging
 import threading
+import time
 from dataclasses import dataclass, field, replace
 from typing import Callable, List, Optional
 
@@ -26,7 +27,11 @@ logger = logging.getLogger("sutra_gcs.state_store")
 class ApplicationState:
     """
     Centralized Single-Source-of-Truth root state model for the Ground Control Station.
+    Includes authoritative state_version for deterministic distributed state synchronization.
     """
+
+    state_version: int = 1
+    timestamp: float = field(default_factory=time.time)
 
     telemetry_state: TelemetryState = field(default_factory=TelemetryState)
     mission_state: MissionState = field(default_factory=MissionState)
@@ -53,7 +58,7 @@ StateSubscriber = Callable[[ApplicationState], None]
 class StateStore:
     """
     Thread-safe reactive store managing the ApplicationState singleton.
-    Provides subscriptions and state mutation with change notification.
+    Provides subscriptions, monotonic state versioning, and change notification.
     """
 
     def __init__(self, initial_state: Optional[ApplicationState] = None) -> None:
@@ -65,6 +70,11 @@ class StateStore:
         """Returns the current immutable ApplicationState snapshot."""
         with self._lock:
             return self._state
+
+    @property
+    def state_version(self) -> int:
+        with self._lock:
+            return self._state.state_version
 
     def subscribe(self, callback: StateSubscriber) -> Callable[[], None]:
         """
@@ -92,15 +102,23 @@ class StateStore:
 
     def update_state(self, mutator: Callable[[ApplicationState], ApplicationState]) -> ApplicationState:
         """
-        Applies a functional transformation to the root state and notifies subscribers
-        if the new state is distinct from the previous state.
+        Applies a functional transformation to the root state, increments state_version,
+        and notifies subscribers if the new state is distinct from the previous state.
         """
         with self._lock:
             old_state = self._state
-            new_state = mutator(old_state)
+            transformed_state = mutator(old_state)
 
-            if new_state == old_state:
+            if transformed_state == old_state:
                 return self._state
+
+            # Increment monotonic state version and update timestamp
+            next_version = old_state.state_version + 1
+            new_state = replace(
+                transformed_state,
+                state_version=next_version,
+                timestamp=time.time(),
+            )
 
             self._state = new_state
             subscribers_snapshot = list(self._subscribers)

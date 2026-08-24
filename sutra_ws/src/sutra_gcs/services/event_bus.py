@@ -1,6 +1,6 @@
 """
 Smart Horizon GCS — Centralized Event Bus & Reactive Messaging Infrastructure
-Subsystem: Core Services
+Subsystem: Core Services (Phase 12 Production Hardening)
 """
 
 import asyncio
@@ -8,6 +8,7 @@ import fnmatch
 import logging
 import threading
 import time
+import uuid
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Set, Union
@@ -29,6 +30,12 @@ class EventNames(str, Enum):
     MISSION_UPDATED = "mission.updated"
     MISSION_STARTED = "mission.started"
     MISSION_PAUSED = "mission.paused"
+    MISSION_RESUMED = "mission.resumed"
+    MISSION_RTL = "mission.rtl"
+    MISSION_WAYPOINT_REACHED = "mission.waypoint_reached"
+    MISSION_WAYPOINT_ADDED = "mission.waypoint_added"
+    MISSION_WAYPOINT_UPDATED = "mission.waypoint_updated"
+    MISSION_WAYPOINT_DELETED = "mission.waypoint_deleted"
     MISSION_COMPLETED = "mission.completed"
     MISSION_ABORTED = "mission.aborted"
     MISSION_WAYPOINTS_UPDATED = "mission.waypoints_updated"
@@ -57,6 +64,11 @@ class EventNames(str, Enum):
     COMMUNICATION_DISCONNECTED = "communication.disconnected"
     COMMUNICATION_RECONNECTING = "communication.reconnecting"
 
+    # AI Subsystem
+    AI_RECOMMENDATION = "ai.recommendation"
+    AI_PREDICTION = "ai.prediction"
+    AI_ASSISTANT_REPLY = "ai.assistant_reply"
+
     # System Lifecycle
     SYSTEM_ERROR = "system.error"
     SYSTEM_SHUTDOWN = "system.shutdown"
@@ -65,7 +77,7 @@ class EventNames(str, Enum):
 @dataclass(frozen=True)
 class Event:
     """
-    Standard immutable event envelope delivered to subscribers.
+    Standard immutable event envelope delivered to subscribers and frontend WebSocket clients.
     """
 
     event_name: str
@@ -73,6 +85,12 @@ class Event:
     timestamp: float = field(default_factory=time.time)
     source: str = "system"
     correlation_id: Optional[str] = None
+    event_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    state_version: Optional[int] = None
+
+    @property
+    def event_type(self) -> str:
+        return self.event_name
 
 
 EventHandler = Callable[[Event], None]
@@ -126,6 +144,8 @@ class EventBus:
         payload: Any = None,
         source: str = "system",
         correlation_id: Optional[str] = None,
+        event_id: Optional[str] = None,
+        state_version: Optional[int] = None,
     ) -> Event:
         """
         Synchronously publishes an event to matching topic and wildcard subscribers.
@@ -138,6 +158,8 @@ class EventBus:
             timestamp=time.time(),
             source=source,
             correlation_id=correlation_id,
+            event_id=event_id or str(uuid.uuid4()),
+            state_version=state_version,
         )
         self.emit_event(event)
         return event
@@ -180,6 +202,8 @@ class EventBus:
         payload: Any = None,
         source: str = "system",
         correlation_id: Optional[str] = None,
+        event_id: Optional[str] = None,
+        state_version: Optional[int] = None,
     ) -> Event:
         """
         Asynchronously publishes an event across matching synchronous and asynchronous handlers.
@@ -191,6 +215,8 @@ class EventBus:
             timestamp=time.time(),
             source=source,
             correlation_id=correlation_id,
+            event_id=event_id or str(uuid.uuid4()),
+            state_version=state_version,
         )
 
         matching_handlers: List[EventHandler] = []

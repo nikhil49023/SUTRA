@@ -1,6 +1,6 @@
 """
 Smart Horizon GCS — Swarm Fleet Management & Lifecycle Registry
-Subsystem: Swarm Fleet Management (Phase 6)
+Subsystem: Swarm Fleet Management (Phase 12 Hardening)
 """
 
 import logging
@@ -63,6 +63,10 @@ class FleetManager:
             is_leader=is_leader,
         )
 
+        self.logger.info(
+            f"🛸 FLEET REGISTERED id={drone_id} callsign='{callsign}' role={role} lat={latitude:.6f} lon={longitude:.6f}"
+        )
+
         self.state_store.update_state(
             lambda s: replace(s, fleet_state=s.fleet_state.add_drone(drone))
         )
@@ -71,7 +75,18 @@ class FleetManager:
 
         self.event_bus.emit(
             "fleet.drone_added",
-            payload={"drone_id": drone_id, "callsign": callsign, "role": role},
+            payload={"drone": {
+                "drone_id": drone.drone_id,
+                "callsign": drone.callsign,
+                "role": drone.role,
+                "latitude": drone.latitude,
+                "longitude": drone.longitude,
+                "altitude": drone.altitude,
+                "heading": drone.heading,
+                "battery": drone.battery,
+                "is_leader": drone.is_leader,
+                "flight_mode": drone.flight_mode,
+            }},
             source="fleet_manager",
         )
         return drone
@@ -83,6 +98,8 @@ class FleetManager:
             return False
 
         drone = fleet.drones[drone_id]
+        self.logger.info(f"🛑 FLEET REMOVED id={drone_id} callsign='{drone.callsign}'")
+
         self.state_store.update_state(
             lambda s: replace(s, fleet_state=s.fleet_state.remove_drone(drone_id))
         )
@@ -102,6 +119,7 @@ class FleetManager:
         if drone_id not in fleet.drones:
             return False
 
+        self.logger.info(f"👑 FLEET LEADER PROMOTED id={drone_id}")
         self.formation_engine.change_leader(drone_id)
         return True
 
@@ -142,8 +160,8 @@ class FleetManager:
                 drone_id="drone_bravo",
                 callsign="BRAVO (WINGMAN)",
                 role="WINGMAN",
-                latitude=origin_lat,
-                longitude=origin_lon,
+                latitude=origin_lat - 0.0002,
+                longitude=origin_lon - 0.0002,
                 altitude=origin_alt,
                 heading=0.0,
                 battery=96.0,
@@ -154,8 +172,8 @@ class FleetManager:
                 drone_id="drone_charlie",
                 callsign="CHARLIE (SCOUT)",
                 role="SCOUT",
-                latitude=origin_lat,
-                longitude=origin_lon,
+                latitude=origin_lat - 0.0002,
+                longitude=origin_lon + 0.0002,
                 altitude=origin_alt,
                 heading=0.0,
                 battery=94.0,
@@ -166,7 +184,7 @@ class FleetManager:
                 drone_id="drone_delta",
                 callsign="DELTA (SUPPORT)",
                 role="SUPPORT",
-                latitude=origin_lat,
+                latitude=origin_lat - 0.0004,
                 longitude=origin_lon,
                 altitude=origin_alt,
                 heading=0.0,
@@ -175,6 +193,9 @@ class FleetManager:
                 formation_index=3,
             ),
         }
+
+        for d_id, d in drones.items():
+            self.logger.info(f"🛸 FLEET REGISTERED id={d_id} callsign='{d.callsign}' role={d.role}")
 
         self.state_store.update_state(
             lambda s: replace(
