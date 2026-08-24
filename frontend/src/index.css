@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    background-color: #0a0d12;
+    color: #f8fafc;
+    overflow: hidden;
+    user-select: none;
+  }
+}
+
+/* Custom scrollbars for tactical UI */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(51, 65, 85, 0.8);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 229, 255, 0.5);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tactical HUD and Glow effects */
+.tactical-glow {
+  box-shadow: 0 0 15px rgba(0, 229, 255, 0.15);
+}
+
+.tactical-glow-red {
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.25);
+}
+
+.tactical-glow-amber {
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+}
+
+.tactical-glow-green {
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+}
+
+/* Glass panel */
+.tactical-panel {
+  background-color: rgba(15, 20, 28, 0.88);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(30, 41, 59, 0.8);
+}
