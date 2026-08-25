@@ -57,7 +57,7 @@ export const PrimaryFlightDisplay: React.FC = () => {
   const isCritical = telemetry.battery_percent <= 10;
 
   return (
-    <div className="relative w-full bg-[#0a0d12]/95 border-t border-slate-800/90 backdrop-blur-md px-4 py-2.5 flex items-center justify-between shadow-2xl text-slate-100 select-none">
+    <div className="relative w-full bg-[#0B0F14]/98 border-t border-[#2B3743] backdrop-blur-md px-4 py-2.5 flex items-center justify-between shadow-2xl text-[#E7EBEF] select-none">
       {/* Alert Overlay Banner */}
       <AlertOverlay
         isCritical={isCritical}
@@ -69,11 +69,11 @@ export const PrimaryFlightDisplay: React.FC = () => {
         {/* Drone Selector Pill */}
         <div className="flex flex-col space-y-1">
           <div className="flex items-center space-x-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-[#4F9A72] animate-pulse" />
             <select
               value={activeDroneId}
               onChange={(e) => setActiveDroneId(e.target.value)}
-              className="bg-slate-900 border border-cyan-500/50 rounded px-2 py-1 text-xs font-mono font-bold text-cyan-300 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+              className="bg-[#11171E] border border-[#2B3743] rounded px-2 py-1 text-xs font-mono font-bold text-[#E7EBEF] focus:outline-none focus:ring-1 focus:ring-[#5B8FB9]"
             >
               {Object.values(drones).map((d) => (
                 <option key={d.drone_id} value={d.drone_id}>
@@ -82,8 +82,8 @@ export const PrimaryFlightDisplay: React.FC = () => {
               ))}
             </select>
           </div>
-          <div className="text-[10px] font-mono text-slate-400">
-            PROG: <span className="text-cyan-300">{missionState.mission_progress.toFixed(0)}%</span> | WP: <span className="text-emerald-400">{missionState.active_waypoint_index}</span>
+          <div className="text-[10px] font-mono text-[#707C88]">
+            PROG: <span className="text-[#5B8FB9]">{missionState.mission_progress.toFixed(0)}%</span> | WP: <span className="text-[#4F9A72]">{missionState.active_waypoint_index}</span>
           </div>
         </div>
 

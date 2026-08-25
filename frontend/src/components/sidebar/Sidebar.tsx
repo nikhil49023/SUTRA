@@ -28,7 +28,7 @@ export const Sidebar: React.FC = () => {
 
   return (
     <aside
-      className={`h-full bg-[#090d14] border-r border-slate-800/90 flex flex-col justify-between transition-all duration-200 z-30 select-none ${
+      className={`h-full bg-[#0B0F14] border-r border-[#2B3743] flex flex-col justify-between transition-all duration-200 z-30 select-none ${
         isSidebarCollapsed ? 'w-14' : 'w-48'
       }`}
     >
@@ -44,12 +44,12 @@ export const Sidebar: React.FC = () => {
               onClick={() => setActiveSection(item.id)}
               className={`w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-lg font-mono text-xs font-bold transition ${
                 isActive
-                  ? 'bg-cyan-950/80 border border-cyan-500/50 text-cyan-300 shadow-[0_0_12px_rgba(0,229,255,0.2)]'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                  ? 'bg-[#1B2530] border border-[#5B8FB9] text-[#E7EBEF] shadow-[0_0_12px_rgba(91,143,185,0.15)]'
+                  : 'text-[#707C88] hover:text-[#E7EBEF] hover:bg-[#151D26]'
               }`}
               title={item.label}
             >
-              <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-cyan-400' : 'text-slate-400'}`} />
+              <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-[#5B8FB9]' : 'text-[#707C88]'}`} />
               {!isSidebarCollapsed && <span className="truncate tracking-wide">{item.label}</span>}
             </button>
           );
@@ -57,10 +57,10 @@ export const Sidebar: React.FC = () => {
       </div>
 
       {/* Collapse Toggle */}
-      <div className="p-2 border-t border-slate-800/80">
+      <div className="p-2 border-t border-[#2B3743]">
         <button
           onClick={toggleSidebar}
-          className="w-full flex items-center justify-center p-2 rounded hover:bg-slate-900 text-slate-400 hover:text-cyan-300 transition"
+          className="w-full flex items-center justify-center p-2 rounded hover:bg-[#151D26] text-[#707C88] hover:text-[#E7EBEF] transition"
           title={isSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
         >
           {isSidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}

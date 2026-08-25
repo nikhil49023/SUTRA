@@ -9,7 +9,9 @@ import { useSelectionStore } from '../stores/selectionStore';
 import { useMapStore } from '../stores/mapStore';
 import { MapInteractionToolbox } from './MapInteractionToolbox';
 import { GeofenceToolbar } from '../geofence/GeofenceToolbar';
+import { GeofenceDebugPanel } from '../geofence/GeofenceDebugPanel';
 import { ZoomIn, ZoomOut, Compass, Navigation, MapPin } from 'lucide-react';
+
 
 export const MapView: React.FC = () => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -135,18 +137,18 @@ export const MapView: React.FC = () => {
   const isAddingWaypoint = interactionMode === 'ADD_WAYPOINT';
 
   return (
-    <div className={`relative w-full h-full overflow-hidden bg-[#0a0d12] ${isAddingWaypoint || isDrawingGeofence ? 'cursor-crosshair' : ''}`}>
+    <div className={`relative w-full h-full overflow-hidden bg-[#0B0F14] ${isAddingWaypoint || isDrawingGeofence ? 'cursor-crosshair' : ''}`}>
       {/* Persistent Map Canvas Container */}
       <div ref={mapContainerRef} className="w-full h-full" />
 
       {/* ADD_WAYPOINT Banner — top center, prominent */}
       {isAddingWaypoint && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-950/95 border border-cyan-400/70 shadow-[0_0_20px_rgba(0,229,255,0.3)] backdrop-blur-md">
-          <MapPin className="w-4 h-4 text-cyan-400 animate-pulse" />
-          <span className="text-cyan-300 text-[12px] font-mono font-bold tracking-wide">
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2 rounded-full bg-[#1B2530]/95 border border-[#5B8FB9] shadow-[0_0_12px_rgba(91,143,185,0.25)] backdrop-blur-md">
+          <MapPin className="w-4 h-4 text-[#5B8FB9] animate-pulse" />
+          <span className="text-[#E7EBEF] text-[12px] font-mono font-bold tracking-wide">
             CLICK MAP TO PLACE WAYPOINT
           </span>
-          <span className="text-slate-400 text-[11px] font-mono ml-1">(ESC to cancel)</span>
+          <span className="text-[#A9B3BD] text-[11px] font-mono ml-1">(ESC to cancel)</span>
         </div>
       )}
 
@@ -164,46 +166,46 @@ export const MapView: React.FC = () => {
 
       {/* Floating Right Controls — Zoom / Bearing / Center */}
       <div className="absolute top-4 right-4 flex flex-col space-y-2 z-10">
-        <div className="flex flex-col rounded border border-slate-800 bg-[#0f141c]/90 backdrop-blur-md shadow-xl overflow-hidden">
+        <div className="flex flex-col rounded border border-[#2B3743] bg-[#11171E]/95 backdrop-blur-md shadow-xl overflow-hidden">
           <button
             onClick={handleZoomIn}
-            className="p-2 text-slate-300 hover:text-cyan-400 hover:bg-slate-800/60 transition"
+            className="p-2 text-[#A9B3BD] hover:text-[#E7EBEF] hover:bg-[#151D26] transition"
             title="Zoom In (+)"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
-          <div className="h-px bg-slate-800" />
+          <div className="h-px bg-[#2B3743]" />
           <button
             onClick={handleZoomOut}
-            className="p-2 text-slate-300 hover:text-cyan-400 hover:bg-slate-800/60 transition"
+            className="p-2 text-[#A9B3BD] hover:text-[#E7EBEF] hover:bg-[#151D26] transition"
             title="Zoom Out (-)"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
-          <div className="h-px bg-slate-800" />
+          <div className="h-px bg-[#2B3743]" />
           <button
             onClick={handleResetBearing}
-            className="p-2 text-slate-300 hover:text-cyan-400 hover:bg-slate-800/60 transition"
+            className="p-2 text-[#A9B3BD] hover:text-[#E7EBEF] hover:bg-[#151D26] transition"
             title="Reset North & 2D"
           >
             <Compass className="w-4 h-4" />
           </button>
-          <div className="h-px bg-slate-800" />
+          <div className="h-px bg-[#2B3743]" />
           <button
             onClick={handleCenterFleet}
-            className="p-2 text-slate-300 hover:text-cyan-400 hover:bg-slate-800/60 transition"
+            className="p-2 text-[#A9B3BD] hover:text-[#E7EBEF] hover:bg-[#151D26] transition"
             title="Center on Fleet Leader"
           >
-            <Navigation className="w-4 h-4 text-emerald-400" />
+            <Navigation className="w-4 h-4 text-[#4F9A72]" />
           </button>
         </div>
       </div>
 
       {/* Map Mode Indicator Bottom Left */}
-      <div className="absolute bottom-2 left-2 z-10 px-2.5 py-1 rounded bg-[#0f141c]/80 border border-slate-800/80 backdrop-blur text-[11px] font-mono text-slate-400 flex items-center space-x-3">
+      <div className="absolute bottom-2 left-2 z-10 px-2.5 py-1 rounded bg-[#11171E]/90 border border-[#2B3743] backdrop-blur text-[11px] font-mono text-[#707C88] flex items-center space-x-3">
         <span>MAPLIBRE GL PERSISTENT</span>
         <span>•</span>
-        <span className={interactionMode !== 'SELECT' ? 'text-cyan-400 font-bold' : 'text-cyan-400'}>
+        <span className="text-[#5B8FB9] font-bold">
           {interactionMode}
         </span>
         <span>•</span>
@@ -211,6 +213,10 @@ export const MapView: React.FC = () => {
           HOME: {missionState.home_latitude.toFixed(5)}°, {missionState.home_longitude.toFixed(5)}°
         </span>
       </div>
+
+      {/* Geofence Debug Panel — Ctrl+Shift+G to toggle */}
+      <GeofenceDebugPanel />
     </div>
   );
 };
+

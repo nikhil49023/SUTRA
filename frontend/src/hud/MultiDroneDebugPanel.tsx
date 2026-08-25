@@ -65,11 +65,11 @@ export const MultiDroneDebugPanel: React.FC = () => {
   const Row: React.FC<{ label: string; value: React.ReactNode; ok?: boolean; warn?: boolean }> = ({
     label, value, ok, warn,
   }) => (
-    <div className="flex justify-between items-center py-0.5 border-b border-slate-800/50 last:border-0">
-      <span className="text-slate-500 text-[10px] font-mono">{label}</span>
+    <div className="flex justify-between items-center py-0.5 border-b border-[#2B3743]/50 last:border-0">
+      <span className="text-[#707C88] text-[10px] font-mono">{label}</span>
       <span
         className={`text-[10px] font-mono font-bold ${
-          ok ? 'text-emerald-400' : warn ? 'text-amber-400' : 'text-slate-300'
+          ok ? 'text-[#4F9A72]' : warn ? 'text-[#C49A4A]' : 'text-[#E7EBEF]'
         }`}
       >
         {value}
@@ -78,19 +78,19 @@ export const MultiDroneDebugPanel: React.FC = () => {
   );
 
   return (
-    <div className="absolute bottom-12 right-4 z-30 w-[280px] rounded border border-cyan-800/60 bg-[#080c12]/95 backdrop-blur-md shadow-2xl text-slate-300 font-mono select-none">
+    <div className="absolute bottom-12 right-4 z-30 w-[280px] rounded border border-[#2B3743] bg-[#11171E]/95 backdrop-blur-md shadow-2xl text-[#E7EBEF] font-mono select-none">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-slate-800 bg-cyan-950/40">
+      <div className="flex items-center justify-between px-3 py-1.5 border-b border-[#2B3743] bg-[#151D26]">
         <div className="flex items-center gap-2">
-          <Bug className="w-3 h-3 text-cyan-400" />
-          <span className="text-[11px] font-bold text-cyan-300 tracking-widest">DIAGNOSTIC HUD</span>
-          <span className="text-[9px] text-slate-500">[Ctrl+D]</span>
+          <Bug className="w-3 h-3 text-[#5B8FB9]" />
+          <span className="text-[11px] font-bold text-[#E7EBEF] tracking-widest">DIAGNOSTIC HUD</span>
+          <span className="text-[9px] text-[#707C88]">[Ctrl+D]</span>
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={() => setCollapsed((c) => !c)} className="text-slate-500 hover:text-slate-300 p-0.5">
+          <button onClick={() => setCollapsed((c) => !c)} className="text-[#707C88] hover:text-[#E7EBEF] p-0.5">
             {collapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
           </button>
-          <button onClick={() => setVisible(false)} className="text-slate-500 hover:text-red-400 p-0.5">
+          <button onClick={() => setVisible(false)} className="text-[#707C88] hover:text-[#C75A5A] p-0.5">
             <X className="w-3 h-3" />
           </button>
         </div>
@@ -100,7 +100,7 @@ export const MultiDroneDebugPanel: React.FC = () => {
         <div className="px-3 py-2 space-y-3">
           {/* Fleet Section */}
           <div>
-            <div className="text-[9px] font-bold text-cyan-600 uppercase tracking-widest mb-1">Fleet Status</div>
+            <div className="text-[9px] font-bold text-[#5B8FB9] uppercase tracking-widest mb-1">Fleet Status</div>
             <Row label="Total Drones" value={totalDrones} />
             <Row
               label="Moving"
@@ -124,18 +124,18 @@ export const MultiDroneDebugPanel: React.FC = () => {
 
           {/* Per-Drone Positions */}
           <div>
-            <div className="text-[9px] font-bold text-cyan-600 uppercase tracking-widest mb-1">Drone Positions</div>
+            <div className="text-[9px] font-bold text-[#5B8FB9] uppercase tracking-widest mb-1">Drone Positions</div>
             {drones.map((d) => (
-              <div key={d.drone_id} className="py-0.5 border-b border-slate-800/40 last:border-0">
+              <div key={d.drone_id} className="py-0.5 border-b border-[#2B3743]/40 last:border-0">
                 <div className="flex justify-between">
-                  <span className={`text-[10px] ${d.is_leader ? 'text-amber-400' : 'text-slate-400'}`}>
+                  <span className={`text-[10px] ${d.is_leader ? 'text-[#C49A4A]' : 'text-[#A9B3BD]'}`}>
                     {d.is_leader ? '★ ' : '  '}{d.callsign.split(' ')[0]}
                   </span>
-                  <span className={`text-[10px] ${d.speed > 0.5 ? 'text-emerald-400' : 'text-slate-500'}`}>
+                  <span className={`text-[10px] ${d.speed > 0.5 ? 'text-[#4F9A72]' : 'text-[#707C88]'}`}>
                     {d.speed.toFixed(1)}m/s
                   </span>
                 </div>
-                <div className="text-[9px] text-slate-600">
+                <div className="text-[9px] text-[#707C88]">
                   {d.latitude.toFixed(5)}, {d.longitude.toFixed(5)}
                 </div>
               </div>
@@ -144,7 +144,7 @@ export const MultiDroneDebugPanel: React.FC = () => {
 
           {/* Formation Section */}
           <div>
-            <div className="text-[9px] font-bold text-cyan-600 uppercase tracking-widest mb-1">Formation</div>
+            <div className="text-[9px] font-bold text-[#5B8FB9] uppercase tracking-widest mb-1">Formation</div>
             <Row label="Type" value={formation} />
             <Row label="Leader" value={leader?.callsign?.split(' ')[0] || 'NONE'} ok={!!leader} />
             <Row label="Spacing" value={`${fleetState.spacing}m`} />
@@ -152,7 +152,7 @@ export const MultiDroneDebugPanel: React.FC = () => {
 
           {/* Message Router Metrics */}
           <div>
-            <div className="text-[9px] font-bold text-cyan-600 uppercase tracking-widest mb-1">Message Router</div>
+            <div className="text-[9px] font-bold text-[#5B8FB9] uppercase tracking-widest mb-1">Message Router</div>
             <Row label="Dropped (stale)" value={msgMetrics.droppedStaleEventsCount} warn={msgMetrics.droppedStaleEventsCount > 0} />
             <Row label="Dropped (dup)" value={msgMetrics.droppedDuplicateEventsCount} />
             <Row label="Dropped (out-of-seq)" value={msgMetrics.droppedOutOfOrderTelemCount} />
@@ -161,7 +161,7 @@ export const MultiDroneDebugPanel: React.FC = () => {
 
           {/* Waypoint Tool Section */}
           <div>
-            <div className="text-[9px] font-bold text-cyan-600 uppercase tracking-widest mb-1">Waypoint Tool</div>
+            <div className="text-[9px] font-bold text-[#5B8FB9] uppercase tracking-widest mb-1">Waypoint Tool</div>
             <Row
               label="Mode"
               value={waypointMode}

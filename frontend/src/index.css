@@ -2,13 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bg-primary: #0B0F14;
+  --bg-secondary: #11171E;
+  --surface: #151D26;
+  --surface-raised: #1B2530;
+  --surface-subtle: #202B36;
+  --border: #2B3743;
+  --border-strong: #3A4856;
+  --text-primary: #E7EBEF;
+  --text-secondary: #A9B3BD;
+  --text-muted: #707C88;
+  --disabled: #4D5964;
+  --accent: #5B8FB9;
+  --accent-hover: #6FA4CE;
+  --accent-active: #4B7FA9;
+  --success: #4F9A72;
+  --warning: #C49A4A;
+  --danger: #C75A5A;
+  --info: #5B8FB9;
+}
+
 @layer base {
   * {
     box-sizing: border-box;
   }
   body {
-    background-color: #0a0d12;
-    color: #f8fafc;
+    background-color: #0B0F14;
+    color: #E7EBEF;
     overflow: hidden;
     user-select: none;
   }
@@ -21,42 +42,41 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6);
+  background: #11171E;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(51, 65, 85, 0.8);
+  background: #2B3743;
   border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 229, 255, 0.5);
+  background: #5B8FB9;
 }
 
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
 
-/* Tactical HUD and Glow effects */
+/* Restrained Tactical HUD and Status Glows */
 .tactical-glow {
-  box-shadow: 0 0 15px rgba(0, 229, 255, 0.15);
+  box-shadow: 0 0 12px rgba(91, 143, 185, 0.15);
 }
 
 .tactical-glow-red {
-  box-shadow: 0 0 15px rgba(239, 68, 68, 0.25);
+  box-shadow: 0 0 12px rgba(199, 90, 90, 0.20);
 }
 
 .tactical-glow-amber {
-  box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+  box-shadow: 0 0 12px rgba(196, 154, 74, 0.18);
 }
 
 .tactical-glow-green {
-  box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+  box-shadow: 0 0 12px rgba(79, 154, 114, 0.18);
 }
 
-/* Glass panel */
+/* Tactical Glass/Solid Panels */
 .tactical-panel {
-  background-color: rgba(15, 20, 28, 0.88);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(30, 41, 59, 0.8);
+  background-color: #11171E;
+  border: 1px solid #2B3743;
 }

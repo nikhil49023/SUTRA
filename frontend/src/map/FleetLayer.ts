@@ -75,7 +75,7 @@ export class FleetLayer {
         const pillIcon = document.createElement('span');
         const callsignEl = document.createElement('span');
         const batteryEl = document.createElement('span');
-        batteryEl.className = 'text-[9px] text-emerald-400 ml-1';
+        batteryEl.className = 'text-[9px] text-[#4F9A72] ml-1';
 
         pillEl.appendChild(pillIcon);
         pillEl.appendChild(callsignEl);
@@ -90,13 +90,13 @@ export class FleetLayer {
         headingCircleEl.innerHTML = `<svg viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor"><path d="M12 2L4 20L12 16L20 20L12 2Z" /></svg>`;
 
         const pingEl = document.createElement('div');
-        pingEl.className = 'absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 rounded-full animate-ping';
+        pingEl.className = 'absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#C49A4A] rounded-full animate-ping';
 
         headingWrapperEl.appendChild(headingCircleEl);
 
         // Subtext
         const subtextEl = document.createElement('div');
-        subtextEl.className = 'mt-0.5 text-[8px] font-mono text-slate-400 bg-black/70 px-1 rounded';
+        subtextEl.className = 'mt-0.5 text-[8px] font-mono text-[#A9B3BD] bg-[#0B0F14]/90 px-1 rounded border border-[#2B3743]';
 
         const containerEl = document.createElement('div');
         containerEl.className = 'relative flex flex-col items-center select-none';
@@ -125,11 +125,11 @@ export class FleetLayer {
 
       // 2. Callsign pill classes
       if (isSelected) {
-        entry.pillEl.className = 'mb-1 px-1.5 py-0.5 rounded border text-[10px] font-mono font-bold whitespace-nowrap shadow-md transition bg-cyan-950/90 border-cyan-400 text-cyan-200 ring-2 ring-cyan-400/40';
+        entry.pillEl.className = 'mb-1 px-1.5 py-0.5 rounded border text-[10px] font-mono font-bold whitespace-nowrap shadow-md transition bg-[#1B2530] border-[#6FA4CE] text-[#E7EBEF] ring-2 ring-[#5B8FB9]/40';
       } else if (isLeader) {
-        entry.pillEl.className = 'mb-1 px-1.5 py-0.5 rounded border text-[10px] font-mono font-bold whitespace-nowrap shadow-md transition bg-amber-950/80 border-amber-400 text-amber-300';
+        entry.pillEl.className = 'mb-1 px-1.5 py-0.5 rounded border text-[10px] font-mono font-bold whitespace-nowrap shadow-md transition bg-[#151D26] border-[#C49A4A] text-[#C49A4A]';
       } else {
-        entry.pillEl.className = 'mb-1 px-1.5 py-0.5 rounded border text-[10px] font-mono font-bold whitespace-nowrap shadow-md transition bg-slate-900/80 border-slate-700 text-slate-300';
+        entry.pillEl.className = 'mb-1 px-1.5 py-0.5 rounded border text-[10px] font-mono font-bold whitespace-nowrap shadow-md transition bg-[#11171E] border-[#2B3743] text-[#A9B3BD]';
       }
       entry.pillIcon.textContent = isLeader ? '★ ' : '';
       entry.callsignEl.textContent = drone.callsign.split(' ')[0];
@@ -138,16 +138,16 @@ export class FleetLayer {
       // 3. Heading ring + chevron color
       entry.headingCircleEl.style.transform = `rotate(${drone.heading}deg)`;
       if (isSelected) {
-        entry.headingCircleEl.className = 'w-8 h-8 rounded-full border flex items-center justify-center transition-transform border-cyan-400 bg-cyan-950/60 shadow-[0_0_12px_rgba(0,229,255,0.6)]';
+        entry.headingCircleEl.className = 'w-8 h-8 rounded-full border flex items-center justify-center transition-transform border-[#6FA4CE] bg-[#151D26] shadow-[0_0_12px_rgba(91,143,185,0.4)]';
       } else if (isLeader) {
-        entry.headingCircleEl.className = 'w-8 h-8 rounded-full border flex items-center justify-center transition-transform border-amber-400 bg-amber-950/60';
+        entry.headingCircleEl.className = 'w-8 h-8 rounded-full border flex items-center justify-center transition-transform border-[#C49A4A] bg-[#151D26]';
       } else {
-        entry.headingCircleEl.className = 'w-8 h-8 rounded-full border flex items-center justify-center transition-transform border-slate-600 bg-slate-900/60';
+        entry.headingCircleEl.className = 'w-8 h-8 rounded-full border flex items-center justify-center transition-transform border-[#2B3743] bg-[#11171E]';
       }
       // SVG chevron color
       const svg = entry.headingCircleEl.querySelector('svg');
       if (svg) {
-        svg.className.baseVal = `w-5 h-5 ${isSelected ? 'text-cyan-300' : isLeader ? 'text-amber-400' : 'text-emerald-400'}`;
+        svg.className.baseVal = `w-5 h-5 ${isSelected ? 'text-[#6FA4CE]' : isLeader ? 'text-[#C49A4A]' : 'text-[#5B8FB9]'}`;
       }
 
       // 4. Leader ping dot

@@ -1,9 +1,16 @@
 /**
- * Smart Horizon GCS — Shaded Translucent Geofence Layers & Interactive Drawing
+ * Smart Horizon GCS — Persistent Geofence Layers & Interactive Drawing
+ *
+ * Key fixes:
+ * - style.load handler to re-init sources/layers after map style reload
+ * - visible !== false (not !visible) so undefined-visible geofences still render
+ * - Optimistic geofences render immediately; replaced by authoritative on geofence.created
+ * - Selected geofence shows stronger border + fill
+ * - fitGeofence() for camera fit
  */
 
 import maplibregl from 'maplibre-gl';
-import { Geofence, GeometryType, ZoneType } from '../types/geofence';
+import { Geofence } from '../types/geofence';
 import { useSelectionStore } from '../stores/selectionStore';
 import { useGeofenceStore } from '../stores/geofenceStore';
 import { useMapStore } from '../stores/mapStore';
@@ -19,67 +26,93 @@ export class GeofenceLayer {
   private drawingBorderLayerId = 'geofence-drawing-border';
   private handleMarkers: maplibregl.Marker[] = [];
 
+  /** Last known geofences for re-rendering after style reload */
+  private lastGeofences: Geofence[] = [];
+  private lastSelectedId: string | null = null;
+
   public setMap(map: maplibregl.Map | null): void {
     this.map = map;
-    if (map && map.isStyleLoaded()) {
+    if (!map) return;
+
+    // Initialize as soon as the style is ready
+    if (map.isStyleLoaded()) {
       this.initLayers();
+    } else {
+      map.once('load', () => this.initLayers());
     }
+
+    // Re-init layers whenever the map style is replaced (style change removes custom sources/layers)
+    map.on('style.load', () => {
+      this.initLayers();
+      // Restore last known geofence data
+      if (this.lastGeofences.length > 0) {
+        this.updateGeofences(this.lastGeofences, this.lastSelectedId);
+      }
+    });
   }
 
   public initLayers(): void {
-    if (!this.map || !this.map.isStyleLoaded() || this.map.getSource(this.sourceId)) return;
+    if (!this.map || !this.map.isStyleLoaded()) return;
+
+    // Guard: only add if source doesn't already exist
+    if (this.map.getSource(this.sourceId)) return;
 
     try {
-      // 1. Authoritative Geofences Source
+      // ── Authoritative Geofences Source ──────────────────────────────────────
       this.map.addSource(this.sourceId, {
         type: 'geojson',
         data: { type: 'FeatureCollection', features: [] },
       });
 
-      // Shaded Fill
+      // Fill — zone-type color + stronger fill when selected
       this.map.addLayer({
         id: this.fillLayerId,
         type: 'fill',
         source: this.sourceId,
         paint: {
           'fill-color': [
-            'match',
-            ['get', 'zone_type'],
-            'NO_FLY',
-            '#ef4444',
-            'WARNING',
-            '#f59e0b',
-            'SAFE',
-            '#10b981',
-            '#00e5ff',
+            'match', ['get', 'zone_type'],
+            'NO_FLY',   '#C75A5A',
+            'WARNING',  '#C49A4A',
+            'SAFE',     '#4F9A72',
+            'INCLUSION','#5B8FB9',
+            'EXCLUSION','#C75A5A',
+            '#5B8FB9',
           ],
-          'fill-opacity': 0.22,
+          'fill-opacity': [
+            'case', ['==', ['get', 'selected'], true],
+            0.32,
+            ['match', ['get', 'zone_type'],
+              'NO_FLY',  0.20,
+              'WARNING', 0.20,
+              'SAFE',    0.18,
+              0.18,
+            ],
+          ],
         },
       });
 
-      // Border Lines
+      // Border — solid, brighter when selected
       this.map.addLayer({
         id: this.borderLayerId,
         type: 'line',
         source: this.sourceId,
         paint: {
           'line-color': [
-            'match',
-            ['get', 'zone_type'],
-            'NO_FLY',
-            '#ef4444',
-            'WARNING',
-            '#f59e0b',
-            'SAFE',
-            '#10b981',
-            '#00e5ff',
+            'match', ['get', 'zone_type'],
+            'NO_FLY',   '#C75A5A',
+            'WARNING',  '#C49A4A',
+            'SAFE',     '#4F9A72',
+            'INCLUSION','#5B8FB9',
+            'EXCLUSION','#C75A5A',
+            '#5B8FB9',
           ],
-          'line-width': 2.5,
-          'line-opacity': 0.9,
+          'line-width': ['case', ['==', ['get', 'selected'], true], 3.5, 2.0],
+          'line-opacity': ['case', ['==', ['get', 'selected'], true], 1.0, 0.85],
         },
       });
 
-      // 2. Active Drawing Session Source & Layers
+      // ── Drawing Preview Source & Layers ─────────────────────────────────────
       this.map.addSource(this.drawingSourceId, {
         type: 'geojson',
         data: { type: 'FeatureCollection', features: [] },
@@ -89,10 +122,7 @@ export class GeofenceLayer {
         id: this.drawingFillLayerId,
         type: 'fill',
         source: this.drawingSourceId,
-        paint: {
-          'fill-color': '#00e5ff',
-          'fill-opacity': 0.25,
-        },
+        paint: { 'fill-color': '#5B8FB9', 'fill-opacity': 0.16 },
       });
 
       this.map.addLayer({
@@ -100,20 +130,17 @@ export class GeofenceLayer {
         type: 'line',
         source: this.drawingSourceId,
         paint: {
-          'line-color': '#00e5ff',
-          'line-width': 2,
-          'line-dasharray': [3, 2],
+          'line-color': '#5B8FB9',
+          'line-width': 1.8,
+          'line-dasharray': [4, 2],
         },
       });
 
-      // Click to select
+      // Click to select (only when not drawing)
       this.map.on('click', this.fillLayerId, (e) => {
         const { drawing_mode } = useGeofenceStore.getState();
         const { interactionMode } = useMapStore.getState();
-        if (drawing_mode || interactionMode === 'DRAW_GEOFENCE' || interactionMode === 'ADD_WAYPOINT') {
-          // Pass click through to drawing/waypoint handler
-          return;
-        }
+        if (drawing_mode || interactionMode === 'DRAW_GEOFENCE' || interactionMode === 'ADD_WAYPOINT') return;
         if (e.features && e.features[0]) {
           const id = e.features[0].properties?.id;
           if (id) {
@@ -122,31 +149,55 @@ export class GeofenceLayer {
           }
         }
       });
+
+      // Pointer cursor over geofences
+      this.map.on('mouseenter', this.fillLayerId, () => {
+        if (!this.map) return;
+        const { drawing_mode } = useGeofenceStore.getState();
+        if (!drawing_mode) this.map.getCanvas().style.cursor = 'pointer';
+      });
+      this.map.on('mouseleave', this.fillLayerId, () => {
+        if (!this.map) return;
+        const { interactionMode } = useMapStore.getState();
+        this.map.getCanvas().style.cursor = interactionMode === 'DRAW_GEOFENCE' ? 'crosshair' : '';
+      });
     } catch (e) {
-      console.warn('GeofenceLayer initLayers error:', e);
+      console.warn('[GeofenceLayer] initLayers error:', e);
     }
   }
 
   public updateGeofences(geofences: Geofence[], selectedId: string | null = null): void {
+    // Cache for re-rendering after style reload
+    this.lastGeofences = geofences;
+    this.lastSelectedId = selectedId;
+
     if (!this.map || !this.map.isStyleLoaded()) return;
-    this.initLayers();
+
+    // Re-init if layers were removed by a style change
+    if (!this.map.getSource(this.sourceId)) {
+      this.initLayers();
+    }
 
     const features: any[] = [];
     geofences.forEach((g) => {
-      if (!g.visible) return;
+      // CRITICAL FIX: was `if (!g.visible) return;` which drops undefined-visible geofences
+      // Now: only skip if explicitly false
+      if (g.visible === false) return;
 
       let polygonCoords: [number, number][][] = [];
+
       if (g.geometry_type === 'CIRCLE' && g.center && g.radius) {
         polygonCoords = [this.generateCirclePolygon(g.center[0], g.center[1], g.radius)];
       } else if (g.coordinates && g.coordinates.length >= 3) {
         const closed = [...g.coordinates];
-        if (
-          closed[0][0] !== closed[closed.length - 1][0] ||
-          closed[0][1] !== closed[closed.length - 1][1]
-        ) {
-          closed.push(closed[0]);
+        // Close polygon if not already closed
+        const first = closed[0];
+        const last = closed[closed.length - 1];
+        if (first[0] !== last[0] || first[1] !== last[1]) {
+          closed.push(first);
         }
-        polygonCoords = [closed.map((c) => [c[1], c[0]])];
+        // coordinates are [lat, lon] → GeoJSON needs [lon, lat]
+        polygonCoords = [closed.map((c) => [c[1], c[0]] as [number, number])];
       }
 
       if (polygonCoords.length > 0) {
@@ -159,10 +210,7 @@ export class GeofenceLayer {
             zone_type: g.zone_type,
             selected: g.id === selectedId,
           },
-          geometry: {
-            type: 'Polygon',
-            coordinates: polygonCoords,
-          },
+          geometry: { type: 'Polygon', coordinates: polygonCoords },
         });
       }
     });
@@ -170,6 +218,7 @@ export class GeofenceLayer {
     const source = this.map.getSource(this.sourceId) as maplibregl.GeoJSONSource;
     if (source) {
       source.setData({ type: 'FeatureCollection', features });
+      console.debug(`[GeofenceLayer] Rendered ${features.length}/${geofences.length} geofences`);
     }
 
     this.renderHandles(geofences.find((g) => g.id === selectedId));
@@ -177,12 +226,13 @@ export class GeofenceLayer {
 
   public updateDrawingSession(points: [number, number][], preview?: [number, number] | null): void {
     if (!this.map || !this.map.isStyleLoaded()) return;
-    this.initLayers();
+
+    if (!this.map.getSource(this.drawingSourceId)) {
+      this.initLayers();
+    }
 
     const drawingCoords = [...points];
-    if (preview) {
-      drawingCoords.push(preview);
-    }
+    if (preview) drawingCoords.push(preview);
 
     const features: any[] = [];
     if (drawingCoords.length >= 3) {
@@ -210,6 +260,23 @@ export class GeofenceLayer {
     }
   }
 
+  /** Fit the camera to show all coordinates of the given geofence */
+  public fitGeofence(geofence: Geofence): void {
+    if (!this.map) return;
+    const coords = geofence.geometry_type === 'CIRCLE' && geofence.center
+      ? this.generateCirclePolygon(geofence.center[0], geofence.center[1], geofence.radius ?? 200)
+      : geofence.coordinates;
+    if (!coords || coords.length === 0) return;
+
+    const lats = coords.map((c) => c[0]);
+    const lons = coords.map((c) => c[1]);
+    const bounds: maplibregl.LngLatBoundsLike = [
+      [Math.min(...lons), Math.min(...lats)],
+      [Math.max(...lons), Math.max(...lats)],
+    ];
+    this.map.fitBounds(bounds, { padding: 80, maxZoom: 16 });
+  }
+
   private renderHandles(geofence?: Geofence): void {
     this.handleMarkers.forEach((m) => m.remove());
     this.handleMarkers = [];
@@ -219,7 +286,7 @@ export class GeofenceLayer {
     geofence.coordinates.forEach((coord, idx) => {
       const el = document.createElement('div');
       el.className =
-        'w-3.5 h-3.5 rounded-full bg-cyan-400 border-2 border-white shadow cursor-move hover:scale-125 transition-transform';
+        'w-3.5 h-3.5 rounded-full bg-[#5B8FB9] border-2 border-[#E7EBEF] shadow cursor-move hover:scale-125 transition-transform';
 
       const marker = new maplibregl.Marker({ element: el, draggable: true })
         .setLngLat([coord[1], coord[0]])
@@ -260,7 +327,7 @@ export class GeofenceLayer {
       const theta = (i * 2 * Math.PI) / points;
       const pLat = lat + dLat * (180 / Math.PI) * Math.sin(theta);
       const pLon = lon + dLon * (180 / Math.PI) * Math.cos(theta);
-      coords.push([pLon, pLat]);
+      coords.push([pLat, pLon]);
     }
     return coords;
   }

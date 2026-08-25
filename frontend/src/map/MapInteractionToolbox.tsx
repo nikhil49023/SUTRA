@@ -24,35 +24,35 @@ const TOOLS: ToolButton[] = [
     icon: <MousePointer2 className="w-4 h-4" />,
     label: 'Select',
     shortcut: 'S',
-    activeClass: 'bg-slate-700 border-slate-500 text-slate-100',
+    activeClass: 'bg-[#1B2530] border-[#5B8FB9] text-[#E7EBEF]',
   },
   {
     mode: 'PAN',
     icon: <Hand className="w-4 h-4" />,
     label: 'Pan',
     shortcut: 'P',
-    activeClass: 'bg-slate-700 border-slate-500 text-slate-100',
+    activeClass: 'bg-[#1B2530] border-[#5B8FB9] text-[#E7EBEF]',
   },
   {
     mode: 'ADD_WAYPOINT',
     icon: <MapPin className="w-4 h-4" />,
     label: '+ Waypoint',
     shortcut: 'W',
-    activeClass: 'bg-cyan-900 border-cyan-400 text-cyan-300 shadow-[0_0_8px_rgba(0,229,255,0.4)]',
+    activeClass: 'bg-[#1B2530] border-[#5B8FB9] text-[#E7EBEF] shadow-[0_0_8px_rgba(91,143,185,0.3)]',
   },
   {
     mode: 'DRAW_GEOFENCE',
     icon: <Shield className="w-4 h-4" />,
     label: 'Geofence',
     shortcut: 'G',
-    activeClass: 'bg-amber-900 border-amber-400 text-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.4)]',
+    activeClass: 'bg-[#151D26] border-[#C49A4A] text-[#C49A4A] shadow-[0_0_8px_rgba(196,154,74,0.3)]',
   },
   {
     mode: 'MEASURE',
     icon: <Ruler className="w-4 h-4" />,
     label: 'Measure',
     shortcut: 'M',
-    activeClass: 'bg-emerald-900 border-emerald-400 text-emerald-300',
+    activeClass: 'bg-[#151D26] border-[#4F9A72] text-[#4F9A72]',
   },
 ];
 
@@ -123,19 +123,19 @@ export const MapInteractionToolbox: React.FC = () => {
   return (
     <div className="flex flex-col gap-1">
       {/* Tool buttons */}
-      <div className="flex flex-col rounded border border-slate-800 bg-[#0f141c]/95 backdrop-blur-md shadow-xl overflow-hidden">
+      <div className="flex flex-col rounded border border-[#2B3743] bg-[#11171E]/95 backdrop-blur-md shadow-xl overflow-hidden">
         {TOOLS.map((tool, idx) => {
           const isActive = interactionMode === tool.mode;
           return (
             <React.Fragment key={tool.mode}>
-              {idx > 0 && <div className="h-px bg-slate-800/60" />}
+              {idx > 0 && <div className="h-px bg-[#2B3743]" />}
               <button
                 onClick={() => handleToolSelect(tool.mode)}
                 className={`flex items-center gap-2 px-3 py-2 text-[11px] font-mono font-medium transition-all whitespace-nowrap
                   border rounded-none border-transparent
                   ${isActive
                     ? tool.activeClass
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                    : 'text-[#707C88] hover:text-[#E7EBEF] hover:bg-[#151D26]'
                   }`}
                 title={`${tool.label} (${tool.shortcut})`}
               >
@@ -152,7 +152,7 @@ export const MapInteractionToolbox: React.FC = () => {
       {interactionMode !== 'SELECT' && (
         <button
           onClick={handleCancelCurrent}
-          className="flex items-center gap-1.5 px-2 py-1 rounded border border-red-700/60 bg-red-950/60 text-red-400 text-[10px] font-mono hover:bg-red-900/60 transition"
+          className="flex items-center gap-1.5 px-2 py-1 rounded border border-[#C75A5A]/60 bg-[#151D26] text-[#C75A5A] text-[10px] font-mono hover:bg-[#1B2530] transition"
         >
           <X className="w-3 h-3" />
           <span>Cancel [Esc]</span>

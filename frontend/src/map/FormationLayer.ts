@@ -31,10 +31,10 @@ export class FormationLayer {
         type: 'line',
         source: this.sourceId,
         paint: {
-          'line-color': '#f59e0b',
-          'line-width': 1.5,
+          'line-color': '#5B8FB9',
+          'line-width': 1.2,
           'line-dasharray': [2, 3],
-          'line-opacity': 0.7,
+          'line-opacity': 0.6,
         },
       });
     } catch (e) {

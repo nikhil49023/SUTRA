@@ -243,17 +243,11 @@ class MessageRouter {
       useFleetStore.getState().updateFromEvent(topic, payload);
     }
 
-    // Geofence Events
-    else if (topic === 'geofence.created' && payload.geofence) {
-      useGeofenceStore.getState().setGeofences([
-        ...useGeofenceStore.getState().geofences,
-        payload.geofence,
-      ]);
-    } else if (topic === 'geofence.deleted' && payload.geofence_id) {
-      useGeofenceStore.getState().deleteGeofence(payload.geofence_id);
-    } else if (topic.startsWith('geofence.')) {
+    // Geofence Events — route through store's updateFromEvent which handles dedup & normalization
+    else if (topic.startsWith('geofence.')) {
       useGeofenceStore.getState().updateFromEvent(topic, payload);
     }
+
 
     // GIS Events
     else if (topic.startsWith('gis.')) {

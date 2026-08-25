@@ -34,8 +34,8 @@ export class GisLayer {
         type: 'line',
         source: this.losSourceId,
         paint: {
-          'line-color': ['case', ['get', 'visible'], '#10b981', '#ef4444'],
-          'line-width': 2.5,
+          'line-color': ['case', ['get', 'visible'], '#4F9A72', '#C75A5A'],
+          'line-width': 2.0,
           'line-dasharray': [3, 2],
         },
       });
@@ -51,9 +51,9 @@ export class GisLayer {
         type: 'line',
         source: this.searchSourceId,
         paint: {
-          'line-color': '#a855f7',
-          'line-width': 2,
-          'line-opacity': 0.8,
+          'line-color': '#5B8FB9',
+          'line-width': 1.5,
+          'line-opacity': 0.75,
         },
       });
     } catch (e) {

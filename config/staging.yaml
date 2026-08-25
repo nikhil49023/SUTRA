@@ -1,0 +1,48 @@
+environment: staging
+app_version: "1.0.0"
+protocol_version: "1.0"
+simulation_mode: false
+hardware_mode: false
+
+server:
+  backend_host: "0.0.0.0"
+  backend_port: 8000
+  websocket_host: "0.0.0.0"
+  websocket_port: 8765
+  allowed_origins:
+    - "https://staging.smarthorizon.gcs"
+    - "https://gcs-staging.internal"
+
+security:
+  security_mode: "STRICT"
+  websocket_auth_required: true
+  session_timeout_sec: 14400 # 4 hours
+  rate_limit_rpm: 200
+  replay_window_sec: 30
+  token_secret_env: "GCS_TOKEN_SECRET"
+  jwt_secret_env: "GCS_JWT_SECRET"
+
+logging:
+  level: "INFO"
+  format: "structured_json"
+  log_file: "/var/log/smart-horizon/gcs_staging.log"
+  max_bytes: 52428800 # 50MB
+  backup_count: 14
+  audit_file: "/var/log/smart-horizon/audit_staging.log"
+
+telemetry:
+  telemetry_rate_hz: 10
+  hud_refresh_rate_hz: 60
+  simulation_rate_hz: 10
+  drone_count: 4
+
+ai:
+  update_rate_hz: 2
+  threat_threshold: 0.65
+  battery_margin_pct: 25.0
+  confidence_decay_half_life_sec: 3.0
+
+mavlink:
+  connection_string: "udp:10.0.10.50:14550"
+  baud_rate: 57600
+  heartbeat_timeout_sec: 2.0

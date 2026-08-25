@@ -40,8 +40,8 @@ export class RouteLayer {
           'line-cap': 'round',
         },
         paint: {
-          'line-color': '#00e5ff',
-          'line-width': 3,
+          'line-color': '#5B8FB9',
+          'line-width': 2.5,
           'line-opacity': 0.85,
         },
       });
@@ -52,10 +52,10 @@ export class RouteLayer {
         type: 'line',
         source: this.sourceId,
         paint: {
-          'line-color': '#ffffff',
-          'line-width': 1.5,
+          'line-color': '#E7EBEF',
+          'line-width': 1.2,
           'line-dasharray': [2, 4],
-          'line-opacity': 0.9,
+          'line-opacity': 0.75,
         },
       });
     } catch (e) {

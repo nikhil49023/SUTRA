@@ -77,7 +77,7 @@ export const TacticalLayout: React.FC = () => {
   }, []);
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-[#0a0d12] text-slate-100 overflow-hidden select-none">
+    <div className="h-screen w-screen flex flex-col bg-[#0B0F14] text-[#E7EBEF] overflow-hidden select-none">
       {/* 1. TOP BAR */}
       <ErrorBoundary fallbackTitle="TOP BAR">
         <TopBar />
@@ -101,7 +101,7 @@ export const TacticalLayout: React.FC = () => {
 
           {/* Contextual Overlays / Tabs when not in plain COMMAND view */}
           {activeSection !== 'COMMAND' && activeSection !== 'LIVEOPS' && (
-            <div className="absolute inset-0 z-20 bg-[#0a0d12]/85 backdrop-blur-md overflow-hidden">
+            <div className="absolute inset-0 z-20 bg-[#0B0F14]/90 backdrop-blur-md overflow-hidden">
               <ErrorBoundary fallbackTitle={`${activeSection} SUBSYSTEM`}>
                 {activeSection === 'MISSION' && <MissionPlanner />}
                 {activeSection === 'GIS' && <GisPanel />}

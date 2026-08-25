@@ -26,27 +26,27 @@ export const TopBar: React.FC = () => {
     : 100;
 
   return (
-    <header className="h-12 bg-[#090d14] border-b border-slate-800/90 px-4 flex items-center justify-between text-slate-100 font-mono text-xs select-none shadow-md z-40">
+    <header className="h-12 bg-[#0B0F14] border-b border-[#2B3743] px-4 flex items-center justify-between text-[#E7EBEF] font-mono text-xs select-none shadow-md z-40">
       {/* 1. Left: Brand & Mission Name */}
       <div className="flex items-center space-x-3">
         <div className="flex items-center space-x-2">
-          <div className="w-2.5 h-2.5 rounded-sm bg-cyan-400 shadow-[0_0_8px_rgba(0,229,255,0.8)]" />
-          <span className="font-extrabold text-sm tracking-wider bg-gradient-to-r from-cyan-400 to-sky-200 bg-clip-text text-transparent">
+          <div className="w-2.5 h-2.5 rounded-sm bg-[#5B8FB9] shadow-[0_0_8px_rgba(91,143,185,0.6)]" />
+          <span className="font-extrabold text-sm tracking-wider text-[#E7EBEF]">
             SMART HORIZON
           </span>
-          <span className="text-[10px] text-slate-500 font-bold border border-slate-800 px-1 rounded bg-slate-950">
+          <span className="text-[10px] text-[#707C88] font-bold border border-[#2B3743] px-1 rounded bg-[#11171E]">
             GCS
           </span>
         </div>
 
-        <div className="h-4 w-px bg-slate-800" />
+        <div className="h-4 w-px bg-[#2B3743]" />
 
         {/* Mission Status Badge */}
         <div className="flex items-center space-x-2">
-          <span className="text-slate-400 text-[11px]">MISSION:</span>
-          <span className="font-bold text-cyan-300">{mission_name}</span>
-          <span className="px-1.5 py-0.2 rounded border border-emerald-500/40 bg-emerald-950/50 text-emerald-400 text-[10px] font-bold flex items-center space-x-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-[#707C88] text-[11px]">MISSION:</span>
+          <span className="font-bold text-[#E7EBEF]">{mission_name}</span>
+          <span className="px-1.5 py-0.2 rounded border border-[#4F9A72]/40 bg-[#151D26] text-[#4F9A72] text-[10px] font-bold flex items-center space-x-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#4F9A72] animate-pulse" />
             <span>{state}</span>
           </span>
         </div>
@@ -55,30 +55,30 @@ export const TopBar: React.FC = () => {
       {/* 2. Middle: Fleet Summary & Telemetry Quick Stats */}
       <div className="hidden lg:flex items-center space-x-3">
         {/* Fleet Count */}
-        <div className="flex items-center space-x-1.5 bg-slate-900/60 px-2 py-1 rounded border border-slate-800">
-          <span className="text-slate-400">FLEET:</span>
-          <span className="font-bold text-cyan-300 tabular-nums">{droneList.length} UAVs</span>
+        <div className="flex items-center space-x-1.5 bg-[#11171E] px-2 py-1 rounded border border-[#2B3743]">
+          <span className="text-[#707C88]">FLEET:</span>
+          <span className="font-bold text-[#E7EBEF] tabular-nums">{droneList.length} UAVs</span>
         </div>
 
         {/* GPS Satellites */}
-        <div className="flex items-center space-x-1.5 bg-slate-900/60 px-2 py-1 rounded border border-slate-800">
-          <Satellite className="w-3 h-3 text-cyan-400" />
-          <span className="font-bold text-slate-200 tabular-nums">{telem?.satellites || 18} SAT</span>
+        <div className="flex items-center space-x-1.5 bg-[#11171E] px-2 py-1 rounded border border-[#2B3743]">
+          <Satellite className="w-3 h-3 text-[#5B8FB9]" />
+          <span className="font-bold text-[#E7EBEF] tabular-nums">{telem?.satellites || 18} SAT</span>
         </div>
 
         {/* Battery Summary */}
-        <div className="flex items-center space-x-1.5 bg-slate-900/60 px-2 py-1 rounded border border-slate-800">
-          <Battery className="w-3 h-3 text-emerald-400" />
-          <span className="text-slate-400">BAT:</span>
-          <span className={`font-bold tabular-nums ${lowestBattery <= 20 ? 'text-amber-400' : 'text-emerald-400'}`}>
+        <div className="flex items-center space-x-1.5 bg-[#11171E] px-2 py-1 rounded border border-[#2B3743]">
+          <Battery className="w-3 h-3 text-[#4F9A72]" />
+          <span className="text-[#707C88]">BAT:</span>
+          <span className={`font-bold tabular-nums ${lowestBattery <= 20 ? 'text-[#C49A4A]' : 'text-[#4F9A72]'}`}>
             {lowestBattery.toFixed(0)}%
           </span>
         </div>
 
         {/* AI Status */}
-        <div className="flex items-center space-x-1.5 bg-slate-900/60 px-2 py-1 rounded border border-slate-800">
-          <Brain className="w-3 h-3 text-purple-400" />
-          <span className="text-purple-300 font-bold">AI {aiMode}</span>
+        <div className="flex items-center space-x-1.5 bg-[#11171E] px-2 py-1 rounded border border-[#2B3743]">
+          <Brain className="w-3 h-3 text-[#5B8FB9]" />
+          <span className="text-[#A9B3BD] font-bold">AI {aiMode}</span>
         </div>
       </div>
 
@@ -91,10 +91,10 @@ export const TopBar: React.FC = () => {
         {(role === 'ADMIN' || role === 'COMMANDER') && (
           <button
             onClick={() => setShowAuditModal(true)}
-            className="px-2 py-1 rounded bg-slate-900 border border-slate-800 hover:border-cyan-500/50 hover:bg-cyan-950/40 text-slate-300 hover:text-cyan-200 text-[10px] flex items-center space-x-1 transition"
+            className="px-2 py-1 rounded bg-[#11171E] border border-[#2B3743] hover:border-[#5B8FB9] hover:bg-[#151D26] text-[#A9B3BD] hover:text-[#E7EBEF] text-[10px] flex items-center space-x-1 transition"
             title="Open Authoritative Security Audit Log"
           >
-            <FileText className="w-3 h-3 text-cyan-400" />
+            <FileText className="w-3 h-3 text-[#5B8FB9]" />
             <span className="hidden sm:inline">AUDIT</span>
           </button>
         )}
@@ -104,7 +104,7 @@ export const TopBar: React.FC = () => {
         {/* Prominent EMERGENCY RTL Button */}
         <button
           onClick={() => setEmergencyModalOpen(true, 'ALL')}
-          className="px-3 py-1.5 rounded bg-rose-600 border border-rose-400 hover:bg-rose-500 text-white font-bold text-xs tracking-wider shadow-[0_0_15px_rgba(239,68,68,0.4)] flex items-center space-x-1.5 transition active:scale-95"
+          className="px-3 py-1.5 rounded bg-[#C75A5A] border border-[#C75A5A] hover:bg-[#b04f4f] text-white font-bold text-xs tracking-wider shadow-[0_0_12px_rgba(199,90,90,0.35)] flex items-center space-x-1.5 transition active:scale-95"
         >
           <ShieldAlert className="w-3.5 h-3.5 animate-pulse" />
           <span>EMERGENCY RTL</span>

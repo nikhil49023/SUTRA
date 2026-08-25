@@ -1,0 +1,49 @@
+environment: development
+app_version: "1.0.0"
+protocol_version: "1.0"
+simulation_mode: true
+hardware_mode: false
+
+server:
+  backend_host: "0.0.0.0"
+  backend_port: 8000
+  websocket_host: "0.0.0.0"
+  websocket_port: 8765
+  allowed_origins:
+    - "http://localhost:5173"
+    - "http://127.0.0.1:5173"
+    - "http://localhost:3000"
+
+security:
+  security_mode: "PERMISSIVE"
+  websocket_auth_required: false
+  session_timeout_sec: 86400
+  rate_limit_rpm: 600
+  replay_window_sec: 120
+  token_secret_env: "GCS_TOKEN_SECRET"
+  jwt_secret_env: "GCS_JWT_SECRET"
+
+logging:
+  level: "DEBUG"
+  format: "structured_json"
+  log_file: "development_audit_logs/gcs_dev.log"
+  max_bytes: 10485760 # 10MB
+  backup_count: 5
+  audit_file: "development_audit_logs/audit_dev.log"
+
+telemetry:
+  telemetry_rate_hz: 10
+  hud_refresh_rate_hz: 60
+  simulation_rate_hz: 10
+  drone_count: 4
+
+ai:
+  update_rate_hz: 2
+  threat_threshold: 0.75
+  battery_margin_pct: 20.0
+  confidence_decay_half_life_sec: 10.0
+
+mavlink:
+  connection_string: "udp:127.0.0.1:14550"
+  baud_rate: 115200
+  heartbeat_timeout_sec: 5.0

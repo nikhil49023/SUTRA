@@ -42,14 +42,14 @@ export class WaypointLayer {
         <div class="relative flex items-center justify-center">
           <div class="w-8 h-8 rounded-full flex items-center justify-center font-mono font-bold text-xs border-2 shadow-lg transition-transform ${
             isSelected
-              ? 'bg-cyan-500 border-white text-black scale-125 ring-4 ring-cyan-400/40'
+              ? 'bg-[#5B8FB9] border-[#E7EBEF] text-[#0B0F14] scale-125 ring-4 ring-[#5B8FB9]/40'
               : isActive
-              ? 'bg-emerald-600 border-emerald-300 text-white ring-2 ring-emerald-400/50'
-              : 'bg-slate-900/90 border-cyan-400 text-cyan-300 hover:scale-110'
+              ? 'bg-[#4B7FA9] border-[#6FA4CE] text-[#E7EBEF] ring-2 ring-[#6FA4CE]/50'
+              : 'bg-[#11171E]/95 border-[#5B8FB9] text-[#5B8FB9] hover:scale-110'
           }">
             ${wp.index}
           </div>
-          <div class="absolute -bottom-4 px-1 py-0.2 bg-black/80 rounded border border-slate-700 text-[9px] font-mono text-slate-300 whitespace-nowrap pointer-events-none">
+          <div class="absolute -bottom-4 px-1 py-0.2 bg-[#0B0F14]/90 rounded border border-[#2B3743] text-[9px] font-mono text-[#A9B3BD] whitespace-nowrap pointer-events-none">
             ${wp.altitude}m | ${wp.speed}m/s
           </div>
         </div>
