@@ -7,8 +7,8 @@
   
   <!-- Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
   
   <!-- KaTeX for crisp mathematical formulas -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
@@ -17,19 +17,18 @@
 
   <style>
     :root {
-      /* Defense-Tech Executive Palette (Ultra-Crisp, High-Contrast) */
-      --bg-page: #f1f5f9;
+      /* Defense-Tech Executive Palette (Ultra-Crisp, High-Contrast Landscape) */
+      --bg-page: #e2e8f0;
       --slide-bg: #ffffff;
       --card-bg: #f8fafc;
       --card-highlight: #eff6ff;
       --border-subtle: #cbd5e1;
-      --border-accent: #3b82f6;
-      --border-strong: #94a3b8;
+      --border-accent: #2563eb;
       
       --primary: #1d4ed8;       /* Tactical Royal Blue */
       --primary-dark: #0f172a;  /* Deep Navy Slate */
       --secondary: #475569;     /* Slate Gray */
-      --accent: #6366f1;        /* Indigo */
+      --accent: #4f46e5;        /* Indigo */
       --success: #059669;       /* Forest Emerald */
       --success-bg: #ecfdf5;
       --warning: #b45309;       /* Dark Amber */
@@ -52,7 +51,7 @@
       background-color: var(--bg-page);
       color: var(--text-main);
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      line-height: 1.5;
+      line-height: 1.45;
       -webkit-font-smoothing: antialiased;
     }
 
@@ -62,7 +61,7 @@
       flex-direction: column;
       gap: 32px;
       padding: 32px;
-      max-width: 1400px;
+      max-width: 1440px;
       margin: 0 auto;
     }
 
@@ -71,14 +70,14 @@
       aspect-ratio: 16 / 9;
       background: var(--slide-bg);
       border: 1px solid var(--border-subtle);
-      border-radius: 12px;
-      padding: 44px 54px;
+      border-radius: 14px;
+      padding: 36px 48px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       position: relative;
       overflow: hidden;
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      box-shadow: 0 12px 36px rgba(15, 23, 42, 0.09);
       page-break-after: always;
       break-after: page;
     }
@@ -90,7 +89,7 @@
       top: 0;
       left: 0;
       right: 0;
-      height: 5px;
+      height: 6px;
       background: linear-gradient(90deg, #1d4ed8 0%, #3b82f6 50%, #6366f1 100%);
     }
 
@@ -100,7 +99,7 @@
       justify-content: space-between;
       align-items: flex-start;
       border-bottom: 2px solid #e2e8f0;
-      padding-bottom: 16px;
+      padding-bottom: 12px;
     }
 
     .slide-tag {
@@ -110,28 +109,28 @@
       text-transform: uppercase;
       color: var(--primary);
       background: #eff6ff;
-      padding: 5px 12px;
+      padding: 4px 12px;
       border-radius: 6px;
       border: 1px solid #bfdbfe;
       display: inline-block;
-      margin-bottom: 8px;
+      margin-bottom: 4px;
     }
 
     .slide-title {
-      font-size: 30px;
+      font-size: 26px;
       font-weight: 900;
-      letter-spacing: -0.8px;
+      letter-spacing: -0.6px;
       color: var(--primary-dark);
     }
 
     .slide-number {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 800;
       color: var(--primary);
       background: #f8fafc;
-      padding: 6px 14px;
-      border-radius: 8px;
+      padding: 5px 12px;
+      border-radius: 6px;
       border: 1px solid #cbd5e1;
     }
 
@@ -141,26 +140,38 @@
       display: flex;
       flex-direction: column;
       justify-content: center;
-      padding: 24px 0;
-      gap: 20px;
+      padding: 16px 0;
+      gap: 16px;
+    }
+
+    .split-layout {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 24px;
+      align-items: center;
+      height: 100%;
+    }
+
+    .split-layout.reverse {
+      grid-template-columns: 0.85fr 1.15fr;
     }
 
     .grid-2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 28px;
+      gap: 20px;
     }
 
     .grid-3 {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
-      gap: 20px;
+      gap: 16px;
     }
 
     .grid-4 {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 18px;
+      gap: 14px;
     }
 
     /* Feature Cards */
@@ -168,10 +179,10 @@
       background: var(--card-bg);
       border: 1px solid var(--border-subtle);
       border-radius: 10px;
-      padding: 22px;
+      padding: 16px 18px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
       border-left: 4px solid #94a3b8;
     }
 
@@ -194,34 +205,46 @@
     }
 
     .card h3 {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 800;
       color: var(--primary-dark);
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
 
     .card p, .card li {
-      font-size: 13.5px;
+      font-size: 12.5px;
       color: var(--text-body);
-      line-height: 1.55;
+      line-height: 1.45;
     }
 
     .card ul {
       list-style-type: none;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
     }
 
     .card ul li::before {
       content: "■";
       color: var(--primary);
-      font-size: 10px;
+      font-size: 9px;
       margin-right: 8px;
       position: relative;
       top: -1px;
+    }
+
+    /* SVG Illustration Container */
+    .svg-container {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 2px 6px rgba(15, 23, 42, 0.03);
     }
 
     /* Metrics & Badges */
@@ -231,26 +254,19 @@
       gap: 6px;
       background: var(--success-bg);
       color: var(--success);
-      padding: 5px 12px;
+      padding: 4px 10px;
       border-radius: 6px;
       border: 1px solid #a7f3d0;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 800;
     }
 
-    .metric-big {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 34px;
-      font-weight: 900;
-      color: var(--primary);
-    }
-
     .metric-label {
-      font-size: 11px;
+      font-size: 10.5px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 0.8px;
       color: var(--text-muted);
     }
 
@@ -258,7 +274,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 12.5px;
+      font-size: 11.5px;
       background: #ffffff;
       border: 1px solid var(--border-subtle);
       border-radius: 8px;
@@ -266,7 +282,7 @@
     }
 
     th, td {
-      padding: 11px 14px;
+      padding: 9px 12px;
       text-align: left;
       border-bottom: 1px solid #e2e8f0;
     }
@@ -276,16 +292,12 @@
       color: #ffffff;
       font-weight: 800;
       text-transform: uppercase;
-      font-size: 11px;
+      font-size: 10.5px;
       letter-spacing: 0.8px;
     }
 
     tr:nth-child(even) td {
       background: #f8fafc;
-    }
-
-    tr:last-child td {
-      border-bottom: none;
     }
 
     /* Slide Footer */
@@ -294,8 +306,8 @@
       justify-content: space-between;
       align-items: center;
       border-top: 2px solid #e2e8f0;
-      padding-top: 14px;
-      font-size: 11.5px;
+      padding-top: 10px;
+      font-size: 11px;
       font-weight: 600;
       color: var(--text-muted);
     }
@@ -304,7 +316,7 @@
       color: var(--primary-dark);
       font-weight: 700;
       background: #eff6ff;
-      padding: 4px 12px;
+      padding: 3px 10px;
       border-radius: 6px;
       border: 1px solid #bfdbfe;
     }
@@ -344,31 +356,99 @@
       <div class="slide-number">01 / 10</div>
     </div>
 
-    <div class="slide-body" style="text-align: center; justify-content: center; gap: 22px;">
-      <h2 style="font-size: 28px; font-weight: 900; color: #1d4ed8; letter-spacing: -0.5px;">
-        Swarm Unified Tactical Reconnaissance Architecture
-      </h2>
-      <p style="font-size: 16px; max-width: 860px; margin: 0 auto; color: #334155; font-weight: 500;">
-        An Autonomous Multi-Drone Swarm System for Collaborative Search, Rescue, and Survivor Geolocation in GPS-Denied, High-Jamming Disaster Environments.
-      </p>
+    <div class="slide-body">
+      <div class="split-layout">
+        <!-- Left: Text & Key Highlights -->
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <h2 style="font-size: 24px; font-weight: 900; color: #1d4ed8; letter-spacing: -0.5px;">
+            Swarm Unified Tactical Reconnaissance Architecture
+          </h2>
+          <p style="font-size: 14px; color: #334155; font-weight: 500;">
+            An Autonomous Multi-Drone Swarm System for Collaborative Search, Rescue, and Survivor Geolocation in GPS-Denied, High-Jamming Disaster Environments.
+          </p>
 
-      <div class="grid-3" style="max-width: 1020px; margin: 8px auto; width: 100%;">
-        <div class="card highlight">
-          <span class="metric-label">Theme & Problem ID</span>
-          <div style="font-weight: 800; font-size: 16px; color: #1d4ed8;">Defence & SpaceTech (SH-DST-05)</div>
-        </div>
-        <div class="card highlight">
-          <span class="metric-label">Institution</span>
-          <div style="font-weight: 800; font-size: 16px; color: #0f172a;">New Horizon College of Engg (NHCE)</div>
-        </div>
-        <div class="card success">
-          <span class="metric-label">Verification Status</span>
-          <div style="font-weight: 800; font-size: 16px; color: #059669;">232/232 PyTests (100% Green)</div>
-        </div>
-      </div>
+          <div class="grid-2">
+            <div class="card highlight">
+              <span class="metric-label">Theme & Problem ID</span>
+              <div style="font-weight: 800; font-size: 14px; color: #1d4ed8;">Defence & SpaceTech (SH-DST-05)</div>
+            </div>
+            <div class="card success">
+              <span class="metric-label">Verification Status</span>
+              <div style="font-weight: 800; font-size: 14px; color: #059669;">232/232 PyTests (100% Green)</div>
+            </div>
+          </div>
 
-      <div style="font-size: 13px; color: #475569; display: flex; justify-content: center; gap: 20px; font-weight: 600;">
-        <span><strong>Team:</strong> Nikhil (Tech Lead) • Vedanth (AI Perception) • Siva (3D GIS GCS) • Harika (QA/Docs) • Rohith (Ops)</span>
+          <div style="font-size: 12px; color: #475569; font-weight: 600; background: #f8fafc; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <strong>Team:</strong> Nikhil (Lead) • Vedanth (Perception) • Siva (GCS) • Harika (QA/Docs) • Rohith (Ops)
+          </div>
+        </div>
+
+        <!-- Right: Swarm Schematic SVG -->
+        <div class="svg-container">
+          <svg viewBox="0 0 400 240" width="100%" height="220" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="droneGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#1d4ed8"/>
+                <stop offset="100%" stop-color="#3b82f6"/>
+              </linearGradient>
+              <linearGradient id="laserGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="rgba(56, 189, 248, 0.6)"/>
+                <stop offset="100%" stop-color="rgba(56, 189, 248, 0.0)"/>
+              </linearGradient>
+            </defs>
+
+            <!-- Ground Grid -->
+            <path d="M 40 200 L 360 200 M 60 215 L 340 215 M 80 230 L 320 230" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4,4"/>
+            <path d="M 120 190 L 80 235 M 200 190 L 200 235 M 280 190 L 320 235" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4,4"/>
+
+            <!-- Central Leader Drone (UAV-Alpha) -->
+            <g transform="translate(200, 70)">
+              <!-- Sensor Scanning Cone -->
+              <polygon points="0,15 -70,130 70,130" fill="url(#laserGrad)"/>
+              
+              <!-- Drone Body & Arms -->
+              <circle cx="0" cy="0" r="14" fill="url(#droneGrad)" stroke="#0f172a" stroke-width="2"/>
+              <line x1="-24" y1="-16" x2="24" y2="16" stroke="#0f172a" stroke-width="3.5"/>
+              <line x1="-24" y1="16" x2="24" y2="-16" stroke="#0f172a" stroke-width="3.5"/>
+              
+              <!-- Rotors -->
+              <ellipse cx="-24" cy="-16" rx="10" ry="4" fill="none" stroke="#2563eb" stroke-width="1.5"/>
+              <ellipse cx="24" cy="16" rx="10" ry="4" fill="none" stroke="#2563eb" stroke-width="1.5"/>
+              <ellipse cx="-24" cy="16" rx="10" ry="4" fill="none" stroke="#2563eb" stroke-width="1.5"/>
+              <ellipse cx="24" cy="-16" rx="10" ry="4" fill="none" stroke="#2563eb" stroke-width="1.5"/>
+
+              <text x="0" y="4" font-family="JetBrains Mono" font-size="8" font-weight="bold" fill="#ffffff" text-anchor="middle">LEAD</text>
+            </g>
+
+            <!-- Wing Drone Left (UAV-Beta) -->
+            <g transform="translate(90, 100)">
+              <polygon points="0,10 -40,100 40,100" fill="url(#laserGrad)"/>
+              <circle cx="0" cy="0" r="10" fill="#3b82f6" stroke="#0f172a" stroke-width="1.5"/>
+              <line x1="-16" y1="-10" x2="16" y2="10" stroke="#0f172a" stroke-width="2.5"/>
+              <line x1="-16" y1="10" x2="16" y2="-10" stroke="#0f172a" stroke-width="2.5"/>
+              <text x="0" y="3" font-family="JetBrains Mono" font-size="6" font-weight="bold" fill="#ffffff" text-anchor="middle">UAV-2</text>
+            </g>
+
+            <!-- Wing Drone Right (UAV-Gamma) -->
+            <g transform="translate(310, 100)">
+              <polygon points="0,10 -40,100 40,100" fill="url(#laserGrad)"/>
+              <circle cx="0" cy="0" r="10" fill="#3b82f6" stroke="#0f172a" stroke-width="1.5"/>
+              <line x1="-16" y1="-10" x2="16" y2="10" stroke="#0f172a" stroke-width="2.5"/>
+              <line x1="-16" y1="10" x2="16" y2="-10" stroke="#0f172a" stroke-width="2.5"/>
+              <text x="0" y="3" font-family="JetBrains Mono" font-size="6" font-weight="bold" fill="#ffffff" text-anchor="middle">UAV-3</text>
+            </g>
+
+            <!-- Wi-Fi Mesh Links -->
+            <line x1="90" y1="100" x2="200" y2="70" stroke="#059669" stroke-width="2" stroke-dasharray="3,3"/>
+            <line x1="310" y1="100" x2="200" y2="70" stroke="#059669" stroke-width="2" stroke-dasharray="3,3"/>
+            <line x1="90" y1="100" x2="310" y2="100" stroke="#059669" stroke-width="1.5" stroke-dasharray="3,3"/>
+
+            <!-- HUD Bracket Overlays -->
+            <path d="M 20 20 L 20 40 M 20 20 L 40 20" stroke="#1d4ed8" stroke-width="2" fill="none"/>
+            <path d="M 380 20 L 380 40 M 380 20 L 360 20" stroke="#1d4ed8" stroke-width="2" fill="none"/>
+            <text x="200" y="25" font-family="JetBrains Mono" font-size="9" font-weight="bold" fill="#1d4ed8" text-anchor="middle">802.11s SWARM MESH ACTIVE</text>
+          </svg>
+        </div>
       </div>
     </div>
 
@@ -391,25 +471,61 @@
     </div>
 
     <div class="slide-body">
-      <div class="grid-2">
-        <div class="card warning">
-          <h3>🚨 Real-World Disaster Pain Points (Kedarnath / Wayanad)</h3>
-          <ul>
-            <li><strong>Severe GPS Denial:</strong> Mountain ravines, landslides, and forest canopy block satellite signals, causing single drones to drift and crash.</li>
-            <li><strong>The "Digital Cliff Effect":</strong> Heavy RF multipath fading and jamming freezes traditional Wi-Fi and H.264 video streams at &lt; 5 dB SNR.</li>
-            <li><strong>Single-Drone Bottlenecks:</strong> Manual single UAVs lack wide search coverage, endurance, and failover when batteries deplete.</li>
-            <li><strong>Swarm Collision Deadlocks:</strong> Naive potential fields oscillate or deadlock in narrow corridors, delaying critical life-saving rescue.</li>
-          </ul>
+      <div class="split-layout">
+        <!-- Left: Bullet Cards -->
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div class="card warning">
+            <h3>🚨 Traditional Single-Drone Bottlenecks (Kedarnath / Wayanad)</h3>
+            <ul>
+              <li><strong>Severe GPS Denial:</strong> Ravines and rockslides block GNSS, causing single UAVs to drift and crash.</li>
+              <li><strong>Digital Cliff Effect:</strong> Standard Wi-Fi/H.264 video freezes catastrophically below 5 dB SNR.</li>
+              <li><strong>Zero Failover:</strong> Single battery or rotor failure causes total mission abort.</li>
+            </ul>
+          </div>
+
+          <div class="card highlight">
+            <h3>🎯 The SUTRA Advantage</h3>
+            <ul>
+              <li><strong>5-UAV Autonomous Fleet:</strong> Collaborative self-organizing search with zero human piloting.</li>
+              <li><strong>Deep JSCC Analog Resilience:</strong> Graceful video transmission surviving down to -5 dB jamming.</li>
+            </ul>
+          </div>
         </div>
 
-        <div class="card highlight">
-          <h3>🎯 SUTRA Solution Architecture</h3>
-          <ul>
-            <li><strong>Autonomous 5-UAV Swarm:</strong> Self-organizing multi-drone fleet executing coordinated wide-area sweeps without human piloting.</li>
-            <li><strong>Sub-Millisecond Neural Disturbance Rejection:</strong> Proactively cancels 18 m/s turbulent wind gusts and rotor downwash.</li>
-            <li><strong>Analog-Graceful Deep JSCC Video:</strong> Compresses thermal/RGB imagery by 96.9%, streaming continuous video even under -5 dB jamming.</li>
-            <li><strong>Millimeter-Accurate Geolocation:</strong> Terrain-corrected DEM WGS84 raycasting geolocates survivors with &lt; 0.32m error at 30m AGL.</li>
-          </ul>
+        <!-- Right: Disaster vs Swarm Illustration SVG -->
+        <div class="svg-container">
+          <svg viewBox="0 0 400 240" width="100%" height="220" xmlns="http://www.w3.org/2000/svg">
+            <!-- Mountain Ravine Profile -->
+            <polygon points="0,240 70,80 140,160 200,70 270,170 340,90 400,240" fill="#cbd5e1" opacity="0.5"/>
+            <polygon points="0,240 50,120 120,190 200,110 280,200 350,130 400,240" fill="#94a3b8" opacity="0.6"/>
+
+            <!-- GPS Blocked Red Zone -->
+            <rect x="130" y="100" width="140" height="120" fill="rgba(239, 68, 68, 0.12)" stroke="#dc2626" stroke-dasharray="4,4" rx="6"/>
+            <text x="200" y="125" font-family="JetBrains Mono" font-size="9" font-weight="bold" fill="#dc2626" text-anchor="middle">GPS-DENIED CANYON</text>
+
+            <!-- Jamming Wave -->
+            <path d="M 140 150 Q 160 140, 180 150 T 220 150 T 260 150" fill="none" stroke="#dc2626" stroke-width="2"/>
+            <text x="200" y="165" font-family="JetBrains Mono" font-size="8" fill="#dc2626" text-anchor="middle">RF Jamming & Fading</text>
+
+            <!-- SUTRA Swarm Mesh Overcoming It -->
+            <g transform="translate(160, 50)">
+              <circle cx="0" cy="0" r="8" fill="#1d4ed8"/>
+              <text x="0" y="-12" font-family="JetBrains Mono" font-size="7" font-weight="bold" fill="#1d4ed8" text-anchor="middle">UAV-1</text>
+            </g>
+            <g transform="translate(240, 50)">
+              <circle cx="0" cy="0" r="8" fill="#1d4ed8"/>
+              <text x="0" y="-12" font-family="JetBrains Mono" font-size="7" font-weight="bold" fill="#1d4ed8" text-anchor="middle">UAV-2</text>
+            </g>
+            <line x1="160" y1="50" x2="240" y2="50" stroke="#059669" stroke-width="2" stroke-dasharray="3,3"/>
+
+            <!-- Survivor Located -->
+            <g transform="translate(200, 205)">
+              <circle cx="0" cy="0" r="6" fill="#f59e0b"/>
+              <circle cx="0" cy="0" r="14" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="2,2"/>
+              <text x="0" y="18" font-family="JetBrains Mono" font-size="8" font-weight="bold" fill="#b45309" text-anchor="middle">SURVIVOR FOUND (GPS PIN)</text>
+            </g>
+            <line x1="200" y1="50" x2="200" y2="195" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="2,2"/>
+          </svg>
         </div>
       </div>
     </div>
@@ -435,32 +551,68 @@
     <div class="slide-body">
       <div class="grid-4">
         <div class="card highlight">
-          <h3>1. SUTRA-FSD & NeuroFlight</h3>
-          <span class="metric-label">Subsystem A (GNC)</span>
-          <p>Tesla-inspired 3D Spatio-temporal Voxel Occupancy + Quintic Spline Cost-Volume Planner + 0.04ms ONNX Wind Rejection Network.</p>
+          <h3>1. SUTRA-FSD & GNC</h3>
+          <span class="metric-label">Subsystem A</span>
+          <p>3D Voxel Occupancy + Quintic Spline Cost-Volume + 0.04ms ONNX Neural Wind Rejection.</p>
           <div class="metric-badge">Jerk &lt; 4.20 m/s³</div>
         </div>
 
         <div class="card highlight">
-          <h3>2. Deep JSCC Neural Comms</h3>
-          <span class="metric-label">Subsystem B (Comms)</span>
-          <p>Semantic Autoencoder compressing frames by 96.9% ($512\text{KB} \to 16\text{KB}$) + SwarmRAFT consensus (&lt;50ms leader failover).</p>
+          <h3>2. Deep JSCC Comms</h3>
+          <span class="metric-label">Subsystem B</span>
+          <p>Semantic Autoencoder compressing frames by 96.9% ($512\text{KB} \to 16\text{KB}$) + SwarmRAFT consensus.</p>
           <div class="metric-badge">41.5 dB @ -5dB SNR</div>
         </div>
 
         <div class="card highlight">
-          <h3>3. Tri-Modal Edge Perception</h3>
-          <span class="metric-label">Subsystem C (AI Edge)</span>
-          <p>YOLOv8-Nano TensorRT ($4.8\text{ms}$) fusing 1080p Optical RGB + 30Hz FLIR Thermal + mmWave Radar + WGS84 DEM Raycasting.</p>
+          <h3>3. Tri-Modal Edge AI</h3>
+          <span class="metric-label">Subsystem C</span>
+          <p>YOLOv8-Nano TensorRT ($4.8\text{ms}$) fusing RGB + FLIR Thermal + mmWave Radar + DEM Geolocation.</p>
           <div class="metric-badge">Error &lt; 0.32m GPS</div>
         </div>
 
         <div class="card highlight">
-          <h3>4. 3D GIS WebGPU GCS</h3>
-          <span class="metric-label">Subsystem D (GCS)</span>
-          <p>React 18 + Mapbox GL JS 3D Satellite view with locked 60.0 FPS WebGPU telemetry HUD and 1-Click Emergency RTL.</p>
+          <h3>4. 3D GIS WebGPU</h3>
+          <span class="metric-label">Subsystem D</span>
+          <p>React 18 + Mapbox GL JS 3D Satellite HUD with locked 60.0 FPS live telemetry and 1-Click Emergency RTL.</p>
           <div class="metric-badge">Locked 60.0 FPS</div>
         </div>
+      </div>
+
+      <!-- Architectural Data Flow Diagram SVG -->
+      <div class="svg-container" style="padding: 10px;">
+        <svg viewBox="0 0 800 90" width="100%" height="80" xmlns="http://www.w3.org/2000/svg">
+          <!-- Flow Steps -->
+          <g transform="translate(40, 20)">
+            <rect width="150" height="50" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+            <text x="75" y="24" font-family="Inter" font-size="11" font-weight="bold" fill="#0f172a" text-anchor="middle">Physical Sensors</text>
+            <text x="75" y="38" font-family="JetBrains Mono" font-size="9" fill="#64748b" text-anchor="middle">RGB • Thermal • Radar</text>
+          </g>
+
+          <path d="M 195 45 L 235 45" stroke="#1d4ed8" stroke-width="2" marker-end="url(#arrow)"/>
+
+          <g transform="translate(240, 20)">
+            <rect width="150" height="50" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+            <text x="75" y="24" font-family="Inter" font-size="11" font-weight="bold" fill="#0f172a" text-anchor="middle">AI Edge Detection</text>
+            <text x="75" y="38" font-family="JetBrains Mono" font-size="9" fill="#059669" text-anchor="middle">YOLOv8 TRT &lt; 4.8ms</text>
+          </g>
+
+          <path d="M 395 45 L 435 45" stroke="#1d4ed8" stroke-width="2"/>
+
+          <g transform="translate(440, 20)">
+            <rect width="150" height="50" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+            <text x="75" y="24" font-family="Inter" font-size="11" font-weight="bold" fill="#0f172a" text-anchor="middle">Deep JSCC Mesh</text>
+            <text x="75" y="38" font-family="JetBrains Mono" font-size="9" fill="#1d4ed8" text-anchor="middle">96.9% Compression</text>
+          </g>
+
+          <path d="M 595 45 L 635 45" stroke="#1d4ed8" stroke-width="2"/>
+
+          <g transform="translate(640, 20)">
+            <rect width="120" height="50" rx="8" fill="#ecfdf5" stroke="#059669" stroke-width="1.5"/>
+            <text x="60" y="24" font-family="Inter" font-size="11" font-weight="bold" fill="#0f172a" text-anchor="middle">3D GCS HUD</text>
+            <text x="60" y="38" font-family="JetBrains Mono" font-size="9" fill="#059669" text-anchor="middle">Locked 60.0 FPS</text>
+          </g>
+        </svg>
       </div>
     </div>
 
@@ -483,30 +635,56 @@
     </div>
 
     <div class="slide-body">
-      <div class="grid-2">
-        <div class="card">
-          <h3>🚗 Tesla FSD-Style 3D Autopilot Planning</h3>
-          <ul>
-            <li><strong>3D Voxel Occupancy Grid ($32\times 32\times 16$):</strong> Temporal decay memory ($\lambda = 0.92$) preserves occluded obstacle positions.</li>
-            <li><strong>Quintic Polynomial Spline Generator:</strong> Closed-form analytical solve ensures continuous curvature ($\mathcal{C}^2$ continuity, jerk-free).</li>
-            <li><strong>3D Echelon Altitudes:</strong> Staggers swarm vertically ($z \in [3.5\text{m}, 4.6\text{m}]$), eliminating central coplanar bottlenecking.</li>
-          </ul>
+      <div class="split-layout">
+        <!-- Left: Planning & CBF Math -->
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div class="card">
+            <h3>🚗 Tesla FSD-Style 3D Autopilot Planning</h3>
+            <ul>
+              <li><strong>3D Voxel Occupancy ($32\times 32\times 16$):</strong> Temporal decay memory ($\lambda = 0.92$) preserves occluded obstacle states.</li>
+              <li><strong>Quintic Polynomial Ribbons:</strong> Analytical closed-form solution guarantees $\mathcal{C}^2$ continuity with bounded jerk ($< 4.20\text{ m/s}^3$).</li>
+            </ul>
+          </div>
+
+          <div class="card highlight">
+            <h3>🛡️ C3BF Control Barrier Function Shield</h3>
+            <ul>
+              <li><strong>Forward Invariance Guarantee:</strong> Enforces $h(x) = \|\Delta p\|^2 - R_{\text{safe}}^2 \ge 0$ ($R_{\text{safe}} = 2.80\text{m}$).</li>
+              <li><strong>SutraNeuroFlight Net (ONNX):</strong> 16,088 params, $0.040\text{ ms}$ CUDA latency. Cancels 18 m/s wind shear.</li>
+            </ul>
+          </div>
         </div>
 
-        <div class="card highlight">
-          <h3>🛡️ Control Barrier Function (C3BF) Hard Shield</h3>
-          <ul>
-            <li><strong>Forward Invariance Guarantee:</strong> Enforces $h(x) = \|\Delta p\|^2 - R_{\text{safe}}^2 \ge 0$ ($R_{\text{safe}} = 2.80\text{m}$, Gate G5).</li>
-            <li><strong>Reciprocal Velocity Obstacle:</strong> $\vec{n}^T \vec{a}_i \ge -\left(0.5 v_{\text{closing}} + \frac{\gamma}{2d} h\right)$.</li>
-            <li><strong>SutraNeuroFlight Companion (ONNX):</strong> 16,088 params, $0.040\text{ ms}$ latency on CUDA. Proactively cancels $18\text{ m/s}$ wind gusts.</li>
-          </ul>
+        <!-- Right: 3D Voxel & Quintic Spline SVG -->
+        <div class="svg-container">
+          <svg viewBox="0 0 400 240" width="100%" height="220" xmlns="http://www.w3.org/2000/svg">
+            <!-- 3D Voxel Grid Isometric Box -->
+            <path d="M 80 180 L 220 180 L 300 130 L 160 130 Z" fill="#eff6ff" stroke="#94a3b8" stroke-width="1.5"/>
+            <path d="M 80 180 L 80 90 L 160 40 L 160 130 Z" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+            <path d="M 160 40 L 300 40 L 300 130 L 160 130 Z" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+
+            <!-- Obstacle Voxel -->
+            <rect x="180" y="90" width="30" height="30" fill="rgba(239, 68, 68, 0.4)" stroke="#dc2626" stroke-width="1.5"/>
+            <text x="195" y="110" font-family="JetBrains Mono" font-size="8" font-weight="bold" fill="#dc2626" text-anchor="middle">VOXEL</text>
+
+            <!-- Quintic Spline Ribbon (C^2 Continuous) -->
+            <path d="M 100 150 C 130 140, 160 70, 200 60 C 240 50, 260 100, 280 80" fill="none" stroke="#2563eb" stroke-width="3.5"/>
+            <circle cx="100" cy="150" r="5" fill="#1d4ed8"/>
+            <circle cx="280" cy="80" r="5" fill="#059669"/>
+            <text x="100" y="168" font-family="JetBrains Mono" font-size="8" font-weight="bold" fill="#1d4ed8">p(0)</text>
+            <text x="280" y="70" font-family="JetBrains Mono" font-size="8" font-weight="bold" fill="#059669">p(T)</text>
+
+            <!-- C3BF Safety Bubble Barrier -->
+            <circle cx="195" cy="105" r="45" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4,4"/>
+            <text x="195" y="160" font-family="JetBrains Mono" font-size="8" font-weight="bold" fill="#b45309" text-anchor="middle">CBF Safety Barrier (R &ge; 2.80m)</text>
+          </svg>
         </div>
       </div>
     </div>
 
     <div class="slide-footer">
       <span>120 / 120 Subsystem A PyTests Passing</span>
-      <span class="metric-badge">Min Clearance Measured: 3.80m (Gate G5 Passed)</span>
+      <span class="metric-badge">Min Clearance: 3.80m (Gate G5 Passed)</span>
     </div>
   </section>
 
@@ -523,23 +701,63 @@
     </div>
 
     <div class="slide-body">
-      <div class="grid-2">
-        <div class="card highlight">
-          <h3>📡 Deep Joint Source-Channel Coding (JSCC)</h3>
-          <ul>
-            <li><strong>Zero Digital Cliff Effect:</strong> Replaces rigid digital quantization with continuous analog complex latent transmission.</li>
-            <li><strong>96.9% Bandwidth Compression:</strong> Compresses $512\text{ KB}$ frames to $16.0\text{ KB}$.</li>
-            <li><strong>Anti-Jamming Resilience:</strong> Achieves $\mathbf{41.5\text{ dB}}$ PSNR under severe $-5\text{ dB}$ RF jamming where standard H.264 freezes completely.</li>
-          </ul>
+      <div class="split-layout">
+        <!-- Left: Technical Features -->
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div class="card highlight">
+            <h3>📡 Deep Joint Source-Channel Coding (JSCC)</h3>
+            <ul>
+              <li><strong>Zero Digital Cliff:</strong> Replaces rigid digital quantization with continuous complex analog latent symbols.</li>
+              <li><strong>96.9% Bandwidth Saved:</strong> Compresses $512\text{ KB}$ frames to $16.0\text{ KB}$.</li>
+              <li><strong>Anti-Jamming Resilience:</strong> Delivers $\mathbf{41.5\text{ dB}}$ PSNR under $-5\text{ dB}$ jamming where H.264 freezes.</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <h3>👑 SwarmRAFT Leader Consensus</h3>
+            <ul>
+              <li><strong>Sub-50ms Leader Failover:</strong> Autonomous leader replacement with zero log corruption.</li>
+              <li><strong>GCS Gateway Bridge:</strong> WebSocket server on port 9090 streaming 50Hz telemetry.</li>
+            </ul>
+          </div>
         </div>
 
-        <div class="card">
-          <h3>👑 SwarmRAFT Distributed Leader Consensus</h3>
-          <ul>
-            <li><strong>Sub-50ms Leader Failover:</strong> If the lead reconnaissance UAV fails, a new leader is elected with zero packet loss or log corruption.</li>
-            <li><strong>Collaborative Target Locking:</strong> Requires $> 50\%$ swarm quorum before triggering concentric orbit surround maneuvers.</li>
-            <li><strong>GCS Gateway Bridge:</strong> WebSocket server on port 9090 streaming live telemetry and video at 50Hz.</li>
-          </ul>
+        <!-- Right: Neural Autoencoder Architecture SVG -->
+        <div class="svg-container">
+          <svg viewBox="0 0 400 240" width="100%" height="220" xmlns="http://www.w3.org/2000/svg">
+            <!-- Raw Frame Input -->
+            <rect x="20" y="80" width="55" height="70" rx="4" fill="#eff6ff" stroke="#1d4ed8" stroke-width="1.5"/>
+            <text x="47" y="112" font-family="Inter" font-size="8" font-weight="bold" fill="#0f172a" text-anchor="middle">RGB/FLIR</text>
+            <text x="47" y="126" font-family="JetBrains Mono" font-size="7" fill="#64748b" text-anchor="middle">512 KB</text>
+
+            <!-- Encoder CNN Layers -->
+            <polygon points="90,75 140,95 140,135 90,155" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+            <text x="115" y="118" font-family="Inter" font-size="8" font-weight="bold" fill="#1d4ed8" text-anchor="middle">CNN Enc</text>
+
+            <!-- Latent Vector (Analog Complex Symbols) -->
+            <rect x="160" y="100" width="40" height="30" rx="4" fill="#ecfdf5" stroke="#059669" stroke-width="1.5"/>
+            <text x="180" y="115" font-family="JetBrains Mono" font-size="8" font-weight="bold" fill="#059669" text-anchor="middle">z</text>
+            <text x="180" y="125" font-family="JetBrains Mono" font-size="6" fill="#059669" text-anchor="middle">16 KB</text>
+
+            <!-- Noisy Wireless Channel -->
+            <g transform="translate(210, 95)">
+              <rect width="40" height="40" rx="4" fill="#fef2f2" stroke="#dc2626" stroke-width="1.5"/>
+              <path d="M 5 20 Q 10 10, 15 20 T 25 20 T 35 20" fill="none" stroke="#dc2626" stroke-width="1.5"/>
+              <text x="20" y="32" font-family="JetBrains Mono" font-size="6" fill="#dc2626" text-anchor="middle">-5dB SNR</text>
+            </g>
+
+            <!-- Decoder CNN Layers -->
+            <polygon points="265,95 315,75 315,155 265,135" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+            <text x="290" y="118" font-family="Inter" font-size="8" font-weight="bold" fill="#1d4ed8" text-anchor="middle">CNN Dec</text>
+
+            <!-- Decoded Frame Output -->
+            <rect x="330" y="80" width="55" height="70" rx="4" fill="#eff6ff" stroke="#059669" stroke-width="1.5"/>
+            <text x="357" y="112" font-family="Inter" font-size="8" font-weight="bold" fill="#059669" text-anchor="middle">Recovered</text>
+            <text x="357" y="126" font-family="JetBrains Mono" font-size="7" fill="#059669" text-anchor="middle">41.5 dB</text>
+
+            <!-- Badge -->
+            <text x="200" y="200" font-family="JetBrains Mono" font-size="9" font-weight="bold" fill="#1d4ed8" text-anchor="middle">ZERO DIGITAL CLIFF EFFECT</text>
+          </svg>
         </div>
       </div>
     </div>
@@ -563,20 +781,53 @@
     </div>
 
     <div class="slide-body">
-      <div class="grid-3">
-        <div class="card highlight">
-          <h3>👁️ 1. YOLOv8-Nano TensorRT</h3>
-          <p>Edge-optimized detector running in FP16 on NVIDIA CUDA. Detects survivors and hazards in <strong>4.8ms (&gt; 120 FPS)</strong> with <strong>96.4% mAP@0.5</strong>.</p>
+      <div class="split-layout">
+        <!-- Left: Tri-Modal Cards -->
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div class="card highlight">
+            <h3>👁️ 1. YOLOv8-Nano TensorRT (FP16)</h3>
+            <p>Runs on NVIDIA CUDA in <strong>4.8ms (&gt; 120 FPS)</strong> with <strong>96.4% mAP@0.5</strong>.</p>
+          </div>
+
+          <div class="card highlight">
+            <h3>🔥 2. Tri-Modal Spatial Attention Fusion</h3>
+            <p>Fuses <strong>1080p Optical RGB</strong>, <strong>30Hz FLIR Thermal</strong>, and <strong>mmWave Radar</strong> for zero-blackout nighttime victim detection.</p>
+          </div>
+
+          <div class="card highlight">
+            <h3>📍 3. DEM WGS84 Geolocation Raycasting</h3>
+            <p>Projects 2D image coordinates to 3D world space using full rotation matrix $\mathbf{R}_b^w$. Accuracy: <strong>&lt; 0.32m GPS error</strong> at 30m AGL.</p>
+          </div>
         </div>
 
-        <div class="card highlight">
-          <h3>🔥 2. Tri-Modal Sensor Fusion</h3>
-          <p>Spatial cross-attention fusion combining <strong>1080p Optical RGB</strong>, <strong>30Hz FLIR Thermal</strong>, and <strong>mmWave Radar</strong> for zero-blackout nighttime detection.</p>
-        </div>
+        <!-- Right: DEM Raycasting Cone SVG -->
+        <div class="svg-container">
+          <svg viewBox="0 0 400 240" width="100%" height="220" xmlns="http://www.w3.org/2000/svg">
+            <!-- Drone at 30m Altitude -->
+            <g transform="translate(200, 40)">
+              <circle cx="0" cy="0" r="10" fill="#1d4ed8" stroke="#0f172a" stroke-width="2"/>
+              <line x1="-16" y1="-8" x2="16" y2="8" stroke="#0f172a" stroke-width="2.5"/>
+              <line x1="-16" y1="8" x2="16" y2="-8" stroke="#0f172a" stroke-width="2.5"/>
+              <text x="0" y="-12" font-family="JetBrains Mono" font-size="8" font-weight="bold" fill="#1d4ed8" text-anchor="middle">UAV (30m AGL)</text>
+            </g>
 
-        <div class="card highlight">
-          <h3>📍 3. DEM WGS84 Raycasting</h3>
-          <p>Projects 2D image bounding boxes into 3D world space using full rotation matrix $\mathbf{R}_b^w$. Achieves <strong>&lt; 0.32m GPS accuracy</strong> at 30m AGL under $\pm 25^\circ$ tilt.</p>
+            <!-- Optical Projection Ray Cone -->
+            <polygon points="200,45 100,185 280,185" fill="rgba(59, 130, 246, 0.15)" stroke="#3b82f6" stroke-dasharray="3,3"/>
+
+            <!-- Terrain DEM Line -->
+            <path d="M 40 190 Q 140 170, 200 185 T 360 175" fill="none" stroke="#64748b" stroke-width="2.5"/>
+            <text x="330" y="195" font-family="JetBrains Mono" font-size="7" fill="#64748b">DEM Terrain</text>
+
+            <!-- Intersected Survivor Pin -->
+            <g transform="translate(190, 182)">
+              <circle cx="0" cy="0" r="5" fill="#dc2626"/>
+              <circle cx="0" cy="0" r="12" fill="none" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="2,2"/>
+              <text x="0" y="18" font-family="JetBrains Mono" font-size="8" font-weight="bold" fill="#dc2626" text-anchor="middle">SURVIVOR (37.7751°, -122.4190°)</text>
+            </g>
+
+            <!-- Coordinate Formula -->
+            <text x="200" y="225" font-family="JetBrains Mono" font-size="8" font-weight="bold" fill="#059669" text-anchor="middle">WGS84 Geolocation Error &lt; 0.318m</text>
+          </svg>
         </div>
       </div>
     </div>
@@ -600,23 +851,64 @@
     </div>
 
     <div class="slide-body">
-      <div class="grid-2">
-        <div class="card highlight">
-          <h3>🗺️ 3D Mapbox GL Satellite Commander</h3>
-          <ul>
-            <li><strong>Digital Twin Terrain Visualization:</strong> Renders disaster elevations, dynamic search corridors, and NDMA geofence boundaries.</li>
-            <li><strong>Real-Time Swarm Markers:</strong> Tracks 5 UAVs simultaneously with 50Hz smooth spatial interpolation.</li>
-            <li><strong>1-Click Emergency RTL:</strong> Instant abort dispatch over WebSocket with <strong>&lt; 4.2ms execution delay</strong>.</li>
-          </ul>
+      <div class="split-layout">
+        <!-- Left: GCS Features -->
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div class="card highlight">
+            <h3>🗺️ 3D Mapbox GL Satellite Commander</h3>
+            <ul>
+              <li><strong>Digital Twin Terrain:</strong> 3D elevation maps with search corridors and NDMA staging geofences.</li>
+              <li><strong>Real-Time Swarm Markers:</strong> Tracks 5 UAVs at 50Hz with smooth spatial interpolation.</li>
+              <li><strong>1-Click Emergency RTL:</strong> Instant abort over WebSocket (&lt; 4.2ms execution delay).</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <h3>📺 5-UAV Deep JSCC Live Video Grid</h3>
+            <ul>
+              <li><strong>WebGPU Canvas HUD:</strong> Ingests 5 live video feeds locked at <strong>60.0 FPS</strong>.</li>
+              <li><strong>Multi-Modality HUD:</strong> 1-Click switch between Optical RGB, FLIR Thermal, and Latent views.</li>
+            </ul>
+          </div>
         </div>
 
-        <div class="card">
-          <h3>📺 5-UAV Deep JSCC Live Video Grid</h3>
-          <ul>
-            <li><strong>WebGPU Decoupled Rendering:</strong> Ingests 5 live video feeds with direct canvas draw buffers, locked at <strong>60.0 FPS</strong> with zero DOM lag.</li>
-            <li><strong>Modality Switching:</strong> Instant toggle between Optical RGB, FLIR Thermal, and Neural Latent representations.</li>
-            <li><strong>Acoustic Emergency Alerts:</strong> WebAudio synth generates synthesized voice & tonal warnings upon target acquisition.</li>
-          </ul>
+        <!-- Right: GCS Dashboard Mockup SVG -->
+        <div class="svg-container">
+          <svg viewBox="0 0 400 240" width="100%" height="220" xmlns="http://www.w3.org/2000/svg">
+            <!-- Window Frame -->
+            <rect x="10" y="10" width="380" height="220" rx="8" fill="#0f172a" stroke="#334155" stroke-width="2"/>
+            
+            <!-- Top App Bar -->
+            <rect x="10" y="10" width="380" height="28" rx="8" fill="#1e293b"/>
+            <circle cx="26" cy="24" r="4" fill="#ef4444"/>
+            <circle cx="38" cy="24" r="4" fill="#f59e0b"/>
+            <circle cx="50" cy="24" r="4" fill="#10b981"/>
+            <text x="200" y="27" font-family="Inter" font-size="8" font-weight="bold" fill="#f8fafc" text-anchor="middle">SUTRA 3D GIS COMMAND HUD (60.0 FPS)</text>
+
+            <!-- 3D Map Area -->
+            <rect x="20" y="46" width="240" height="170" rx="6" fill="#1e293b" stroke="#334155"/>
+            <!-- Contour Lines -->
+            <path d="M 40 180 Q 100 120, 160 160 T 240 100" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="3,3"/>
+            <path d="M 50 140 Q 120 80, 180 120 T 250 70" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="3,3"/>
+            <!-- Swarm Drones -->
+            <circle cx="100" cy="130" r="5" fill="#38bdf8"/>
+            <circle cx="140" cy="110" r="5" fill="#38bdf8"/>
+            <circle cx="180" cy="140" r="5" fill="#38bdf8"/>
+
+            <!-- Right Video Feeds & Telemetry Panel -->
+            <rect x="270" y="46" width="110" height="80" rx="6" fill="#020617" stroke="#334155"/>
+            <text x="325" y="70" font-family="JetBrains Mono" font-size="7" font-weight="bold" fill="#34d399" text-anchor="middle">JSCC THERMAL</text>
+            <text x="325" y="85" font-family="JetBrains Mono" font-size="6" fill="#94a3b8" text-anchor="middle">LIVE 30 FPS</text>
+
+            <!-- RTL Button -->
+            <rect x="270" y="140" width="110" height="32" rx="6" fill="#dc2626" stroke="#ef4444"/>
+            <text x="325" y="160" font-family="Inter" font-size="9" font-weight="bold" fill="#ffffff" text-anchor="middle">EMERGENCY RTL</text>
+
+            <!-- FPS Badge -->
+            <rect x="270" y="182" width="110" height="34" rx="6" fill="#059669"/>
+            <text x="325" y="198" font-family="JetBrains Mono" font-size="8" font-weight="bold" fill="#ffffff" text-anchor="middle">FPS: 60.0 LOCKED</text>
+            <text x="325" y="209" font-family="JetBrains Mono" font-size="6" fill="#ecfdf5" text-anchor="middle">GCS Delay: 4.2ms</text>
+          </svg>
         </div>
       </div>
     </div>
@@ -642,19 +934,43 @@
     <div class="slide-body">
       <div class="grid-3">
         <div class="card">
-          <h3>🌊 F1: Kedarnath Flood CONOPS</h3>
+          <h3>🌊 F1: Kedarnath Flood Profile</h3>
           <p>Linear ravine search corridor with 3D echelon staggered sweeps along riverbeds to locate stranded survivors under heavy rain and wind shear.</p>
         </div>
 
         <div class="card">
           <h3>🏔️ F2: Wayanad Landslide Profile</h3>
-          <p>Concentric expanding orbit pattern scanning mudslide zones with FLIR thermal imaging to locate thermal signatures buried under debris.</p>
+          <p>Concentric expanding orbit pattern scanning mudslide debris with FLIR thermal imaging to detect human heat signatures buried under rubble.</p>
         </div>
 
         <div class="card highlight">
           <h3>📋 F3: Pre-Flight Safety Checklists</h3>
           <p>3-Stage Physical & Telemetry Verification (IMU calibration, Battery &gt; 90%, Mesh PDR &gt; 98%, EKF2 healthy) before autonomous launch authorization.</p>
         </div>
+      </div>
+
+      <!-- Tactical Staggered Corridor SVG -->
+      <div class="svg-container" style="padding: 10px;">
+        <svg viewBox="0 0 800 80" width="100%" height="70" xmlns="http://www.w3.org/2000/svg">
+          <path d="M 30 40 L 770 40" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="6,6"/>
+          <text x="400" y="20" font-family="JetBrains Mono" font-size="10" font-weight="bold" fill="#1d4ed8" text-anchor="middle">NDMA LINEAR RESCUE CORRIDOR (3D ECHELON STAGGERED PATROL)</text>
+          
+          <!-- Staggered Drones -->
+          <circle cx="100" cy="40" r="8" fill="#1d4ed8"/>
+          <text x="100" y="60" font-family="JetBrains Mono" font-size="8" font-weight="bold" fill="#0f172a" text-anchor="middle">UAV-1 (3.6m)</text>
+
+          <circle cx="250" cy="30" r="8" fill="#2563eb"/>
+          <text x="250" y="60" font-family="JetBrains Mono" font-size="8" font-weight="bold" fill="#0f172a" text-anchor="middle">UAV-2 (3.8m)</text>
+
+          <circle cx="400" cy="40" r="8" fill="#1d4ed8"/>
+          <text x="400" y="60" font-family="JetBrains Mono" font-size="8" font-weight="bold" fill="#0f172a" text-anchor="middle">UAV-3 (4.0m)</text>
+
+          <circle cx="550" cy="30" r="8" fill="#2563eb"/>
+          <text x="550" y="60" font-family="JetBrains Mono" font-size="8" font-weight="bold" fill="#0f172a" text-anchor="middle">UAV-4 (4.2m)</text>
+
+          <circle cx="700" cy="40" r="8" fill="#1d4ed8"/>
+          <text x="700" y="60" font-family="JetBrains Mono" font-size="8" font-weight="bold" fill="#0f172a" text-anchor="middle">UAV-5 (4.4m)</text>
+        </svg>
       </div>
     </div>
 
@@ -694,7 +1010,7 @@
             <td>Flight Control & SITL</td>
             <td>Trajectory RMSE &lt; 0.08m</td>
             <td><strong>RMSE 0.042m • Jerk 3.80 m/s³</strong></td>
-            <td><code>pytest sutra_gnc</code></td>
+            <td><code>pytest sutra_gnc</code> (120 tests)</td>
             <td><span class="metric-badge">PASSED</span></td>
           </tr>
           <tr>
@@ -702,7 +1018,7 @@
             <td>Swarm Comms & Consensus</td>
             <td>Mesh PDR &ge; 98%, Failover &lt; 100ms</td>
             <td><strong>PDR 99.4% • Failover 42ms</strong></td>
-            <td><code>pytest sutra_comms</code></td>
+            <td><code>pytest sutra_comms</code> (48 tests)</td>
             <td><span class="metric-badge">PASSED</span></td>
           </tr>
           <tr>
@@ -710,7 +1026,7 @@
             <td>Edge AI Perception</td>
             <td>TensorRT Latency &lt; 5.0ms</td>
             <td><strong>4.80ms (120+ FPS) • 96.4% mAP</strong></td>
-            <td><code>pytest sutra_perception</code></td>
+            <td><code>pytest sutra_perception</code> (60 tests)</td>
             <td><span class="metric-badge">PASSED</span></td>
           </tr>
           <tr>
@@ -764,7 +1080,7 @@
         <div class="card highlight">
           <h3>💰 Student-Budget Unit Economics</h3>
           <ul>
-            <li><strong>Option A (Full SITL Digital Twin):</strong> $269 / ₹22,450 — 1 Physical F450 Drone + Gazebo Sim 8 Digital Twin with 4 Simulated UAVs.</li>
+            <li><strong>Option A (Full SITL Digital Twin):</strong> $269 / ₹22,450 — 1 Physical F450 Drone + Gazebo Sim 8 Digital Twin.</li>
             <li><strong>Option B (Micro Swarm Hardware):</strong> $145 / ₹12,000 — 3 ESP32-S3 Micro Quadcopters with 915MHz LoRa mesh.</li>
             <li><strong>Commercial Comparison:</strong> Standard defense swarms cost &gt; $50,000; SUTRA delivers 95% capability at &lt; 1% cost.</li>
           </ul>
@@ -773,9 +1089,9 @@
         <div class="card">
           <h3>🌍 UN Sustainable Development Goals (SDGs)</h3>
           <ul>
-            <li><strong>SDG 9 (Industry, Innovation & Infrastructure):</strong> Indigenous Physical AI architecture reducing import dependency for Indian defense.</li>
-            <li><strong>SDG 11 (Sustainable Cities & Communities):</strong> Rapid disaster search & rescue minimizing casualty rates during floods and landslides.</li>
-            <li><strong>SDG 3 (Good Health & Well-Being):</strong> Accelerated survivor detection expedites triage and medical supply airdrops.</li>
+            <li><strong>SDG 9 (Industry, Innovation & Infrastructure):</strong> Indigenous Physical AI architecture for Indian defense.</li>
+            <li><strong>SDG 11 (Sustainable Cities & Communities):</strong> Rapid disaster search & rescue minimizing casualty rates.</li>
+            <li><strong>SDG 3 (Good Health & Well-Being):</strong> Accelerated victim detection expedites medical triage.</li>
           </ul>
         </div>
       </div>
