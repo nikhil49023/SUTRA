@@ -25,8 +25,16 @@ import numpy as np
 import cv2
 import psutil
 
+# Auto-detect Project Root and anchor cwd
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
+if os.path.exists(os.path.join(PROJECT_ROOT, "sutra_ws")):
+    os.chdir(PROJECT_ROOT)
+sys.path.insert(0, PROJECT_ROOT)
+
 import torch
 import torch.nn as nn
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 0. PyTorch Universal Deep JSCC Convolutional Autoencoder Architecture
