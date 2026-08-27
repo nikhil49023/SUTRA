@@ -8,7 +8,7 @@
   <!-- Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
   
   <!-- KaTeX for crisp mathematical formulas -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
@@ -17,17 +17,29 @@
 
   <style>
     :root {
-      --bg-dark: #070b14;
-      --card-bg: rgba(15, 23, 42, 0.85);
-      --card-border: rgba(56, 189, 248, 0.2);
-      --primary: #38bdf8;
-      --secondary: #818cf8;
-      --accent: #c084fc;
-      --success: #34d399;
-      --warning: #fbbf24;
-      --danger: #f87171;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
+      /* Defense-Tech Executive Palette (Ultra-Crisp, High-Contrast) */
+      --bg-page: #f1f5f9;
+      --slide-bg: #ffffff;
+      --card-bg: #f8fafc;
+      --card-highlight: #eff6ff;
+      --border-subtle: #cbd5e1;
+      --border-accent: #3b82f6;
+      --border-strong: #94a3b8;
+      
+      --primary: #1d4ed8;       /* Tactical Royal Blue */
+      --primary-dark: #0f172a;  /* Deep Navy Slate */
+      --secondary: #475569;     /* Slate Gray */
+      --accent: #6366f1;        /* Indigo */
+      --success: #059669;       /* Forest Emerald */
+      --success-bg: #ecfdf5;
+      --warning: #b45309;       /* Dark Amber */
+      --warning-bg: #fffbeb;
+      --danger: #dc2626;        /* Tactical Red */
+      --danger-bg: #fef2f2;
+      
+      --text-main: #0f172a;     /* Deepest Slate */
+      --text-body: #334155;     /* Dark Charcoal */
+      --text-muted: #64748b;    /* Medium Slate */
     }
 
     * {
@@ -37,7 +49,7 @@
     }
 
     body {
-      background-color: var(--bg-dark);
+      background-color: var(--bg-page);
       color: var(--text-main);
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
       line-height: 1.5;
@@ -49,38 +61,37 @@
       display: flex;
       flex-direction: column;
       gap: 32px;
-      padding: 24px;
-      max-width: 1360px;
+      padding: 32px;
+      max-width: 1400px;
       margin: 0 auto;
     }
 
     .slide {
       width: 100%;
       aspect-ratio: 16 / 9;
-      background: radial-gradient(circle at 10% 20%, rgba(30, 41, 59, 0.9) 0%, rgba(7, 11, 20, 0.98) 90%);
-      border: 1px solid var(--card-border);
-      border-radius: 16px;
-      padding: 40px 48px;
+      background: var(--slide-bg);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 44px 54px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       position: relative;
       overflow: hidden;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
       page-break-after: always;
       break-after: page;
     }
 
-    .slide::before {
+    /* Top Accent Stripe */
+    .slide::after {
       content: "";
       position: absolute;
-      top: -150px;
-      right: -150px;
-      width: 350px;
-      height: 350px;
-      background: radial-gradient(circle, rgba(56, 189, 248, 0.15), transparent 70%);
-      border-radius: 50%;
-      pointer-events: none;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 5px;
+      background: linear-gradient(90deg, #1d4ed8 0%, #3b82f6 50%, #6366f1 100%);
     }
 
     /* Slide Header */
@@ -88,42 +99,40 @@
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+      border-bottom: 2px solid #e2e8f0;
       padding-bottom: 16px;
     }
 
     .slide-tag {
       font-size: 11px;
-      font-weight: 700;
+      font-weight: 800;
       letter-spacing: 1.5px;
       text-transform: uppercase;
       color: var(--primary);
-      background: rgba(56, 189, 248, 0.12);
-      padding: 4px 12px;
+      background: #eff6ff;
+      padding: 5px 12px;
       border-radius: 6px;
-      border: 1px solid rgba(56, 189, 248, 0.3);
+      border: 1px solid #bfdbfe;
       display: inline-block;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
 
     .slide-title {
-      font-size: 28px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-      background: linear-gradient(90deg, #ffffff, #93c5fd, #c084fc);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      font-size: 30px;
+      font-weight: 900;
+      letter-spacing: -0.8px;
+      color: var(--primary-dark);
     }
 
     .slide-number {
       font-family: 'JetBrains Mono', monospace;
       font-size: 14px;
-      font-weight: 700;
-      color: var(--text-muted);
-      background: rgba(15, 23, 42, 0.6);
+      font-weight: 800;
+      color: var(--primary);
+      background: #f8fafc;
       padding: 6px 14px;
       border-radius: 8px;
-      border: 1px solid rgba(148, 163, 184, 0.2);
+      border: 1px solid #cbd5e1;
     }
 
     /* Slide Content Layouts */
@@ -132,14 +141,14 @@
       display: flex;
       flex-direction: column;
       justify-content: center;
-      padding: 20px 0;
+      padding: 24px 0;
       gap: 20px;
     }
 
     .grid-2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 24px;
+      gap: 28px;
     }
 
     .grid-3 {
@@ -151,54 +160,68 @@
     .grid-4 {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
+      gap: 18px;
     }
 
     /* Feature Cards */
     .card {
       background: var(--card-bg);
-      border: 1px solid rgba(148, 163, 184, 0.15);
-      border-radius: 12px;
-      padding: 20px;
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 22px;
       display: flex;
       flex-direction: column;
       gap: 10px;
-      backdrop-filter: blur(8px);
+      border-left: 4px solid #94a3b8;
     }
 
     .card.highlight {
-      border-color: rgba(56, 189, 248, 0.4);
-      background: rgba(15, 23, 42, 0.95);
-      box-shadow: 0 8px 24px rgba(56, 189, 248, 0.1);
+      background: var(--card-highlight);
+      border-color: #bfdbfe;
+      border-left: 4px solid var(--primary);
+    }
+
+    .card.success {
+      background: var(--success-bg);
+      border-color: #a7f3d0;
+      border-left: 4px solid var(--success);
+    }
+
+    .card.warning {
+      background: var(--warning-bg);
+      border-color: #fde68a;
+      border-left: 4px solid var(--warning);
     }
 
     .card h3 {
       font-size: 16px;
-      font-weight: 700;
-      color: var(--primary);
+      font-weight: 800;
+      color: var(--primary-dark);
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
     .card p, .card li {
-      font-size: 13px;
-      color: var(--text-muted);
-      line-height: 1.5;
+      font-size: 13.5px;
+      color: var(--text-body);
+      line-height: 1.55;
     }
 
     .card ul {
       list-style-type: none;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 8px;
     }
 
     .card ul li::before {
-      content: "▹";
-      color: var(--secondary);
+      content: "■";
+      color: var(--primary);
+      font-size: 10px;
       margin-right: 8px;
-      font-weight: bold;
+      position: relative;
+      top: -1px;
     }
 
     /* Metrics & Badges */
@@ -206,24 +229,26 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: rgba(52, 211, 153, 0.15);
+      background: var(--success-bg);
       color: var(--success);
-      padding: 4px 10px;
+      padding: 5px 12px;
       border-radius: 6px;
+      border: 1px solid #a7f3d0;
       font-family: 'JetBrains Mono', monospace;
       font-size: 12px;
-      font-weight: 700;
+      font-weight: 800;
     }
 
     .metric-big {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 32px;
-      font-weight: 800;
-      color: #38bdf8;
+      font-size: 34px;
+      font-weight: 900;
+      color: var(--primary);
     }
 
     .metric-label {
       font-size: 11px;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 1px;
       color: var(--text-muted);
@@ -233,25 +258,30 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 12px;
-      background: rgba(15, 23, 42, 0.6);
+      font-size: 12.5px;
+      background: #ffffff;
+      border: 1px solid var(--border-subtle);
       border-radius: 8px;
       overflow: hidden;
     }
 
     th, td {
-      padding: 10px 14px;
+      padding: 11px 14px;
       text-align: left;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+      border-bottom: 1px solid #e2e8f0;
     }
 
     th {
-      background: rgba(30, 41, 59, 0.8);
-      color: var(--primary);
-      font-weight: 700;
+      background: #0f172a;
+      color: #ffffff;
+      font-weight: 800;
       text-transform: uppercase;
       font-size: 11px;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.8px;
+    }
+
+    tr:nth-child(even) td {
+      background: #f8fafc;
     }
 
     tr:last-child td {
@@ -263,25 +293,26 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-top: 1px solid rgba(148, 163, 184, 0.15);
-      padding-top: 12px;
-      font-size: 11px;
+      border-top: 2px solid #e2e8f0;
+      padding-top: 14px;
+      font-size: 11.5px;
+      font-weight: 600;
       color: var(--text-muted);
     }
 
     .jury-note {
-      color: var(--warning);
-      font-weight: 600;
-      background: rgba(251, 191, 36, 0.1);
-      padding: 4px 10px;
-      border-radius: 4px;
-      border: 1px solid rgba(251, 191, 36, 0.2);
+      color: var(--primary-dark);
+      font-weight: 700;
+      background: #eff6ff;
+      padding: 4px 12px;
+      border-radius: 6px;
+      border: 1px solid #bfdbfe;
     }
 
     /* Print Styles for Pixel-Perfect 16:9 PDF */
     @media print {
       body {
-        background: #070b14;
+        background: #ffffff;
       }
       .slide-deck {
         padding: 0;
@@ -313,30 +344,30 @@
       <div class="slide-number">01 / 10</div>
     </div>
 
-    <div class="slide-body" style="text-align: center; justify-content: center; gap: 24px;">
-      <h2 style="font-size: 26px; font-weight: 800; background: linear-gradient(90deg, #38bdf8, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+    <div class="slide-body" style="text-align: center; justify-content: center; gap: 22px;">
+      <h2 style="font-size: 28px; font-weight: 900; color: #1d4ed8; letter-spacing: -0.5px;">
         Swarm Unified Tactical Reconnaissance Architecture
       </h2>
-      <p style="font-size: 15px; max-width: 820px; margin: 0 auto; color: #cbd5e1;">
+      <p style="font-size: 16px; max-width: 860px; margin: 0 auto; color: #334155; font-weight: 500;">
         An Autonomous Multi-Drone Swarm System for Collaborative Search, Rescue, and Survivor Geolocation in GPS-Denied, High-Jamming Disaster Environments.
       </p>
 
-      <div class="grid-3" style="max-width: 960px; margin: 12px auto; width: 100%;">
-        <div class="card">
+      <div class="grid-3" style="max-width: 1020px; margin: 8px auto; width: 100%;">
+        <div class="card highlight">
           <span class="metric-label">Theme & Problem ID</span>
-          <div style="font-weight: 800; font-size: 15px; color: #38bdf8;">Defence & SpaceTech (SH-DST-05)</div>
+          <div style="font-weight: 800; font-size: 16px; color: #1d4ed8;">Defence & SpaceTech (SH-DST-05)</div>
         </div>
-        <div class="card">
+        <div class="card highlight">
           <span class="metric-label">Institution</span>
-          <div style="font-weight: 800; font-size: 15px; color: #818cf8;">New Horizon College of Engg (NHCE)</div>
+          <div style="font-weight: 800; font-size: 16px; color: #0f172a;">New Horizon College of Engg (NHCE)</div>
         </div>
-        <div class="card">
+        <div class="card success">
           <span class="metric-label">Verification Status</span>
-          <div style="font-weight: 800; font-size: 15px; color: #34d399;">232/232 PyTests (100% Green)</div>
+          <div style="font-weight: 800; font-size: 16px; color: #059669;">232/232 PyTests (100% Green)</div>
         </div>
       </div>
 
-      <div style="font-size: 12px; color: var(--text-muted); display: flex; justify-content: center; gap: 20px;">
+      <div style="font-size: 13px; color: #475569; display: flex; justify-content: center; gap: 20px; font-weight: 600;">
         <span><strong>Team:</strong> Nikhil (Tech Lead) • Vedanth (AI Perception) • Siva (3D GIS GCS) • Harika (QA/Docs) • Rohith (Ops)</span>
       </div>
     </div>
@@ -361,21 +392,21 @@
 
     <div class="slide-body">
       <div class="grid-2">
-        <div class="card highlight">
+        <div class="card warning">
           <h3>🚨 Real-World Disaster Pain Points (Kedarnath / Wayanad)</h3>
           <ul>
-            <li><strong>Severe GPS Denial:</strong> Ravines, dense forest canopies, and rockslides block satellite signals, causing single drones to lose orientation and crash.</li>
-            <li><strong>The "Digital Cliff Effect":</strong> High RF multi-path fading & jamming causes standard Wi-Fi/H.264 video streams to freeze catastrophically at &lt; 5 dB SNR.</li>
-            <li><strong>Single-Drone Bottlenecks:</strong> Manual single UAVs lack coverage, endurance, and failover when batteries deplete or rotors fail.</li>
-            <li><strong>Swarm Collision Deadlocks:</strong> Naive potential fields deadlock or oscillate in narrow corridors, bottlenecking rescue efforts.</li>
+            <li><strong>Severe GPS Denial:</strong> Mountain ravines, landslides, and forest canopy block satellite signals, causing single drones to drift and crash.</li>
+            <li><strong>The "Digital Cliff Effect":</strong> Heavy RF multipath fading and jamming freezes traditional Wi-Fi and H.264 video streams at &lt; 5 dB SNR.</li>
+            <li><strong>Single-Drone Bottlenecks:</strong> Manual single UAVs lack wide search coverage, endurance, and failover when batteries deplete.</li>
+            <li><strong>Swarm Collision Deadlocks:</strong> Naive potential fields oscillate or deadlock in narrow corridors, delaying critical life-saving rescue.</li>
           </ul>
         </div>
 
-        <div class="card">
-          <h3>🎯 SUTRA Ultimate Solution Objective</h3>
+        <div class="card highlight">
+          <h3>🎯 SUTRA Solution Architecture</h3>
           <ul>
-            <li><strong>Autonomous 5-UAV Swarm:</strong> Fully collaborative, self-organizing aerial swarm operating without continuous human piloting.</li>
-            <li><strong>Sub-Millisecond Neural Disturbance Rejection:</strong> Proactively compensates for 18 m/s turbulent wind gusts and rotor downwash.</li>
+            <li><strong>Autonomous 5-UAV Swarm:</strong> Self-organizing multi-drone fleet executing coordinated wide-area sweeps without human piloting.</li>
+            <li><strong>Sub-Millisecond Neural Disturbance Rejection:</strong> Proactively cancels 18 m/s turbulent wind gusts and rotor downwash.</li>
             <li><strong>Analog-Graceful Deep JSCC Video:</strong> Compresses thermal/RGB imagery by 96.9%, streaming continuous video even under -5 dB jamming.</li>
             <li><strong>Millimeter-Accurate Geolocation:</strong> Terrain-corrected DEM WGS84 raycasting geolocates survivors with &lt; 0.32m error at 30m AGL.</li>
           </ul>
@@ -385,7 +416,7 @@
 
     <div class="slide-footer">
       <span>National Disaster Management Authority (NDMA) Rescue CONOPS Aligned</span>
-      <span>Challenge: High Risk, Low Visibility, Broken Comms</span>
+      <span class="jury-note">Challenge: High Risk • Zero Visibility • Broken Comms</span>
     </div>
   </section>
 
@@ -435,7 +466,7 @@
 
     <div class="slide-footer">
       <span>Integrated via ROS 2 Jazzy & Gazebo Sim 8 Digital Twin</span>
-      <span>Hardware Target: Jetson Orin Nano / RTX 3050 + PX4 Flight Core</span>
+      <span>Hardware Target: NVIDIA Jetson Orin Nano / RTX 3050 + PX4 Autopilot</span>
     </div>
   </section>
 
@@ -456,9 +487,9 @@
         <div class="card">
           <h3>🚗 Tesla FSD-Style 3D Autopilot Planning</h3>
           <ul>
-            <li><strong>3D Voxel Occupancy Grid ($32\times 32\times 16$):</strong> Temporal decay memory ($\lambda = 0.92$) preserves occluded obstacles in memory.</li>
+            <li><strong>3D Voxel Occupancy Grid ($32\times 32\times 16$):</strong> Temporal decay memory ($\lambda = 0.92$) preserves occluded obstacle positions.</li>
             <li><strong>Quintic Polynomial Spline Generator:</strong> Closed-form analytical solve ensures continuous curvature ($\mathcal{C}^2$ continuity, jerk-free).</li>
-            <li><strong>3D Echelon Altitudes:</strong> Staggers drones vertically ($z \in [3.5\text{m}, 4.6\text{m}]$), eliminating central coplanar bottlenecking.</li>
+            <li><strong>3D Echelon Altitudes:</strong> Staggers swarm vertically ($z \in [3.5\text{m}, 4.6\text{m}]$), eliminating central coplanar bottlenecking.</li>
           </ul>
         </div>
 
