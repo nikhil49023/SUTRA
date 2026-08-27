@@ -4,6 +4,7 @@
  * Supports:
  * - Geometries: POLYGON, CIRCLE, CORRIDOR
  * - Zone Types: NO_FLY, WARNING, SAFE, INCLUSION, EXCLUSION
+ * - Real-time vertex dots and dynamic rubberband line/polygon previews during drawing
  * - Permanent visibility across map style switches and tab navigation
  * - Bidirectional selection with prominent tactical highlights
  * - Interactive vertex moving handles for selected polygon geofences
@@ -122,18 +123,21 @@ export class GeofenceLayer {
         id: this.drawingFillLayerId,
         type: 'fill',
         source: this.drawingSourceId,
-        filter: ['==', '$type', 'Polygon'],
-        paint: { 'fill-color': '#5B8FB9', 'fill-opacity': 0.20 },
+        filter: ['==', ['geometry-type'], 'Polygon'],
+        paint: {
+          'fill-color': '#5B8FB9',
+          'fill-opacity': 0.22,
+        },
       });
 
       this.map.addLayer({
         id: this.drawingBorderLayerId,
         type: 'line',
         source: this.drawingSourceId,
-        filter: ['in', '$type', 'Polygon', 'LineString'],
+        filter: ['!=', ['geometry-type'], 'Point'],
         paint: {
           'line-color': '#5B8FB9',
-          'line-width': 2.0,
+          'line-width': 2.5,
           'line-dasharray': [4, 2],
         },
       });
@@ -142,12 +146,12 @@ export class GeofenceLayer {
         id: this.drawingPointsLayerId,
         type: 'circle',
         source: this.drawingSourceId,
-        filter: ['==', '$type', 'Point'],
+        filter: ['==', ['geometry-type'], 'Point'],
         paint: {
-          'circle-radius': 4.5,
+          'circle-radius': 5,
           'circle-color': '#5B8FB9',
           'circle-stroke-width': 2,
-          'circle-stroke-color': '#E7EBEF',
+          'circle-stroke-color': '#FFFFFF',
         },
       });
 
@@ -246,18 +250,23 @@ export class GeofenceLayer {
       this.initLayers();
     }
 
-    const { active_geometry_type } = useGeofenceStore.getState();
-    const drawingCoords = [...points];
-    if (preview) drawingCoords.push(preview);
+    const source = this.map.getSource(this.drawingSourceId) as maplibregl.GeoJSONSource;
+    if (!source) return;
 
+    if (points.length === 0 && !preview) {
+      source.setData({ type: 'FeatureCollection', features: [] });
+      return;
+    }
+
+    const { active_geometry_type } = useGeofenceStore.getState();
     const features: any[] = [];
 
-    // Add point markers for all fixed vertices
+    // 1. Add vertex dots for all placed points
     points.forEach((p, idx) => {
       features.push({
         type: 'Feature',
         id: `vertex-${idx}`,
-        properties: { vertexIndex: idx },
+        properties: { isVertex: true, vertexIndex: idx },
         geometry: {
           type: 'Point',
           coordinates: [p[1], p[0]],
@@ -265,14 +274,33 @@ export class GeofenceLayer {
       });
     });
 
+    // 2. Add cursor preview dot if mouse is moving
+    if (preview) {
+      features.push({
+        type: 'Feature',
+        id: 'preview-dot',
+        properties: { isPreview: true },
+        geometry: {
+          type: 'Point',
+          coordinates: [preview[1], preview[0]],
+        },
+      });
+    }
+
+    // Combine placed points + preview for live shape preview
+    const drawingCoords = [...points];
+    if (preview) drawingCoords.push(preview);
+
+    // 3. Shape preview based on active geometry type
     if (active_geometry_type === 'CIRCLE' && drawingCoords.length >= 1) {
       const center = drawingCoords[0];
       let radius = 200;
       if (drawingCoords.length >= 2) {
-        radius = this.calculateDistance(center[0], center[1], drawingCoords[1][0], drawingCoords[1][1]);
+        radius = Math.max(10, this.calculateDistance(center[0], center[1], drawingCoords[1][0], drawingCoords[1][1]));
       }
       features.push({
         type: 'Feature',
+        properties: { isShape: true },
         geometry: {
           type: 'Polygon',
           coordinates: [this.generateCirclePolygon(center[0], center[1], radius)],
@@ -281,6 +309,7 @@ export class GeofenceLayer {
     } else if (active_geometry_type === 'CORRIDOR' && drawingCoords.length >= 2) {
       features.push({
         type: 'Feature',
+        properties: { isShape: true },
         geometry: {
           type: 'Polygon',
           coordinates: [this.generateCorridorPolygon(drawingCoords, 50)],
@@ -290,6 +319,7 @@ export class GeofenceLayer {
       const closed = [...drawingCoords, drawingCoords[0]];
       features.push({
         type: 'Feature',
+        properties: { isShape: true },
         geometry: {
           type: 'Polygon',
           coordinates: [closed.map((p) => [p[1], p[0]])],
@@ -298,6 +328,7 @@ export class GeofenceLayer {
     } else if (drawingCoords.length === 2) {
       features.push({
         type: 'Feature',
+        properties: { isShape: true },
         geometry: {
           type: 'LineString',
           coordinates: drawingCoords.map((p) => [p[1], p[0]]),
@@ -305,10 +336,7 @@ export class GeofenceLayer {
       });
     }
 
-    const source = this.map.getSource(this.drawingSourceId) as maplibregl.GeoJSONSource;
-    if (source) {
-      source.setData({ type: 'FeatureCollection', features });
-    }
+    source.setData({ type: 'FeatureCollection', features });
   }
 
   /** Fit the camera to show all coordinates of the given geofence */
