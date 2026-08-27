@@ -268,7 +268,7 @@ class SubsystemCPerceptionEngine:
         alt_m = 3584.0  # Kedarnath valley elevation
         return round(lat_deg, 6), round(lon_deg, 6), round(alt_m, 1)
 
-    def evaluate_feed(self, frame_bgr: np.ndarray, psnr_db: float, is_cliff_frozen: bool) -> Tuple[np.ndarray, dict]:
+    def evaluate_feed(self, frame_bgr: np.ndarray, psnr_db: float, is_cliff_frozen: bool, is_thermal: bool = False) -> Tuple[np.ndarray, dict]:
         annotated = frame_bgr.copy()
         h, w, _ = frame_bgr.shape
 
@@ -327,8 +327,8 @@ class SubsystemCPerceptionEngine:
             except Exception:
                 pass
 
-        # Thermal FLIR heat hotspot detector fallback
-        if len(targets) == 0:
+        # Thermal FLIR heat hotspot detector fallback (ONLY on thermal frames)
+        if len(targets) == 0 and is_thermal:
             gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
             _, thresh = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
             contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -350,6 +350,7 @@ class SubsystemCPerceptionEngine:
                         'lat': t_lat,
                         'lon': t_lon
                     })
+
 
         mean_conf = float(np.mean(confs)) if confs else 0.0
         return annotated, {
@@ -556,16 +557,20 @@ class CumulativeSubsystemBCDemonstrator:
                     self.total_frames_evaluated += 1
                     step_once = False
 
-                    # Smooth dynamic SNR sweep
+                    # Smooth dynamic SNR sweep & Automated EW Jamming Burst
                     if duration_sec > 0:
                         cycle_t = t % 20.0
                         if cycle_t < 10.0:
                             self.current_snr_db = 20.0 - (cycle_t / 10.0) * 28.0  # +20 -> -8 dB
                         else:
                             self.current_snr_db = -8.0 + ((cycle_t - 10.0) / 10.0) * 28.0  # -8 -> +20 dB
+                        
+                        # Automated 4-second EW Jamming Burst
+                        self.jammer_active = (7.0 <= cycle_t <= 11.0)
 
                 # 1. Ingest Real Drone Disaster Search Frame
                 raw_frame = self.get_frame(frame_idx, t)
+                is_thermal = (self.scenarios[self.current_scenario_idx]["modality"] == "THERMAL_FLIR")
 
                 # 2. Subsystem B Physical Comms Transmission
                 c_recon, c_meta = self.classical_pipe.transmit(raw_frame, self.current_snr_db)
@@ -573,10 +578,13 @@ class CumulativeSubsystemBCDemonstrator:
 
                 # 3. Subsystem C Edge AI & WGS84 Geolocation Raycasting ON ALL THREE FEEDS (Empirical Profiling)
                 t_yolo_start = time.perf_counter()
-                raw_ai_frame, raw_ai = self.perception.evaluate_feed(raw_frame, 45.0, False)
-                c_ai_frame, c_ai = self.perception.evaluate_feed(c_recon, c_meta['psnr_db'], c_meta['status'] != 'DECODED_OK')
-                j_ai_frame, j_ai = self.perception.evaluate_feed(j_recon, j_meta['psnr_db'], False)
-                yolo_latency_ms = (time.perf_counter() - t_yolo_start) * 1000.0 / 3.0
+                raw_ai_frame, raw_ai = self.perception.evaluate_feed(raw_frame, 45.0, False, is_thermal=is_thermal)
+                c_ai_frame, c_ai = self.perception.evaluate_feed(c_recon, c_meta['psnr_db'], c_meta['status'] != 'DECODED_OK', is_thermal=is_thermal)
+                j_ai_frame, j_ai = self.perception.evaluate_feed(j_recon, j_meta['psnr_db'], False, is_thermal=is_thermal)
+                
+                num_inferences = 1 + (0 if c_meta['status'] != 'DECODED_OK' else 1) + 1
+                yolo_latency_ms = (time.perf_counter() - t_yolo_start) * 1000.0 / max(1, num_inferences)
+
 
                 # 100% Measured Live Hardware Telemetry
                 cpu_pct = psutil.cpu_percent()
