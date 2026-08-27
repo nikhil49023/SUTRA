@@ -1,57 +1,61 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { useMissionStore } from '../stores/missionStore';
 import { useSelectionStore } from '../stores/selectionStore';
-import { wsClient } from '../communication/WebSocketClient';
+import { commandManager } from '../communication/CommandManager';
 import { Waypoint } from '../types/mission';
-import { Trash2, Edit3, ArrowUp, ArrowDown, MapPin } from 'lucide-react';
+import { Trash2, ArrowUp, ArrowDown, MapPin } from 'lucide-react';
 
-export const WaypointList: React.FC = () => {
-  const { waypoints, active_waypoint_index } = useMissionStore();
-  const { selected_type, selected_id, selectWaypoint } = useSelectionStore();
+export const WaypointList: React.FC = memo(() => {
+  const waypoints = useMissionStore((s) => s.waypoints);
+  const activeWaypointIndex = useMissionStore((s) => s.active_waypoint_index);
+  const selectedType = useSelectionStore((s) => s.selected_type);
+  const selectedId = useSelectionStore((s) => s.selected_id);
+  const selectWaypoint = useSelectionStore((s) => s.selectWaypoint);
 
   const handleSelect = (wp: Waypoint) => {
-    selectWaypoint(wp.id || wp.index);
-    wsClient.sendCommand('WAYPOINT_SELECT', { waypoint_id: wp.id || wp.index });
+    const id = wp.id || wp.index;
+    selectWaypoint(id);
+    commandManager.sendCommand('mission.select_waypoint', { waypoint_id: id });
   };
 
   const handleDelete = (e: React.MouseEvent, wp: Waypoint) => {
     e.stopPropagation();
-    wsClient.sendCommand('WAYPOINT_DELETE', { waypoint_id: wp.id || wp.index });
+    commandManager.sendCommand('mission.delete_waypoint', { waypoint_id: wp.id || wp.index });
   };
 
   const handleMoveUp = (e: React.MouseEvent, index: number) => {
     e.stopPropagation();
     if (index > 1) {
-      wsClient.sendCommand('WAYPOINT_REORDER', { from_index: index, to_index: index - 1 });
+      commandManager.sendCommand('mission.reorder_waypoint', { from_index: index, to_index: index - 1 });
     }
   };
 
   const handleMoveDown = (e: React.MouseEvent, index: number) => {
     e.stopPropagation();
     if (index < waypoints.length) {
-      wsClient.sendCommand('WAYPOINT_REORDER', { from_index: index, to_index: index + 1 });
+      commandManager.sendCommand('mission.reorder_waypoint', { from_index: index, to_index: index + 1 });
     }
   };
 
   return (
-    <div className="bg-[#0f141c]/90 border border-slate-800 rounded-lg overflow-hidden flex flex-col font-mono text-xs select-none">
-      <div className="bg-slate-900/80 px-3 py-2 border-b border-slate-800 flex justify-between items-center text-slate-300 font-bold">
+    <div className="bg-[#11171E] border border-[#2B3743] rounded-lg overflow-hidden flex flex-col font-mono text-xs select-none">
+      <div className="bg-[#151D26] px-3 py-2 border-b border-[#2B3743] flex justify-between items-center text-[#E7EBEF] font-bold">
         <div className="flex items-center space-x-1.5">
-          <MapPin className="w-3.5 h-3.5 text-cyan-400" />
+          <MapPin className="w-3.5 h-3.5 text-[#5B8FB9]" />
           <span>WAYPOINT CORRIDOR ({waypoints.length})</span>
         </div>
-        <span className="text-[10px] text-slate-500 font-normal">DRAG MAP TO REPOSITION</span>
+        <span className="text-[10px] text-[#707C88] font-normal">DRAG MAP TO REPOSITION</span>
       </div>
 
-      <div className="divide-y divide-slate-800/80 max-h-64 overflow-y-auto">
+      <div className="divide-y divide-[#2B3743]/60 max-h-64 overflow-y-auto">
         {waypoints.length === 0 ? (
-          <div className="p-4 text-center text-slate-500 text-xs">
+          <div className="p-4 text-center text-[#707C88] text-xs">
             No waypoints defined. Click "ADD WAYPOINT" and click on the map.
           </div>
         ) : (
           waypoints.map((wp) => {
-            const isSelected = selected_type === 'WAYPOINT' && (selected_id === wp.id || selected_id === String(wp.index));
-            const isActive = active_waypoint_index === wp.index;
+            const isSelected = selectedType === 'WAYPOINT' && (selectedId === wp.id || selectedId === String(wp.index));
+            const isActive = activeWaypointIndex === wp.index;
 
             return (
               <div
@@ -59,20 +63,20 @@ export const WaypointList: React.FC = () => {
                 onClick={() => handleSelect(wp)}
                 className={`px-3 py-2 flex items-center justify-between cursor-pointer transition ${
                   isSelected
-                    ? 'bg-cyan-950/60 border-l-4 border-l-cyan-400 text-cyan-200'
+                    ? 'bg-[#1B2530] border-l-4 border-l-[#5B8FB9] text-[#E7EBEF]'
                     : isActive
-                    ? 'bg-emerald-950/40 border-l-4 border-l-emerald-400 text-slate-200'
-                    : 'hover:bg-slate-800/40 text-slate-300'
+                    ? 'bg-[#151D26] border-l-4 border-l-[#4F9A72] text-[#E7EBEF]'
+                    : 'hover:bg-[#151D26] text-[#A9B3BD]'
                 }`}
               >
                 <div className="flex items-center space-x-2">
                   <div
                     className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] ${
                       isSelected
-                        ? 'bg-cyan-500 text-black'
+                        ? 'bg-[#5B8FB9] text-[#0B0F14]'
                         : isActive
-                        ? 'bg-emerald-500 text-white'
-                        : 'bg-slate-800 text-cyan-300 border border-slate-700'
+                        ? 'bg-[#4F9A72] text-white'
+                        : 'bg-[#0B0F14] text-[#5B8FB9] border border-[#2B3743]'
                     }`}
                   >
                     {wp.index}
@@ -81,12 +85,12 @@ export const WaypointList: React.FC = () => {
                     <div className="font-bold text-[11px] flex items-center space-x-1.5">
                       <span>{wp.command || 'WAYPOINT'}</span>
                       {isActive && (
-                        <span className="px-1 py-0.2 bg-emerald-900/80 text-emerald-300 rounded text-[9px]">
+                        <span className="px-1.5 py-0.2 bg-[#1B2530] border border-[#4F9A72]/40 text-[#4F9A72] rounded text-[9px]">
                           ACTIVE
                         </span>
                       )}
                     </div>
-                    <div className="text-[10px] text-slate-400 tabular-nums">
+                    <div className="text-[10px] text-[#707C88] tabular-nums">
                       ALT: {wp.altitude}m · SPD: {wp.speed}m/s
                     </div>
                   </div>
@@ -97,7 +101,7 @@ export const WaypointList: React.FC = () => {
                   <button
                     onClick={(e) => handleMoveUp(e, wp.index)}
                     disabled={wp.index === 1}
-                    className="p-1 hover:text-cyan-400 disabled:opacity-30 transition"
+                    className="p-1 hover:text-[#5B8FB9] text-[#707C88] disabled:opacity-20 transition"
                     title="Move Up"
                   >
                     <ArrowUp className="w-3 h-3" />
@@ -105,14 +109,14 @@ export const WaypointList: React.FC = () => {
                   <button
                     onClick={(e) => handleMoveDown(e, wp.index)}
                     disabled={wp.index === waypoints.length}
-                    className="p-1 hover:text-cyan-400 disabled:opacity-30 transition"
+                    className="p-1 hover:text-[#5B8FB9] text-[#707C88] disabled:opacity-20 transition"
                     title="Move Down"
                   >
                     <ArrowDown className="w-3 h-3" />
                   </button>
                   <button
                     onClick={(e) => handleDelete(e, wp)}
-                    className="p-1 hover:text-rose-400 transition"
+                    className="p-1 hover:text-[#C75A5A] text-[#707C88] transition"
                     title="Delete Waypoint"
                   >
                     <Trash2 className="w-3 h-3" />
@@ -125,4 +129,4 @@ export const WaypointList: React.FC = () => {
       </div>
     </div>
   );
-};
+});

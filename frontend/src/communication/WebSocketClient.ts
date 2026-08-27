@@ -16,7 +16,9 @@ const generateUUID = (): string => {
 
 class WebSocketClient {
   private ws: WebSocket | null = null;
-  private url: string = 'ws://127.0.0.1:8765';
+  private url: string =
+    (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_WS_URL) ||
+    'ws://127.0.0.1:8765';
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 50;
   private reconnectIntervalMs = 2000;

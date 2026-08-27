@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { useMissionStore } from '../../stores/missionStore';
 import { useFleetStore } from '../../stores/fleetStore';
@@ -8,15 +8,16 @@ import { useAuthStore } from '../../security/authStore';
 import { ConnectionStatus } from '../../communication/ConnectionStatus';
 import { SessionStatus } from '../../security/SessionStatus';
 import { AuditViewModal } from '../../security/AuditViewModal';
-import { ShieldAlert, Battery, Satellite, Activity, Brain, FileText } from 'lucide-react';
+import { ShieldAlert, Battery, Satellite, Brain, FileText } from 'lucide-react';
 
-export const TopBar: React.FC = () => {
-  const { setEmergencyModalOpen } = useAppStore();
-  const { mission_name, state } = useMissionStore();
-  const { drones } = useFleetStore();
-  const { getTelemetry } = useTelemetryStore();
-  const { mode: aiMode } = useAIStore();
-  const { role } = useAuthStore();
+export const TopBar: React.FC = memo(() => {
+  const setEmergencyModalOpen = useAppStore((s) => s.setEmergencyModalOpen);
+  const missionName = useMissionStore((s) => s.mission_name);
+  const missionState = useMissionStore((s) => s.state);
+  const drones = useFleetStore((s) => s.drones);
+  const getTelemetry = useTelemetryStore((s) => s.getTelemetry);
+  const aiMode = useAIStore((s) => s.mode);
+  const role = useAuthStore((s) => s.role);
   const [showAuditModal, setShowAuditModal] = useState(false);
 
   const telem = getTelemetry();
@@ -30,7 +31,7 @@ export const TopBar: React.FC = () => {
       {/* 1. Left: Brand & Mission Name */}
       <div className="flex items-center space-x-3">
         <div className="flex items-center space-x-2">
-          <div className="w-2.5 h-2.5 rounded-sm bg-[#5B8FB9] shadow-[0_0_8px_rgba(91,143,185,0.6)]" />
+          <div className="w-2.5 h-2.5 rounded-sm bg-[#5B8FB9]" />
           <span className="font-extrabold text-sm tracking-wider text-[#E7EBEF]">
             SMART HORIZON
           </span>
@@ -44,10 +45,10 @@ export const TopBar: React.FC = () => {
         {/* Mission Status Badge */}
         <div className="flex items-center space-x-2">
           <span className="text-[#707C88] text-[11px]">MISSION:</span>
-          <span className="font-bold text-[#E7EBEF]">{mission_name}</span>
+          <span className="font-bold text-[#E7EBEF]">{missionName}</span>
           <span className="px-1.5 py-0.2 rounded border border-[#4F9A72]/40 bg-[#151D26] text-[#4F9A72] text-[10px] font-bold flex items-center space-x-1">
             <span className="w-1.5 h-1.5 rounded-full bg-[#4F9A72] animate-pulse" />
-            <span>{state}</span>
+            <span>{missionState}</span>
           </span>
         </div>
       </div>
@@ -104,7 +105,7 @@ export const TopBar: React.FC = () => {
         {/* Prominent EMERGENCY RTL Button */}
         <button
           onClick={() => setEmergencyModalOpen(true, 'ALL')}
-          className="px-3 py-1.5 rounded bg-[#C75A5A] border border-[#C75A5A] hover:bg-[#b04f4f] text-white font-bold text-xs tracking-wider shadow-[0_0_12px_rgba(199,90,90,0.35)] flex items-center space-x-1.5 transition active:scale-95"
+          className="px-3 py-1.5 rounded bg-[#C75A5A] border border-[#C75A5A] hover:bg-[#b04f4f] text-white font-bold text-xs tracking-wider flex items-center space-x-1.5 transition active:scale-95"
         >
           <ShieldAlert className="w-3.5 h-3.5 animate-pulse" />
           <span>EMERGENCY RTL</span>
@@ -115,4 +116,4 @@ export const TopBar: React.FC = () => {
       <AuditViewModal isOpen={showAuditModal} onClose={() => setShowAuditModal(false)} />
     </header>
   );
-};
+});

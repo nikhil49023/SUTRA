@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { NavigationSection } from '../../types/app';
 import {
@@ -23,8 +23,11 @@ const NAV_ITEMS: { id: NavigationSection; label: string; icon: any }[] = [
   { id: 'SETTINGS', label: 'SETTINGS', icon: Settings },
 ];
 
-export const Sidebar: React.FC = () => {
-  const { activeSection, setActiveSection, isSidebarCollapsed, toggleSidebar } = useAppStore();
+export const Sidebar: React.FC = memo(() => {
+  const activeSection = useAppStore((s) => s.activeSection);
+  const setActiveSection = useAppStore((s) => s.setActiveSection);
+  const isSidebarCollapsed = useAppStore((s) => s.isSidebarCollapsed);
+  const toggleSidebar = useAppStore((s) => s.toggleSidebar);
 
   return (
     <aside
@@ -68,4 +71,4 @@ export const Sidebar: React.FC = () => {
       </div>
     </aside>
   );
-};
+});

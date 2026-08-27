@@ -1,16 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { useGeofenceStore } from '../stores/geofenceStore';
 import { useSelectionStore } from '../stores/selectionStore';
 import { commandManager } from '../communication/CommandManager';
 import { ZoneType } from '../types/geofence';
-import { Edit3, Save, ShieldAlert } from 'lucide-react';
+import { Edit3, Save } from 'lucide-react';
 
-export const GeofenceEditor: React.FC = () => {
-  const { geofences, updateGeofence } = useGeofenceStore();
-  const { selected_type, selected_id } = useSelectionStore();
+export const GeofenceEditor: React.FC = memo(() => {
+  const geofences = useGeofenceStore((s) => s.geofences);
+  const updateGeofence = useGeofenceStore((s) => s.updateGeofence);
+  const selectedType = useSelectionStore((s) => s.selected_type);
+  const selectedId = useSelectionStore((s) => s.selected_id);
 
   const selectedGf =
-    selected_type === 'GEOFENCE' ? geofences.find((g) => g.id === selected_id) : null;
+    selectedType === 'GEOFENCE' ? geofences.find((g) => g.id === selectedId) : null;
 
   const [name, setName] = useState('');
   const [zoneType, setZoneType] = useState<ZoneType>('NO_FLY');
@@ -45,33 +47,33 @@ export const GeofenceEditor: React.FC = () => {
   };
 
   return (
-    <div className="bg-[#0f141c]/90 border border-slate-800 rounded-lg p-3 font-mono text-xs space-y-3 select-none">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-        <div className="flex items-center space-x-1.5 font-bold text-cyan-300">
+    <div className="bg-[#11171E] border border-[#2B3743] rounded-lg p-3 font-mono text-xs space-y-3 select-none">
+      <div className="flex items-center justify-between border-b border-[#2B3743] pb-2">
+        <div className="flex items-center space-x-1.5 font-bold text-[#5B8FB9]">
           <Edit3 className="w-3.5 h-3.5" />
           <span>EDIT GEOFENCE ZONE</span>
         </div>
-        <span className="text-[10px] text-slate-500">{selectedGf.id}</span>
+        <span className="text-[10px] text-[#707C88]">{selectedGf.id}</span>
       </div>
 
       <div className="space-y-2">
         <div>
-          <label className="text-[10px] text-slate-400 block mb-1">ZONE NAME</label>
+          <label className="text-[10px] text-[#707C88] block mb-1">ZONE NAME</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:ring-1 focus:ring-cyan-400"
+            className="w-full bg-[#0B0F14] border border-[#2B3743] rounded px-2 py-1 text-[#E7EBEF] text-xs focus:border-[#5B8FB9] focus:outline-none"
           />
         </div>
 
         <div className="grid grid-cols-3 gap-2">
           <div>
-            <label className="text-[10px] text-slate-400 block mb-1">ZONE TYPE</label>
+            <label className="text-[10px] text-[#707C88] block mb-1">ZONE TYPE</label>
             <select
               value={zoneType}
               onChange={(e) => setZoneType(e.target.value as ZoneType)}
-              className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:ring-1 focus:ring-cyan-400"
+              className="w-full bg-[#0B0F14] border border-[#2B3743] rounded px-2 py-1 text-[#E7EBEF] text-xs focus:border-[#5B8FB9] focus:outline-none"
             >
               <option value="NO_FLY">NO FLY</option>
               <option value="WARNING">WARNING</option>
@@ -80,22 +82,22 @@ export const GeofenceEditor: React.FC = () => {
           </div>
 
           <div>
-            <label className="text-[10px] text-slate-400 block mb-1">ALT MIN (m)</label>
+            <label className="text-[10px] text-[#707C88] block mb-1">ALT MIN (m)</label>
             <input
               type="number"
               value={altMin}
               onChange={(e) => setAltMin(Number(e.target.value))}
-              className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:ring-1 focus:ring-cyan-400"
+              className="w-full bg-[#0B0F14] border border-[#2B3743] rounded px-2 py-1 text-[#E7EBEF] text-xs focus:border-[#5B8FB9] focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="text-[10px] text-slate-400 block mb-1">ALT MAX (m)</label>
+            <label className="text-[10px] text-[#707C88] block mb-1">ALT MAX (m)</label>
             <input
               type="number"
               value={altMax}
               onChange={(e) => setAltMax(Number(e.target.value))}
-              className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:ring-1 focus:ring-cyan-400"
+              className="w-full bg-[#0B0F14] border border-[#2B3743] rounded px-2 py-1 text-[#E7EBEF] text-xs focus:border-[#5B8FB9] focus:outline-none"
             />
           </div>
         </div>
@@ -103,11 +105,11 @@ export const GeofenceEditor: React.FC = () => {
 
       <button
         onClick={handleSave}
-        className="w-full mt-2 py-1.5 rounded bg-cyan-900/60 border border-cyan-500/50 hover:bg-cyan-800 text-cyan-200 font-bold transition flex items-center justify-center space-x-1.5"
+        className="w-full mt-2 py-1.5 rounded bg-[#1B2530] border border-[#5B8FB9]/60 hover:bg-[#223040] hover:border-[#5B8FB9] text-[#E7EBEF] font-bold transition flex items-center justify-center space-x-1.5 active:scale-95"
       >
-        <Save className="w-3.5 h-3.5" />
+        <Save className="w-3.5 h-3.5 text-[#4F9A72]" />
         <span>APPLY GEOFENCE CHANGES</span>
       </button>
     </div>
   );
-};
+});

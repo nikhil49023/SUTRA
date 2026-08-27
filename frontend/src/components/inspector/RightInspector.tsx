@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { useSelectionStore } from '../../stores/selectionStore';
 import { useAppStore } from '../../stores/appStore';
 import { useFleetStore } from '../../stores/fleetStore';
@@ -8,20 +8,18 @@ import { DroneInspector } from '../../fleet/DroneInspector';
 import { WaypointEditor } from '../../mission/WaypointEditor';
 import { GeofenceEditor } from '../../geofence/GeofenceEditor';
 import { GeofenceProperties } from '../../geofence/GeofenceProperties';
-import { Shield, ChevronRight, ChevronLeft, Cpu, Activity } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Cpu, Activity } from 'lucide-react';
 
-export const RightInspector: React.FC = () => {
-  const { selected_type, selected_id, clearSelection } = useSelectionStore();
-  const { isInspectorOpen, toggleInspector } = useAppStore();
-  const { drones } = useFleetStore();
-  const { waypoints } = useMissionStore();
-  const { geofences } = useGeofenceStore();
+export const RightInspector: React.FC = memo(() => {
+  const selectedType = useSelectionStore((s) => s.selected_type);
+  const isInspectorOpen = useAppStore((s) => s.isInspectorOpen);
+  const toggleInspector = useAppStore((s) => s.toggleInspector);
 
   if (!isInspectorOpen) {
     return (
       <button
         onClick={toggleInspector}
-        className="absolute right-0 top-16 z-30 p-1.5 bg-[#11171E] border border-r-0 border-[#2B3743] rounded-l text-[#707C88] hover:text-[#5B8FB9]"
+        className="absolute right-0 top-16 z-30 p-1.5 bg-[#11171E] border border-r-0 border-[#2B3743] rounded-l text-[#707C88] hover:text-[#5B8FB9] hover:bg-[#151D26] transition"
         title="Open Inspector"
       >
         <ChevronLeft className="w-4 h-4" />
@@ -39,7 +37,7 @@ export const RightInspector: React.FC = () => {
         </div>
         <button
           onClick={toggleInspector}
-          className="p-1 text-[#707C88] hover:text-[#E7EBEF]"
+          className="p-1 rounded text-[#707C88] hover:text-[#E7EBEF] hover:bg-[#151D26] transition"
           title="Collapse Inspector"
         >
           <ChevronRight className="w-4 h-4" />
@@ -47,47 +45,56 @@ export const RightInspector: React.FC = () => {
       </div>
 
       {/* Context-Sensitive Content */}
-      {selected_type === 'DRONE' ? (
+      {selectedType === 'DRONE' ? (
         <DroneInspector />
-      ) : selected_type === 'WAYPOINT' ? (
+      ) : selectedType === 'WAYPOINT' ? (
         <WaypointEditor />
-      ) : selected_type === 'GEOFENCE' ? (
+      ) : selectedType === 'GEOFENCE' ? (
         <div className="space-y-3">
           <GeofenceEditor />
           <GeofenceProperties />
         </div>
       ) : (
-        /* System Overview when nothing selected */
-        <div className="bg-[#11171E] border border-[#2B3743] rounded-lg p-3 space-y-3">
-          <div className="text-[#A9B3BD] font-bold border-b border-[#2B3743] pb-1.5 flex items-center space-x-1.5">
-            <Activity className="w-3.5 h-3.5 text-[#4F9A72]" />
-            <span>SYSTEM TELEMETRY SUMMARY</span>
-          </div>
-
-          <div className="space-y-2 text-[11px]">
-            <div className="flex justify-between">
-              <span className="text-[#707C88]">ACTIVE DRONES:</span>
-              <span className="font-bold text-[#E7EBEF]">{Object.keys(drones).length} Connected</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[#707C88]">MISSION WAYPOINTS:</span>
-              <span className="font-bold text-[#E7EBEF]">{waypoints.length} Setpoints</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[#707C88]">GEOFENCE ZONES:</span>
-              <span className="font-bold text-[#E7EBEF]">{geofences.length} Active</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[#707C88]">ORCA COLLISION BUFFER:</span>
-              <span className="font-bold text-[#4F9A72]">&gt; 2.8m (SAFE)</span>
-            </div>
-          </div>
-
-          <div className="text-[10px] text-[#707C88] pt-2 border-t border-[#2B3743]">
-            Click any drone, waypoint, or geofence on the map to inspect its parameters.
-          </div>
-        </div>
+        <SystemOverview />
       )}
     </aside>
   );
-};
+});
+
+const SystemOverview: React.FC = memo(() => {
+  const droneCount = useFleetStore((s) => Object.keys(s.drones).length);
+  const waypointCount = useMissionStore((s) => s.waypoints.length);
+  const geofenceCount = useGeofenceStore((s) => s.geofences.length);
+
+  return (
+    <div className="bg-[#11171E] border border-[#2B3743] rounded-lg p-3 space-y-3">
+      <div className="text-[#A9B3BD] font-bold border-b border-[#2B3743] pb-1.5 flex items-center space-x-1.5">
+        <Activity className="w-3.5 h-3.5 text-[#4F9A72]" />
+        <span>SYSTEM TELEMETRY SUMMARY</span>
+      </div>
+
+      <div className="space-y-2 text-[11px]">
+        <div className="flex justify-between items-center">
+          <span className="text-[#707C88]">ACTIVE DRONES:</span>
+          <span className="font-bold text-[#E7EBEF] tabular-nums">{droneCount} Connected</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-[#707C88]">MISSION WAYPOINTS:</span>
+          <span className="font-bold text-[#E7EBEF] tabular-nums">{waypointCount} Setpoints</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-[#707C88]">GEOFENCE ZONES:</span>
+          <span className="font-bold text-[#E7EBEF] tabular-nums">{geofenceCount} Active</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-[#707C88]">ORCA COLLISION BUFFER:</span>
+          <span className="font-bold text-[#4F9A72]">&gt; 2.8m (SAFE)</span>
+        </div>
+      </div>
+
+      <div className="text-[10px] text-[#707C88] pt-2 border-t border-[#2B3743]">
+        Click any drone, waypoint, or geofence on the map to inspect its parameters.
+      </div>
+    </div>
+  );
+});
