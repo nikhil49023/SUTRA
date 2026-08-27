@@ -150,6 +150,16 @@ export const useFleetStore = create<FleetStoreState>((set) => ({
           },
         };
       }
+      // Shallow-equality guard: return same state reference if nothing changed.
+      // Prevents re-renders on duplicate or identical telemetry ticks (very common at 10Hz+).
+      let changed = false;
+      for (const key of Object.keys(dronePartial) as (keyof DroneState)[]) {
+        if ((dronePartial as any)[key] !== (existing as any)[key]) {
+          changed = true;
+          break;
+        }
+      }
+      if (!changed) return s; // Same reference — zero subscribers notified
       return {
         drones: {
           ...s.drones,

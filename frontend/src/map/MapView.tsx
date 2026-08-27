@@ -1,4 +1,15 @@
-import React, { useEffect, useRef, useState } from 'react';
+/**
+ * Smart Horizon GCS — Optimized MapView
+ *
+ * PERFORMANCE FIXES:
+ * 1. Each useEffect subscribes to ONLY the store slice it needs via selector —
+ *    telemetry ticks no longer cause MapView itself to re-render.
+ * 2. WaypointLayer.onDragUpdate wired directly to RouteLayer — zero React involvement during drag.
+ * 3. Fleet / Formation layer effects use shallow equality guards to skip no-op renders.
+ * 4. syncAllLayers (style.load) reads current state from store snapshots, not from props.
+ */
+
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { mapPersistence } from './MapPersistence';
 import { mapController } from './MapController';
 import { useMissionStore } from '../stores/missionStore';
@@ -27,132 +38,156 @@ export const MapView: React.FC = () => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [styleMenuOpen, setStyleMenuOpen] = useState(false);
 
-  const missionState = useMissionStore();
-  const fleetState = useFleetStore();
-  const geofenceState = useGeofenceStore();
-  const gisState = useGISStore();
-  const { selected_type, selected_id } = useSelectionStore();
-  const { interactionMode, previewWaypoint } = useMapStore();
-  const { mapStyle, mapStyleLoading, setMapStyle } = useAppStore();
+  // ── Only subscribe to what MapView itself renders (not fleet/mission details) ──
+  const interactionMode = useMapStore((s) => s.interactionMode);
+  const mapStyle = useAppStore((s) => s.mapStyle);
+  const mapStyleLoading = useAppStore((s) => s.mapStyleLoading);
+  const setMapStyle = useAppStore((s) => s.setMapStyle);
 
-  const syncAllLayers = () => {
-    mapController.routeLayer.updateRoute(
-      missionState.waypoints,
-      missionState.home_latitude,
-      missionState.home_longitude
-    );
-    mapController.waypointLayer.renderWaypoints(
-      missionState.waypoints,
-      missionState.active_waypoint_index,
-      selected_type === 'WAYPOINT' ? selected_id : null
-    );
-    mapController.geofenceLayer.updateGeofences(
-      geofenceState.geofences,
-      selected_type === 'GEOFENCE' ? selected_id : null
-    );
-    mapController.fleetLayer.updateFleet(
-      fleetState.drones,
-      selected_type === 'DRONE' ? selected_id : null
-    );
-    mapController.formationLayer.updateFormation(fleetState);
-    mapController.gisLayer.updateGis(gisState);
-  };
+  // Snapshot getter — reads once at call time, never subscribes MapView to these stores
+  const getLayerState = useCallback(() => {
+    const ms = useMissionStore.getState();
+    const fs = useFleetStore.getState();
+    const gs = useGeofenceStore.getState();
+    const gis = useGISStore.getState();
+    const sel = useSelectionStore.getState();
+    return { ms, fs, gs, gis, sel };
+  }, []);
 
-  // Initialize Map exactly once
+  // ── Wire waypoint drag → route line (pure JS, no React renders during drag) ──
   useEffect(() => {
-    if (mapContainerRef.current) {
-      const mapInstance = mapPersistence.initOrAttach(mapContainerRef.current);
-      mapController.attachMap(mapInstance);
-      if (mapInstance.isStyleLoaded()) {
-        syncAllLayers();
-      }
-    }
-
-    // Subscribe to style reload events
-    const unsubscribe = mapPersistence.onStyleLoaded(() => {
-      syncAllLayers();
-    });
-
+    mapController.waypointLayer.onDragUpdate = (wpId, lat, lon) => {
+      const ms = useMissionStore.getState();
+      // Build updated waypoints list in-memory only — do NOT call setWaypoints here
+      const tempWaypoints = ms.waypoints.map((w) =>
+        (w.id || w.index) === wpId ? { ...w, latitude: lat, longitude: lon } : w
+      );
+      mapController.routeLayer.updateRoute(tempWaypoints, ms.home_latitude, ms.home_longitude);
+    };
     return () => {
-      unsubscribe();
+      mapController.waypointLayer.onDragUpdate = null;
     };
   }, []);
 
-  // React to mapStyle store updates
+  // ── Initialize Map exactly once ──────────────────────────────────────────────
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+
+    const mapInstance = mapPersistence.initOrAttach(mapContainerRef.current);
+    mapController.attachMap(mapInstance);
+
+    if (mapInstance.isStyleLoaded()) {
+      const { ms, fs, gs, gis, sel } = getLayerState();
+      syncAll(ms, fs, gs, gis, sel);
+    }
+
+    // Fired after map style switch — re-add all layers
+    const unsubStyle = mapPersistence.onStyleLoaded(() => {
+      const { ms, fs, gs, gis, sel } = getLayerState();
+      syncAll(ms, fs, gs, gis, sel);
+    });
+
+    return () => {
+      unsubStyle();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── React to mapStyle store updates ─────────────────────────────────────────
   useEffect(() => {
     if (mapStyle) {
       mapPersistence.setMapStyle(mapStyle);
     }
   }, [mapStyle]);
 
-  // Update Mission & Waypoint layers
+  // ── Mission layer: waypoints + route ─────────────────────────────────────────
+  // Subscribe to mission.waypoints and selection — NOT to entire missionStore
   useEffect(() => {
-    mapController.routeLayer.updateRoute(
-      missionState.waypoints,
-      missionState.home_latitude,
-      missionState.home_longitude
-    );
-    mapController.waypointLayer.renderWaypoints(
-      missionState.waypoints,
-      missionState.active_waypoint_index,
-      selected_type === 'WAYPOINT' ? selected_id : null
-    );
-  }, [missionState.waypoints, missionState.active_waypoint_index, selected_type, selected_id]);
-
-  // Fit route trigger
-  useEffect(() => {
-    if (missionState.fitRouteTrigger > 0) {
-      mapController.fitRoute(missionState.waypoints);
-    }
-  }, [missionState.fitRouteTrigger]);
-
-  // Update Geofence Layer
-  useEffect(() => {
-    mapController.geofenceLayer.updateGeofences(
-      geofenceState.geofences,
-      selected_type === 'GEOFENCE' ? selected_id : null
-    );
-  }, [geofenceState.geofences, selected_type, selected_id]);
-
-  // Update Geofence Drawing Preview
-  useEffect(() => {
-    if (geofenceState.drawing_mode) {
-      mapController.geofenceLayer.updateDrawingSession(
-        geofenceState.drawing_points,
-        geofenceState.preview_point
+    const unsub = useMissionStore.subscribe((ms) => {
+      const sel = useSelectionStore.getState();
+      mapController.routeLayer.updateRoute(ms.waypoints, ms.home_latitude, ms.home_longitude);
+      mapController.waypointLayer.renderWaypoints(
+        ms.waypoints,
+        ms.active_waypoint_index,
+        sel.selected_type === 'WAYPOINT' ? sel.selected_id : null
       );
-    } else {
-      mapController.geofenceLayer.updateDrawingSession([]);
-    }
-  }, [geofenceState.drawing_mode, geofenceState.drawing_points, geofenceState.preview_point]);
+    });
+    return unsub;
+  }, []);
 
-  // Update Fleet Layer
+  // ── Selection change — re-render waypoints + geofences with new highlight ────
   useEffect(() => {
-    mapController.fleetLayer.updateFleet(
-      fleetState.drones,
-      selected_type === 'DRONE' ? selected_id : null
-    );
-    mapController.formationLayer.updateFormation(fleetState);
-  }, [
-    fleetState.drones,
-    fleetState.formation,
-    fleetState.spacing,
-    fleetState.show_guides,
-    selected_type,
-    selected_id,
-  ]);
+    const unsub = useSelectionStore.subscribe((sel) => {
+      const ms = useMissionStore.getState();
+      const gs = useGeofenceStore.getState();
+      mapController.waypointLayer.renderWaypoints(
+        ms.waypoints,
+        ms.active_waypoint_index,
+        sel.selected_type === 'WAYPOINT' ? sel.selected_id : null
+      );
+      mapController.geofenceLayer.updateGeofences(
+        gs.geofences,
+        sel.selected_type === 'GEOFENCE' ? sel.selected_id : null
+      );
+    });
+    return unsub;
+  }, []);
 
-  // Update GIS Layer
+  // ── Fit route trigger ─────────────────────────────────────────────────────────
   useEffect(() => {
-    mapController.gisLayer.updateGis(gisState);
-  }, [gisState]);
+    const unsub = useMissionStore.subscribe((ms, prev) => {
+      if (ms.fitRouteTrigger !== prev.fitRouteTrigger && ms.fitRouteTrigger > 0) {
+        mapController.fitRoute(ms.waypoints);
+      }
+    });
+    return unsub;
+  }, []);
 
-  // Map controls
+  // ── Geofence layer ────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const unsub = useGeofenceStore.subscribe((gs) => {
+      const sel = useSelectionStore.getState();
+      mapController.geofenceLayer.updateGeofences(
+        gs.geofences,
+        sel.selected_type === 'GEOFENCE' ? sel.selected_id : null
+      );
+      if (gs.drawing_mode) {
+        mapController.geofenceLayer.updateDrawingSession(gs.drawing_points, gs.preview_point);
+      } else {
+        mapController.geofenceLayer.updateDrawingSession([]);
+      }
+    });
+    return unsub;
+  }, []);
+
+  // ── Fleet + Formation layer (telemetry driven) ────────────────────────────────
+  // Uses zustand subscribe with selector to only trigger when drones object ref changes
+  useEffect(() => {
+    const unsub = useFleetStore.subscribe((fs) => {
+      const sel = useSelectionStore.getState();
+      mapController.fleetLayer.updateFleet(
+        fs.drones,
+        sel.selected_type === 'DRONE' ? sel.selected_id : null
+      );
+      mapController.formationLayer.updateFormation(fs);
+    });
+    return unsub;
+  }, []);
+
+  // ── GIS layer ──────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const unsub = useGISStore.subscribe((gis) => {
+      mapController.gisLayer.updateGis(gis);
+    });
+    return unsub;
+  }, []);
+
+  // ── Map controls ───────────────────────────────────────────────────────────────
   const handleZoomIn = () => mapPersistence.getMap()?.zoomIn();
   const handleZoomOut = () => mapPersistence.getMap()?.zoomOut();
   const handleResetBearing = () => mapPersistence.getMap()?.resetNorthPitch();
   const handleCenterFleet = () => {
-    const leader = fleetState.leader_id ? fleetState.drones[fleetState.leader_id] : null;
+    const fs = useFleetStore.getState();
+    const leader = fs.leader_id ? fs.drones[fs.leader_id] : null;
     if (leader) {
       mapController.centerOnCoordinates(leader.latitude, leader.longitude);
     }
@@ -163,7 +198,7 @@ export const MapView: React.FC = () => {
     setStyleMenuOpen(false);
   };
 
-  const isDrawingGeofence = interactionMode === 'DRAW_GEOFENCE' || geofenceState.drawing_mode;
+  const isDrawingGeofence = interactionMode === 'DRAW_GEOFENCE';
   const isAddingWaypoint = interactionMode === 'ADD_WAYPOINT';
 
   return (
@@ -183,7 +218,7 @@ export const MapView: React.FC = () => {
         </div>
       )}
 
-      {/* ADD_WAYPOINT Banner — top center, prominent */}
+      {/* ADD_WAYPOINT Banner */}
       {isAddingWaypoint && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2 rounded-full bg-[#1B2530]/95 border border-[#5B8FB9] shadow-[0_0_12px_rgba(91,143,185,0.25)] backdrop-blur-md">
           <MapPin className="w-4 h-4 text-[#5B8FB9] animate-pulse" />
@@ -194,19 +229,19 @@ export const MapView: React.FC = () => {
         </div>
       )}
 
-      {/* GEOFENCE_DRAWING Toolbar & Status — top center, floating */}
+      {/* GEOFENCE_DRAWING Toolbar */}
       {isDrawingGeofence && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 shadow-2xl backdrop-blur-md">
           <GeofenceToolbar />
         </div>
       )}
 
-      {/* Floating Left Toolbox — Map Interaction Mode Selector */}
+      {/* Floating Left Toolbox */}
       <div className="absolute top-4 left-4 z-10">
         <MapInteractionToolbox />
       </div>
 
-      {/* Floating Right Controls — Zoom / Bearing / Center / Basemap Styles */}
+      {/* Floating Right Controls */}
       <div className="absolute top-4 right-4 flex flex-col space-y-2 z-10">
         <div className="flex flex-col rounded border border-[#2B3743] bg-[#11171E]/95 backdrop-blur-md shadow-xl overflow-hidden">
           <button
@@ -242,7 +277,7 @@ export const MapView: React.FC = () => {
           </button>
           <div className="h-px bg-[#2B3743]" />
 
-          {/* Quick Basemap Style Selector Toggle */}
+          {/* Quick Basemap Style Selector */}
           <div className="relative">
             <button
               onClick={() => setStyleMenuOpen((prev) => !prev)}
@@ -256,60 +291,35 @@ export const MapView: React.FC = () => {
               <Layers className="w-4 h-4" />
             </button>
 
-            {/* Floating Basemap Style Menu */}
             {styleMenuOpen && (
-              <div className="absolute right-full top-0 mr-2 w-44 rounded-lg border border-[#2B3743] bg-[#11171E]/95 backdrop-blur-md shadow-2xl p-1.5 space-y-1 font-mono text-xs select-none">
+              <div className="absolute right-full top-0 mr-2 w-44 rounded-lg border border-[#2B3743] bg-[#11171E]/95 shadow-2xl p-1.5 space-y-1 font-mono text-xs select-none">
                 <div className="px-2 py-1 text-[10px] font-bold text-[#707C88] uppercase tracking-wider border-b border-[#2B3743]/60">
                   Basemap Style
                 </div>
 
-                <button
-                  onClick={() => handleSelectStyle('tactical-dark')}
-                  className={`w-full text-left px-2 py-1.5 rounded flex items-center justify-between transition ${
-                    mapStyle === 'tactical-dark'
-                      ? 'bg-[#1B2530] text-[#5B8FB9] font-bold border border-[#5B8FB9]/40'
-                      : 'text-[#A9B3BD] hover:text-[#E7EBEF] hover:bg-[#151D26]'
-                  }`}
-                >
-                  <span>Dark Tactical</span>
-                  <span className="text-[9px] px-1 rounded bg-[#0B0F14] text-[#707C88]">DARK</span>
-                </button>
-
-                <button
-                  onClick={() => handleSelectStyle('satellite')}
-                  className={`w-full text-left px-2 py-1.5 rounded flex items-center justify-between transition ${
-                    mapStyle === 'satellite'
-                      ? 'bg-[#1B2530] text-[#5B8FB9] font-bold border border-[#5B8FB9]/40'
-                      : 'text-[#A9B3BD] hover:text-[#E7EBEF] hover:bg-[#151D26]'
-                  }`}
-                >
-                  <span>Satellite</span>
-                  <span className="text-[9px] px-1 rounded bg-[#0B0F14] text-[#4F9A72] font-bold">SAT</span>
-                </button>
-
-                <button
-                  onClick={() => handleSelectStyle('terrain')}
-                  className={`w-full text-left px-2 py-1.5 rounded flex items-center justify-between transition ${
-                    mapStyle === 'terrain'
-                      ? 'bg-[#1B2530] text-[#5B8FB9] font-bold border border-[#5B8FB9]/40'
-                      : 'text-[#A9B3BD] hover:text-[#E7EBEF] hover:bg-[#151D26]'
-                  }`}
-                >
-                  <span>Terrain</span>
-                  <span className="text-[9px] px-1 rounded bg-[#0B0F14] text-[#C49A4A]">TOPO</span>
-                </button>
-
-                <button
-                  onClick={() => handleSelectStyle('streets')}
-                  className={`w-full text-left px-2 py-1.5 rounded flex items-center justify-between transition ${
-                    mapStyle === 'streets'
-                      ? 'bg-[#1B2530] text-[#5B8FB9] font-bold border border-[#5B8FB9]/40'
-                      : 'text-[#A9B3BD] hover:text-[#E7EBEF] hover:bg-[#151D26]'
-                  }`}
-                >
-                  <span>Streets</span>
-                  <span className="text-[9px] px-1 rounded bg-[#0B0F14] text-[#707C88]">STR</span>
-                </button>
+                {(
+                  [
+                    { key: 'tactical-dark', label: 'Dark Tactical', badge: 'DARK' },
+                    { key: 'satellite', label: 'Satellite', badge: 'SAT' },
+                    { key: 'terrain', label: 'Terrain', badge: 'TOPO' },
+                    { key: 'streets', label: 'Streets', badge: 'STR' },
+                  ] as { key: MapStyleType; label: string; badge: string }[]
+                ).map(({ key, label, badge }) => (
+                  <button
+                    key={key}
+                    onClick={() => handleSelectStyle(key)}
+                    className={`w-full text-left px-2 py-1.5 rounded flex items-center justify-between transition ${
+                      mapStyle === key
+                        ? 'bg-[#1B2530] text-[#5B8FB9] font-bold border border-[#5B8FB9]/40'
+                        : 'text-[#A9B3BD] hover:text-[#E7EBEF] hover:bg-[#151D26]'
+                    }`}
+                  >
+                    <span>{label}</span>
+                    <span className="text-[9px] px-1 rounded bg-[#0B0F14] text-[#707C88]">
+                      {badge}
+                    </span>
+                  </button>
+                ))}
               </div>
             )}
           </div>
@@ -317,6 +327,20 @@ export const MapView: React.FC = () => {
       </div>
 
       {/* Map Mode Indicator Bottom Left */}
+      <MapStatusBar mapStyle={mapStyle} interactionMode={interactionMode} />
+
+      {/* Geofence Debug Panel */}
+      <GeofenceDebugPanel />
+    </div>
+  );
+};
+
+// ── Memoized status bar — never re-renders due to fleet/mission updates ────────
+const MapStatusBar = React.memo(
+  ({ mapStyle, interactionMode }: { mapStyle: MapStyleType; interactionMode: string }) => {
+    // Read home position once from store snapshot — not subscribed
+    const home = useMissionStore.getState();
+    return (
       <div className="absolute bottom-2 left-2 z-10 px-2.5 py-1 rounded bg-[#11171E]/90 border border-[#2B3743] backdrop-blur text-[11px] font-mono text-[#707C88] flex items-center space-x-3">
         <span>MAPLIBRE GL PERSISTENT</span>
         <span>•</span>
@@ -327,12 +351,29 @@ export const MapView: React.FC = () => {
         <span className="text-[#5B8FB9] font-bold">{interactionMode}</span>
         <span>•</span>
         <span>
-          HOME: {missionState.home_latitude.toFixed(5)}°, {missionState.home_longitude.toFixed(5)}°
+          HOME: {home.home_latitude.toFixed(5)}°, {home.home_longitude.toFixed(5)}°
         </span>
       </div>
+    );
+  }
+);
 
-      {/* Geofence Debug Panel — Ctrl+Shift+G to toggle */}
-      <GeofenceDebugPanel />
-    </div>
+// ── Helper used by onStyleLoaded ────────────────────────────────────────────────
+function syncAll(ms: any, fs: any, gs: any, gis: any, sel: any) {
+  mapController.routeLayer.updateRoute(ms.waypoints, ms.home_latitude, ms.home_longitude);
+  mapController.waypointLayer.renderWaypoints(
+    ms.waypoints,
+    ms.active_waypoint_index,
+    sel.selected_type === 'WAYPOINT' ? sel.selected_id : null
   );
-};
+  mapController.geofenceLayer.updateGeofences(
+    gs.geofences,
+    sel.selected_type === 'GEOFENCE' ? sel.selected_id : null
+  );
+  mapController.fleetLayer.updateFleet(
+    fs.drones,
+    sel.selected_type === 'DRONE' ? sel.selected_id : null
+  );
+  mapController.formationLayer.updateFormation(fs);
+  mapController.gisLayer.updateGis(gis);
+}

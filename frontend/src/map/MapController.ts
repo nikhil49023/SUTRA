@@ -1,9 +1,10 @@
 /**
  * Smart Horizon GCS — Central Master Map Controller
  *
- * BUG 2 Fix: Waypoint placement now routes through commandManager (authenticated)
- * instead of bare wsClient.sendCommand. Interaction mode now comes from mapStore
- * so the floating MapInteractionToolbox button controls it correctly.
+ * PERFORMANCE FIXES:
+ * 1. mousemove geofence preview: RAF-throttled — writes only once per animation frame.
+ * 2. setupInteractions called once; click/mousemove handlers read store snapshots,
+ *    never subscribe, so they don't participate in React render cycles.
  */
 
 import maplibregl from 'maplibre-gl';
@@ -16,6 +17,7 @@ import { GisLayer } from './GisLayer';
 import { commandManager } from '../communication/CommandManager';
 import { useMapStore } from '../stores/mapStore';
 import { useGeofenceStore } from '../stores/geofenceStore';
+import { rafThrottle } from '../utils/performance';
 
 export class MapController {
   public waypointLayer = new WaypointLayer();
@@ -25,6 +27,11 @@ export class MapController {
   public formationLayer = new FormationLayer();
   public gisLayer = new GisLayer();
   private map: maplibregl.Map | null = null;
+
+  // RAF-throttled geofence preview update — at most 1 Zustand write per frame
+  private rafUpdatePreview = rafThrottle((lat: number, lng: number) => {
+    useGeofenceStore.getState().updatePreviewPoint(lat, lng);
+  });
 
   public attachMap(map: maplibregl.Map): void {
     this.map = map;
@@ -69,15 +76,12 @@ export class MapController {
       const mapStore = useMapStore.getState();
       const geofenceState = useGeofenceStore.getState();
 
-      // Record click for debug panel
       mapStore.setLastMapClick(lat, lng);
 
       if (mapStore.interactionMode === 'ADD_WAYPOINT') {
-        // Place temporary preview marker immediately (optimistic UI)
         mapStore.setPreviewWaypoint({ latitude: lat, longitude: lng, altitude: 25.0, speed: 6.0 });
         mapStore.setLastWaypointCommandStatus('SENT');
 
-        // Route through authenticated commandManager — NOT bare wsClient
         commandManager.sendCommand('mission.add_waypoint', {
           latitude: lat,
           longitude: lng,
@@ -99,7 +103,10 @@ export class MapController {
 
       if (mapStore.interactionMode === 'DRAW_GEOFENCE' || geofenceState.drawing_mode) {
         if (!geofenceState.drawing_mode) {
-          geofenceState.startDrawing(geofenceState.active_zone_type || 'NO_FLY', geofenceState.active_geometry_type || 'POLYGON');
+          geofenceState.startDrawing(
+            geofenceState.active_zone_type || 'NO_FLY',
+            geofenceState.active_geometry_type || 'POLYGON'
+          );
           commandManager.sendCommand('geofence.start_drawing', {
             zone_type: geofenceState.active_zone_type || 'NO_FLY',
             geometry_type: geofenceState.active_geometry_type || 'POLYGON',
@@ -111,16 +118,15 @@ export class MapController {
       }
     });
 
-    // Mousemove for geofence drawing rubberband preview
+    // Mousemove: geofence rubberband preview — RAF-throttled, at most 1 store write/frame
     this.map.on('mousemove', (e) => {
-      const { drawing_mode, updatePreviewPoint } = useGeofenceStore.getState();
       const mapStore = useMapStore.getState();
+      const { drawing_mode } = useGeofenceStore.getState();
       if (drawing_mode || mapStore.interactionMode === 'DRAW_GEOFENCE') {
-        updatePreviewPoint(e.lngLat.lat, e.lngLat.lng);
+        this.rafUpdatePreview(e.lngLat.lat, e.lngLat.lng);
       }
     });
   }
 }
 
 export const mapController = new MapController();
-
