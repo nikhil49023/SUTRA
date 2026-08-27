@@ -3,7 +3,7 @@ import { useGeofenceStore } from '../stores/geofenceStore';
 import { useSelectionStore } from '../stores/selectionStore';
 import { commandManager } from '../communication/CommandManager';
 import { ZoneType } from '../types/geofence';
-import { Edit3, Save } from 'lucide-react';
+import { Edit3, Save, CheckCircle2 } from 'lucide-react';
 
 export const GeofenceEditor: React.FC = memo(() => {
   const geofences = useGeofenceStore((s) => s.geofences);
@@ -21,41 +21,62 @@ export const GeofenceEditor: React.FC = memo(() => {
   const [priority, setPriority] = useState(3);
   const [radius, setRadius] = useState(200);
   const [corridorWidth, setCorridorWidth] = useState(50);
+  const [isSaved, setIsSaved] = useState(false);
 
+  // Only re-initialize form fields when the selected geofence ID changes
   useEffect(() => {
     if (selectedGf) {
       setName(selectedGf.name);
       setZoneType(selectedGf.zone_type);
-      setAltMin(selectedGf.altitude_min);
-      setAltMax(selectedGf.altitude_max);
+      setAltMin(selectedGf.altitude_min ?? 0);
+      setAltMax(selectedGf.altitude_max ?? 120);
       setPriority(selectedGf.priority ?? 3);
       setRadius(selectedGf.radius ?? 200);
       setCorridorWidth(selectedGf.corridor_width ?? 50);
+      setIsSaved(false);
     }
-  }, [selectedGf]);
+  }, [selectedGf?.id]);
 
   if (!selectedGf) return null;
 
   const handleSave = () => {
+    const minAlt = Number(altMin);
+    const maxAlt = Number(altMax);
+    const rad = Number(radius);
+    const width = Number(corridorWidth);
+    const prio = Number(priority);
+
+    // 1. Update local reactive store immediately
     updateGeofence(selectedGf.id, {
-      name,
+      name: name.trim() || selectedGf.name,
       zone_type: zoneType,
-      altitude_min: altMin,
-      altitude_max: altMax,
-      priority,
-      radius,
-      corridor_width: corridorWidth,
+      altitude_min: minAlt,
+      altitude_max: maxAlt,
+      priority: prio,
+      radius: rad,
+      corridor_width: width,
     });
+
+    // 2. Broadcast authoritative update to backend
     commandManager.sendCommand('geofence.update', {
       geofence_id: selectedGf.id,
-      name,
+      name: name.trim() || selectedGf.name,
       zone_type: zoneType,
-      altitude_min: altMin,
-      altitude_max: altMax,
-      priority,
-      radius,
-      corridor_width: corridorWidth,
+      geometry_type: selectedGf.geometry_type,
+      altitude_min: minAlt,
+      altitude_max: maxAlt,
+      priority: prio,
+      radius: rad,
+      corridor_width: width,
+      coordinates: selectedGf.coordinates,
+      center: selectedGf.center,
+      enabled: selectedGf.enabled,
+      visible: selectedGf.visible,
     });
+
+    // 3. Show saved confirmation
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 2000);
   };
 
   return (
@@ -161,10 +182,23 @@ export const GeofenceEditor: React.FC = memo(() => {
 
       <button
         onClick={handleSave}
-        className="w-full mt-2 py-1.5 rounded bg-[#1B2530] border border-[#5B8FB9]/60 hover:bg-[#223040] hover:border-[#5B8FB9] text-[#E7EBEF] font-bold transition flex items-center justify-center space-x-1.5 active:scale-95"
+        className={`w-full mt-2 py-1.5 rounded border font-bold transition flex items-center justify-center space-x-1.5 active:scale-95 ${
+          isSaved
+            ? 'bg-[#4F9A72]/20 border-[#4F9A72] text-[#4F9A72]'
+            : 'bg-[#1B2530] border-[#5B8FB9]/60 hover:bg-[#223040] hover:border-[#5B8FB9] text-[#E7EBEF]'
+        }`}
       >
-        <Save className="w-3.5 h-3.5 text-[#4F9A72]" />
-        <span>APPLY GEOFENCE CHANGES</span>
+        {isSaved ? (
+          <>
+            <CheckCircle2 className="w-3.5 h-3.5 text-[#4F9A72]" />
+            <span>CHANGES APPLIED!</span>
+          </>
+        ) : (
+          <>
+            <Save className="w-3.5 h-3.5 text-[#4F9A72]" />
+            <span>APPLY GEOFENCE CHANGES</span>
+          </>
+        )}
       </button>
     </div>
   );
