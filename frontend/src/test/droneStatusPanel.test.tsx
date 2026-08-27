@@ -61,16 +61,16 @@ describe('SMART HORIZON GCS — Drone Status Panel Contextual Visibility', () =>
     });
   });
 
-  it('TEST 1: Default state is EXPANDED for Dashboard (COMMAND), MISSION, and FLEET', () => {
+  it('TEST 1: Default state is EXPANDED ONLY for Dashboard (COMMAND and LIVEOPS)', () => {
     const store = useDroneStatusPanelStore.getState();
     expect(store.getModeForSection('COMMAND')).toBe('EXPANDED');
     expect(store.getModeForSection('LIVEOPS')).toBe('EXPANDED');
-    expect(store.getModeForSection('MISSION')).toBe('EXPANDED');
-    expect(store.getModeForSection('FLEET')).toBe('EXPANDED');
   });
 
-  it('TEST 2: Default state is COLLAPSED for GEOFENCE, GIS, AI, SETTINGS, and LOGS', () => {
+  it('TEST 2: Default state is COLLAPSED for MISSION, FLEET, GEOFENCE, GIS, AI, SETTINGS, and LOGS', () => {
     const store = useDroneStatusPanelStore.getState();
+    expect(store.getModeForSection('MISSION')).toBe('COLLAPSED');
+    expect(store.getModeForSection('FLEET')).toBe('COLLAPSED');
     expect(store.getModeForSection('GEOFENCE')).toBe('COLLAPSED');
     expect(store.getModeForSection('GIS')).toBe('COLLAPSED');
     expect(store.getModeForSection('AI')).toBe('COLLAPSED');
@@ -89,23 +89,31 @@ describe('SMART HORIZON GCS — Drone Status Panel Contextual Visibility', () =>
     expect(screen.getByText(/Alpha/)).toBeInTheDocument();
   });
 
-  it('TEST 4: Renders minimal collapsed pill on GIS view without acting as a wall', () => {
-    useAppStore.setState({ activeSection: 'GIS' });
-    render(<MultiDroneDebugPanel />);
+  it('TEST 4: Renders minimal collapsed pill on Mission and Fleet views without blocking workspace', () => {
+    useAppStore.setState({ activeSection: 'MISSION' });
+    const { unmount } = render(<MultiDroneDebugPanel />);
 
     expect(screen.queryByText('Fleet Status')).not.toBeInTheDocument();
     expect(screen.getByText('DRONE STATUS')).toBeInTheDocument();
     expect(screen.getByText('2/2 MOVING')).toBeInTheDocument();
+
+    unmount();
+
+    useAppStore.setState({ activeSection: 'FLEET' });
+    render(<MultiDroneDebugPanel />);
+
+    expect(screen.queryByText('Fleet Status')).not.toBeInTheDocument();
+    expect(screen.getByText('DRONE STATUS')).toBeInTheDocument();
   });
 
-  it('TEST 5: Clicking collapsed pill expands the panel and remembers section preference', () => {
-    useAppStore.setState({ activeSection: 'GIS' });
+  it('TEST 5: Clicking collapsed pill in Mission expands the panel and remembers section preference', () => {
+    useAppStore.setState({ activeSection: 'MISSION' });
     render(<MultiDroneDebugPanel />);
 
     const pillButton = screen.getByTitle(/Click to expand Drone Status/i);
     fireEvent.click(pillButton);
 
-    expect(useDroneStatusPanelStore.getState().getModeForSection('GIS')).toBe('EXPANDED');
+    expect(useDroneStatusPanelStore.getState().getModeForSection('MISSION')).toBe('EXPANDED');
     expect(screen.getByText('DRONE STATUS & HUD')).toBeInTheDocument();
   });
 
@@ -137,13 +145,13 @@ describe('SMART HORIZON GCS — Drone Status Panel Contextual Visibility', () =>
 
     // User expands GIS
     store.setModeForSection('GIS', 'EXPANDED');
-    // User collapses Mission
-    store.setModeForSection('MISSION', 'COLLAPSED');
+    // User collapses Command
+    store.setModeForSection('COMMAND', 'COLLAPSED');
 
     expect(store.getModeForSection('GIS')).toBe('EXPANDED');
+    expect(store.getModeForSection('COMMAND')).toBe('COLLAPSED');
     expect(store.getModeForSection('MISSION')).toBe('COLLAPSED');
-    expect(store.getModeForSection('COMMAND')).toBe('EXPANDED');
-    expect(store.getModeForSection('AI')).toBe('COLLAPSED');
+    expect(store.getModeForSection('FLEET')).toBe('COLLAPSED');
   });
 
   it('TEST 9: Keyboard shortcut (Ctrl+D) toggles panel mode', () => {

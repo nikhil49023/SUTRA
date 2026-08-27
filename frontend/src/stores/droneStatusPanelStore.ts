@@ -2,8 +2,9 @@
  * Smart Horizon GCS — Drone Status & Diagnostic Panel UI State Store
  *
  * Manages presentation/visibility state for MultiDroneDebugPanel:
- * - Section-aware default states (Dashboard/Mission/Fleet = EXPANDED, Geofence/GIS/AI/Settings/Logs = COLLAPSED)
- * - Remembers user collapse/expand preference per section
+ * - Only Dashboard (COMMAND / LIVEOPS) defaults to EXPANDED
+ * - All other full-screen workspaces (MISSION, FLEET, GEOFENCE, GIS, AI, SETTINGS, LOGS) default to COLLAPSED
+ * - User expand/collapse preferences are persisted per section in localStorage
  * - Keyboard shortcut toggle (Ctrl+D)
  * - Independent from backend and mission/fleet operational stores
  */
@@ -26,8 +27,8 @@ export type PanelSectionKey =
 const DEFAULT_SECTION_MODES: Record<string, PanelDisplayMode> = {
   COMMAND: 'EXPANDED',
   LIVEOPS: 'EXPANDED',
-  MISSION: 'EXPANDED',
-  FLEET: 'EXPANDED',
+  MISSION: 'COLLAPSED',
+  FLEET: 'COLLAPSED',
   GEOFENCE: 'COLLAPSED',
   GIS: 'COLLAPSED',
   AI: 'COLLAPSED',
@@ -35,7 +36,7 @@ const DEFAULT_SECTION_MODES: Record<string, PanelDisplayMode> = {
   LOGS: 'COLLAPSED',
 };
 
-const STORAGE_KEY = 'sh_gcs_drone_status_panel_preferences';
+const STORAGE_KEY = 'sh_gcs_drone_status_panel_preferences_v3';
 
 function loadStoredPreferences(): Record<string, PanelDisplayMode> {
   try {
