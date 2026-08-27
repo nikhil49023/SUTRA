@@ -18,6 +18,7 @@ export const GeofenceEditor: React.FC = memo(() => {
   const [zoneType, setZoneType] = useState<ZoneType>('NO_FLY');
   const [altMin, setAltMin] = useState(0);
   const [altMax, setAltMax] = useState(120);
+  const [priority, setPriority] = useState(3);
 
   useEffect(() => {
     if (selectedGf) {
@@ -25,6 +26,7 @@ export const GeofenceEditor: React.FC = memo(() => {
       setZoneType(selectedGf.zone_type);
       setAltMin(selectedGf.altitude_min);
       setAltMax(selectedGf.altitude_max);
+      setPriority(selectedGf.priority ?? 3);
     }
   }, [selectedGf]);
 
@@ -36,6 +38,7 @@ export const GeofenceEditor: React.FC = memo(() => {
       zone_type: zoneType,
       altitude_min: altMin,
       altitude_max: altMax,
+      priority,
     });
     commandManager.sendCommand('geofence.update', {
       geofence_id: selectedGf.id,
@@ -43,6 +46,7 @@ export const GeofenceEditor: React.FC = memo(() => {
       zone_type: zoneType,
       altitude_min: altMin,
       altitude_max: altMax,
+      priority,
     });
   };
 
@@ -101,6 +105,27 @@ export const GeofenceEditor: React.FC = memo(() => {
             />
           </div>
         </div>
+
+        {/* Priority */}
+        <div>
+          <label className="text-[10px] text-[#707C88] block mb-1">PRIORITY (1=LOW → 5=CRITICAL)</label>
+          <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPriority(p)}
+                className={`flex-1 py-1 rounded border text-[10px] font-bold transition ${
+                  priority === p
+                    ? 'bg-[#1B2530] border-[#5B8FB9] text-[#5B8FB9]'
+                    : 'bg-[#0B0F14] border-[#2B3743] text-[#707C88] hover:text-[#E7EBEF] hover:bg-[#151D26]'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <button
@@ -113,3 +138,4 @@ export const GeofenceEditor: React.FC = memo(() => {
     </div>
   );
 });
+

@@ -1,12 +1,13 @@
 /**
  * Smart Horizon GCS — Persistent Geofence Layers & Interactive Drawing
  *
- * Key fixes:
- * - style.load handler to re-init sources/layers after map style reload
- * - visible !== false (not !visible) so undefined-visible geofences still render
- * - Optimistic geofences render immediately; replaced by authoritative on geofence.created
- * - Selected geofence shows stronger border + fill
- * - fitGeofence() for camera fit
+ * Supports:
+ * - Geometries: POLYGON, CIRCLE, CORRIDOR
+ * - Zone Types: NO_FLY, WARNING, SAFE, INCLUSION, EXCLUSION
+ * - Permanent visibility across map style switches and tab navigation
+ * - Bidirectional selection with prominent tactical highlights
+ * - Interactive vertex moving handles for selected polygon geofences
+ * - Single MapLibre GeoJSON source with efficient setData()
  */
 
 import maplibregl from 'maplibre-gl';
@@ -34,17 +35,14 @@ export class GeofenceLayer {
     this.map = map;
     if (!map) return;
 
-    // Initialize as soon as the style is ready
     if (map.isStyleLoaded()) {
       this.initLayers();
     } else {
       map.once('load', () => this.initLayers());
     }
 
-    // Re-init layers whenever the map style is replaced (style change removes custom sources/layers)
     map.on('style.load', () => {
       this.initLayers();
-      // Restore last known geofence data
       if (this.lastGeofences.length > 0) {
         this.updateGeofences(this.lastGeofences, this.lastSelectedId);
       }
@@ -54,7 +52,6 @@ export class GeofenceLayer {
   public initLayers(): void {
     if (!this.map || !this.map.isStyleLoaded()) return;
 
-    // Guard: only add if source doesn't already exist
     if (this.map.getSource(this.sourceId)) return;
 
     try {
@@ -72,21 +69,23 @@ export class GeofenceLayer {
         paint: {
           'fill-color': [
             'match', ['get', 'zone_type'],
-            'NO_FLY',   '#C75A5A',
-            'WARNING',  '#C49A4A',
-            'SAFE',     '#4F9A72',
-            'INCLUSION','#5B8FB9',
-            'EXCLUSION','#C75A5A',
+            'NO_FLY',    '#C75A5A',
+            'WARNING',   '#C49A4A',
+            'SAFE',      '#4F9A72',
+            'INCLUSION', '#5B8FB9',
+            'EXCLUSION', '#C75A5A',
             '#5B8FB9',
           ],
           'fill-opacity': [
             'case', ['==', ['get', 'selected'], true],
-            0.32,
+            0.35,
             ['match', ['get', 'zone_type'],
-              'NO_FLY',  0.20,
-              'WARNING', 0.20,
-              'SAFE',    0.18,
-              0.18,
+              'NO_FLY',    0.20,
+              'WARNING',   0.18,
+              'SAFE',      0.16,
+              'INCLUSION', 0.15,
+              'EXCLUSION', 0.22,
+              0.16,
             ],
           ],
         },
@@ -100,15 +99,15 @@ export class GeofenceLayer {
         paint: {
           'line-color': [
             'match', ['get', 'zone_type'],
-            'NO_FLY',   '#C75A5A',
-            'WARNING',  '#C49A4A',
-            'SAFE',     '#4F9A72',
-            'INCLUSION','#5B8FB9',
-            'EXCLUSION','#C75A5A',
+            'NO_FLY',    '#C75A5A',
+            'WARNING',   '#C49A4A',
+            'SAFE',      '#4F9A72',
+            'INCLUSION', '#5B8FB9',
+            'EXCLUSION', '#C75A5A',
             '#5B8FB9',
           ],
-          'line-width': ['case', ['==', ['get', 'selected'], true], 3.5, 2.0],
-          'line-opacity': ['case', ['==', ['get', 'selected'], true], 1.0, 0.85],
+          'line-width': ['case', ['==', ['get', 'selected'], true], 3.0, 1.8],
+          'line-opacity': ['case', ['==', ['get', 'selected'], true], 1.0, 0.8],
         },
       });
 
@@ -122,7 +121,7 @@ export class GeofenceLayer {
         id: this.drawingFillLayerId,
         type: 'fill',
         source: this.drawingSourceId,
-        paint: { 'fill-color': '#5B8FB9', 'fill-opacity': 0.16 },
+        paint: { 'fill-color': '#5B8FB9', 'fill-opacity': 0.20 },
       });
 
       this.map.addLayer({
@@ -131,12 +130,12 @@ export class GeofenceLayer {
         source: this.drawingSourceId,
         paint: {
           'line-color': '#5B8FB9',
-          'line-width': 1.8,
-          'line-dasharray': [4, 2],
+          'line-width': 2.0,
+          'line-dasharray': [3, 2],
         },
       });
 
-      // Click to select (only when not drawing)
+      // Click to select geofence from map
       this.map.on('click', this.fillLayerId, (e) => {
         const { drawing_mode } = useGeofenceStore.getState();
         const { interactionMode } = useMapStore.getState();
@@ -167,36 +166,36 @@ export class GeofenceLayer {
   }
 
   public updateGeofences(geofences: Geofence[], selectedId: string | null = null): void {
-    // Cache for re-rendering after style reload
     this.lastGeofences = geofences;
     this.lastSelectedId = selectedId;
 
     if (!this.map || !this.map.isStyleLoaded()) return;
 
-    // Re-init if layers were removed by a style change
     if (!this.map.getSource(this.sourceId)) {
       this.initLayers();
     }
 
     const features: any[] = [];
     geofences.forEach((g) => {
-      // CRITICAL FIX: was `if (!g.visible) return;` which drops undefined-visible geofences
-      // Now: only skip if explicitly false
       if (g.visible === false) return;
 
       let polygonCoords: [number, number][][] = [];
 
-      if (g.geometry_type === 'CIRCLE' && g.center && g.radius) {
-        polygonCoords = [this.generateCirclePolygon(g.center[0], g.center[1], g.radius)];
+      if (g.geometry_type === 'CIRCLE') {
+        const center = g.center || (g.coordinates && g.coordinates[0]);
+        if (center) {
+          polygonCoords = [this.generateCirclePolygon(center[0], center[1], g.radius ?? 200)];
+        }
+      } else if (g.geometry_type === 'CORRIDOR' && g.coordinates && g.coordinates.length >= 2) {
+        polygonCoords = [this.generateCorridorPolygon(g.coordinates, g.corridor_width ?? 50)];
       } else if (g.coordinates && g.coordinates.length >= 3) {
         const closed = [...g.coordinates];
-        // Close polygon if not already closed
         const first = closed[0];
         const last = closed[closed.length - 1];
         if (first[0] !== last[0] || first[1] !== last[1]) {
           closed.push(first);
         }
-        // coordinates are [lat, lon] → GeoJSON needs [lon, lat]
+        // [lat, lon] → [lon, lat] for GeoJSON
         polygonCoords = [closed.map((c) => [c[1], c[0]] as [number, number])];
       }
 
@@ -209,6 +208,7 @@ export class GeofenceLayer {
             name: g.name,
             zone_type: g.zone_type,
             selected: g.id === selectedId,
+            enabled: g.enabled,
           },
           geometry: { type: 'Polygon', coordinates: polygonCoords },
         });
@@ -218,7 +218,6 @@ export class GeofenceLayer {
     const source = this.map.getSource(this.sourceId) as maplibregl.GeoJSONSource;
     if (source) {
       source.setData({ type: 'FeatureCollection', features });
-      console.debug(`[GeofenceLayer] Rendered ${features.length}/${geofences.length} geofences`);
     }
 
     this.renderHandles(geofences.find((g) => g.id === selectedId));
@@ -231,11 +230,35 @@ export class GeofenceLayer {
       this.initLayers();
     }
 
+    const { active_geometry_type } = useGeofenceStore.getState();
     const drawingCoords = [...points];
     if (preview) drawingCoords.push(preview);
 
     const features: any[] = [];
-    if (drawingCoords.length >= 3) {
+
+    if (active_geometry_type === 'CIRCLE' && drawingCoords.length >= 1) {
+      const center = drawingCoords[0];
+      let radius = 200;
+      if (drawingCoords.length >= 2) {
+        // Calculate radius from center to second/preview point
+        radius = this.calculateDistance(center[0], center[1], drawingCoords[1][0], drawingCoords[1][1]);
+      }
+      features.push({
+        type: 'Feature',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [this.generateCirclePolygon(center[0], center[1], radius).map((p) => [p[0], p[1]])],
+        },
+      });
+    } else if (active_geometry_type === 'CORRIDOR' && drawingCoords.length >= 2) {
+      features.push({
+        type: 'Feature',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [this.generateCorridorPolygon(drawingCoords, 50).map((p) => [p[0], p[1]])],
+        },
+      });
+    } else if (drawingCoords.length >= 3) {
       const closed = [...drawingCoords, drawingCoords[0]];
       features.push({
         type: 'Feature',
@@ -263,9 +286,20 @@ export class GeofenceLayer {
   /** Fit the camera to show all coordinates of the given geofence */
   public fitGeofence(geofence: Geofence): void {
     if (!this.map) return;
-    const coords = geofence.geometry_type === 'CIRCLE' && geofence.center
-      ? this.generateCirclePolygon(geofence.center[0], geofence.center[1], geofence.radius ?? 200)
-      : geofence.coordinates;
+    let coords: [number, number][] = [];
+
+    if (geofence.geometry_type === 'CIRCLE' && geofence.center) {
+      coords = this.generateCirclePolygon(geofence.center[0], geofence.center[1], geofence.radius ?? 200).map(
+        (c) => [c[1], c[0]]
+      );
+    } else if (geofence.geometry_type === 'CORRIDOR' && geofence.coordinates.length >= 2) {
+      coords = this.generateCorridorPolygon(geofence.coordinates, geofence.corridor_width ?? 50).map(
+        (c) => [c[1], c[0]]
+      );
+    } else if (geofence.coordinates) {
+      coords = geofence.coordinates;
+    }
+
     if (!coords || coords.length === 0) return;
 
     const lats = coords.map((c) => c[0]);
@@ -317,6 +351,7 @@ export class GeofenceLayer {
     });
   }
 
+  /** Generates [lon, lat][] circle boundary */
   private generateCirclePolygon(lat: number, lon: number, radiusM: number, points = 36): [number, number][] {
     const coords: [number, number][] = [];
     const earthRadius = 6371000;
@@ -327,8 +362,66 @@ export class GeofenceLayer {
       const theta = (i * 2 * Math.PI) / points;
       const pLat = lat + dLat * (180 / Math.PI) * Math.sin(theta);
       const pLon = lon + dLon * (180 / Math.PI) * Math.cos(theta);
-      coords.push([pLat, pLon]);
+      coords.push([pLon, pLat]); // [lon, lat] for GeoJSON
     }
     return coords;
+  }
+
+  /** Generates buffered corridor [lon, lat][] polygon */
+  private generateCorridorPolygon(points: [number, number][], widthM: number): [number, number][] {
+    if (points.length < 2) return [];
+    const leftCoords: [number, number][] = [];
+    const rightCoords: [number, number][] = [];
+    const halfWidth = widthM / 2.0;
+
+    for (let i = 0; i < points.length; i++) {
+      const curr = points[i];
+      let dx = 0;
+      let dy = 0;
+
+      if (i < points.length - 1) {
+        const next = points[i + 1];
+        dx = next[1] - curr[1];
+        dy = next[0] - curr[0];
+      } else {
+        const prev = points[i - 1];
+        dx = curr[1] - prev[1];
+        dy = curr[0] - prev[0];
+      }
+
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len === 0) continue;
+
+      // Normal vector
+      const nx = -dy / len;
+      const ny = dx / len;
+
+      const earthRadius = 6371000;
+      const dLat = (halfWidth / earthRadius) * (180 / Math.PI);
+      const dLon = (halfWidth / (earthRadius * Math.cos((Math.PI * curr[0]) / 180))) * (180 / Math.PI);
+
+      leftCoords.push([curr[1] + nx * dLon, curr[0] + ny * dLat]);
+      rightCoords.unshift([curr[1] - nx * dLon, curr[0] - ny * dLat]);
+    }
+
+    const corridor = [...leftCoords, ...rightCoords];
+    if (corridor.length > 0) {
+      corridor.push(corridor[0]);
+    }
+    return corridor;
+  }
+
+  private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371000;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
   }
 }

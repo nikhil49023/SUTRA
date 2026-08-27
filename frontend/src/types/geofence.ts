@@ -13,6 +13,7 @@ export interface Geofence {
   corridor_width?: number; // meters for corridor
   altitude_min: number; // AGL meters
   altitude_max: number; // AGL meters
+  priority?: number; // 1 (lowest) to 5 (highest/critical)
   enabled: boolean;
   visible: boolean;
   action?: string;
