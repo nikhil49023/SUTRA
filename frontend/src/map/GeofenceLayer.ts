@@ -71,23 +71,32 @@ export class GeofenceLayer {
         paint: {
           'fill-color': [
             'match', ['get', 'zone_type'],
-            'NO_FLY',    '#C75A5A',
-            'WARNING',   '#C49A4A',
-            'SAFE',      '#4F9A72',
-            'INCLUSION', '#5B8FB9',
-            'EXCLUSION', '#C75A5A',
-            '#5B8FB9',
+            'SAFE',      '#10B981',
+            'safe',      '#10B981',
+            'SAFE_ZONE', '#10B981',
+            'WARNING',   '#F59E0B',
+            'warning',   '#F59E0B',
+            'NO_FLY',    '#EF4444',
+            'no_fly',    '#EF4444',
+            'EXCLUSION', '#EF4444',
+            'INCLUSION', '#3B82F6',
+            'inclusion', '#3B82F6',
+            '#3B82F6',
           ],
           'fill-opacity': [
             'case', ['==', ['get', 'selected'], true],
-            0.32,
+            0.35,
             ['match', ['get', 'zone_type'],
-              'NO_FLY',    0.20,
-              'WARNING',   0.20,
-              'SAFE',      0.18,
-              'INCLUSION', 0.16,
-              'EXCLUSION', 0.20,
-              0.18,
+              'SAFE',      0.22,
+              'safe',      0.22,
+              'SAFE_ZONE', 0.22,
+              'WARNING',   0.22,
+              'warning',   0.22,
+              'NO_FLY',    0.22,
+              'no_fly',    0.22,
+              'EXCLUSION', 0.22,
+              'INCLUSION', 0.18,
+              0.20,
             ],
           ],
         },
@@ -101,12 +110,17 @@ export class GeofenceLayer {
         paint: {
           'line-color': [
             'match', ['get', 'zone_type'],
-            'NO_FLY',    '#C75A5A',
-            'WARNING',   '#C49A4A',
-            'SAFE',      '#4F9A72',
-            'INCLUSION', '#5B8FB9',
-            'EXCLUSION', '#C75A5A',
-            '#5B8FB9',
+            'SAFE',      '#10B981',
+            'safe',      '#10B981',
+            'SAFE_ZONE', '#10B981',
+            'WARNING',   '#F59E0B',
+            'warning',   '#F59E0B',
+            'NO_FLY',    '#EF4444',
+            'no_fly',    '#EF4444',
+            'EXCLUSION', '#EF4444',
+            'INCLUSION', '#3B82F6',
+            'inclusion', '#3B82F6',
+            '#3B82F6',
           ],
           'line-width': ['case', ['==', ['get', 'selected'], true], 3.5, 2.0],
           'line-opacity': ['case', ['==', ['get', 'selected'], true], 1.0, 0.85],
@@ -368,6 +382,11 @@ export class GeofenceLayer {
       [Math.max(...lons), Math.max(...lats)],
     ];
     this.map.fitBounds(bounds, { padding: 80, maxZoom: 16 });
+  }
+
+  public clearHandles(): void {
+    this.handleMarkers.forEach((m) => m.remove());
+    this.handleMarkers = [];
   }
 
   private renderHandles(geofence?: Geofence): void {

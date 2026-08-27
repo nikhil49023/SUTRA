@@ -2,6 +2,7 @@ import React, { useState, useEffect, memo } from 'react';
 import { useGeofenceStore } from '../stores/geofenceStore';
 import { useSelectionStore } from '../stores/selectionStore';
 import { commandManager } from '../communication/CommandManager';
+import { mapController } from '../map/MapController';
 import { ZoneType } from '../types/geofence';
 import { Edit3, Save, CheckCircle2 } from 'lucide-react';
 
@@ -74,9 +75,9 @@ export const GeofenceEditor: React.FC = memo(() => {
       visible: selectedGf.visible,
     });
 
-    // 3. Show saved confirmation
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2000);
+    // 3. Close editing dots/handles and clear selection
+    mapController.geofenceLayer.clearHandles();
+    useSelectionStore.getState().clearSelection();
   };
 
   return (
