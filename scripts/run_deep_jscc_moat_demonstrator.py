@@ -281,39 +281,63 @@ class DeepJsccMoatDemonstrator:
         self.modality = "THERMAL_FLIR"  # or OPTICAL_RGB
         self.paused = False
 
-    def generate_synthetic_search_frame(self, t: float, modality: str) -> np.ndarray:
-        """Generates realistic disaster search frame with survivor thermal blob & foliage."""
+        # Load real datasets from data/curated_sutra_dataset/
+        import glob
+        self.thermal_images = sorted(glob.glob("data/curated_sutra_dataset/images/train/hit_uav_thermal_*.jpg"))
+        self.optical_images = sorted(glob.glob("data/curated_sutra_dataset/images/train/visdrone_train_*.jpg"))
+
+        if not self.thermal_images:
+            self.thermal_images = sorted(glob.glob("data/hit_uav/**/*.jpg", recursive=True))
+        if not self.optical_images:
+            self.optical_images = sorted(glob.glob("data/visdrone/**/*.jpg", recursive=True))
+
+        print(f"📁 Loaded {len(self.thermal_images)} Real HIT-UAV Thermal frames")
+        print(f"📁 Loaded {len(self.optical_images)} Real VisDrone Optical frames")
+
+    def get_search_frame(self, frame_idx: int, t: float, modality: str) -> np.ndarray:
+        """Retrieves and prepares real dataset frames with survivor annotations."""
+        w, h = 640, 480
+        img = None
+
+        if modality == "THERMAL_FLIR" and self.thermal_images:
+            img_path = self.thermal_images[frame_idx % len(self.thermal_images)]
+            raw = cv2.imread(img_path)
+            if raw is not None:
+                img = cv2.resize(raw, (w, h))
+                # Enhance FLIR thermal contrast
+                if len(img.shape) == 2 or (img[:, :, 0] == img[:, :, 1]).all():
+                    img = cv2.applyColorMap(img[:, :, 0], cv2.COLORMAP_INFERNO)
+        elif modality == "OPTICAL_RGB" and self.optical_images:
+            img_path = self.optical_images[frame_idx % len(self.optical_images)]
+            raw = cv2.imread(img_path)
+            if raw is not None:
+                img = cv2.resize(raw, (w, h))
+
+        if img is None:
+            # Fallback synthetic frame if dataset is missing
+            img = self._generate_synthetic_fallback(t, modality)
+
+        return img
+
+    def _generate_synthetic_fallback(self, t: float, modality: str) -> np.ndarray:
         w, h = 640, 480
         if modality == "THERMAL_FLIR":
-            # Dark cold terrain with bright warm body
             img = np.full((h, w, 3), 35, dtype=np.uint8)
-            # Add cold foliage textures
             noise = np.random.randint(-10, 10, (h, w, 3), dtype=np.int16)
             img = np.clip(img.astype(np.int16) + noise, 0, 255).astype(np.uint8)
-
-            # Draw glowing human thermal silhouette
             cx, cy = int(w * 0.42 + math.sin(t * 0.5) * 20), int(h * 0.45)
-            # Head
             cv2.circle(img, (cx, cy - 35), 14, (255, 255, 255), -1)
-            # Torso
             cv2.ellipse(img, (cx, cy), (18, 30), 0, 0, 360, (230, 230, 230), -1)
-            # Legs
-            cv2.line(img, (cx - 8, cy + 30), (cx - 10, cy + 65), (200, 200, 200), 7)
-            cv2.line(img, (cx + 8, cy + 30), (cx + 10, cy + 65), (200, 200, 200), 7)
-            
-            # Apply thermal FLIR colormap
             img = cv2.applyColorMap(img[:, :, 0], cv2.COLORMAP_INFERNO)
         else:
-            # Forest foliage aerial RGB
             img = np.full((h, w, 3), (30, 80, 35), dtype=np.uint8)
             noise = np.random.randint(-15, 15, (h, w, 3), dtype=np.int16)
             img = np.clip(img.astype(np.int16) + noise, 0, 255).astype(np.uint8)
-            # Draw person
             cx, cy = int(w * 0.42 + math.sin(t * 0.5) * 20), int(h * 0.45)
             cv2.circle(img, (cx, cy - 35), 10, (180, 150, 120), -1)
             cv2.ellipse(img, (cx, cy), (14, 25), 0, 0, 360, (50, 50, 180), -1)
-
         return img
+
 
     def compose_quad_hud(self, orig: np.ndarray, classical: np.ndarray, jscc: np.ndarray, 
                          c_meta: dict, j_meta: dict, c_ai: dict, j_ai: dict) -> np.ndarray:
@@ -406,8 +430,9 @@ class DeepJsccMoatDemonstrator:
                     else:
                         self.current_snr_db = -8.0 + ((cycle_t - 7.5) / 7.5) * 28.0  # -8 -> +20 dB
 
-                # 1. Generate Input Search Frame
-                raw_frame = self.generate_synthetic_search_frame(t, self.modality)
+                # 1. Ingest Real Drone Disaster Search Frame (HIT-UAV Thermal / VisDrone)
+                raw_frame = self.get_search_frame(frame_idx, t, self.modality)
+
 
                 # 2. Transmit through Classical Digital Pipeline
                 c_recon, c_meta = self.classical_pipe.transmit(raw_frame, self.current_snr_db)
