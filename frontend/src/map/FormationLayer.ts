@@ -3,18 +3,30 @@
  */
 
 import maplibregl from 'maplibre-gl';
-import { DroneState, FleetState } from '../types/fleet';
+import { FleetState } from '../types/fleet';
 
 export class FormationLayer {
   private map: maplibregl.Map | null = null;
   private sourceId = 'formation-guides-source';
   private lineLayerId = 'formation-guides-line';
+  private lastFleetState: FleetState | null = null;
 
   public setMap(map: maplibregl.Map | null): void {
     this.map = map;
-    if (map && map.isStyleLoaded()) {
+    if (!map) return;
+
+    if (map.isStyleLoaded()) {
       this.initLayers();
+    } else {
+      map.once('load', () => this.initLayers());
     }
+
+    map.on('style.load', () => {
+      this.initLayers();
+      if (this.lastFleetState) {
+        this.updateFormation(this.lastFleetState);
+      }
+    });
   }
 
   public initLayers(): void {
@@ -43,6 +55,8 @@ export class FormationLayer {
   }
 
   public updateFormation(fleet: FleetState): void {
+    this.lastFleetState = fleet;
+
     if (!this.map || !this.map.isStyleLoaded() || !fleet.show_guides) return;
     this.initLayers();
 
@@ -64,6 +78,7 @@ export class FormationLayer {
                 [targetLon, targetLat],
               ],
             },
+            properties: {},
           });
         }
       });
@@ -71,7 +86,10 @@ export class FormationLayer {
 
     const source = this.map.getSource(this.sourceId) as maplibregl.GeoJSONSource;
     if (source) {
-      source.setData({ type: 'FeatureCollection', features });
+      source.setData({
+        type: 'FeatureCollection',
+        features,
+      });
     }
   }
 }

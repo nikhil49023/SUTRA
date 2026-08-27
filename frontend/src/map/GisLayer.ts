@@ -3,7 +3,7 @@
  */
 
 import maplibregl from 'maplibre-gl';
-import { GISState } from '../types/gis';
+import { GISState, LOSVector } from '../types/gis';
 
 export class GisLayer {
   private map: maplibregl.Map | null = null;
@@ -11,12 +11,24 @@ export class GisLayer {
   private losLineLayerId = 'gis-los-line';
   private searchSourceId = 'gis-search-source';
   private searchLineLayerId = 'gis-search-line';
+  private lastGisState: GISState | null = null;
 
   public setMap(map: maplibregl.Map | null): void {
     this.map = map;
-    if (map && map.isStyleLoaded()) {
+    if (!map) return;
+
+    if (map.isStyleLoaded()) {
       this.initLayers();
+    } else {
+      map.once('load', () => this.initLayers());
     }
+
+    map.on('style.load', () => {
+      this.initLayers();
+      if (this.lastGisState) {
+        this.updateGis(this.lastGisState);
+      }
+    });
   }
 
   public initLayers(): void {
@@ -61,44 +73,51 @@ export class GisLayer {
     }
   }
 
-  public updateGis(gis: GISState): void {
+  public updateGis(gisState: GISState): void {
+    this.lastGisState = gisState;
+
     if (!this.map || !this.map.isStyleLoaded()) return;
     this.initLayers();
 
-    // LOS update
-    const losFeatures: GeoJSON.Feature<GeoJSON.LineString>[] = gis.los_enabled
-      ? gis.los_vectors.map((v) => ({
-          type: 'Feature' as const,
-          properties: { visible: v.visible },
-          geometry: {
-            type: 'LineString' as const,
-            coordinates: [
-              [v.obs_lon, v.obs_lat],
-              [v.target_lon, v.target_lat],
-            ],
-          },
-        }))
-      : [];
-
+    // Render LOS
     const losSource = this.map.getSource(this.losSourceId) as maplibregl.GeoJSONSource;
-    if (losSource) losSource.setData({ type: 'FeatureCollection', features: losFeatures });
+    if (losSource) {
+      const features = (gisState.los_vectors || []).map((ray: LOSVector) => ({
+        type: 'Feature' as const,
+        geometry: {
+          type: 'LineString' as const,
+          coordinates: [
+            [ray.target_lon, ray.target_lat],
+            [ray.obs_lon, ray.obs_lat],
+          ],
+        },
+        properties: {
+          visible: ray.visible,
+        },
+      }));
 
-    // Search path update
-    const searchFeatures: GeoJSON.Feature<GeoJSON.LineString>[] =
-      gis.grid_enabled && gis.search_path_points.length >= 2
-        ? [
-            {
-              type: 'Feature' as const,
-              properties: {},
-              geometry: {
-                type: 'LineString' as const,
-                coordinates: gis.search_path_points.map((p) => [p[1], p[0]]),
-              },
-            },
-          ]
-        : [];
+      losSource.setData({
+        type: 'FeatureCollection',
+        features,
+      });
+    }
 
+    // Render Search Path
     const searchSource = this.map.getSource(this.searchSourceId) as maplibregl.GeoJSONSource;
-    if (searchSource) searchSource.setData({ type: 'FeatureCollection', features: searchFeatures });
+    if (searchSource && gisState.search_path_points && gisState.search_path_points.length >= 2) {
+      searchSource.setData({
+        type: 'FeatureCollection',
+        features: [
+          {
+            type: 'Feature' as const,
+            geometry: {
+              type: 'LineString' as const,
+              coordinates: gisState.search_path_points.map((p) => [p[1], p[0]]),
+            },
+            properties: {},
+          },
+        ],
+      });
+    }
   }
 }

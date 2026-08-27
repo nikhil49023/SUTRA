@@ -9,6 +9,8 @@ export type NavigationSection =
   | 'LIVEOPS'
   | 'SETTINGS';
 
+export type MapStyleType = 'tactical-dark' | 'satellite' | 'terrain' | 'streets';
+
 export interface Alert {
   alert_id: string;
   timestamp: number;

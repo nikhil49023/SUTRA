@@ -10,12 +10,26 @@ export class RouteLayer {
   private sourceId = 'mission-route-source';
   private lineLayerId = 'mission-route-line';
   private dashLayerId = 'mission-route-dash';
+  private lastWaypoints: Waypoint[] = [];
+  private lastHomeLat?: number;
+  private lastHomeLon?: number;
 
   public setMap(map: maplibregl.Map | null): void {
     this.map = map;
-    if (map && map.isStyleLoaded()) {
+    if (!map) return;
+
+    if (map.isStyleLoaded()) {
       this.initLayers();
+    } else {
+      map.once('load', () => this.initLayers());
     }
+
+    map.on('style.load', () => {
+      this.initLayers();
+      if (this.lastWaypoints.length > 0) {
+        this.updateRoute(this.lastWaypoints, this.lastHomeLat, this.lastHomeLon);
+      }
+    });
   }
 
   public initLayers(): void {
@@ -64,6 +78,10 @@ export class RouteLayer {
   }
 
   public updateRoute(waypoints: Waypoint[], homeLat?: number, homeLon?: number): void {
+    this.lastWaypoints = waypoints;
+    this.lastHomeLat = homeLat;
+    this.lastHomeLon = homeLon;
+
     if (!this.map || !this.map.isStyleLoaded()) return;
     this.initLayers();
 

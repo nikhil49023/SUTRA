@@ -1,5 +1,27 @@
 import { create } from 'zustand';
-import { ApplicationState, NavigationSection } from '../types/app';
+import { ApplicationState, NavigationSection, MapStyleType } from '../types/app';
+
+const STORAGE_MAP_STYLE_KEY = 'sh_gcs_map_style_preference';
+
+function loadStoredMapStyle(): MapStyleType {
+  try {
+    const saved = localStorage.getItem(STORAGE_MAP_STYLE_KEY);
+    if (saved && ['tactical-dark', 'satellite', 'terrain', 'streets'].includes(saved)) {
+      return saved as MapStyleType;
+    }
+  } catch (e) {
+    // Ignore storage parse error
+  }
+  return 'tactical-dark';
+}
+
+function saveMapStyle(style: MapStyleType) {
+  try {
+    localStorage.setItem(STORAGE_MAP_STYLE_KEY, style);
+  } catch (e) {
+    // Ignore storage write error
+  }
+}
 
 interface AppStoreState extends ApplicationState {
   activeSection: NavigationSection;
@@ -10,7 +32,8 @@ interface AppStoreState extends ApplicationState {
   activeConsoleTab: 'TELEMETRY' | 'MISSION' | 'SAFETY' | 'COMMUNICATION' | 'AI' | 'SYSTEM';
   theme: 'dark-tactical' | 'satellite' | 'high-contrast';
   units: 'metric' | 'imperial';
-  mapStyle: 'tactical-dark' | 'satellite' | 'terrain';
+  mapStyle: MapStyleType;
+  mapStyleLoading: boolean;
   telemetryRateHz: number;
   hudRefreshRateHz: number;
   emergencyModalOpen: boolean;
@@ -29,7 +52,8 @@ interface AppStoreState extends ApplicationState {
   setActiveConsoleTab: (tab: 'TELEMETRY' | 'MISSION' | 'SAFETY' | 'COMMUNICATION' | 'AI' | 'SYSTEM') => void;
   setTheme: (theme: 'dark-tactical' | 'satellite' | 'high-contrast') => void;
   setUnits: (units: 'metric' | 'imperial') => void;
-  setMapStyle: (style: 'tactical-dark' | 'satellite' | 'terrain') => void;
+  setMapStyle: (style: MapStyleType) => void;
+  setMapStyleLoading: (loading: boolean) => void;
   setEmergencyModalOpen: (open: boolean, targetDrone?: string) => void;
   hydrateFromSnapshot: (appState: Partial<ApplicationState>) => void;
 }
@@ -51,7 +75,8 @@ export const useAppStore = create<AppStoreState>((set) => ({
   activeConsoleTab: 'TELEMETRY',
   theme: 'dark-tactical',
   units: 'metric',
-  mapStyle: 'tactical-dark',
+  mapStyle: loadStoredMapStyle(),
+  mapStyleLoading: false,
   telemetryRateHz: 10,
   hudRefreshRateHz: 60,
   emergencyModalOpen: false,
@@ -69,7 +94,11 @@ export const useAppStore = create<AppStoreState>((set) => ({
   setActiveConsoleTab: (tab) => set({ activeConsoleTab: tab }),
   setTheme: (theme) => set({ theme }),
   setUnits: (units) => set({ units }),
-  setMapStyle: (mapStyle) => set({ mapStyle }),
+  setMapStyle: (mapStyle) => {
+    saveMapStyle(mapStyle);
+    set({ mapStyle });
+  },
+  setMapStyleLoading: (mapStyleLoading) => set({ mapStyleLoading }),
   setEmergencyModalOpen: (open, targetDrone = 'ALL') =>
     set({ emergencyModalOpen: open, emergencyTargetDrone: targetDrone }),
   hydrateFromSnapshot: (appState) => set((s) => ({ ...s, ...appState })),
