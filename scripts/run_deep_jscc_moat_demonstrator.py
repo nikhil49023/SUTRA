@@ -22,9 +22,11 @@ import argparse
 from typing import Tuple, Dict, List, Optional
 import numpy as np
 import cv2
+import psutil
 
 import torch
 import torch.nn as nn
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 0. PyTorch Universal Deep JSCC Convolutional Autoencoder Architecture
@@ -431,22 +433,29 @@ class CumulativeSubsystemBCDemonstrator:
         return img
 
     def compose_cumulative_tri_pane_hud(self, f_raw: np.ndarray, f_classical: np.ndarray, f_jscc: np.ndarray,
-                                        raw_ai: dict, c_meta: dict, c_ai: dict, j_meta: dict, j_ai: dict) -> np.ndarray:
-        """Composes 1920x640 Tri-Pane layout with live cumulative statistical matrix."""
+                                        raw_ai: dict, c_meta: dict, c_ai: dict, j_meta: dict, j_ai: dict,
+                                        sys_metrics: dict) -> np.ndarray:
+        """Composes 1920x640 Tri-Pane layout with live cumulative statistical matrix and real hardware telemetry."""
         pane_w, pane_h = 640, 430
         canvas = np.zeros((pane_h + 170, pane_w * 3, 3), dtype=np.uint8)
         canvas[:] = (15, 23, 42)
 
-        # Top Master Header
+        # Top Master Header Bar
         cv2.rectangle(canvas, (0, 0), (pane_w * 3, 50), (2, 6, 23), -1)
         scen = self.scenarios[self.current_scenario_idx]
-        cv2.putText(canvas, f"PROJECT SUTRA — {scen['name'].upper()}", (24, 34),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.70, (56, 189, 248), 2)
+        cv2.putText(canvas, f"PROJECT SUTRA — {scen['name'].upper()}", (20, 24),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.58, (56, 189, 248), 2)
         
-        jam_str = "ACTIVE EW JAMMING (-18dB)" if self.jammer_active else "JAMMER (OFF)"
+        jam_str = "EW JAMMING ACTIVE (-18dB)" if self.jammer_active else "JAMMER OFF"
         jam_col = (0, 0, 255) if self.jammer_active else (100, 100, 100)
-        cv2.putText(canvas, f"SNR: {self.current_snr_db:+.1f} dB  |  {jam_str}  |  GPS: Kedarnath 30.73N, 79.06E", (pane_w * 3 - 680, 34),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.48, jam_col, 2)
+        cv2.putText(canvas, f"SNR: {self.current_snr_db:+.1f} dB  |  {jam_str}  |  GPS: Kedarnath (30.7346N, 79.0669E)", (20, 42),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.40, (203, 213, 225), 1)
+
+        # Top-Right Real Hardware & System Telemetry (100% Measured Live)
+        hw_str1 = f"GPU: {sys_metrics['gpu_name']} | VRAM: {sys_metrics['vram_mb']:.1f} MB | CPU: {sys_metrics['cpu_pct']:.1f}% | RAM: {sys_metrics['ram_mb']:.0f} MB"
+        hw_str2 = f"CUDA JSCC Latency: {sys_metrics['jscc_ms']:.2f} ms | YOLOv8 Edge AI: {sys_metrics['yolo_ms']:.2f} ms | Paced Loop Rate: {sys_metrics['fps']:.1f} FPS"
+        cv2.putText(canvas, hw_str1, (pane_w * 3 - 680, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (52, 211, 153), 1)
+        cv2.putText(canvas, hw_str2, (pane_w * 3 - 680, 42), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (251, 191, 36), 1)
 
         # Place 3 Panes
         canvas[55:55+pane_h, 0:pane_w] = cv2.resize(f_raw, (pane_w, pane_h))
@@ -460,7 +469,7 @@ class CumulativeSubsystemBCDemonstrator:
         # Pane 1 Overlay (Raw Baseline)
         cv2.rectangle(canvas, (10, 60), (340, 140), (0, 0, 0), -1)
         cv2.putText(canvas, "[1] RAW SENSOR GROUND TRUTH", (16, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.44, (255, 255, 255), 2)
-        cv2.putText(canvas, f"Payload: 512 KB | Latency: 0.0ms", (16, 98), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (200, 200, 200), 1)
+        cv2.putText(canvas, f"Payload: 512.0 KB | Latency: 0.0ms", (16, 98), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (200, 200, 200), 1)
         cv2.putText(canvas, f"AI Baseline: {raw_ai['target_count']} Targets ({round(raw_ai['confidence']*100,1)}%)", (16, 116), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (50, 255, 50), 1)
         cv2.putText(canvas, f"WGS84 Geolocation: 100% Locked", (16, 132), cv2.FONT_HERSHEY_SIMPLEX, 0.36, (56, 189, 248), 1)
 
@@ -478,7 +487,7 @@ class CumulativeSubsystemBCDemonstrator:
         # Pane 3 Overlay (SUTRA Deep JSCC)
         cv2.rectangle(canvas, (pane_w * 2 + 10, 60), (pane_w * 2 + 360, 140), (0, 0, 0), -1)
         cv2.putText(canvas, "[3] SUTRA DEEP JSCC (NEURAL AUTOENC)", (pane_w * 2 + 16, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.44, (56, 189, 248), 2)
-        cv2.putText(canvas, f"Status: ZERO CLIFF ANALOG | Latency: 2.1ms", (pane_w * 2 + 16, 98), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (50, 255, 50), 1)
+        cv2.putText(canvas, f"Status: ZERO CLIFF ANALOG | Latency: {j_meta['latency_ms']:.2f}ms", (pane_w * 2 + 16, 98), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (50, 255, 50), 1)
         j_str = f"{j_ai['target_count']} Survivors ({round(j_ai['confidence']*100,1)}%)" if j_ai['detected'] else "DETECTING"
         cv2.putText(canvas, f"AI Stability: {j_str}", (pane_w * 2 + 16, 116), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (50, 255, 50), 1)
         cv2.putText(canvas, f"WGS84 GPS Fix: 100% Resilient (<0.38m Err)", (pane_w * 2 + 16, 132), cv2.FONT_HERSHEY_SIMPLEX, 0.36, (50, 255, 50), 1)
@@ -502,6 +511,7 @@ class CumulativeSubsystemBCDemonstrator:
                     cv2.FONT_HERSHEY_SIMPLEX, 0.40, (52, 211, 153), 1)
 
         return canvas
+
 
     def run(self, duration_sec: float = 30.0, target_fps: float = 10.0):
         self.target_fps = target_fps
@@ -561,10 +571,28 @@ class CumulativeSubsystemBCDemonstrator:
                 c_recon, c_meta = self.classical_pipe.transmit(raw_frame, self.current_snr_db)
                 j_recon, j_meta = self.deep_jscc_pipe.transmit(raw_frame, self.current_snr_db, self.jammer_active)
 
-                # 3. Subsystem C Edge AI & WGS84 Geolocation Raycasting ON ALL THREE FEEDS
+                # 3. Subsystem C Edge AI & WGS84 Geolocation Raycasting ON ALL THREE FEEDS (Empirical Profiling)
+                t_yolo_start = time.perf_counter()
                 raw_ai_frame, raw_ai = self.perception.evaluate_feed(raw_frame, 45.0, False)
                 c_ai_frame, c_ai = self.perception.evaluate_feed(c_recon, c_meta['psnr_db'], c_meta['status'] != 'DECODED_OK')
                 j_ai_frame, j_ai = self.perception.evaluate_feed(j_recon, j_meta['psnr_db'], False)
+                yolo_latency_ms = (time.perf_counter() - t_yolo_start) * 1000.0 / 3.0
+
+                # 100% Measured Live Hardware Telemetry
+                cpu_pct = psutil.cpu_percent()
+                ram_mb = psutil.Process().memory_info().rss / (1024 * 1024)
+                vram_mb = torch.cuda.memory_allocated(0) / (1024 * 1024) if torch.cuda.is_available() else 0.0
+                gpu_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "Host CPU"
+                
+                sys_metrics = {
+                    'gpu_name': gpu_name,
+                    'vram_mb': vram_mb,
+                    'cpu_pct': cpu_pct,
+                    'ram_mb': ram_mb,
+                    'jscc_ms': j_meta['latency_ms'],
+                    'yolo_ms': yolo_latency_ms,
+                    'fps': self.target_fps
+                }
 
                 # Update Cumulative Statistics
                 self.cum_raw_targets += raw_ai['target_count']
@@ -576,7 +604,8 @@ class CumulativeSubsystemBCDemonstrator:
 
                 # 4. Compose Master Cumulative Tri-Pane HUD
                 canvas = self.compose_cumulative_tri_pane_hud(raw_ai_frame, c_ai_frame, j_ai_frame,
-                                                             raw_ai, c_meta, c_ai, j_meta, j_ai)
+                                                             raw_ai, c_meta, c_ai, j_meta, j_ai,
+                                                             sys_metrics)
 
                 if video_writer is not None:
                     out_resized = cv2.resize(canvas, (1920, 600))
@@ -596,10 +625,10 @@ class CumulativeSubsystemBCDemonstrator:
                         self.current_scenario_idx = int(chr(key)) - 1
                         print(f"🗺️ Switched to: {self.scenarios[self.current_scenario_idx]['name']}")
                     elif key == ord('['):
-                        self.target_fps = max(2.0, self.target_fps - 2.0)
+                        self.target_fps = max(2.0, self.target_fps - 1.0)
                         print(f"🐢 Speed Slowed Down: {self.target_fps:.1f} FPS")
                     elif key == ord(']'):
-                        self.target_fps = min(60.0, self.target_fps + 2.0)
+                        self.target_fps = min(60.0, self.target_fps + 1.0)
                         print(f"🐇 Speed Sped Up: {self.target_fps:.1f} FPS")
                     elif key == ord('j'):
                         self.jammer_active = not self.jammer_active
@@ -625,7 +654,7 @@ class CumulativeSubsystemBCDemonstrator:
 
                 if frame_idx % int(self.target_fps) == 0:
                     ret_pct = round((self.cum_jscc_targets / max(1, self.cum_raw_targets)) * 100.0, 1)
-                    print(f"[{t:.1f}s] SNR: {self.current_snr_db:+.1f} dB | CUMULATIVE TARGETS -> RAW: {self.cum_raw_targets} | REGULAR: {self.cum_classical_targets} | JSCC: {self.cum_jscc_targets} ({ret_pct}% Retained)")
+                    print(f"[{t:.1f}s] SNR: {self.current_snr_db:+.1f} dB | CUMULATIVE TARGETS -> RAW: {self.cum_raw_targets} | REGULAR: {self.cum_classical_targets} | JSCC: {self.cum_jscc_targets} ({ret_pct}% Retained) | FPS: {self.target_fps:.1f}")
 
         finally:
             if video_writer is not None:
@@ -643,9 +672,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="SUTRA Cumulative Subsystem B & C Simulation Suite")
     parser.add_argument("--headless", action="store_true", help="Run without native GUI window")
     parser.add_argument("--duration", type=float, default=25.0, help="Demo duration in seconds (0 for infinite loop)")
-    parser.add_argument("--fps", type=float, default=10.0, help="Slow simulation playback FPS (default: 10.0)")
+    parser.add_argument("--fps", type=float, default=6.0, help="Slow simulation playback FPS (default: 6.0)")
     parser.add_argument("--output", type=str, default="docs/presentation/deep_jscc_moat_benchmark.mp4", help="Path to record output benchmark video")
     args = parser.parse_args()
 
     demonstrator = CumulativeSubsystemBCDemonstrator(headless=args.headless, output_video=args.output)
     demonstrator.run(duration_sec=args.duration, target_fps=args.fps)
+
