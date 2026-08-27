@@ -261,7 +261,9 @@ class MessageRouter {
 
     // Alert Events
     else if (topic === 'alert.created' && payload.alert) {
-      useAlertStore.getState().addAlert(payload.alert);
+      if (payload.alert.source !== 'geofence_monitor' && !payload.alert.title?.toLowerCase().includes('geofence')) {
+        useAlertStore.getState().addAlert(payload.alert);
+      }
     } else if (topic === 'alert.acknowledged' && payload.alert_id) {
       useAlertStore.getState().acknowledgeAlert(payload.alert_id);
     }

@@ -89,12 +89,7 @@ export const GeofenceSidebar: React.FC = memo(() => {
     reader.onload = (event) => {
       const content = event.target?.result as string;
       if (content) {
-        const res = importGeoJSON(content);
-        if (res.success) {
-          alert(`Successfully imported ${res.importedCount} geofence(s).`);
-        } else {
-          alert(`Failed to import GeoJSON:\n${res.errors.join('\n')}`);
-        }
+        importGeoJSON(content);
       }
     };
     reader.readAsText(file);
