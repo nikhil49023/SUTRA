@@ -31,6 +31,7 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 from geometry_msgs.msg import PoseStamped, TwistStamped
 from nav_msgs.msg import Odometry
+from sensor_msgs.msg import FluidPressure, MagneticField, LaserScan
 from std_msgs.msg import String
 
 
@@ -385,6 +386,27 @@ class PX4OffboardControllerNode(Node):
             String, "/sutra/cmd/rtl", self._on_cmd_rtl, 10
         )
 
+        # ── Extended Sensor Avionics Subscriptions ───────────────────────────
+        sensor_qos = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            durability=DurabilityPolicy.VOLATILE,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=5
+        )
+        self.baro_alt_m: Optional[float] = None
+        self.rangefinder_dist_m: Optional[float] = None
+        self.mag_heading_rad: Optional[float] = None
+
+        self.sub_baro = self.create_subscription(
+            FluidPressure, f"/{self.drone_id}/air_pressure", self._on_air_pressure, sensor_qos
+        )
+        self.sub_rangefinder = self.create_subscription(
+            LaserScan, f"/{self.drone_id}/rangefinder/distance", self._on_rangefinder, sensor_qos
+        )
+        self.sub_mag = self.create_subscription(
+            MagneticField, f"/{self.drone_id}/magnetometer", self._on_magnetometer, sensor_qos
+        )
+
         # ── Timers: 50Hz Flight Loop (20ms) & 10Hz Heartbeat (100ms) ──────────
         self.timer_heartbeat = self.create_timer(0.10, self._heartbeat_tick)     # 10Hz
         self.timer_control = self.create_timer(0.02, self._flight_control_tick)  # 50Hz
@@ -527,13 +549,16 @@ class PX4OffboardControllerNode(Node):
                 des_vel_enu = [(dx / dist) * speed, (dy / dist) * speed, (dz / dist) * speed]
 
         elif self.state in (PX4FlightState.EMERGENCY_LAND, PX4FlightState.RETURN_TO_LAUNCH):
-            # 2-phase WaveLander soft descent
-            if self.pos_enu[2] > 1.2:
-                des_vel_enu = [0.0, 0.0, -1.20]  # Approach phase
+            # Precision WaveLander soft descent with rangefinder & barometer feedback
+            effective_alt = self.rangefinder_dist_m if (self.rangefinder_dist_m is not None and self.rangefinder_dist_m < 5.0) else self.pos_enu[2]
+            if effective_alt > 1.2:
+                des_vel_enu = [0.0, 0.0, -1.20]  # Fast approach phase
+            elif effective_alt > 0.35:
+                des_vel_enu = [0.0, 0.0, -0.35]  # Soft descent phase
             else:
-                des_vel_enu = [0.0, 0.0, -0.35]  # Soft touchdown phase
+                des_vel_enu = [0.0, 0.0, -0.15]  # Ground cushion phase
             des_pos_enu = [self.pos_enu[0], self.pos_enu[1], 0.0]
-            if self.pos_enu[2] <= 0.15:
+            if effective_alt <= 0.15:
                 self.disarm()
                 self.state = PX4FlightState.DISARMED_COMPLETE
 
@@ -577,6 +602,9 @@ class PX4OffboardControllerNode(Node):
             "pos_ned": [round(p, 3) for p in pos_ned],
             "vel_enu": [round(v, 3) for v in filtered_vel_enu],
             "target_enu": [round(t, 3) for t in self.target_pos_enu],
+            "baro_alt": round(self.baro_alt_m, 2) if self.baro_alt_m is not None else None,
+            "rangefinder_dist": round(self.rangefinder_dist_m, 2) if self.rangefinder_dist_m is not None else None,
+            "mag_heading": round(self.mag_heading_rad, 3) if self.mag_heading_rad is not None else None,
             "heartbeats": self.heartbeat_count,
             "timestamp": now,
         })
@@ -594,6 +622,25 @@ class PX4OffboardControllerNode(Node):
         self.pos_enu = (p.x, p.y, p.z)
         self.vel_enu = (v.x, v.y, v.z)
         self.pos_ned = enu_to_ned(p.x, p.y, p.z)
+
+    def _on_air_pressure(self, msg: FluidPressure) -> None:
+        """Converts barometric pressure in Pascals to barometric altitude (m)."""
+        if msg.fluid_pressure > 0.0:
+            self.baro_alt_m = 44330.0 * (1.0 - math.pow(msg.fluid_pressure / 101325.0, 0.190295))
+
+    def _on_rangefinder(self, msg: LaserScan) -> None:
+        """Processes downward laser altimeter/rangefinder distance (m)."""
+        if msg.ranges and len(msg.ranges) > 0:
+            dist = msg.ranges[0]
+            if not math.isnan(dist) and not math.isinf(dist) and dist > 0.0:
+                self.rangefinder_dist_m = float(dist)
+
+    def _on_magnetometer(self, msg: MagneticField) -> None:
+        """Extracts magnetic heading angle in radians to eliminate yaw drift."""
+        bx = msg.magnetic_field.x
+        by = msg.magnetic_field.y
+        if abs(bx) > 1e-6 or abs(by) > 1e-6:
+            self.mag_heading_rad = math.atan2(-by, bx)
 
     def _on_cmd_pose(self, msg: PoseStamped) -> None:
         """Handles external waypoint navigation commands in ENU frame."""

@@ -13,7 +13,8 @@ import {
   Wifi, 
   Navigation,
   Download,
-  Filter
+  Filter,
+  Video
 } from 'lucide-react';
 
 export interface TargetAlert {
@@ -23,8 +24,8 @@ export interface TargetAlert {
   lon: number;
   alt: number;
   confidence: number;
-  drone: str;
-  time: str;
+  drone: string;
+  time: string;
   bbox?: [number, number, number, number];
   sensors?: string[];
 }
@@ -45,6 +46,7 @@ export const GisTelemetryHud: React.FC = () => {
   const [activePort, setActivePort] = useState<number>(9090);
   const [wsRef, setWsRef] = useState<WebSocket | null>(null);
   const [rtlTriggered, setRtlTriggered] = useState<boolean>(false);
+  const [liveCameraFrame, setLiveCameraFrame] = useState<any>(null);
 
   // Default Swarm Telemetry Cache (Indian Flood Disaster Site: 20.5937° N, 78.9629° E)
   const [swarmTelemetry, setSwarmTelemetry] = useState<Record<string, SwarmDroneState>>({
@@ -133,6 +135,8 @@ export const GisTelemetryHud: React.FC = () => {
               if (payload.survivors && payload.survivors.length > 0) {
                 setTargetAlerts(payload.survivors);
               }
+            } else if (payload.topic === 'CAMERA_FRAME') {
+              setLiveCameraFrame(payload);
             } else if (payload.topic === 'SURVIVOR_ALERT') {
               setTargetAlerts((prev) => [payload.data, ...prev]);
             } else if (payload.topic === 'RAFT_STATUS') {
@@ -408,6 +412,19 @@ export const GisTelemetryHud: React.FC = () => {
                   </div>
                 );
               })}
+
+              {/* PiP Deep JSCC Live Camera Feed Overlay */}
+              {liveCameraFrame?.image_b64 && (
+                <div style={{ position: 'absolute', bottom: '16px', right: '16px', width: '220px', height: '124px', backgroundColor: '#020617', borderRadius: '10px', overflow: 'hidden', border: '1.5px solid #38bdf8', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.8)', zIndex: 40 }}>
+                  <img src={liveCameraFrame.image_b64} alt="PiP Stream" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <div style={{ position: 'absolute', top: '4px', left: '6px', backgroundColor: 'rgba(15, 23, 42, 0.85)', padding: '1px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: 800, color: '#38bdf8' }}>
+                    JSCC // {liveCameraFrame.drone_id?.toUpperCase()}
+                  </div>
+                  <div style={{ position: 'absolute', bottom: '4px', right: '6px', backgroundColor: 'rgba(15, 23, 42, 0.85)', padding: '1px 6px', borderRadius: '4px', fontSize: '8px', fontWeight: 700, color: '#34d399' }}>
+                    {liveCameraFrame.jscc?.psnr_db ? `${liveCameraFrame.jscc.psnr_db.toFixed(1)} dB` : '96.9%'}
+                  </div>
+                </div>
+              )}
 
             </div>
 

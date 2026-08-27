@@ -73,7 +73,11 @@ def launch_setup(context, *args, **kwargs):
             f"/model/{d}/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry",
             f"/model/{d}/pose@geometry_msgs/msg/Pose[gz.msgs.Pose",
             f"/{d}/imu@sensor_msgs/msg/Imu[gz.msgs.IMU",
+            f"/{d}/air_pressure@sensor_msgs/msg/FluidPressure[gz.msgs.FluidPressure",
+            f"/{d}/magnetometer@sensor_msgs/msg/MagneticField[gz.msgs.Magnetometer",
+            f"/{d}/navsat@sensor_msgs/msg/NavSatFix[gz.msgs.NavSat",
             f"/{d}/lidar/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked",
+            f"/{d}/rangefinder/distance@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan",
             f"/{d}/camera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image",
             f"/{d}/thermal_camera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image",
         ])

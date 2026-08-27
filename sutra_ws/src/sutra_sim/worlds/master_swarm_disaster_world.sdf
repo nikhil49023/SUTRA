@@ -49,6 +49,9 @@ Features:
       <render_engine>ogre2</render_engine>
     </plugin>
     <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu" />
+    <plugin filename="gz-sim-air-pressure-system" name="gz::sim::systems::AirPressure" />
+    <plugin filename="gz-sim-magnetometer-system" name="gz::sim::systems::Magnetometer" />
+    <plugin filename="gz-sim-navsat-system" name="gz::sim::systems::NavSat" />
 
     <!-- Directional Sun Light -->
     <light type="directional" name="sun">
@@ -201,13 +204,31 @@ Features:
           <material><ambient>1.0 0.2 0.2 1</ambient><diffuse>1.0 0.2 0.2 1</diffuse></material>
         </visual>
 
-        <sensor name="imu" type="imu">
-          <always_on>1</always_on><update_rate>200</update_rate><topic>/uav_alpha/imu</topic>
-        </sensor>
-        <sensor name="camera_rgb" type="camera">
-          <update_rate>30</update_rate><topic>/uav_alpha/camera/image_raw</topic>
-          <camera><horizontal_fov>1.5708</horizontal_fov><image><width>640</width><height>480</height><format>R8G8B8</format></image></camera>
-        </sensor>
+        <!-- 🛰️ PHYSICAL HARDWARE PAYLOAD STACK -->
+        <visual name="lidar_base"><pose>0 0 0.055 0 0 0</pose><geometry><cylinder><radius>0.042</radius><length>0.022</length></cylinder></geometry><material><ambient>0.15 0.15 0.18 1</ambient><diffuse>0.22 0.22 0.26 1</diffuse><specular>0.8 0.8 0.8 1</specular></material></visual>
+        <visual name="lidar_ring"><pose>0 0 0.068 0 0 0</pose><geometry><cylinder><radius>0.039</radius><length>0.016</length></cylinder></geometry><material><ambient>0.0 0.7 0.9 1</ambient><diffuse>0.0 0.85 1.0 1</diffuse><emissive>0.0 0.45 0.85 1</emissive></material></visual>
+        <visual name="lidar_cap"><pose>0 0 0.078 0 0 0</pose><geometry><cylinder><radius>0.041</radius><length>0.008</length></cylinder></geometry><material><ambient>0.12 0.12 0.14 1</ambient><diffuse>0.18 0.18 0.20 1</diffuse></material></visual>
+        <visual name="edge_tpu_case"><pose>-0.05 0 0.038 0 0 0</pose><geometry><box><size>0.085 0.065 0.022</size></box></geometry><material><ambient>0.1 0.1 0.12 1</ambient><diffuse>0.15 0.15 0.18 1</diffuse></material></visual>
+        <visual name="edge_tpu_heatsink"><pose>-0.05 0 0.051 0 0 0</pose><geometry><box><size>0.075 0.055 0.006</size></box></geometry><material><ambient>0.5 0.5 0.55 1</ambient><diffuse>0.7 0.7 0.75 1</diffuse><specular>0.9 0.9 0.9 1</specular></material></visual>
+        <visual name="edge_tpu_led"><pose>-0.015 0.024 0.052 0 0 0</pose><geometry><box><size>0.008 0.008 0.004</size></box></geometry><material><ambient>0.0 1.0 0.3 1</ambient><diffuse>0.0 1.0 0.3 1</diffuse><emissive>0.0 1.0 0.3 1</emissive></material></visual>
+        <visual name="gimbal_bracket"><pose>0.135 0 -0.028 0 0.15 0</pose><geometry><box><size>0.035 0.055 0.030</size></box></geometry><material><ambient>0.15 0.15 0.15 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material></visual>
+        <visual name="camera_rgb_lens"><pose>0.155 -0.015 -0.030 0 1.5708 0</pose><geometry><cylinder><radius>0.010</radius><length>0.014</length></cylinder></geometry><material><ambient>0.1 0.4 0.8 1</ambient><diffuse>0.1 0.6 0.9 1</diffuse><emissive>0.0 0.3 0.6 1</emissive></material></visual>
+        <visual name="camera_thermal_lens"><pose>0.155 0.015 -0.030 0 1.5708 0</pose><geometry><cylinder><radius>0.012</radius><length>0.014</length></cylinder></geometry><material><ambient>0.8 0.35 0.0 1</ambient><diffuse>0.9 0.45 0.0 1</diffuse><emissive>0.7 0.25 0.0 1</emissive></material></visual>
+        <visual name="gps_mast"><pose>-0.10 -0.08 0.065 0 0 0</pose><geometry><cylinder><radius>0.0035</radius><length>0.08</length></cylinder></geometry><material><ambient>0.1 0.1 0.1 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material></visual>
+        <visual name="gps_puck"><pose>-0.10 -0.08 0.108 0 0 0</pose><geometry><cylinder><radius>0.022</radius><length>0.010</length></cylinder></geometry><material><ambient>0.15 0.15 0.18 1</ambient><diffuse>0.25 0.25 0.30 1</diffuse><specular>0.6 0.6 0.6 1</specular></material></visual>
+        <visual name="mesh_ant_l"><pose>-0.14 0.11 0.045 0.25 -0.2 0</pose><geometry><cylinder><radius>0.0032</radius><length>0.075</length></cylinder></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.1 0.1 0.1 1</diffuse></material></visual>
+        <visual name="mesh_ant_r"><pose>-0.14 -0.11 0.045 -0.25 -0.2 0</pose><geometry><cylinder><radius>0.0032</radius><length>0.075</length></cylinder></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.1 0.1 0.1 1</diffuse></material></visual>
+        <visual name="battery_pack"><pose>0 0 -0.028 0 0 0</pose><geometry><box><size>0.13 0.048 0.034</size></box></geometry><material><ambient>0.8 0.65 0.0 1</ambient><diffuse>0.9 0.75 0.0 1</diffuse></material></visual>
+
+        <!-- 📡 FULL 9-DOF AVIONICS & TACTICAL SENSORS -->
+        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>250</update_rate><topic>/uav_alpha/imu</topic></sensor>
+        <sensor name="air_pressure" type="air_pressure"><always_on>1</always_on><update_rate>50</update_rate><topic>/uav_alpha/air_pressure</topic><air_pressure><reference_altitude>0.0</reference_altitude><pressure><noise type="gaussian"><mean>0.0</mean><stddev>1.2</stddev></noise></pressure></air_pressure></sensor>
+        <sensor name="magnetometer" type="magnetometer"><always_on>1</always_on><update_rate>50</update_rate><topic>/uav_alpha/magnetometer</topic></sensor>
+        <sensor name="navsat" type="navsat"><always_on>1</always_on><update_rate>10</update_rate><topic>/uav_alpha/navsat</topic></sensor>
+        <sensor name="lidar" type="gpu_lidar"><pose>0 0 0.1 0 0 0</pose><topic>/uav_alpha/lidar/points</topic><update_rate>10</update_rate><ray><scan><horizontal><samples>720</samples><resolution>1</resolution><min_angle>-3.14159</min_angle><max_angle>3.14159</max_angle></horizontal><vertical><samples>32</samples><resolution>1</resolution><min_angle>-0.436332</min_angle><max_angle>0.261799</max_angle></vertical></scan><range><min>0.1</min><max>50.0</max></range></ray><always_on>1</always_on></sensor>
+        <sensor name="rangefinder" type="gpu_lidar"><pose>0 0 -0.04 0 1.5707963 0</pose><topic>/uav_alpha/rangefinder/distance</topic><update_rate>50</update_rate><ray><scan><horizontal><samples>1</samples><min_angle>0</min_angle><max_angle>0</max_angle></horizontal><vertical><samples>1</samples><min_angle>0</min_angle><max_angle>0</max_angle></vertical></scan><range><min>0.05</min><max>40.0</max></range></ray><always_on>1</always_on></sensor>
+        <sensor name="camera_rgb" type="camera"><pose>0.15 0 0 0 0 0</pose><update_rate>30</update_rate><topic>/uav_alpha/camera/image_raw</topic><camera><horizontal_fov>1.3962634</horizontal_fov><image><width>1280</width><height>720</height><format>R8G8B8</format></image><clip><near>0.1</near><far>150</far></clip></camera><always_on>1</always_on></sensor>
+        <sensor name="camera_thermal" type="thermal"><pose>0.15 0 -0.03 0 0 0</pose><update_rate>30</update_rate><topic>/uav_alpha/thermal_camera/image_raw</topic><camera><horizontal_fov>1.047</horizontal_fov><image><width>640</width><height>480</height><format>L8</format></image></camera><always_on>1</always_on></sensor>
       </link>
       <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
         <link_name>base_link</link_name><topic>/uav_alpha/gazebo/command/twist</topic>
@@ -249,7 +270,31 @@ Features:
           <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry>
           <material><ambient>1.0 0.5 0.0 1</ambient><diffuse>1.0 0.5 0.0 1</diffuse></material>
         </visual>
-        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>200</update_rate><topic>/uav_beta/imu</topic></sensor>
+        <!-- 🛰️ PHYSICAL HARDWARE PAYLOAD STACK -->
+        <visual name="lidar_base"><pose>0 0 0.055 0 0 0</pose><geometry><cylinder><radius>0.042</radius><length>0.022</length></cylinder></geometry><material><ambient>0.15 0.15 0.18 1</ambient><diffuse>0.22 0.22 0.26 1</diffuse><specular>0.8 0.8 0.8 1</specular></material></visual>
+        <visual name="lidar_ring"><pose>0 0 0.068 0 0 0</pose><geometry><cylinder><radius>0.039</radius><length>0.016</length></cylinder></geometry><material><ambient>1.0 0.5 0.0 1</ambient><diffuse>1.0 0.6 0.0 1</diffuse><emissive>0.8 0.4 0.0 1</emissive></material></visual>
+        <visual name="lidar_cap"><pose>0 0 0.078 0 0 0</pose><geometry><cylinder><radius>0.041</radius><length>0.008</length></cylinder></geometry><material><ambient>0.12 0.12 0.14 1</ambient><diffuse>0.18 0.18 0.20 1</diffuse></material></visual>
+        <visual name="edge_tpu_case"><pose>-0.05 0 0.038 0 0 0</pose><geometry><box><size>0.085 0.065 0.022</size></box></geometry><material><ambient>0.1 0.1 0.12 1</ambient><diffuse>0.15 0.15 0.18 1</diffuse></material></visual>
+        <visual name="edge_tpu_heatsink"><pose>-0.05 0 0.051 0 0 0</pose><geometry><box><size>0.075 0.055 0.006</size></box></geometry><material><ambient>0.5 0.5 0.55 1</ambient><diffuse>0.7 0.7 0.75 1</diffuse><specular>0.9 0.9 0.9 1</specular></material></visual>
+        <visual name="edge_tpu_led"><pose>-0.015 0.024 0.052 0 0 0</pose><geometry><box><size>0.008 0.008 0.004</size></box></geometry><material><ambient>0.0 1.0 0.3 1</ambient><diffuse>0.0 1.0 0.3 1</diffuse><emissive>0.0 1.0 0.3 1</emissive></material></visual>
+        <visual name="gimbal_bracket"><pose>0.135 0 -0.028 0 0.15 0</pose><geometry><box><size>0.035 0.055 0.030</size></box></geometry><material><ambient>0.15 0.15 0.15 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material></visual>
+        <visual name="camera_rgb_lens"><pose>0.155 -0.015 -0.030 0 1.5708 0</pose><geometry><cylinder><radius>0.010</radius><length>0.014</length></cylinder></geometry><material><ambient>0.1 0.4 0.8 1</ambient><diffuse>0.1 0.6 0.9 1</diffuse><emissive>0.0 0.3 0.6 1</emissive></material></visual>
+        <visual name="camera_thermal_lens"><pose>0.155 0.015 -0.030 0 1.5708 0</pose><geometry><cylinder><radius>0.012</radius><length>0.014</length></cylinder></geometry><material><ambient>0.8 0.35 0.0 1</ambient><diffuse>0.9 0.45 0.0 1</diffuse><emissive>0.7 0.25 0.0 1</emissive></material></visual>
+        <visual name="gps_mast"><pose>-0.10 -0.08 0.065 0 0 0</pose><geometry><cylinder><radius>0.0035</radius><length>0.08</length></cylinder></geometry><material><ambient>0.1 0.1 0.1 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material></visual>
+        <visual name="gps_puck"><pose>-0.10 -0.08 0.108 0 0 0</pose><geometry><cylinder><radius>0.022</radius><length>0.010</length></cylinder></geometry><material><ambient>0.15 0.15 0.18 1</ambient><diffuse>0.25 0.25 0.30 1</diffuse><specular>0.6 0.6 0.6 1</specular></material></visual>
+        <visual name="mesh_ant_l"><pose>-0.14 0.11 0.045 0.25 -0.2 0</pose><geometry><cylinder><radius>0.0032</radius><length>0.075</length></cylinder></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.1 0.1 0.1 1</diffuse></material></visual>
+        <visual name="mesh_ant_r"><pose>-0.14 -0.11 0.045 -0.25 -0.2 0</pose><geometry><cylinder><radius>0.0032</radius><length>0.075</length></cylinder></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.1 0.1 0.1 1</diffuse></material></visual>
+        <visual name="battery_pack"><pose>0 0 -0.028 0 0 0</pose><geometry><box><size>0.13 0.048 0.034</size></box></geometry><material><ambient>0.8 0.65 0.0 1</ambient><diffuse>0.9 0.75 0.0 1</diffuse></material></visual>
+
+        <!-- 📡 FULL 9-DOF AVIONICS & TACTICAL SENSORS -->
+        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>250</update_rate><topic>/uav_beta/imu</topic></sensor>
+        <sensor name="air_pressure" type="air_pressure"><always_on>1</always_on><update_rate>50</update_rate><topic>/uav_beta/air_pressure</topic><air_pressure><reference_altitude>0.0</reference_altitude><pressure><noise type="gaussian"><mean>0.0</mean><stddev>1.2</stddev></noise></pressure></air_pressure></sensor>
+        <sensor name="magnetometer" type="magnetometer"><always_on>1</always_on><update_rate>50</update_rate><topic>/uav_beta/magnetometer</topic></sensor>
+        <sensor name="navsat" type="navsat"><always_on>1</always_on><update_rate>10</update_rate><topic>/uav_beta/navsat</topic></sensor>
+        <sensor name="lidar" type="gpu_lidar"><pose>0 0 0.1 0 0 0</pose><topic>/uav_beta/lidar/points</topic><update_rate>10</update_rate><ray><scan><horizontal><samples>720</samples><resolution>1</resolution><min_angle>-3.14159</min_angle><max_angle>3.14159</max_angle></horizontal><vertical><samples>32</samples><resolution>1</resolution><min_angle>-0.436332</min_angle><max_angle>0.261799</max_angle></vertical></scan><range><min>0.1</min><max>50.0</max></range></ray><always_on>1</always_on></sensor>
+        <sensor name="rangefinder" type="gpu_lidar"><pose>0 0 -0.04 0 1.5707963 0</pose><topic>/uav_beta/rangefinder/distance</topic><update_rate>50</update_rate><ray><scan><horizontal><samples>1</samples><min_angle>0</min_angle><max_angle>0</max_angle></horizontal><vertical><samples>1</samples><min_angle>0</min_angle><max_angle>0</max_angle></vertical></scan><range><min>0.05</min><max>40.0</max></range></ray><always_on>1</always_on></sensor>
+        <sensor name="camera_rgb" type="camera"><pose>0.15 0 0 0 0 0</pose><update_rate>30</update_rate><topic>/uav_beta/camera/image_raw</topic><camera><horizontal_fov>1.3962634</horizontal_fov><image><width>1280</width><height>720</height><format>R8G8B8</format></image><clip><near>0.1</near><far>150</far></clip></camera><always_on>1</always_on></sensor>
+        <sensor name="camera_thermal" type="thermal"><pose>0.15 0 -0.03 0 0 0</pose><update_rate>30</update_rate><topic>/uav_beta/thermal_camera/image_raw</topic><camera><horizontal_fov>1.047</horizontal_fov><image><width>640</width><height>480</height><format>L8</format></image></camera><always_on>1</always_on></sensor>
       </link>
       <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
         <link_name>base_link</link_name><topic>/uav_beta/gazebo/command/twist</topic>
@@ -291,7 +336,31 @@ Features:
           <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry>
           <material><ambient>1.0 0.8 0.0 1</ambient><diffuse>1.0 0.8 0.0 1</diffuse></material>
         </visual>
-        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>200</update_rate><topic>/uav_gamma/imu</topic></sensor>
+        <!-- 🛰️ PHYSICAL HARDWARE PAYLOAD STACK -->
+        <visual name="lidar_base"><pose>0 0 0.055 0 0 0</pose><geometry><cylinder><radius>0.042</radius><length>0.022</length></cylinder></geometry><material><ambient>0.15 0.15 0.18 1</ambient><diffuse>0.22 0.22 0.26 1</diffuse><specular>0.8 0.8 0.8 1</specular></material></visual>
+        <visual name="lidar_ring"><pose>0 0 0.068 0 0 0</pose><geometry><cylinder><radius>0.039</radius><length>0.016</length></cylinder></geometry><material><ambient>0.1 0.9 0.3 1</ambient><diffuse>0.2 1.0 0.4 1</diffuse><emissive>0.1 0.7 0.2 1</emissive></material></visual>
+        <visual name="lidar_cap"><pose>0 0 0.078 0 0 0</pose><geometry><cylinder><radius>0.041</radius><length>0.008</length></cylinder></geometry><material><ambient>0.12 0.12 0.14 1</ambient><diffuse>0.18 0.18 0.20 1</diffuse></material></visual>
+        <visual name="edge_tpu_case"><pose>-0.05 0 0.038 0 0 0</pose><geometry><box><size>0.085 0.065 0.022</size></box></geometry><material><ambient>0.1 0.1 0.12 1</ambient><diffuse>0.15 0.15 0.18 1</diffuse></material></visual>
+        <visual name="edge_tpu_heatsink"><pose>-0.05 0 0.051 0 0 0</pose><geometry><box><size>0.075 0.055 0.006</size></box></geometry><material><ambient>0.5 0.5 0.55 1</ambient><diffuse>0.7 0.7 0.75 1</diffuse><specular>0.9 0.9 0.9 1</specular></material></visual>
+        <visual name="edge_tpu_led"><pose>-0.015 0.024 0.052 0 0 0</pose><geometry><box><size>0.008 0.008 0.004</size></box></geometry><material><ambient>0.0 1.0 0.3 1</ambient><diffuse>0.0 1.0 0.3 1</diffuse><emissive>0.0 1.0 0.3 1</emissive></material></visual>
+        <visual name="gimbal_bracket"><pose>0.135 0 -0.028 0 0.15 0</pose><geometry><box><size>0.035 0.055 0.030</size></box></geometry><material><ambient>0.15 0.15 0.15 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material></visual>
+        <visual name="camera_rgb_lens"><pose>0.155 -0.015 -0.030 0 1.5708 0</pose><geometry><cylinder><radius>0.010</radius><length>0.014</length></cylinder></geometry><material><ambient>0.1 0.4 0.8 1</ambient><diffuse>0.1 0.6 0.9 1</diffuse><emissive>0.0 0.3 0.6 1</emissive></material></visual>
+        <visual name="camera_thermal_lens"><pose>0.155 0.015 -0.030 0 1.5708 0</pose><geometry><cylinder><radius>0.012</radius><length>0.014</length></cylinder></geometry><material><ambient>0.8 0.35 0.0 1</ambient><diffuse>0.9 0.45 0.0 1</diffuse><emissive>0.7 0.25 0.0 1</emissive></material></visual>
+        <visual name="gps_mast"><pose>-0.10 -0.08 0.065 0 0 0</pose><geometry><cylinder><radius>0.0035</radius><length>0.08</length></cylinder></geometry><material><ambient>0.1 0.1 0.1 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material></visual>
+        <visual name="gps_puck"><pose>-0.10 -0.08 0.108 0 0 0</pose><geometry><cylinder><radius>0.022</radius><length>0.010</length></cylinder></geometry><material><ambient>0.15 0.15 0.18 1</ambient><diffuse>0.25 0.25 0.30 1</diffuse><specular>0.6 0.6 0.6 1</specular></material></visual>
+        <visual name="mesh_ant_l"><pose>-0.14 0.11 0.045 0.25 -0.2 0</pose><geometry><cylinder><radius>0.0032</radius><length>0.075</length></cylinder></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.1 0.1 0.1 1</diffuse></material></visual>
+        <visual name="mesh_ant_r"><pose>-0.14 -0.11 0.045 -0.25 -0.2 0</pose><geometry><cylinder><radius>0.0032</radius><length>0.075</length></cylinder></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.1 0.1 0.1 1</diffuse></material></visual>
+        <visual name="battery_pack"><pose>0 0 -0.028 0 0 0</pose><geometry><box><size>0.13 0.048 0.034</size></box></geometry><material><ambient>0.8 0.65 0.0 1</ambient><diffuse>0.9 0.75 0.0 1</diffuse></material></visual>
+
+        <!-- 📡 FULL 9-DOF AVIONICS & TACTICAL SENSORS -->
+        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>250</update_rate><topic>/uav_gamma/imu</topic></sensor>
+        <sensor name="air_pressure" type="air_pressure"><always_on>1</always_on><update_rate>50</update_rate><topic>/uav_gamma/air_pressure</topic><air_pressure><reference_altitude>0.0</reference_altitude><pressure><noise type="gaussian"><mean>0.0</mean><stddev>1.2</stddev></noise></pressure></air_pressure></sensor>
+        <sensor name="magnetometer" type="magnetometer"><always_on>1</always_on><update_rate>50</update_rate><topic>/uav_gamma/magnetometer</topic></sensor>
+        <sensor name="navsat" type="navsat"><always_on>1</always_on><update_rate>10</update_rate><topic>/uav_gamma/navsat</topic></sensor>
+        <sensor name="lidar" type="gpu_lidar"><pose>0 0 0.1 0 0 0</pose><topic>/uav_gamma/lidar/points</topic><update_rate>10</update_rate><ray><scan><horizontal><samples>720</samples><resolution>1</resolution><min_angle>-3.14159</min_angle><max_angle>3.14159</max_angle></horizontal><vertical><samples>32</samples><resolution>1</resolution><min_angle>-0.436332</min_angle><max_angle>0.261799</max_angle></vertical></scan><range><min>0.1</min><max>50.0</max></range></ray><always_on>1</always_on></sensor>
+        <sensor name="rangefinder" type="gpu_lidar"><pose>0 0 -0.04 0 1.5707963 0</pose><topic>/uav_gamma/rangefinder/distance</topic><update_rate>50</update_rate><ray><scan><horizontal><samples>1</samples><min_angle>0</min_angle><max_angle>0</max_angle></horizontal><vertical><samples>1</samples><min_angle>0</min_angle><max_angle>0</max_angle></vertical></scan><range><min>0.05</min><max>40.0</max></range></ray><always_on>1</always_on></sensor>
+        <sensor name="camera_rgb" type="camera"><pose>0.15 0 0 0 0 0</pose><update_rate>30</update_rate><topic>/uav_gamma/camera/image_raw</topic><camera><horizontal_fov>1.3962634</horizontal_fov><image><width>1280</width><height>720</height><format>R8G8B8</format></image><clip><near>0.1</near><far>150</far></clip></camera><always_on>1</always_on></sensor>
+        <sensor name="camera_thermal" type="thermal"><pose>0.15 0 -0.03 0 0 0</pose><update_rate>30</update_rate><topic>/uav_gamma/thermal_camera/image_raw</topic><camera><horizontal_fov>1.047</horizontal_fov><image><width>640</width><height>480</height><format>L8</format></image></camera><always_on>1</always_on></sensor>
       </link>
       <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
         <link_name>base_link</link_name><topic>/uav_gamma/gazebo/command/twist</topic>
@@ -333,7 +402,31 @@ Features:
           <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry>
           <material><ambient>0.9 0.1 0.9 1</ambient><diffuse>0.9 0.1 0.9 1</diffuse></material>
         </visual>
-        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>200</update_rate><topic>/uav_delta/imu</topic></sensor>
+        <!-- 🛰️ PHYSICAL HARDWARE PAYLOAD STACK -->
+        <visual name="lidar_base"><pose>0 0 0.055 0 0 0</pose><geometry><cylinder><radius>0.042</radius><length>0.022</length></cylinder></geometry><material><ambient>0.15 0.15 0.18 1</ambient><diffuse>0.22 0.22 0.26 1</diffuse><specular>0.8 0.8 0.8 1</specular></material></visual>
+        <visual name="lidar_ring"><pose>0 0 0.068 0 0 0</pose><geometry><cylinder><radius>0.039</radius><length>0.016</length></cylinder></geometry><material><ambient>0.9 0.1 0.7 1</ambient><diffuse>1.0 0.2 0.8 1</diffuse><emissive>0.7 0.1 0.6 1</emissive></material></visual>
+        <visual name="lidar_cap"><pose>0 0 0.078 0 0 0</pose><geometry><cylinder><radius>0.041</radius><length>0.008</length></cylinder></geometry><material><ambient>0.12 0.12 0.14 1</ambient><diffuse>0.18 0.18 0.20 1</diffuse></material></visual>
+        <visual name="edge_tpu_case"><pose>-0.05 0 0.038 0 0 0</pose><geometry><box><size>0.085 0.065 0.022</size></box></geometry><material><ambient>0.1 0.1 0.12 1</ambient><diffuse>0.15 0.15 0.18 1</diffuse></material></visual>
+        <visual name="edge_tpu_heatsink"><pose>-0.05 0 0.051 0 0 0</pose><geometry><box><size>0.075 0.055 0.006</size></box></geometry><material><ambient>0.5 0.5 0.55 1</ambient><diffuse>0.7 0.7 0.75 1</diffuse><specular>0.9 0.9 0.9 1</specular></material></visual>
+        <visual name="edge_tpu_led"><pose>-0.015 0.024 0.052 0 0 0</pose><geometry><box><size>0.008 0.008 0.004</size></box></geometry><material><ambient>0.0 1.0 0.3 1</ambient><diffuse>0.0 1.0 0.3 1</diffuse><emissive>0.0 1.0 0.3 1</emissive></material></visual>
+        <visual name="gimbal_bracket"><pose>0.135 0 -0.028 0 0.15 0</pose><geometry><box><size>0.035 0.055 0.030</size></box></geometry><material><ambient>0.15 0.15 0.15 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material></visual>
+        <visual name="camera_rgb_lens"><pose>0.155 -0.015 -0.030 0 1.5708 0</pose><geometry><cylinder><radius>0.010</radius><length>0.014</length></cylinder></geometry><material><ambient>0.1 0.4 0.8 1</ambient><diffuse>0.1 0.6 0.9 1</diffuse><emissive>0.0 0.3 0.6 1</emissive></material></visual>
+        <visual name="camera_thermal_lens"><pose>0.155 0.015 -0.030 0 1.5708 0</pose><geometry><cylinder><radius>0.012</radius><length>0.014</length></cylinder></geometry><material><ambient>0.8 0.35 0.0 1</ambient><diffuse>0.9 0.45 0.0 1</diffuse><emissive>0.7 0.25 0.0 1</emissive></material></visual>
+        <visual name="gps_mast"><pose>-0.10 -0.08 0.065 0 0 0</pose><geometry><cylinder><radius>0.0035</radius><length>0.08</length></cylinder></geometry><material><ambient>0.1 0.1 0.1 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material></visual>
+        <visual name="gps_puck"><pose>-0.10 -0.08 0.108 0 0 0</pose><geometry><cylinder><radius>0.022</radius><length>0.010</length></cylinder></geometry><material><ambient>0.15 0.15 0.18 1</ambient><diffuse>0.25 0.25 0.30 1</diffuse><specular>0.6 0.6 0.6 1</specular></material></visual>
+        <visual name="mesh_ant_l"><pose>-0.14 0.11 0.045 0.25 -0.2 0</pose><geometry><cylinder><radius>0.0032</radius><length>0.075</length></cylinder></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.1 0.1 0.1 1</diffuse></material></visual>
+        <visual name="mesh_ant_r"><pose>-0.14 -0.11 0.045 -0.25 -0.2 0</pose><geometry><cylinder><radius>0.0032</radius><length>0.075</length></cylinder></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.1 0.1 0.1 1</diffuse></material></visual>
+        <visual name="battery_pack"><pose>0 0 -0.028 0 0 0</pose><geometry><box><size>0.13 0.048 0.034</size></box></geometry><material><ambient>0.8 0.65 0.0 1</ambient><diffuse>0.9 0.75 0.0 1</diffuse></material></visual>
+
+        <!-- 📡 FULL 9-DOF AVIONICS & TACTICAL SENSORS -->
+        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>250</update_rate><topic>/uav_delta/imu</topic></sensor>
+        <sensor name="air_pressure" type="air_pressure"><always_on>1</always_on><update_rate>50</update_rate><topic>/uav_delta/air_pressure</topic><air_pressure><reference_altitude>0.0</reference_altitude><pressure><noise type="gaussian"><mean>0.0</mean><stddev>1.2</stddev></noise></pressure></air_pressure></sensor>
+        <sensor name="magnetometer" type="magnetometer"><always_on>1</always_on><update_rate>50</update_rate><topic>/uav_delta/magnetometer</topic></sensor>
+        <sensor name="navsat" type="navsat"><always_on>1</always_on><update_rate>10</update_rate><topic>/uav_delta/navsat</topic></sensor>
+        <sensor name="lidar" type="gpu_lidar"><pose>0 0 0.1 0 0 0</pose><topic>/uav_delta/lidar/points</topic><update_rate>10</update_rate><ray><scan><horizontal><samples>720</samples><resolution>1</resolution><min_angle>-3.14159</min_angle><max_angle>3.14159</max_angle></horizontal><vertical><samples>32</samples><resolution>1</resolution><min_angle>-0.436332</min_angle><max_angle>0.261799</max_angle></vertical></scan><range><min>0.1</min><max>50.0</max></range></ray><always_on>1</always_on></sensor>
+        <sensor name="rangefinder" type="gpu_lidar"><pose>0 0 -0.04 0 1.5707963 0</pose><topic>/uav_delta/rangefinder/distance</topic><update_rate>50</update_rate><ray><scan><horizontal><samples>1</samples><min_angle>0</min_angle><max_angle>0</max_angle></horizontal><vertical><samples>1</samples><min_angle>0</min_angle><max_angle>0</max_angle></vertical></scan><range><min>0.05</min><max>40.0</max></range></ray><always_on>1</always_on></sensor>
+        <sensor name="camera_rgb" type="camera"><pose>0.15 0 0 0 0 0</pose><update_rate>30</update_rate><topic>/uav_delta/camera/image_raw</topic><camera><horizontal_fov>1.3962634</horizontal_fov><image><width>1280</width><height>720</height><format>R8G8B8</format></image><clip><near>0.1</near><far>150</far></clip></camera><always_on>1</always_on></sensor>
+        <sensor name="camera_thermal" type="thermal"><pose>0.15 0 -0.03 0 0 0</pose><update_rate>30</update_rate><topic>/uav_delta/thermal_camera/image_raw</topic><camera><horizontal_fov>1.047</horizontal_fov><image><width>640</width><height>480</height><format>L8</format></image></camera><always_on>1</always_on></sensor>
       </link>
       <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
         <link_name>base_link</link_name><topic>/uav_delta/gazebo/command/twist</topic>
@@ -375,7 +468,31 @@ Features:
           <geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry>
           <material><ambient>0.0 0.9 1.0 1</ambient><diffuse>0.0 0.9 1.0 1</diffuse></material>
         </visual>
-        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>200</update_rate><topic>/uav_epsilon/imu</topic></sensor>
+        <!-- 🛰️ PHYSICAL HARDWARE PAYLOAD STACK -->
+        <visual name="lidar_base"><pose>0 0 0.055 0 0 0</pose><geometry><cylinder><radius>0.042</radius><length>0.022</length></cylinder></geometry><material><ambient>0.15 0.15 0.18 1</ambient><diffuse>0.22 0.22 0.26 1</diffuse><specular>0.8 0.8 0.8 1</specular></material></visual>
+        <visual name="lidar_ring"><pose>0 0 0.068 0 0 0</pose><geometry><cylinder><radius>0.039</radius><length>0.016</length></cylinder></geometry><material><ambient>1.0 0.9 0.0 1</ambient><diffuse>1.0 0.95 0.1 1</diffuse><emissive>0.8 0.75 0.0 1</emissive></material></visual>
+        <visual name="lidar_cap"><pose>0 0 0.078 0 0 0</pose><geometry><cylinder><radius>0.041</radius><length>0.008</length></cylinder></geometry><material><ambient>0.12 0.12 0.14 1</ambient><diffuse>0.18 0.18 0.20 1</diffuse></material></visual>
+        <visual name="edge_tpu_case"><pose>-0.05 0 0.038 0 0 0</pose><geometry><box><size>0.085 0.065 0.022</size></box></geometry><material><ambient>0.1 0.1 0.12 1</ambient><diffuse>0.15 0.15 0.18 1</diffuse></material></visual>
+        <visual name="edge_tpu_heatsink"><pose>-0.05 0 0.051 0 0 0</pose><geometry><box><size>0.075 0.055 0.006</size></box></geometry><material><ambient>0.5 0.5 0.55 1</ambient><diffuse>0.7 0.7 0.75 1</diffuse><specular>0.9 0.9 0.9 1</specular></material></visual>
+        <visual name="edge_tpu_led"><pose>-0.015 0.024 0.052 0 0 0</pose><geometry><box><size>0.008 0.008 0.004</size></box></geometry><material><ambient>0.0 1.0 0.3 1</ambient><diffuse>0.0 1.0 0.3 1</diffuse><emissive>0.0 1.0 0.3 1</emissive></material></visual>
+        <visual name="gimbal_bracket"><pose>0.135 0 -0.028 0 0.15 0</pose><geometry><box><size>0.035 0.055 0.030</size></box></geometry><material><ambient>0.15 0.15 0.15 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material></visual>
+        <visual name="camera_rgb_lens"><pose>0.155 -0.015 -0.030 0 1.5708 0</pose><geometry><cylinder><radius>0.010</radius><length>0.014</length></cylinder></geometry><material><ambient>0.1 0.4 0.8 1</ambient><diffuse>0.1 0.6 0.9 1</diffuse><emissive>0.0 0.3 0.6 1</emissive></material></visual>
+        <visual name="camera_thermal_lens"><pose>0.155 0.015 -0.030 0 1.5708 0</pose><geometry><cylinder><radius>0.012</radius><length>0.014</length></cylinder></geometry><material><ambient>0.8 0.35 0.0 1</ambient><diffuse>0.9 0.45 0.0 1</diffuse><emissive>0.7 0.25 0.0 1</emissive></material></visual>
+        <visual name="gps_mast"><pose>-0.10 -0.08 0.065 0 0 0</pose><geometry><cylinder><radius>0.0035</radius><length>0.08</length></cylinder></geometry><material><ambient>0.1 0.1 0.1 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material></visual>
+        <visual name="gps_puck"><pose>-0.10 -0.08 0.108 0 0 0</pose><geometry><cylinder><radius>0.022</radius><length>0.010</length></cylinder></geometry><material><ambient>0.15 0.15 0.18 1</ambient><diffuse>0.25 0.25 0.30 1</diffuse><specular>0.6 0.6 0.6 1</specular></material></visual>
+        <visual name="mesh_ant_l"><pose>-0.14 0.11 0.045 0.25 -0.2 0</pose><geometry><cylinder><radius>0.0032</radius><length>0.075</length></cylinder></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.1 0.1 0.1 1</diffuse></material></visual>
+        <visual name="mesh_ant_r"><pose>-0.14 -0.11 0.045 -0.25 -0.2 0</pose><geometry><cylinder><radius>0.0032</radius><length>0.075</length></cylinder></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.1 0.1 0.1 1</diffuse></material></visual>
+        <visual name="battery_pack"><pose>0 0 -0.028 0 0 0</pose><geometry><box><size>0.13 0.048 0.034</size></box></geometry><material><ambient>0.8 0.65 0.0 1</ambient><diffuse>0.9 0.75 0.0 1</diffuse></material></visual>
+
+        <!-- 📡 FULL 9-DOF AVIONICS & TACTICAL SENSORS -->
+        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>250</update_rate><topic>/uav_epsilon/imu</topic></sensor>
+        <sensor name="air_pressure" type="air_pressure"><always_on>1</always_on><update_rate>50</update_rate><topic>/uav_epsilon/air_pressure</topic><air_pressure><reference_altitude>0.0</reference_altitude><pressure><noise type="gaussian"><mean>0.0</mean><stddev>1.2</stddev></noise></pressure></air_pressure></sensor>
+        <sensor name="magnetometer" type="magnetometer"><always_on>1</always_on><update_rate>50</update_rate><topic>/uav_epsilon/magnetometer</topic></sensor>
+        <sensor name="navsat" type="navsat"><always_on>1</always_on><update_rate>10</update_rate><topic>/uav_epsilon/navsat</topic></sensor>
+        <sensor name="lidar" type="gpu_lidar"><pose>0 0 0.1 0 0 0</pose><topic>/uav_epsilon/lidar/points</topic><update_rate>10</update_rate><ray><scan><horizontal><samples>720</samples><resolution>1</resolution><min_angle>-3.14159</min_angle><max_angle>3.14159</max_angle></horizontal><vertical><samples>32</samples><resolution>1</resolution><min_angle>-0.436332</min_angle><max_angle>0.261799</max_angle></vertical></scan><range><min>0.1</min><max>50.0</max></range></ray><always_on>1</always_on></sensor>
+        <sensor name="rangefinder" type="gpu_lidar"><pose>0 0 -0.04 0 1.5707963 0</pose><topic>/uav_epsilon/rangefinder/distance</topic><update_rate>50</update_rate><ray><scan><horizontal><samples>1</samples><min_angle>0</min_angle><max_angle>0</max_angle></horizontal><vertical><samples>1</samples><min_angle>0</min_angle><max_angle>0</max_angle></vertical></scan><range><min>0.05</min><max>40.0</max></range></ray><always_on>1</always_on></sensor>
+        <sensor name="camera_rgb" type="camera"><pose>0.15 0 0 0 0 0</pose><update_rate>30</update_rate><topic>/uav_epsilon/camera/image_raw</topic><camera><horizontal_fov>1.3962634</horizontal_fov><image><width>1280</width><height>720</height><format>R8G8B8</format></image><clip><near>0.1</near><far>150</far></clip></camera><always_on>1</always_on></sensor>
+        <sensor name="camera_thermal" type="thermal"><pose>0.15 0 -0.03 0 0 0</pose><update_rate>30</update_rate><topic>/uav_epsilon/thermal_camera/image_raw</topic><camera><horizontal_fov>1.047</horizontal_fov><image><width>640</width><height>480</height><format>L8</format></image></camera><always_on>1</always_on></sensor>
       </link>
       <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
         <link_name>base_link</link_name><topic>/uav_epsilon/gazebo/command/twist</topic>

@@ -185,6 +185,208 @@ with 50Hz Velocity Control, Odometry Telemetry, and Dynamic 3D Checkpoints.
           </material>
         </visual>
 
+        <!-- 🛰️ PHYSICAL HARDWARE PAYLOAD STACK -->
+        
+        <!-- 1. Top 360° LiDAR Sensor Puck (Livox Mid-360 / Velodyne Dome) -->
+        <visual name="lidar_base_visual">
+          <pose>0 0 0.055 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.042</radius>
+              <length>0.022</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.15 0.15 0.18 1</ambient>
+            <diffuse>0.22 0.22 0.26 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+        <visual name="lidar_optic_ring_visual">
+          <pose>0 0 0.068 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.039</radius>
+              <length>0.016</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.0 0.7 0.9 1</ambient>
+            <diffuse>0.0 0.85 1.0 1</diffuse>
+            <emissive>0.0 0.45 0.85 1</emissive>
+          </material>
+        </visual>
+        <visual name="lidar_top_cap_visual">
+          <pose>0 0 0.078 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.041</radius>
+              <length>0.008</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.12 0.12 0.14 1</ambient>
+            <diffuse>0.18 0.18 0.20 1</diffuse>
+          </material>
+        </visual>
+
+        <!-- 2. Edge AI TPU & Companion Computer (Jetson Orin / Google Coral TPU) -->
+        <visual name="edge_tpu_case_visual">
+          <pose>-0.05 0 0.038 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.085 0.065 0.022</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.1 0.1 0.12 1</ambient>
+            <diffuse>0.15 0.15 0.18 1</diffuse>
+          </material>
+        </visual>
+        <!-- Metallic Heatsink Cooling Fins -->
+        <visual name="edge_tpu_heatsink_visual">
+          <pose>-0.05 0 0.051 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.075 0.055 0.006</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.5 0.5 0.55 1</ambient>
+            <diffuse>0.7 0.7 0.75 1</diffuse>
+            <specular>0.9 0.9 0.9 1</specular>
+          </material>
+        </visual>
+        <!-- AI TPU Status LED Indicator -->
+        <visual name="edge_tpu_led_visual">
+          <pose>-0.015 0.024 0.052 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.008 0.008 0.004</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.0 1.0 0.3 1</ambient>
+            <diffuse>0.0 1.0 0.3 1</diffuse>
+            <emissive>0.0 1.0 0.3 1</emissive>
+          </material>
+        </visual>
+
+        <!-- 3. Dual-Lens Optical RGB + FLIR Thermal Gimbal Assembly -->
+        <visual name="gimbal_bracket_visual">
+          <pose>0.135 0 -0.028 0 0.15 0</pose>
+          <geometry>
+            <box>
+              <size>0.035 0.055 0.030</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.15 0.15 0.15 1</ambient>
+            <diffuse>0.2 0.2 0.2 1</diffuse>
+          </material>
+        </visual>
+        <!-- Optical RGB Camera Lens -->
+        <visual name="camera_rgb_lens_visual">
+          <pose>0.155 -0.015 -0.030 0 1.5708 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.010</radius>
+              <length>0.014</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.1 0.4 0.8 1</ambient>
+            <diffuse>0.1 0.6 0.9 1</diffuse>
+            <emissive>0.0 0.3 0.6 1</emissive>
+          </material>
+        </visual>
+        <!-- FLIR LWIR Thermal Lens (Germanium Coated) -->
+        <visual name="camera_thermal_lens_visual">
+          <pose>0.155 0.015 -0.030 0 1.5708 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.012</radius>
+              <length>0.014</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.8 0.35 0.0 1</ambient>
+            <diffuse>0.9 0.45 0.0 1</diffuse>
+            <emissive>0.7 0.25 0.0 1</emissive>
+          </material>
+        </visual>
+
+        <!-- 4. GNSS / GPS Receiver Mast & Compass Puck -->
+        <visual name="gps_mast_visual">
+          <pose>-0.10 -0.08 0.065 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.0035</radius>
+              <length>0.08</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.1 0.1 0.1 1</ambient>
+            <diffuse>0.2 0.2 0.2 1</diffuse>
+          </material>
+        </visual>
+        <visual name="gps_puck_visual">
+          <pose>-0.10 -0.08 0.108 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.022</radius>
+              <length>0.010</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.15 0.15 0.18 1</ambient>
+            <diffuse>0.25 0.25 0.30 1</diffuse>
+            <specular>0.6 0.6 0.6 1</specular>
+          </material>
+        </visual>
+
+        <!-- 5. Dual 802.11s Mesh Dipole Omnidirectional Antennas -->
+        <visual name="mesh_antenna_left_visual">
+          <pose>-0.14 0.11 0.045 0.25 -0.2 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.0032</radius>
+              <length>0.075</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.05 0.05 0.05 1</ambient>
+            <diffuse>0.1 0.1 0.1 1</diffuse>
+          </material>
+        </visual>
+        <visual name="mesh_antenna_right_visual">
+          <pose>-0.14 -0.11 0.045 -0.25 -0.2 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.0032</radius>
+              <length>0.075</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.05 0.05 0.05 1</ambient>
+            <diffuse>0.1 0.1 0.1 1</diffuse>
+          </material>
+        </visual>
+
+        <!-- 6. High-Capacity LiPo Battery Underbelly Pack -->
+        <visual name="battery_pack_visual">
+          <pose>0 0 -0.028 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.13 0.048 0.034</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.8 0.65 0.0 1</ambient>
+            <diffuse>0.9 0.75 0.0 1</diffuse>
+          </material>
+        </visual>
+
 
         <!-- IMU Sensor -->
         <sensor name="uav_alpha_imu" type="imu">

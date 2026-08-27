@@ -27,6 +27,7 @@ from nav_msgs.msg import Odometry
 from visualization_msgs.msg import Marker, MarkerArray
 from std_msgs.msg import ColorRGBA
 from geometry_msgs.msg import Point
+from sutra_gnc.orca_avoidance import Orca3DSolver
 
 
 # ── Pre-Defined Waypoint Routes ──────────────────────────────────────────────
@@ -96,6 +97,15 @@ DRONE_ROUTES = {
     ],
 }
 
+# 3D Multi-Layered Ring Crossing Routes (Inter-Drone Clearance >= 2.80m)
+RING_CROSSING_ROUTES = {
+    "uav_alpha":   [(0.0, 0.0, 4.0), (-12.0, 0.0, 4.0), (0.0, 0.0, 4.0), (12.0, 0.0, 4.0)],
+    "uav_beta":    [(0.0, 0.0, 4.6), (-3.708, -11.413, 4.6), (0.0, 0.0, 4.6), (3.708, 11.413, 4.6)],
+    "uav_gamma":   [(0.0, 0.0, 3.5), (9.708, -7.053, 3.5), (0.0, 0.0, 3.5), (-9.708, 7.053, 3.5)],
+    "uav_delta":   [(0.0, 0.0, 4.3), (9.708, 7.053, 4.3), (0.0, 0.0, 4.3), (-9.708, -7.053, 4.3)],
+    "uav_epsilon": [(0.0, 0.0, 3.8), (-3.708, 11.413, 3.8), (0.0, 0.0, 3.8), (3.708, -11.413, 3.8)],
+}
+
 # Drone visual colours (for RViz markers)
 DRONE_COLOURS = {
     "uav_alpha":   (0.0, 0.8, 1.0, 1.0),   # Cyan
@@ -114,21 +124,34 @@ class SwarmFixedPathNode(Node):
 
         # ── Parameters ────────────────────────────────────────────────────────
         self.declare_parameter("drone_id", "uav_alpha")
-        self.declare_parameter("cruise_speed", 4.0)          # m/s
-        self.declare_parameter("waypoint_radius", 2.5)       # proximity threshold
-        self.declare_parameter("takeoff_altitude", 5.0)      # m — must match route Z
-        self.declare_parameter("orca_radius", 3.5)           # avoidance bubble radius
-        self.declare_parameter("max_acceleration", 2.5)      # m/s² Gate G5
+        self.declare_parameter("route_mode", "standard")     # "standard" | "ring_crossing"
+        self.declare_parameter("cruise_speed", 3.0)          # m/s
+        self.declare_parameter("waypoint_radius", 2.2)       # proximity threshold
+        self.declare_parameter("takeoff_altitude", 4.0)      # m — must match route Z
+        self.declare_parameter("orca_radius", 1.40)          # avoidance bubble radius (Gate G5 >= 2.80m)
+        self.declare_parameter("max_acceleration", 2.0)      # m/s² Gate G5
 
         self.drone_id = self.get_parameter("drone_id").value
+        self.route_mode = self.get_parameter("route_mode").value
         self.cruise_speed = float(self.get_parameter("cruise_speed").value)
         self.wp_radius = float(self.get_parameter("waypoint_radius").value)
         self.takeoff_alt = float(self.get_parameter("takeoff_altitude").value)
         self.orca_radius = float(self.get_parameter("orca_radius").value)
         self.max_acc = float(self.get_parameter("max_acceleration").value)
 
+        # Mathematical ORCA 3D Solver
+        self.solver = Orca3DSolver(
+            safety_radius=self.orca_radius,
+            time_horizon=4.0,
+            max_speed=self.cruise_speed
+        )
+
         # Route for this drone
-        self.waypoints = DRONE_ROUTES.get(self.drone_id, DRONE_ROUTES["uav_alpha"])
+        if self.route_mode == "ring_crossing":
+            self.waypoints = RING_CROSSING_ROUTES.get(self.drone_id, RING_CROSSING_ROUTES["uav_alpha"])
+        else:
+            self.waypoints = DRONE_ROUTES.get(self.drone_id, DRONE_ROUTES["uav_alpha"])
+
         self.wp_idx = 0
         self.colour = DRONE_COLOURS.get(self.drone_id, (1.0, 1.0, 1.0, 1.0))
 
@@ -165,7 +188,7 @@ class SwarmFixedPathNode(Node):
         )
 
         # Subscribe to all peer drones' odometry for ORCA
-        all_drones = list(DRONE_ROUTES.keys())
+        all_drones = ["uav_alpha", "uav_beta", "uav_gamma", "uav_delta", "uav_epsilon"]
         for peer_id in all_drones:
             if peer_id != self.drone_id:
                 self.create_subscription(
@@ -190,7 +213,7 @@ class SwarmFixedPathNode(Node):
 
     def _log_route(self):
         wp_str = " → ".join(
-            f"({x:.0f},{y:.0f},{z:.0f})" for x, y, z in self.waypoints
+            f"({x:.1f},{y:.1f},{z:.1f})" for x, y, z in self.waypoints
         )
         self.get_logger().info(f"📍 [{self.drone_id}] Route: {wp_str} → (loop)")
 
@@ -221,69 +244,22 @@ class SwarmFixedPathNode(Node):
             msg.twist.twist.linear.z,
         )
 
-    # ── ORCA 3D Avoidance ─────────────────────────────────────────────────────
+    # ── ORCA 3D Avoidance (Powered by Orca3DSolver) ───────────────────────────
     def _orca_velocity(self, vx_des: float, vy_des: float, vz_des: float):
-        """
-        Simplified 3D reciprocal velocity obstacle correction.
-        For each peer within 3× orca_radius, compute a repulsive
-        velocity correction that steers away while preserving speed.
-        Full ORCA maths are in orca_avoidance.py; this is the inline
-        per-node correction for real-time 50Hz loop integration.
-        """
-        avoidance_range = self.orca_radius * 3.0    # look-ahead bubble
+        pos_i = (self.x, self.y, self.z)
+        vel_i = (self.vx, self.vy, self.vz)
+        pref_vel_i = (vx_des, vy_des, vz_des)
 
-        ax, ay, az = 0.0, 0.0, 0.0  # accumulated avoidance vector
-
+        neighbors = []
         for peer_id, state in self.peer_states.items():
-            px, py, pz, pvx, pvy, pvz = state
-            dx = self.x - px
-            dy = self.y - py
-            dz = self.z - pz
-            dist = math.sqrt(dx*dx + dy*dy + dz*dz)
+            if peer_id != self.drone_id:
+                px, py, pz, pvx, pvy, pvz = state
+                neighbors.append(((px, py, pz), (pvx, pvy, pvz)))
 
-            if dist < 0.01:
-                continue  # same position (startup edge case)
-
-            if dist < avoidance_range:
-                # Relative velocity
-                rvx = (vx_des - pvx)
-                rvy = (vy_des - pvy)
-                rvz = (vz_des - pvz)
-
-                # Penetration depth: how much inside avoidance bubble
-                penetration = max(0.0, avoidance_range - dist)
-                weight = (penetration / avoidance_range) ** 2  # quadratic ramp
-
-                # Repulsion direction = normalised separation vector
-                nx = dx / dist
-                ny = dy / dist
-                nz = dz / dist
-
-                # Project relative velocity onto separation axis
-                dot = rvx * nx + rvy * ny + rvz * nz
-
-                # Only repel if closing (dot < 0)
-                if dot < 0:
-                    repulsion = -dot * weight * self.cruise_speed
-                    ax += nx * repulsion
-                    ay += ny * repulsion
-                    az += nz * repulsion
-
-        # Blend: desired + avoidance correction, then re-normalise to cruise speed
-        fx = vx_des + ax
-        fy = vy_des + ay
-        fz = vz_des + az
-
-        # Clamp to cruise speed
-        mag = math.sqrt(fx*fx + fy*fy + fz*fz)
-        if mag > self.cruise_speed:
-            scale = self.cruise_speed / mag
-            fx *= scale; fy *= scale; fz *= scale
-
-        # Clamp vertical to ±2 m/s
-        fz = max(-2.0, min(2.0, fz))
-
-        return fx, fy, fz
+        safe_vx, safe_vy, safe_vz = self.solver.compute_avoidance_velocity(
+            pos_i, vel_i, pref_vel_i, neighbors
+        )
+        return safe_vx, safe_vy, safe_vz
 
     # ── Control Loop ──────────────────────────────────────────────────────────
     def _control_loop(self):

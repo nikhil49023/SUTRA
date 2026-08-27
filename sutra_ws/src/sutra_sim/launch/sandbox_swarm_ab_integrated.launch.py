@@ -105,7 +105,11 @@ def generate_launch_description():
             f"/model/{did}/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry",
             f"/model/{did}/pose@geometry_msgs/msg/Pose[gz.msgs.Pose",
             f"/{did}/imu@sensor_msgs/msg/Imu[gz.msgs.IMU",
+            f"/{did}/air_pressure@sensor_msgs/msg/FluidPressure[gz.msgs.FluidPressure",
+            f"/{did}/magnetometer@sensor_msgs/msg/MagneticField[gz.msgs.Magnetometer",
+            f"/{did}/navsat@sensor_msgs/msg/NavSatFix[gz.msgs.NavSat",
             f"/{did}/lidar/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked",
+            f"/{did}/rangefinder/distance@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan",
         ]
 
     bridge_args = (

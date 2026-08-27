@@ -1,0 +1,266 @@
+<?xml version="1.0" ?>
+<!--
+  PROJECT SUTRA — 5-Drone SORCA 3D Ring Crossing Simulation Arena
+  ================================================================
+  Author: Tech Lead Nikhil (Subsystem A Lead)
+  Location: sutra_ws/src/sutra_sim/worlds/ring_crossing_arena.sdf
+
+  SDF 1.8 World Engineered for Clean 5-Drone Ring Crossing Collision Avoidance:
+    - R=12.0m Staged Launch Perimeter for [uav_alpha, uav_beta, uav_gamma, uav_delta, uav_epsilon]
+    - 500Hz DART Physics Solver with RTF >= 0.99
+    - Ground Guidance Rings (4m, 8m, 12m) and Central Beacon (0, 0, 4m)
+    - Full 9-DOF Sensor Suite (250Hz IMU, Baro, Mag, GPS, RGB, FLIR Thermal, LiDAR)
+-->
+<sdf version="1.8">
+  <world name="ring_crossing_arena">
+
+    <physics name="500hz" type="dart">
+      <max_step_size>0.002</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>500</real_time_update_rate>
+    </physics>
+
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics" />
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands" />
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster" />
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu" />
+    <plugin filename="gz-sim-air-pressure-system" name="gz::sim::systems::AirPressure" />
+    <plugin filename="gz-sim-magnetometer-system" name="gz::sim::systems::Magnetometer" />
+    <plugin filename="gz-sim-navsat-system" name="gz::sim::systems::NavSat" />
+
+    <!-- ── Sun & Ambient Tactical Lighting ───────────────────────────────── -->
+    <light name="sun" type="directional">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 50 0 0 0</pose>
+      <diffuse>0.95 0.95 0.92 1</diffuse>
+      <specular>0.3 0.3 0.3 1</specular>
+      <direction>-0.3 0.3 -0.9</direction>
+    </light>
+
+    <!-- ── Arena Ground Grid Plane (80m x 80m Dark Asphalt) ─────────────── -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="col">
+          <geometry><plane><normal>0 0 1</normal><size>80 80</size></plane></geometry>
+        </collision>
+        <visual name="vis">
+          <geometry><plane><normal>0 0 1</normal><size>80 80</size></plane></geometry>
+          <material>
+            <ambient>0.08 0.10 0.15 1</ambient>
+            <diffuse>0.12 0.15 0.20 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ── Concentric Range Rings on Ground (Visual Guidance) ────────────── -->
+    <model name="ring_perimeter_12m"><static>true</static><pose>0 0 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="vis">
+          <geometry><cylinder><radius>12.0</radius><length>0.01</length></cylinder></geometry>
+          <material><ambient>0.0 0.5 0.8 0.15</ambient><diffuse>0.0 0.7 0.9 0.2</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="ring_inner_8m"><static>true</static><pose>0 0 0.015 0 0 0</pose>
+      <link name="link">
+        <visual name="vis">
+          <geometry><cylinder><radius>8.0</radius><length>0.01</length></cylinder></geometry>
+          <material><ambient>0.2 0.2 0.3 0.15</ambient><diffuse>0.3 0.3 0.4 0.2</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="ring_inner_4m"><static>true</static><pose>0 0 0.02 0 0 0</pose>
+      <link name="link">
+        <visual name="vis">
+          <geometry><cylinder><radius>4.0</radius><length>0.01</length></cylinder></geometry>
+          <material><ambient>0.8 0.2 0.2 0.2</ambient><diffuse>0.9 0.2 0.2 0.25</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ── Central Intersection Target Marker (0, 0, 4.0m) ───────────────── -->
+    <model name="central_crossing_target"><static>true</static><pose>0 0 4.0 0 0 0</pose>
+      <link name="link">
+        <visual name="beacon">
+          <geometry><sphere><radius>0.25</radius></sphere></geometry>
+          <material>
+            <ambient>1.0 0.1 0.1 1</ambient>
+            <diffuse>1.0 0.2 0.2 1</diffuse>
+            <emissive>0.8 0.1 0.1 1</emissive>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ── 5 Perimeter Launch Pads ───────────────────────────────────────── -->
+    <model name="pad_alpha"><static>true</static><pose>12.0 0.0 0.02 0 0 0</pose>
+      <link name="link"><visual name="vis"><geometry><cylinder><radius>1.2</radius><length>0.02</length></cylinder></geometry><material><ambient>0.0 0.8 1.0 1</ambient><diffuse>0.0 0.8 1.0 1</diffuse><emissive>0.0 0.4 0.6 1</emissive></material></visual></link>
+    </model>
+    <model name="pad_beta"><static>true</static><pose>3.708 11.413 0.02 0 0 0</pose>
+      <link name="link"><visual name="vis"><geometry><cylinder><radius>1.2</radius><length>0.02</length></cylinder></geometry><material><ambient>0.5 0.5 1.0 1</ambient><diffuse>0.5 0.5 1.0 1</diffuse><emissive>0.3 0.3 0.7 1</emissive></material></visual></link>
+    </model>
+    <model name="pad_gamma"><static>true</static><pose>-9.708 7.053 0.02 0 0 0</pose>
+      <link name="link"><visual name="vis"><geometry><cylinder><radius>1.2</radius><length>0.02</length></cylinder></geometry><material><ambient>0.2 0.8 0.5 1</ambient><diffuse>0.2 0.8 0.5 1</diffuse><emissive>0.1 0.5 0.3 1</emissive></material></visual></link>
+    </model>
+    <model name="pad_delta"><static>true</static><pose>-9.708 -7.053 0.02 0 0 0</pose>
+      <link name="link"><visual name="vis"><geometry><cylinder><radius>1.2</radius><length>0.02</length></cylinder></geometry><material><ambient>0.9 0.6 0.1 1</ambient><diffuse>0.9 0.6 0.1 1</diffuse><emissive>0.6 0.4 0.1 1</emissive></material></visual></link>
+    </model>
+    <model name="pad_epsilon"><static>true</static><pose>3.708 -11.413 0.02 0 0 0</pose>
+      <link name="link"><visual name="vis"><geometry><cylinder><radius>1.2</radius><length>0.02</length></cylinder></geometry><material><ambient>0.9 0.3 0.6 1</ambient><diffuse>0.9 0.3 0.6 1</diffuse><emissive>0.6 0.2 0.4 1</emissive></material></visual></link>
+    </model>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         UAV_ALPHA (Launch Pad 1: 12m East, Facing Inward)
+    ════════════════════════════════════════════════════════════════════════ -->
+    <model name="uav_alpha">
+      <pose>12.0 0.0 0.2 0 0 3.14159</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><ixy>0</ixy><ixz>0</ixz><iyy>0.07000</iyy><iyz>0</iyz><izz>0.09770</izz></inertia></inertial>
+        <collision name="col"><geometry><box><size>0.47 0.47 0.11</size></box></geometry></collision>
+        <visual name="body"><geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry></visual>
+        <visual name="r_fl"><pose>0.20 -0.33 0.035 0 0 0</pose><geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_ccw.dae</uri></mesh></geometry><material><ambient>0.0 0.8 1.0 1</ambient><diffuse>0.0 0.8 1.0 1</diffuse></material></visual>
+        <visual name="r_rr"><pose>-0.20 0.30 0.035 0 0 0</pose><geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_ccw.dae</uri></mesh></geometry><material><ambient>0.0 0.8 1.0 1</ambient><diffuse>0.0 0.8 1.0 1</diffuse></material></visual>
+        <visual name="r_fr"><pose>0.20 0.33 0.035 0 0 0</pose><geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry><material><ambient>1.0 0.2 0.2 1</ambient><diffuse>1.0 0.2 0.2 1</diffuse></material></visual>
+        <visual name="r_rl"><pose>-0.20 -0.30 0.035 0 0 0</pose><geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry><material><ambient>1.0 0.2 0.2 1</ambient><diffuse>1.0 0.2 0.2 1</diffuse></material></visual>
+
+        <!-- Sensors -->
+        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>250</update_rate><topic>/uav_alpha/imu</topic></sensor>
+        <sensor name="air_pressure" type="air_pressure"><always_on>1</always_on><update_rate>50</update_rate><topic>/uav_alpha/air_pressure</topic></sensor>
+        <sensor name="magnetometer" type="magnetometer"><always_on>1</always_on><update_rate>50</update_rate><topic>/uav_alpha/magnetometer</topic></sensor>
+        <sensor name="navsat" type="navsat"><always_on>1</always_on><update_rate>10</update_rate><topic>/uav_alpha/navsat</topic></sensor>
+        <sensor name="rangefinder" type="gpu_lidar"><pose>0 0 -0.04 0 1.5707963 0</pose><topic>/uav_alpha/rangefinder/distance</topic><update_rate>50</update_rate><ray><scan><horizontal><samples>1</samples><min_angle>0</min_angle><max_angle>0</max_angle></horizontal><vertical><samples>1</samples><min_angle>0</min_angle><max_angle>0</max_angle></vertical></scan><range><min>0.05</min><max>40.0</max></range></ray><always_on>1</always_on></sensor>
+        <sensor name="cam" type="camera"><pose>0.15 0 0 0 0 0</pose><topic>/uav_alpha/camera/image_raw</topic><update_rate>30</update_rate><camera><horizontal_fov>1.396</horizontal_fov><image><width>1280</width><height>720</height><format>R8G8B8</format></image></camera><always_on>1</always_on></sensor>
+        <sensor name="thermal_cam" type="thermal"><pose>0.15 0 -0.03 0 0 0</pose><topic>/uav_alpha/thermal_camera/image_raw</topic><update_rate>30</update_rate><camera><horizontal_fov>1.047</horizontal_fov><image><width>640</width><height>480</height><format>L8</format></image></camera><always_on>1</always_on></sensor>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl"><link_name>base_link</link_name><topic>/uav_alpha/gazebo/command/twist</topic></plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions><odom_publish_frequency>50</odom_publish_frequency><odom_frame>world</odom_frame><robot_base_frame>base_link</robot_base_frame></plugin>
+    </model>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         UAV_BETA (Launch Pad 2: 72 deg)
+    ════════════════════════════════════════════════════════════════════════ -->
+    <model name="uav_beta">
+      <pose>3.708 11.413 0.2 0 0 -1.88496</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><ixy>0</ixy><ixz>0</ixz><iyy>0.07000</iyy><iyz>0</iyz><izz>0.09770</izz></inertia></inertial>
+        <collision name="col"><geometry><box><size>0.47 0.47 0.11</size></box></geometry></collision>
+        <visual name="body"><geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry></visual>
+        <visual name="r_fl"><pose>0.20 -0.33 0.035 0 0 0</pose><geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_ccw.dae</uri></mesh></geometry><material><ambient>0.5 0.5 1.0 1</ambient><diffuse>0.5 0.5 1.0 1</diffuse></material></visual>
+        <visual name="r_rr"><pose>-0.20 0.30 0.035 0 0 0</pose><geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_ccw.dae</uri></mesh></geometry><material><ambient>0.5 0.5 1.0 1</ambient><diffuse>0.5 0.5 1.0 1</diffuse></material></visual>
+        <visual name="r_fr"><pose>0.20 0.33 0.035 0 0 0</pose><geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry><material><ambient>1.0 0.2 0.2 1</ambient><diffuse>1.0 0.2 0.2 1</diffuse></material></visual>
+        <visual name="r_rl"><pose>-0.20 -0.30 0.035 0 0 0</pose><geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry><material><ambient>1.0 0.2 0.2 1</ambient><diffuse>1.0 0.2 0.2 1</diffuse></material></visual>
+
+        <!-- Sensors -->
+        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>250</update_rate><topic>/uav_beta/imu</topic></sensor>
+        <sensor name="air_pressure" type="air_pressure"><always_on>1</always_on><update_rate>50</update_rate><topic>/uav_beta/air_pressure</topic></sensor>
+        <sensor name="magnetometer" type="magnetometer"><always_on>1</always_on><update_rate>50</update_rate><topic>/uav_beta/magnetometer</topic></sensor>
+        <sensor name="navsat" type="navsat"><always_on>1</always_on><update_rate>10</update_rate><topic>/uav_beta/navsat</topic></sensor>
+        <sensor name="rangefinder" type="gpu_lidar"><pose>0 0 -0.04 0 1.5707963 0</pose><topic>/uav_beta/rangefinder/distance</topic><update_rate>50</update_rate><ray><scan><horizontal><samples>1</samples><min_angle>0</min_angle><max_angle>0</max_angle></horizontal><vertical><samples>1</samples><min_angle>0</min_angle><max_angle>0</max_angle></vertical></scan><range><min>0.05</min><max>40.0</max></range></ray><always_on>1</always_on></sensor>
+        <sensor name="cam" type="camera"><pose>0.15 0 0 0 0 0</pose><topic>/uav_beta/camera/image_raw</topic><update_rate>30</update_rate><camera><horizontal_fov>1.396</horizontal_fov><image><width>1280</width><height>720</height><format>R8G8B8</format></image></camera><always_on>1</always_on></sensor>
+        <sensor name="thermal_cam" type="thermal"><pose>0.15 0 -0.03 0 0 0</pose><topic>/uav_beta/thermal_camera/image_raw</topic><update_rate>30</update_rate><camera><horizontal_fov>1.047</horizontal_fov><image><width>640</width><height>480</height><format>L8</format></image></camera><always_on>1</always_on></sensor>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl"><link_name>base_link</link_name><topic>/uav_beta/gazebo/command/twist</topic></plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions><odom_publish_frequency>50</odom_publish_frequency><odom_frame>world</odom_frame><robot_base_frame>base_link</robot_base_frame></plugin>
+    </model>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         UAV_GAMMA (Launch Pad 3: 144 deg)
+    ════════════════════════════════════════════════════════════════════════ -->
+    <model name="uav_gamma">
+      <pose>-9.708 7.053 0.2 0 0 -0.628319</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><ixy>0</ixy><ixz>0</ixz><iyy>0.07000</iyy><iyz>0</iyz><izz>0.09770</izz></inertia></inertial>
+        <collision name="col"><geometry><box><size>0.47 0.47 0.11</size></box></geometry></collision>
+        <visual name="body"><geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry></visual>
+        <visual name="r_fl"><pose>0.20 -0.33 0.035 0 0 0</pose><geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_ccw.dae</uri></mesh></geometry><material><ambient>0.2 0.8 0.5 1</ambient><diffuse>0.2 0.8 0.5 1</diffuse></material></visual>
+        <visual name="r_rr"><pose>-0.20 0.30 0.035 0 0 0</pose><geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_ccw.dae</uri></mesh></geometry><material><ambient>0.2 0.8 0.5 1</ambient><diffuse>0.2 0.8 0.5 1</diffuse></material></visual>
+        <visual name="r_fr"><pose>0.20 0.33 0.035 0 0 0</pose><geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry><material><ambient>1.0 0.2 0.2 1</ambient><diffuse>1.0 0.2 0.2 1</diffuse></material></visual>
+        <visual name="r_rl"><pose>-0.20 -0.30 0.035 0 0 0</pose><geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry><material><ambient>1.0 0.2 0.2 1</ambient><diffuse>1.0 0.2 0.2 1</diffuse></material></visual>
+
+        <!-- Sensors -->
+        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>250</update_rate><topic>/uav_gamma/imu</topic></sensor>
+        <sensor name="air_pressure" type="air_pressure"><always_on>1</always_on><update_rate>50</update_rate><topic>/uav_gamma/air_pressure</topic></sensor>
+        <sensor name="magnetometer" type="magnetometer"><always_on>1</always_on><update_rate>50</update_rate><topic>/uav_gamma/magnetometer</topic></sensor>
+        <sensor name="navsat" type="navsat"><always_on>1</always_on><update_rate>10</update_rate><topic>/uav_gamma/navsat</topic></sensor>
+        <sensor name="rangefinder" type="gpu_lidar"><pose>0 0 -0.04 0 1.5707963 0</pose><topic>/uav_gamma/rangefinder/distance</topic><update_rate>50</update_rate><ray><scan><horizontal><samples>1</samples><min_angle>0</min_angle><max_angle>0</max_angle></horizontal><vertical><samples>1</samples><min_angle>0</min_angle><max_angle>0</max_angle></vertical></scan><range><min>0.05</min><max>40.0</max></range></ray><always_on>1</always_on></sensor>
+        <sensor name="cam" type="camera"><pose>0.15 0 0 0 0 0</pose><topic>/uav_gamma/camera/image_raw</topic><update_rate>30</update_rate><camera><horizontal_fov>1.396</horizontal_fov><image><width>1280</width><height>720</height><format>R8G8B8</format></image></camera><always_on>1</always_on></sensor>
+        <sensor name="thermal_cam" type="thermal"><pose>0.15 0 -0.03 0 0 0</pose><topic>/uav_gamma/thermal_camera/image_raw</topic><update_rate>30</update_rate><camera><horizontal_fov>1.047</horizontal_fov><image><width>640</width><height>480</height><format>L8</format></image></camera><always_on>1</always_on></sensor>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl"><link_name>base_link</link_name><topic>/uav_gamma/gazebo/command/twist</topic></plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions><odom_publish_frequency>50</odom_publish_frequency><odom_frame>world</odom_frame><robot_base_frame>base_link</robot_base_frame></plugin>
+    </model>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         UAV_DELTA (Launch Pad 4: 216 deg)
+    ════════════════════════════════════════════════════════════════════════ -->
+    <model name="uav_delta">
+      <pose>-9.708 -7.053 0.2 0 0 0.628319</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><ixy>0</ixy><ixz>0</ixz><iyy>0.07000</iyy><iyz>0</iyz><izz>0.09770</izz></inertia></inertial>
+        <collision name="col"><geometry><box><size>0.47 0.47 0.11</size></box></geometry></collision>
+        <visual name="body"><geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry></visual>
+        <visual name="r_fl"><pose>0.20 -0.33 0.035 0 0 0</pose><geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_ccw.dae</uri></mesh></geometry><material><ambient>0.9 0.6 0.1 1</ambient><diffuse>0.9 0.6 0.1 1</diffuse></material></visual>
+        <visual name="r_rr"><pose>-0.20 0.30 0.035 0 0 0</pose><geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_ccw.dae</uri></mesh></geometry><material><ambient>0.9 0.6 0.1 1</ambient><diffuse>0.9 0.6 0.1 1</diffuse></material></visual>
+        <visual name="r_fr"><pose>0.20 0.33 0.035 0 0 0</pose><geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry><material><ambient>1.0 0.2 0.2 1</ambient><diffuse>1.0 0.2 0.2 1</diffuse></material></visual>
+        <visual name="r_rl"><pose>-0.20 -0.30 0.035 0 0 0</pose><geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry><material><ambient>1.0 0.2 0.2 1</ambient><diffuse>1.0 0.2 0.2 1</diffuse></material></visual>
+
+        <!-- Sensors -->
+        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>250</update_rate><topic>/uav_delta/imu</topic></sensor>
+        <sensor name="air_pressure" type="air_pressure"><always_on>1</always_on><update_rate>50</update_rate><topic>/uav_delta/air_pressure</topic></sensor>
+        <sensor name="magnetometer" type="magnetometer"><always_on>1</always_on><update_rate>50</update_rate><topic>/uav_delta/magnetometer</topic></sensor>
+        <sensor name="navsat" type="navsat"><always_on>1</always_on><update_rate>10</update_rate><topic>/uav_delta/navsat</topic></sensor>
+        <sensor name="rangefinder" type="gpu_lidar"><pose>0 0 -0.04 0 1.5707963 0</pose><topic>/uav_delta/rangefinder/distance</topic><update_rate>50</update_rate><ray><scan><horizontal><samples>1</samples><min_angle>0</min_angle><max_angle>0</max_angle></horizontal><vertical><samples>1</samples><min_angle>0</min_angle><max_angle>0</max_angle></vertical></scan><range><min>0.05</min><max>40.0</max></range></ray><always_on>1</always_on></sensor>
+        <sensor name="cam" type="camera"><pose>0.15 0 0 0 0 0</pose><topic>/uav_delta/camera/image_raw</topic><update_rate>30</update_rate><camera><horizontal_fov>1.396</horizontal_fov><image><width>1280</width><height>720</height><format>R8G8B8</format></image></camera><always_on>1</always_on></sensor>
+        <sensor name="thermal_cam" type="thermal"><pose>0.15 0 -0.03 0 0 0</pose><topic>/uav_delta/thermal_camera/image_raw</topic><update_rate>30</update_rate><camera><horizontal_fov>1.047</horizontal_fov><image><width>640</width><height>480</height><format>L8</format></image></camera><always_on>1</always_on></sensor>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl"><link_name>base_link</link_name><topic>/uav_delta/gazebo/command/twist</topic></plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions><odom_publish_frequency>50</odom_publish_frequency><odom_frame>world</odom_frame><robot_base_frame>base_link</robot_base_frame></plugin>
+    </model>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         UAV_EPSILON (Launch Pad 5: 288 deg)
+    ════════════════════════════════════════════════════════════════════════ -->
+    <model name="uav_epsilon">
+      <pose>3.708 -11.413 0.2 0 0 1.88496</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><ixy>0</ixy><ixz>0</ixz><iyy>0.07000</iyy><iyz>0</iyz><izz>0.09770</izz></inertia></inertial>
+        <collision name="col"><geometry><box><size>0.47 0.47 0.11</size></box></geometry></collision>
+        <visual name="body"><geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry></visual>
+        <visual name="r_fl"><pose>0.20 -0.33 0.035 0 0 0</pose><geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_ccw.dae</uri></mesh></geometry><material><ambient>0.9 0.3 0.6 1</ambient><diffuse>0.9 0.3 0.6 1</diffuse></material></visual>
+        <visual name="r_rr"><pose>-0.20 0.30 0.035 0 0 0</pose><geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_ccw.dae</uri></mesh></geometry><material><ambient>0.9 0.3 0.6 1</ambient><diffuse>0.9 0.3 0.6 1</diffuse></material></visual>
+        <visual name="r_fr"><pose>0.20 0.33 0.035 0 0 0</pose><geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry><material><ambient>1.0 0.2 0.2 1</ambient><diffuse>1.0 0.2 0.2 1</diffuse></material></visual>
+        <visual name="r_rl"><pose>-0.20 -0.30 0.035 0 0 0</pose><geometry><mesh><scale>0.15 0.15 0.15</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry><material><ambient>1.0 0.2 0.2 1</ambient><diffuse>1.0 0.2 0.2 1</diffuse></material></visual>
+
+        <!-- Sensors -->
+        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>250</update_rate><topic>/uav_epsilon/imu</topic></sensor>
+        <sensor name="air_pressure" type="air_pressure"><always_on>1</always_on><update_rate>50</update_rate><topic>/uav_epsilon/air_pressure</topic></sensor>
+        <sensor name="magnetometer" type="magnetometer"><always_on>1</always_on><update_rate>50</update_rate><topic>/uav_epsilon/magnetometer</topic></sensor>
+        <sensor name="navsat" type="navsat"><always_on>1</always_on><update_rate>10</update_rate><topic>/uav_epsilon/navsat</topic></sensor>
+        <sensor name="rangefinder" type="gpu_lidar"><pose>0 0 -0.04 0 1.5707963 0</pose><topic>/uav_epsilon/rangefinder/distance</topic><update_rate>50</update_rate><ray><scan><horizontal><samples>1</samples><min_angle>0</min_angle><max_angle>0</max_angle></horizontal><vertical><samples>1</samples><min_angle>0</min_angle><max_angle>0</max_angle></vertical></scan><range><min>0.05</min><max>40.0</max></range></ray><always_on>1</always_on></sensor>
+        <sensor name="cam" type="camera"><pose>0.15 0 0 0 0 0</pose><topic>/uav_epsilon/camera/image_raw</topic><update_rate>30</update_rate><camera><horizontal_fov>1.396</horizontal_fov><image><width>1280</width><height>720</height><format>R8G8B8</format></image></camera><always_on>1</always_on></sensor>
+        <sensor name="thermal_cam" type="thermal"><pose>0.15 0 -0.03 0 0 0</pose><topic>/uav_epsilon/thermal_camera/image_raw</topic><update_rate>30</update_rate><camera><horizontal_fov>1.047</horizontal_fov><image><width>640</width><height>480</height><format>L8</format></image></camera><always_on>1</always_on></sensor>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl"><link_name>base_link</link_name><topic>/uav_epsilon/gazebo/command/twist</topic></plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions><odom_publish_frequency>50</odom_publish_frequency><odom_frame>world</odom_frame><robot_base_frame>base_link</robot_base_frame></plugin>
+    </model>
+
+  </world>
+</sdf>

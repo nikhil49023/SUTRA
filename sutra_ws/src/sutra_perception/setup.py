@@ -20,7 +20,10 @@ setup(
         # Config / parameter files
         (os.path.join('share', package_name, 'config'),
             glob('config/*.yaml')),
-        ('lib/' + package_name, ['sutra_perception/detector_node.py']),
+        ('lib/' + package_name, [
+            'sutra_perception/detector_node.py',
+            'sutra_perception/camera_streamer_node.py',
+        ]),
     ],
     install_requires=[
         'setuptools',
@@ -42,6 +45,8 @@ setup(
         'console_scripts': [
             'detector_node = sutra_perception.detector_node:main',
             'detector_node.py = sutra_perception.detector_node:main',
+            'camera_streamer_node = sutra_perception.camera_streamer_node:main',
+            'camera_streamer_node.py = sutra_perception.camera_streamer_node:main',
         ],
     },
 )

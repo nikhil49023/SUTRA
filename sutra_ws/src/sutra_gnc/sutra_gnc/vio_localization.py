@@ -20,7 +20,7 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 from geometry_msgs.msg import Pose, Point, Quaternion, Vector3, Twist, PoseStamped
 from nav_msgs.msg import Odometry
-from sensor_msgs.msg import Imu, NavSatFix
+from sensor_msgs.msg import Imu, NavSatFix, FluidPressure, MagneticField
 from std_msgs.msg import String
 
 
@@ -135,6 +135,36 @@ class VioEKF2Filter:
             self.state_p[i] = self.state_p[i] + k * (meas - self.state_p[i])
             self.cov_p[i] = (1.0 - k) * self.cov_p[i]
 
+    def update_baro(self, pressure_pa: float, timestamp: float):
+        """
+        EKF Barometer altitude measurement update step (FluidPressure in Pa).
+        Converts barometric pressure to altitude and bounds vertical drift.
+        """
+        if pressure_pa <= 0.0:
+            return
+        z_baro = 44330.0 * (1.0 - math.pow(pressure_pa / 101325.0, 0.190295))
+        r_baro = 0.25  # Barometer measurement noise variance
+        k = self.cov_p[2] / (self.cov_p[2] + r_baro)
+        self.state_p[2] = self.state_p[2] + k * (z_baro - self.state_p[2])
+        self.cov_p[2] = (1.0 - k) * self.cov_p[2]
+
+    def update_mag(self, bx: float, by: float, bz: float, timestamp: float):
+        """
+        EKF Magnetometer heading update step to reject yaw gyro drift.
+        Computes magnetic yaw angle and updates orientation quaternion.
+        """
+        if abs(bx) < 1e-6 and abs(by) < 1e-6:
+            return
+        mag_yaw = math.atan2(-by, bx)
+        # Slerp/blend yaw into state quaternion
+        cy = math.cos(mag_yaw * 0.5)
+        sy = math.sin(mag_yaw * 0.5)
+        # Current roll/pitch preserved, yaw aligned
+        self.state_q[0] = 0.9 * self.state_q[0] + 0.1 * cy
+        self.state_q[3] = 0.9 * self.state_q[3] + 0.1 * sy
+        norm = math.sqrt(sum(x * x for x in self.state_q)) + 1e-9
+        self.state_q = [x / norm for x in self.state_q]
+
     def update_object_anchor(self, x: float, y: float, z: float, conf: float, timestamp: float):
         """
         AIVIO Object-Relative Anchor Fusion (arXiv:2410.05996).
@@ -215,14 +245,23 @@ class VIOLocalizationNode(Node):
         self.sub_gps = self.create_subscription(
             NavSatFix, f"/{self.drone_id}/gps/fix", self._gps_cb, sensor_qos
         )
+        self.sub_navsat = self.create_subscription(
+            NavSatFix, f"/{self.drone_id}/navsat", self._gps_cb, sensor_qos
+        )
         self.sub_gps_fallback = self.create_subscription(
             NavSatFix, "/gps/fix", self._gps_cb, sensor_qos
+        )
+        self.sub_baro = self.create_subscription(
+            FluidPressure, f"/{self.drone_id}/air_pressure", self._baro_cb, sensor_qos
+        )
+        self.sub_mag = self.create_subscription(
+            MagneticField, f"/{self.drone_id}/magnetometer", self._mag_cb, sensor_qos
         )
 
         # 50Hz State Output Timer
         self.timer = self.create_timer(0.02, self._publish_state_50hz)
         self.get_logger().info(
-            f"👁️ VIO Localization EKF2 Node Initialized [{self.drone_id}] | GPS Fallback Monitoring Active"
+            f"👁️ VIO Localization EKF2 Node Initialized [{self.drone_id}] | GPS/Baro/Mag Fallback Monitoring Active"
         )
 
     def _imu_cb(self, msg: Imu):
@@ -239,6 +278,12 @@ class VIOLocalizationNode(Node):
                 dt
             )
         self.ekf.last_imu_time = curr_t
+
+    def _baro_cb(self, msg: FluidPressure):
+        self.ekf.update_baro(msg.fluid_pressure, time.time())
+
+    def _mag_cb(self, msg: MagneticField):
+        self.ekf.update_mag(msg.magnetic_field.x, msg.magnetic_field.y, msg.magnetic_field.z, time.time())
 
     def _vio_cam_cb(self, msg: Odometry):
         p = msg.pose.pose.position

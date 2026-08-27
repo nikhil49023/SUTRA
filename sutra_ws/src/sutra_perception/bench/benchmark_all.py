@@ -70,9 +70,10 @@ for _s in _STUBS:
         "YOLO", "Node", "Publisher", "Subscription", "QoSProfile",
         "ReliabilityPolicy", "String", "Image", "LaserScan", "PoseStamped",
         "Header", "is_available", "get_device_name", "version",
-        "RELIABLE", "BEST_EFFORT", "SENSOR_DATA",
+        "RELIABLE", "BEST_EFFORT", "SENSOR_DATA", "set_num_threads",
     ]:
         setattr(_m, _attr, _Stub)
+    setattr(_m, "set_num_threads", lambda *a, **k: None)
     sys.modules[_s] = _m
 
 # ─── Register sutra_perception as a findable package BEFORE loading node ──────

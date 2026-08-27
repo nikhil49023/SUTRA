@@ -418,14 +418,13 @@ class ORCAAvoidanceNode(Node):
         self.odom_received: Dict[str, bool] = {d: False for d in self.drones}
 
         # Option 3 Dynamic Relocating Checkpoint Sequences & Active Indices
-        # Forced collision paths: Alpha (15,0,4) and Gamma (-12.135, 8.816, 4) both target (0,0,4) simultaneously.
-        # Beta (4.635, 14.265, 4) and Epsilon (4.635, -14.265, 4) cross at (0,0,4).
+        # Forced collision paths: 5 UAVs on R=12m perimeter targeting (0, 0, 4.0m) simultaneously.
         self.checkpoints: Dict[str, List[Tuple[float, float, float]]] = {
-            "uav_alpha": [(0.0, 0.0, 4.0), (-15.0, 0.0, 4.0), (15.0, 0.0, 4.0)],
-            "uav_beta": [(0.0, 0.0, 4.0), (-4.635, -14.265, 4.0), (4.635, 14.265, 4.0)],
-            "uav_gamma": [(0.0, 0.0, 4.0), (12.135, -8.816, 4.0), (-12.135, 8.816, 4.0)],
-            "uav_delta": [(0.0, 0.0, 4.0), (12.135, 8.816, 4.0), (-12.135, -8.816, 4.0)],
-            "uav_epsilon": [(0.0, 0.0, 4.0), (-4.635, 14.265, 4.0), (4.635, -14.265, 4.0)],
+            "uav_alpha": [(0.0, 0.0, 4.0), (-12.0, 0.0, 4.0), (12.0, 0.0, 4.0)],
+            "uav_beta": [(0.0, 0.0, 4.0), (-3.708, -11.413, 4.0), (3.708, 11.413, 4.0)],
+            "uav_gamma": [(0.0, 0.0, 4.0), (9.708, -7.053, 4.0), (-9.708, 7.053, 4.0)],
+            "uav_delta": [(0.0, 0.0, 4.0), (9.708, 7.053, 4.0), (-9.708, -7.053, 4.0)],
+            "uav_epsilon": [(0.0, 0.0, 4.0), (-3.708, 11.413, 4.0), (3.708, -11.413, 4.0)],
         }
         self.current_ckpt_idx: Dict[str, int] = {d: 0 for d in self.drones}
 
@@ -476,6 +475,7 @@ class ORCAAvoidanceNode(Node):
             self.subs_odom.extend([sub_o1, sub_o2])
             self.subs_pref_vel.append(sub_pv)
 
+        self.is_airborne: Dict[str, bool] = {d: False for d in self.drones}
         # 50Hz Control Loop Timer
         self.timer = self.create_timer(0.02, self._control_loop_50hz)
         self.get_logger().info(
@@ -510,13 +510,38 @@ class ORCAAvoidanceNode(Node):
     def _control_loop_50hz(self):
         now = time.time()
         for drone_i in self.drones:
+            # 1. Wait until odometry has been received for this drone
+            if not self.odom_received[drone_i]:
+                continue
+
             pos_i = self.positions[drone_i]
             vel_i = self.velocities[drone_i]
 
+            # 2. Phase 1: Clean Vertical Takeoff to cruising altitude (3.8m)
+            if not self.is_airborne[drone_i]:
+                if pos_i[2] < 3.5:
+                    # Pure vertical climb setpoint with zero horizontal drift
+                    dz = 4.0 - pos_i[2]
+                    vz_climb = min(1.5, max(0.5, dz * 1.0))
+                    t_msg = Twist()
+                    t_msg.linear.z = float(vz_climb)
+                    self.pubs_cmd_vel[drone_i].publish(t_msg)
+
+                    ts_msg = TwistStamped()
+                    ts_msg.header.stamp = self.get_clock().now().to_msg()
+                    ts_msg.header.frame_id = "base_link"
+                    ts_msg.twist = t_msg
+                    self.pubs_twist_stamped[drone_i].publish(ts_msg)
+                    continue
+                else:
+                    self.is_airborne[drone_i] = True
+                    self.get_logger().info(f"🚀 [{drone_i}] Takeoff complete (z={pos_i[2]:.2f}m) -> Starting Ring Crossing")
+
+            # 3. Phase 2: Active Ring Crossing with 3D SORCA Avoidance
             # Dynamic obstacle array including motor-failed/unresponsive peers from Subsystem B
             dynamic_obstacles = list(self.obstacles)
             for d in self.drones:
-                if d != drone_i:
+                if d != drone_i and self.odom_received[d]:
                     hb = self.peer_heartbeats.get(d)
                     last_t = self.last_heartbeat_time.get(d, 0.0)
                     if (now - last_t > 3.0 and last_t > 0.0) or (hb and hb.get('motor_status') == 'FAILED'):
@@ -526,7 +551,6 @@ class ORCAAvoidanceNode(Node):
             if (now - self.pref_vel_received_time.get(drone_i, 0.0)) < 1.0:
                 pref_vel_i = self.pref_velocities[drone_i]
             else:
-                # Option 3 Dynamic Checkpoint Advancement: Check distance to active ring checkpoint
                 ckpt_seq = self.checkpoints.get(drone_i, [(0.0, 0.0, 4.0)])
                 idx = self.current_ckpt_idx.get(drone_i, 0)
                 target_ckpt = ckpt_seq[idx]
@@ -534,10 +558,11 @@ class ORCAAvoidanceNode(Node):
                 dx = target_ckpt[0] - pos_i[0]
                 dy = target_ckpt[1] - pos_i[1]
                 dz = target_ckpt[2] - pos_i[2]
+                dist_xy = math.sqrt(dx * dx + dy * dy)
                 dist_3d = math.sqrt(dx * dx + dy * dy + dz * dz)
 
-                # When within reach threshold of active ring, advance to next checkpoint
-                if dist_3d <= self.checkpoint_reach_radius:
+                # Advance to next waypoint when reaching current target
+                if dist_xy <= self.checkpoint_reach_radius:
                     self.current_ckpt_idx[drone_i] = (idx + 1) % len(ckpt_seq)
                     idx = self.current_ckpt_idx[drone_i]
                     target_ckpt = ckpt_seq[idx]
@@ -547,27 +572,30 @@ class ORCAAvoidanceNode(Node):
                     dist_3d = math.sqrt(dx * dx + dy * dy + dz * dz)
 
                 if dist_3d > 0.1:
-                    # Proportional distance speed control prevents flying away / overshooting
-                    speed = min(self.max_speed, dist_3d * 1.2)
+                    speed = min(self.max_speed, max(1.2, dist_3d * 0.6))
                     pref_vel_i = ((dx / dist_3d) * speed, (dy / dist_3d) * speed, (dz / dist_3d) * speed)
                 else:
                     pref_vel_i = (0.0, 0.0, 0.0)
 
+            # Build neighbor list only from peers with active odometry
             neighbors = [
                 (self.positions[drone_j], self.velocities[drone_j])
                 for drone_j in self.drones
-                if drone_j != drone_i
+                if drone_j != drone_i and self.odom_received[drone_j]
             ]
 
             safe_vx, safe_vy, safe_vz = self.solver.compute_avoidance_velocity(
                 pos_i, vel_i, pref_vel_i, neighbors, obstacles=dynamic_obstacles
             )
 
+            # Clamp velocities for stable, cinematic quadcopter dynamics
+            safe_vz = max(-1.2, min(1.2, safe_vz))
+
             # Publish Twist to ROS 2 and TwistStamped to Gazebo
             t_msg = Twist()
-            t_msg.linear.x = safe_vx
-            t_msg.linear.y = safe_vy
-            t_msg.linear.z = safe_vz
+            t_msg.linear.x = float(safe_vx)
+            t_msg.linear.y = float(safe_vy)
+            t_msg.linear.z = float(safe_vz)
             self.pubs_cmd_vel[drone_i].publish(t_msg)
 
             ts_msg = TwistStamped()

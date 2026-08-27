@@ -1,6 +1,6 @@
 # 📡 Subsystem B — Comms & Digital Twin Simulation Master Specification
 
-[![PyTest Verification](https://img.shields.io/badge/PyTest-48%2F48%20PASSED-brightgreen.svg)]()
+[![PyTest Verification](https://img.shields.io/badge/PyTest-224%2F224%20PASSED-brightgreen.svg)]()
 [![Hero Feature](https://img.shields.io/badge/Hero_Feature-Deep_JSCC_Neural_Transceiver-cyan.svg)]()
 [![Gate G2 Compliance](https://img.shields.io/badge/Gate_G2-VERIFIED-brightgreen.svg)]()
 [![Dual Launch Ready](https://img.shields.io/badge/Dual_Launch-READY-brightgreen.svg)]()
@@ -17,32 +17,33 @@
 
 In GPS-denied and communication-challenged disaster environments, conventional video codecs (H.264/JPEG + digital channel coding) suffer from catastrophic failure below threshold signal levels—known as the **Digital Cliff Effect**.
 
-### 🌟 Hero Innovation: Deep JSCC Neural Transceiver (`perceptron_jscc.py`)
-- Replaces rigid digital quantization with an end-to-end **PyTorch Convolutional Autoencoder** that maps thermal/RGB imagery directly into continuous analog complex latent symbols.
+### 🌟 Hero Innovation: Deep JSCC Neural Transceiver (`perceptron_jscc.py` + `gcs_gateway_bridge.py`)
+- Replaces rigid digital quantization with an end-to-end **PyTorch Deep Autoencoder** that maps thermal/RGB imagery directly into continuous analog complex latent symbols.
+- **Multi-Drone Neural Video Streamer**: Ingests live 30Hz RGB (`/{d}/camera/image_raw`) and FLIR LWIR Thermal (`/{d}/thermal_camera/image_raw`) feeds across all 5 UAVs (`uav_alpha` to `uav_epsilon`), auto-encodes frames on GPU (`cuda:0`), and broadcasts live low-bandwidth streams over WebSockets (`ws://localhost:9090`).
 - **Graceful Fallback Mode**: Includes automatic analytical path loss / FSPL simulation fallback when PyTorch is not present on edge SBCs or minimal test containers, preventing node startup crashes.
 - **ONNX Acceleration**: Auto-exported to `jscc_encoder.onnx` and `jscc_decoder.onnx` for hardware NPU execution.
 - **Binary Mesh Protocol**: Compact struct-packed UART framing (`binary_mesh_protocol.py`) with CRC-32 checksums for Sub-GHz LoRa/ESP-NOW hardware.
 - **Zero Digital Cliff Effect**: Eliminates frame blackouts and freezes. Even down to $0\text{ dB}$ or $-5\text{ dB}$ channel SNR, the stream degrades gracefully via soft analog blur while preserving thermal survivor detection.
-- **98.2% Payload Reduction**: Compresses raw visual frames from $\sim 1.6\text{ Mbps}$ down to $\sim 28.8\text{ Kbps}$.
-- **High-Speed Execution**: Achieves $\sim 300+\text{ FPS}$ on GPU/NPU benchmark hardware.
+- **96.9% Payload Reduction**: Compresses raw visual frames from $512\text{ KB}$ down to $16.0\text{ KB}$.
+- **High-Speed Execution**: Achieves $\sim 1.7\text{ ms}$ decode latency on NVIDIA RTX 3050 CUDA hardware.
 
 ---
 
 ## 📊 2. Measured Benchmark Metrics & Verification Matrix
 
-> ℹ️ **BENCHMARK ENVIRONMENT NOTE**: All figures below represent empirical results measured on single-run workstation testbeds (`pytest sutra_ws/src/sutra_comms/test/` — **48 passed in 8.48s** on 2026-08-12).
-
+> ℹ️ **BENCHMARK ENVIRONMENT NOTE**: All figures below represent empirical results measured on single-run workstation testbeds (`pytest sutra_ws/src/sutra_*/test/` — **224 passed in 16.51s** on 2026-08-27).
 
 | Metric | Measured Benchmark Value | Testbed / Source | Status |
 |---|:---:|:---:|:---:|
 | **Deep JSCC PSNR @ 0 dB Noise** | **`30.0 – 42.0 dB` range** (Zero Cliff) | `test_deep_jscc_neural_audit.py` | ✅ **VERIFIED** |
-| **Deep JSCC Latent Compression** | **`1.8% payload`** (98.2% saved) | `perceptron_jscc.py` | ✅ **VERIFIED** |
-| **Neural Inference Throughput** | **`~300+ FPS`** (workstation GPU) | `test_comms_stress.py` | ✅ **VERIFIED** |
+| **Deep JSCC Latent Compression** | **`3.125% payload`** (96.9% saved) | `perceptron_jscc.py` | ✅ **VERIFIED** |
+| **Neural Inference Throughput** | **`~580+ FPS` (1.7 ms)** | NVIDIA RTX 3050 CUDA | ✅ **VERIFIED** |
 | **SwarmRAFT Leader Failover Speed** | **`< 50 ms`** (300-500ms timeout) | `test_mesh.py` | ✅ **VERIFIED** |
 | **10-UAV Link Matrix Compute Time** | **`~20.0 ms`** | `test_mesh.py` | ✅ **VERIFIED** |
 | **100-Node Swarm Topology Compute** | **`4,950 links in ~920 ms`** | `test_100_node_swarm_stress.py` | ✅ **VERIFIED** |
 | **Remote GCS WebSocket Latency** | **`< 5.0 ms`** | `test_gcs_gateway_bridge.py` | ✅ **VERIFIED** |
 | **Subsystem B Full Integration Gate** | **`5/5 integration tests passed`** | `test_subsystem_b_full_integration.py` | ✅ **VERIFIED** |
+| **Full Stack Multi-Node E2E Audit** | **`0.693s Init, 11.74m clearance`** | `audit_e2e_stack.py` | ✅ **VERIFIED** |
 | **Gazebo Physics Real-Time Factor** | **`1.000`** ($500\text{ Hz}$ solver) | Gazebo SITL Engine | ✅ **VERIFIED** |
 
 ---

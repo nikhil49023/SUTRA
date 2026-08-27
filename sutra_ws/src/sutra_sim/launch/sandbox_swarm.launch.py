@@ -111,9 +111,21 @@ def generate_launch_description():
             # IMU (Gazebo → ROS 2)
             f"/{drone_id}/imu"
             f"@sensor_msgs/msg/Imu[gz.msgs.IMU",
+            # Barometer (Gazebo → ROS 2)
+            f"/{drone_id}/air_pressure"
+            f"@sensor_msgs/msg/FluidPressure[gz.msgs.FluidPressure",
+            # Magnetometer (Gazebo → ROS 2)
+            f"/{drone_id}/magnetometer"
+            f"@sensor_msgs/msg/MagneticField[gz.msgs.Magnetometer",
+            # GNSS / NavSat (Gazebo → ROS 2)
+            f"/{drone_id}/navsat"
+            f"@sensor_msgs/msg/NavSatFix[gz.msgs.NavSat",
             # LiDAR (Gazebo → ROS 2)
             f"/{drone_id}/lidar/points"
             f"@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked",
+            # Downward Rangefinder / Altimeter (Gazebo → ROS 2)
+            f"/{drone_id}/rangefinder/distance"
+            f"@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan",
         ]
 
     all_bridge_args = (
