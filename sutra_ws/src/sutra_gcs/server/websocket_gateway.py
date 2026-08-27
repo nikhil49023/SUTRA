@@ -656,12 +656,68 @@ class WebSocketGatewayServer:
 
             elif cmd_type in ("geofence.finish_drawing", "GEOFENCE_FINISH_DRAWING", "geofence.create"):
                 name = payload.get("name") or "New Geofence"
-                gf = self.geofence_ctrl.finish_drawing(name)
+                zone_type_str = payload.get("zone_type", "NO_FLY")
+                geometry_type_str = payload.get("geometry_type", "POLYGON")
+                raw_coords = payload.get("coordinates") or payload.get("points")
+
+                gf = None
+
+                # Try controller path first (drawing_mode was active with server-side points)
+                current_gf_state = self.state_store.get_state().geofence_state
+                if current_gf_state.drawing_mode:
+                    # If frontend also sent coordinates, inject them into the controller state
+                    if raw_coords and len(raw_coords) >= 3:
+                        parsed = []
+                        for c in raw_coords:
+                            if isinstance(c, (list, tuple)) and len(c) >= 2:
+                                parsed.append((float(c[0]), float(c[1])))
+                            elif isinstance(c, dict):
+                                lat = float(c.get("lat", c.get("latitude", 0)))
+                                lng = float(c.get("lng", c.get("longitude", 0)))
+                                parsed.append((lat, lng))
+                        if parsed:
+                            from dataclasses import replace as dc_replace
+                            self.state_store.update_state(
+                                lambda s: dc_replace(
+                                    s,
+                                    geofence_state=dc_replace(
+                                        s.geofence_state,
+                                        drawing_points=parsed,
+                                    ),
+                                )
+                            )
+                    gf = self.geofence_ctrl.finish_drawing(name)
+
+                # Fallback: create directly from coordinates in payload
+                if gf is None and raw_coords and len(raw_coords) >= 3:
+                    parsed = []
+                    for c in raw_coords:
+                        if isinstance(c, (list, tuple)) and len(c) >= 2:
+                            parsed.append((float(c[0]), float(c[1])))
+                        elif isinstance(c, dict):
+                            lat = float(c.get("lat", c.get("latitude", 0)))
+                            lng = float(c.get("lng", c.get("longitude", 0)))
+                            parsed.append((lat, lng))
+                    if len(parsed) >= 3:
+                        gf = self.geofence_svc.create_geofence(
+                            name=name,
+                            zone_type=ZoneType(zone_type_str),
+                            geometry_type=GeometryType(geometry_type_str),
+                            coordinates=parsed,
+                        )
+
                 if gf:
-                    self.event_bus.emit("geofence.created", payload={"geofence": serialize_obj(gf)}, correlation_id=corr_id, state_version=self.state_store.state_version)
+                    # Gateway also emits geofence.created (deduplication handled by event_id)
+                    self.event_bus.emit(
+                        "geofence.created",
+                        payload={"geofence": serialize_obj(gf)},
+                        correlation_id=corr_id,
+                        state_version=self.state_store.state_version,
+                    )
                     return serialize_obj(gf)
                 else:
                     raise ValueError("Geofence creation failed: requires at least 3 points for polygon or valid coordinates")
+
 
             elif cmd_type in ("geofence.cancel_drawing", "GEOFENCE_CANCEL_DRAWING"):
                 self.geofence_ctrl.cancel_drawing()

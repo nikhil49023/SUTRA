@@ -82,9 +82,26 @@ class GeofenceService:
             )
         )
 
+        # Emit full geofence object so frontend can render it immediately
         self.event_bus.emit(
             "geofence.created",
-            payload={"geofence_id": g.id, "name": g.name, "zone_type": g.zone_type.value},
+            payload={
+                "geofence": {
+                    "id": g.id,
+                    "name": g.name,
+                    "zone_type": g.zone_type.value,
+                    "geometry_type": g.geometry_type.value,
+                    "coordinates": [list(c) for c in (g.coordinates or [])],
+                    "center": list(g.center) if g.center else None,
+                    "radius": g.radius,
+                    "corridor_width": g.corridor_width,
+                    "altitude_min": g.altitude_min,
+                    "altitude_max": g.altitude_max,
+                    "enabled": g.enabled,
+                    "visible": True,
+                    "created_at": g.created_at,
+                }
+            },
             source="geofence_service",
         )
         return g
