@@ -164,15 +164,36 @@ def launch_setup(context, *args, **kwargs):
         }],
     )
 
+    # ── Subsystem A Companion Node (Neuro-Adaptive Flight) ────────────────────
+    neuro_flight_node = Node(
+        package="sutra_gnc",
+        executable="neuro_adaptive_flight_node.py",
+        name="sutra_neuro_flight_node",
+        output="screen",
+        parameters=[{"use_sim_time": True, "enable_feedforward": True}],
+    )
+
+    # ── Subsystem C Camera Streamer Node ──────────────────────────────────────
+    camera_streamer_node = Node(
+        package="sutra_perception",
+        executable="camera_streamer_node.py",
+        name="sutra_camera_streamer",
+        output="screen",
+        parameters=[{"use_sim_time": True, "fps": 30.0}],
+    )
+
+
     nodes_to_launch = [
         LogInfo(msg=f"🚁 LAUNCHING SUTRA MASTER TRI-SUBSYSTEM INTEGRATED SIMULATION | World: {os.path.basename(world_path)}"),
         gazebo_process,
         TimerAction(period=2.0, actions=[ros_gz_bridge_node]),
+        TimerAction(period=3.0, actions=[camera_streamer_node]),
         TimerAction(period=3.5, actions=[parallel_sim_manager, mesh_node, jscc_node, gcs_bridge_node]),
-        TimerAction(period=4.5, actions=[detector_node, orca_avoidance_node, octomap_generator_node, coordinated_search_node]),
+        TimerAction(period=4.5, actions=[detector_node, orca_avoidance_node, octomap_generator_node, coordinated_search_node, neuro_flight_node]),
     ]
 
     return nodes_to_launch
+
 
 
 def generate_launch_description():
