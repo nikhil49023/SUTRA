@@ -179,8 +179,9 @@ def launch_setup(context, *args, **kwargs):
         executable="camera_streamer_node.py",
         name="sutra_camera_streamer",
         output="screen",
-        parameters=[{"use_sim_time": True, "fps": 30.0}],
+        parameters=[{"use_sim_time": True, "fps": 30}],
     )
+
 
 
     nodes_to_launch = [
