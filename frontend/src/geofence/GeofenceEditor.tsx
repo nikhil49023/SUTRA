@@ -106,9 +106,8 @@ export const GeofenceEditor: React.FC = memo(() => {
           </div>
         </div>
 
-        {/* Priority */}
         <div>
-          <label className="text-[10px] text-[#707C88] block mb-1">PRIORITY (1=LOW → 5=CRITICAL)</label>
+          <label className="text-[10px] text-[#707C88] block mb-1">PRIORITY LEVEL (1–5)</label>
           <div className="flex gap-1">
             {[1, 2, 3, 4, 5].map((p) => (
               <button
@@ -138,4 +137,3 @@ export const GeofenceEditor: React.FC = memo(() => {
     </div>
   );
 });
-

@@ -25,6 +25,7 @@ export class GeofenceLayer {
   private drawingSourceId = 'geofence-drawing-source';
   private drawingFillLayerId = 'geofence-drawing-fill';
   private drawingBorderLayerId = 'geofence-drawing-border';
+  private drawingPointsLayerId = 'geofence-drawing-points';
   private handleMarkers: maplibregl.Marker[] = [];
 
   /** Last known geofences for re-rendering after style reload */
@@ -78,14 +79,14 @@ export class GeofenceLayer {
           ],
           'fill-opacity': [
             'case', ['==', ['get', 'selected'], true],
-            0.35,
+            0.32,
             ['match', ['get', 'zone_type'],
               'NO_FLY',    0.20,
-              'WARNING',   0.18,
-              'SAFE',      0.16,
-              'INCLUSION', 0.15,
-              'EXCLUSION', 0.22,
-              0.16,
+              'WARNING',   0.20,
+              'SAFE',      0.18,
+              'INCLUSION', 0.16,
+              'EXCLUSION', 0.20,
+              0.18,
             ],
           ],
         },
@@ -106,8 +107,8 @@ export class GeofenceLayer {
             'EXCLUSION', '#C75A5A',
             '#5B8FB9',
           ],
-          'line-width': ['case', ['==', ['get', 'selected'], true], 3.0, 1.8],
-          'line-opacity': ['case', ['==', ['get', 'selected'], true], 1.0, 0.8],
+          'line-width': ['case', ['==', ['get', 'selected'], true], 3.5, 2.0],
+          'line-opacity': ['case', ['==', ['get', 'selected'], true], 1.0, 0.85],
         },
       });
 
@@ -121,6 +122,7 @@ export class GeofenceLayer {
         id: this.drawingFillLayerId,
         type: 'fill',
         source: this.drawingSourceId,
+        filter: ['==', '$type', 'Polygon'],
         paint: { 'fill-color': '#5B8FB9', 'fill-opacity': 0.20 },
       });
 
@@ -128,10 +130,24 @@ export class GeofenceLayer {
         id: this.drawingBorderLayerId,
         type: 'line',
         source: this.drawingSourceId,
+        filter: ['in', '$type', 'Polygon', 'LineString'],
         paint: {
           'line-color': '#5B8FB9',
           'line-width': 2.0,
-          'line-dasharray': [3, 2],
+          'line-dasharray': [4, 2],
+        },
+      });
+
+      this.map.addLayer({
+        id: this.drawingPointsLayerId,
+        type: 'circle',
+        source: this.drawingSourceId,
+        filter: ['==', '$type', 'Point'],
+        paint: {
+          'circle-radius': 4.5,
+          'circle-color': '#5B8FB9',
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#E7EBEF',
         },
       });
 
@@ -182,7 +198,7 @@ export class GeofenceLayer {
       let polygonCoords: [number, number][][] = [];
 
       if (g.geometry_type === 'CIRCLE') {
-        const center = g.center || (g.coordinates && g.coordinates[0]);
+        const center = g.center || (g.coordinates && g.coordinates.length > 0 ? g.coordinates[0] : null);
         if (center) {
           polygonCoords = [this.generateCirclePolygon(center[0], center[1], g.radius ?? 200)];
         }
@@ -236,18 +252,30 @@ export class GeofenceLayer {
 
     const features: any[] = [];
 
+    // Add point markers for all fixed vertices
+    points.forEach((p, idx) => {
+      features.push({
+        type: 'Feature',
+        id: `vertex-${idx}`,
+        properties: { vertexIndex: idx },
+        geometry: {
+          type: 'Point',
+          coordinates: [p[1], p[0]],
+        },
+      });
+    });
+
     if (active_geometry_type === 'CIRCLE' && drawingCoords.length >= 1) {
       const center = drawingCoords[0];
       let radius = 200;
       if (drawingCoords.length >= 2) {
-        // Calculate radius from center to second/preview point
         radius = this.calculateDistance(center[0], center[1], drawingCoords[1][0], drawingCoords[1][1]);
       }
       features.push({
         type: 'Feature',
         geometry: {
           type: 'Polygon',
-          coordinates: [this.generateCirclePolygon(center[0], center[1], radius).map((p) => [p[0], p[1]])],
+          coordinates: [this.generateCirclePolygon(center[0], center[1], radius)],
         },
       });
     } else if (active_geometry_type === 'CORRIDOR' && drawingCoords.length >= 2) {
@@ -255,7 +283,7 @@ export class GeofenceLayer {
         type: 'Feature',
         geometry: {
           type: 'Polygon',
-          coordinates: [this.generateCorridorPolygon(drawingCoords, 50).map((p) => [p[0], p[1]])],
+          coordinates: [this.generateCorridorPolygon(drawingCoords, 50)],
         },
       });
     } else if (drawingCoords.length >= 3) {
@@ -288,15 +316,18 @@ export class GeofenceLayer {
     if (!this.map) return;
     let coords: [number, number][] = [];
 
-    if (geofence.geometry_type === 'CIRCLE' && geofence.center) {
-      coords = this.generateCirclePolygon(geofence.center[0], geofence.center[1], geofence.radius ?? 200).map(
-        (c) => [c[1], c[0]]
-      );
-    } else if (geofence.geometry_type === 'CORRIDOR' && geofence.coordinates.length >= 2) {
+    if (geofence.geometry_type === 'CIRCLE') {
+      const center = geofence.center || (geofence.coordinates && geofence.coordinates.length > 0 ? geofence.coordinates[0] : null);
+      if (center) {
+        coords = this.generateCirclePolygon(center[0], center[1], geofence.radius ?? 200).map(
+          (c) => [c[1], c[0]]
+        );
+      }
+    } else if (geofence.geometry_type === 'CORRIDOR' && geofence.coordinates && geofence.coordinates.length >= 2) {
       coords = this.generateCorridorPolygon(geofence.coordinates, geofence.corridor_width ?? 50).map(
         (c) => [c[1], c[0]]
       );
-    } else if (geofence.coordinates) {
+    } else if (geofence.coordinates && geofence.coordinates.length > 0) {
       coords = geofence.coordinates;
     }
 
@@ -351,8 +382,8 @@ export class GeofenceLayer {
     });
   }
 
-  /** Generates [lon, lat][] circle boundary */
-  private generateCirclePolygon(lat: number, lon: number, radiusM: number, points = 36): [number, number][] {
+  /** Generates [lon, lat][] circle boundary for GeoJSON */
+  private generateCirclePolygon(lat: number, lon: number, radiusM: number, points = 48): [number, number][] {
     const coords: [number, number][] = [];
     const earthRadius = 6371000;
     const dLat = radiusM / earthRadius;

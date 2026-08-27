@@ -2,7 +2,7 @@ import React, { useRef, memo } from 'react';
 import { useGeofenceStore, GeofenceStatusFilter } from '../stores/geofenceStore';
 import { useSelectionStore } from '../stores/selectionStore';
 import { commandManager } from '../communication/CommandManager';
-import { Geofence, ZoneType } from '../types/geofence';
+import { Geofence } from '../types/geofence';
 import {
   Shield,
   Eye,
@@ -12,8 +12,6 @@ import {
   Search,
   Download,
   Upload,
-  Power,
-  PowerOff,
 } from 'lucide-react';
 
 export const GeofenceSidebar: React.FC = memo(() => {
@@ -25,11 +23,8 @@ export const GeofenceSidebar: React.FC = memo(() => {
   const statusFilter = useGeofenceStore((s) => s.statusFilter);
   const setSearchQuery = useGeofenceStore((s) => s.setSearchQuery);
   const setFilterType = useGeofenceStore((s) => s.setFilterType);
-  const setStatusFilter = useGeofenceStore((s) => s.setStatusFilter);
-  const updateGeofence = useGeofenceStore((s) => s.updateGeofence);
   const deleteGeofence = useGeofenceStore((s) => s.deleteGeofence);
   const duplicateGeofence = useGeofenceStore((s) => s.duplicateGeofence);
-  const toggleGeofenceEnabled = useGeofenceStore((s) => s.toggleGeofenceEnabled);
   const toggleGeofenceVisible = useGeofenceStore((s) => s.toggleGeofenceVisible);
   const importGeoJSON = useGeofenceStore((s) => s.importGeoJSON);
   const exportGeoJSON = useGeofenceStore((s) => s.exportGeoJSON);
@@ -59,11 +54,6 @@ export const GeofenceSidebar: React.FC = memo(() => {
   const handleToggleVisible = (e: React.MouseEvent, g: Geofence) => {
     e.stopPropagation();
     toggleGeofenceVisible(g.id);
-  };
-
-  const handleToggleEnabled = (e: React.MouseEvent, g: Geofence) => {
-    e.stopPropagation();
-    toggleGeofenceEnabled(g.id);
   };
 
   const handleDuplicate = (e: React.MouseEvent, g: Geofence) => {
@@ -174,23 +164,6 @@ export const GeofenceSidebar: React.FC = memo(() => {
             </button>
           ))}
         </div>
-
-        {/* Status Filter Pills */}
-        <div className="flex flex-wrap gap-1 border-t border-[#2B3743]/50 pt-1.5">
-          {(['ALL', 'ENABLED', 'DISABLED', 'VISIBLE', 'HIDDEN'] as GeofenceStatusFilter[]).map((sf) => (
-            <button
-              key={sf}
-              onClick={() => setStatusFilter(sf)}
-              className={`px-1.5 py-0.5 rounded text-[9px] font-bold border transition ${
-                statusFilter === sf
-                  ? 'bg-[#1B2530] border-[#4F9A72] text-[#4F9A72]'
-                  : 'bg-[#0B0F14] border-[#2B3743] text-[#707C88] hover:text-[#E7EBEF]'
-              }`}
-            >
-              {sf}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Geofence List */}
@@ -238,20 +211,11 @@ export const GeofenceSidebar: React.FC = memo(() => {
                 </div>
 
                 <div className="flex items-center space-x-1">
-                  {/* Enable / Disable */}
-                  <button
-                    onClick={(e) => handleToggleEnabled(e, g)}
-                    className="p-1 hover:text-[#4F9A72] transition text-[#707C88]"
-                    title={g.enabled ? 'Disable Geofence (Disarm Safety)' : 'Enable Geofence (Enforce Safety)'}
-                  >
-                    {g.enabled ? <Power className="w-3.5 h-3.5 text-[#4F9A72]" /> : <PowerOff className="w-3.5 h-3.5 text-[#C75A5A]" />}
-                  </button>
-
                   {/* Show / Hide */}
                   <button
                     onClick={(e) => handleToggleVisible(e, g)}
                     className="p-1 hover:text-[#5B8FB9] transition text-[#707C88]"
-                    title={g.visible !== false ? 'Hide Geofence from map' : 'Show Geofence on map'}
+                    title={g.visible !== false ? 'Hide Geofence' : 'Show Geofence'}
                   >
                     {g.visible !== false ? <Eye className="w-3.5 h-3.5 text-[#5B8FB9]" /> : <EyeOff className="w-3.5 h-3.5 text-[#707C88]" />}
                   </button>
