@@ -507,12 +507,103 @@ class SutraCommsWorkbenchStudio:
         print("\n" + "="*80)
         print("🚀 LAUNCHING SUTRA INTERACTIVE SDR & SEMANTIC COMMS WORKBENCH STUDIO")
         print(f"🎬 Interactive Pacing: {self.target_fps:.1f} FPS")
-        print("="*80)
+# ──────────────────────────────────────────────────────────────────────────────
+# 4. Universal Native GUI Window (OpenCV + Tkinter Automatic Fallback)
+# ──────────────────────────────────────────────────────────────────────────────
+class UniversalGuiWindow:
+    def __init__(self, title: str, width: int = 1920, height: int = 960):
+        self.title = title
+        self.width = width
+        self.height = height
+        self.use_cv2 = True
+        self.use_tk = False
+        self.tk_root = None
+        self.tk_label = None
+        self.last_key = -1
+
+        try:
+            cv2.namedWindow(title, cv2.WINDOW_NORMAL)
+            cv2.resizeWindow(title, width, height)
+        except Exception as e:
+            print(f"⚡ OpenCV HighGUI window unavailable ({e}). Automatically activating Universal Tkinter Engine...")
+            self.use_cv2 = False
+            self.init_tk()
+
+    def init_tk(self):
+        try:
+            import tkinter as tk
+            from PIL import Image, ImageTk
+            self.tk = tk
+            self.Image = Image
+            self.ImageTk = ImageTk
+            self.tk_root = tk.Tk()
+            self.tk_root.title(self.title)
+            self.tk_root.geometry(f"{self.width}x{self.height}")
+            self.tk_root.configure(bg="#0f172a")
+            self.tk_label = tk.Label(self.tk_root, bg="#0f172a")
+            self.tk_label.pack(fill=tk.BOTH, expand=True)
+
+            def on_key(event):
+                c = event.char
+                if c:
+                    self.last_key = ord(c)
+                elif event.keysym == "space":
+                    self.last_key = ord(' ')
+                elif event.keysym in ["Escape", "q", "Q"]:
+                    self.last_key = ord('q')
+
+            self.tk_root.bind("<Key>", on_key)
+            self.use_tk = True
+            print("✅ Universal Native Window Engine Active.")
+        except Exception as exc:
+            print(f"⚠️ Warning: Could not initialize Tkinter window: {exc}")
+
+    def show(self, canvas_bgr: np.ndarray, delay_ms: int = 1) -> int:
+        if self.use_cv2:
+            try:
+                cv2.imshow(self.title, canvas_bgr)
+                return cv2.waitKey(max(1, delay_ms)) & 0xFF
+            except Exception:
+                self.use_cv2 = False
+                self.init_tk()
+
+        if self.use_tk and self.tk_root is not None:
+            try:
+                rgb = cv2.cvtColor(canvas_bgr, cv2.COLOR_BGR2RGB)
+                im = self.Image.fromarray(rgb)
+                # Resize if needed
+                im_w, im_h = im.size
+                if im_w != self.width or im_h != self.height:
+                    im = im.resize((self.width, self.height), self.Image.BILINEAR)
+                tk_img = self.ImageTk.PhotoImage(im)
+                self.tk_label.configure(image=tk_img)
+                self.tk_label.image = tk_img
+                self.tk_root.update_idletasks()
+                self.tk_root.update()
+                key = self.last_key
+                self.last_key = -1
+                return key
+            except Exception:
+                pass
+        return -1
+
+    def close(self):
+        if self.use_cv2:
+            try:
+                cv2.destroyAllWindows()
+            except Exception:
+                pass
+        if self.use_tk and self.tk_root is not None:
+            try:
+                self.tk_root.destroy()
+            except Exception:
+                pass
+
 
         win_name = "PROJECT SUTRA — Interactive Semantic Comms & SDR Studio Workbench"
+        gui_win = None
         if not self.headless:
-            cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
-            cv2.resizeWindow(win_name, 1920, 960)
+            gui_win = UniversalGuiWindow(win_name, 1920, 960)
 
         video_writer = None
         if self.output_video:
@@ -604,9 +695,8 @@ class SutraCommsWorkbenchStudio:
                     out_resized = cv2.resize(canvas, (1920, 800))
                     video_writer.write(out_resized)
 
-                if not self.headless:
-                    cv2.imshow(win_name, canvas)
-                    key = cv2.waitKey(max(1, int(1000.0 / self.target_fps))) & 0xFF
+                if gui_win is not None:
+                    key = gui_win.show(canvas, int(1000.0 / self.target_fps))
                     if key == ord('q'):
                         break
                     elif key == ord(' '):
@@ -653,9 +743,10 @@ class SutraCommsWorkbenchStudio:
             if video_writer is not None:
                 video_writer.release()
                 print(f"✅ Video export finished: {self.output_video}")
-            if not self.headless:
-                cv2.destroyAllWindows()
+            if gui_win is not None:
+                gui_win.close()
             print("✅ SUTRA Workbench Studio Finished.")
+
 
 
 # ──────────────────────────────────────────────────────────────────────────────
