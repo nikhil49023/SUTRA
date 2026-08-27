@@ -84,6 +84,11 @@ interface GeofenceStoreState extends GeofenceState {
   duplicateGeofence: (id: string) => Geofence | null;
   toggleGeofenceEnabled: (id: string) => void;
   toggleGeofenceVisible: (id: string) => void;
+  setAllGeofencesEnabled: (enabled: boolean) => void;
+  setAllGeofencesVisible: (visible: boolean) => void;
+  clearAllGeofences: () => void;
+  addVertexToGeofence: (id: string, index: number, coord: [number, number]) => void;
+  removeVertexFromGeofence: (id: string, index: number) => void;
   startDrawing: (zone_type?: ZoneType, geometry_type?: GeometryType) => void;
   addDrawingPoint: (lat: number, lon: number) => void;
   updatePreviewPoint: (arg1: [number, number] | number | null, arg2?: number) => void;
@@ -216,6 +221,53 @@ export const useGeofenceStore = create<GeofenceStoreState>((set, get) => ({
     const newVisible = !existing.visible;
     get().updateGeofence(id, { visible: newVisible });
     commandManager.sendCommand('geofence.update', { geofence_id: id, visible: newVisible });
+  },
+
+  setAllGeofencesEnabled: (enabled) => {
+    const gfs = get().geofences;
+    set((s) => ({ geofences: s.geofences.map((g) => ({ ...g, enabled })) }));
+    gfs.forEach((g) => {
+      commandManager.sendCommand('geofence.update', { geofence_id: g.id, enabled });
+    });
+  },
+
+  setAllGeofencesVisible: (visible) => {
+    const gfs = get().geofences;
+    set((s) => ({ geofences: s.geofences.map((g) => ({ ...g, visible })) }));
+    gfs.forEach((g) => {
+      commandManager.sendCommand('geofence.update', { geofence_id: g.id, visible });
+    });
+  },
+
+  clearAllGeofences: () => {
+    const gfs = get().geofences;
+    gfs.forEach((g) => {
+      commandManager.sendCommand('geofence.delete', { geofence_id: g.id });
+    });
+    set({ geofences: [], selected_geofence_id: null });
+  },
+
+  addVertexToGeofence: (id, index, coord) => {
+    const target = get().geofences.find((g) => g.id === id);
+    if (!target) return;
+    const newCoords = [...target.coordinates];
+    newCoords.splice(index, 0, coord);
+    get().updateGeofence(id, { coordinates: newCoords });
+    commandManager.sendCommand('geofence.update', {
+      geofence_id: id,
+      coordinates: newCoords,
+    });
+  },
+
+  removeVertexFromGeofence: (id, index) => {
+    const target = get().geofences.find((g) => g.id === id);
+    if (!target || target.coordinates.length <= 3) return;
+    const newCoords = target.coordinates.filter((_, i) => i !== index);
+    get().updateGeofence(id, { coordinates: newCoords });
+    commandManager.sendCommand('geofence.update', {
+      geofence_id: id,
+      coordinates: newCoords,
+    });
   },
 
   startDrawing: (zone_type = 'NO_FLY', geometry_type = 'POLYGON') =>

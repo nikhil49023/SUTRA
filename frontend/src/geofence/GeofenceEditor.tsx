@@ -19,6 +19,8 @@ export const GeofenceEditor: React.FC = memo(() => {
   const [altMin, setAltMin] = useState(0);
   const [altMax, setAltMax] = useState(120);
   const [priority, setPriority] = useState(3);
+  const [radius, setRadius] = useState(200);
+  const [corridorWidth, setCorridorWidth] = useState(50);
 
   useEffect(() => {
     if (selectedGf) {
@@ -27,6 +29,8 @@ export const GeofenceEditor: React.FC = memo(() => {
       setAltMin(selectedGf.altitude_min);
       setAltMax(selectedGf.altitude_max);
       setPriority(selectedGf.priority ?? 3);
+      setRadius(selectedGf.radius ?? 200);
+      setCorridorWidth(selectedGf.corridor_width ?? 50);
     }
   }, [selectedGf]);
 
@@ -39,6 +43,8 @@ export const GeofenceEditor: React.FC = memo(() => {
       altitude_min: altMin,
       altitude_max: altMax,
       priority,
+      radius,
+      corridor_width: corridorWidth,
     });
     commandManager.sendCommand('geofence.update', {
       geofence_id: selectedGf.id,
@@ -47,6 +53,8 @@ export const GeofenceEditor: React.FC = memo(() => {
       altitude_min: altMin,
       altitude_max: altMax,
       priority,
+      radius,
+      corridor_width: corridorWidth,
     });
   };
 
@@ -105,6 +113,30 @@ export const GeofenceEditor: React.FC = memo(() => {
             />
           </div>
         </div>
+
+        {selectedGf.geometry_type === 'CIRCLE' && (
+          <div>
+            <label className="text-[10px] text-[#707C88] block mb-1">RADIUS (meters)</label>
+            <input
+              type="number"
+              value={radius}
+              onChange={(e) => setRadius(Math.max(10, Number(e.target.value)))}
+              className="w-full bg-[#0B0F14] border border-[#2B3743] rounded px-2 py-1 text-[#E7EBEF] text-xs focus:border-[#5B8FB9] focus:outline-none"
+            />
+          </div>
+        )}
+
+        {selectedGf.geometry_type === 'CORRIDOR' && (
+          <div>
+            <label className="text-[10px] text-[#707C88] block mb-1">CORRIDOR WIDTH (meters)</label>
+            <input
+              type="number"
+              value={corridorWidth}
+              onChange={(e) => setCorridorWidth(Math.max(5, Number(e.target.value)))}
+              className="w-full bg-[#0B0F14] border border-[#2B3743] rounded px-2 py-1 text-[#E7EBEF] text-xs focus:border-[#5B8FB9] focus:outline-none"
+            />
+          </div>
+        )}
 
         <div>
           <label className="text-[10px] text-[#707C88] block mb-1">PRIORITY LEVEL (1–5)</label>

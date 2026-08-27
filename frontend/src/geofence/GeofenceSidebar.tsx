@@ -1,4 +1,4 @@
-import React, { useRef, memo } from 'react';
+import React, { useRef, useState, memo } from 'react';
 import { useGeofenceStore, GeofenceStatusFilter } from '../stores/geofenceStore';
 import { useSelectionStore } from '../stores/selectionStore';
 import { commandManager } from '../communication/CommandManager';
@@ -12,10 +12,14 @@ import {
   Search,
   Download,
   Upload,
+  Power,
+  PowerOff,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 export const GeofenceSidebar: React.FC = memo(() => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showBatchOps, setShowBatchOps] = useState(false);
 
   const geofences = useGeofenceStore((s) => s.geofences);
   const searchQuery = useGeofenceStore((s) => s.searchQuery);
@@ -26,6 +30,10 @@ export const GeofenceSidebar: React.FC = memo(() => {
   const deleteGeofence = useGeofenceStore((s) => s.deleteGeofence);
   const duplicateGeofence = useGeofenceStore((s) => s.duplicateGeofence);
   const toggleGeofenceVisible = useGeofenceStore((s) => s.toggleGeofenceVisible);
+  const toggleGeofenceEnabled = useGeofenceStore((s) => s.toggleGeofenceEnabled);
+  const setAllGeofencesEnabled = useGeofenceStore((s) => s.setAllGeofencesEnabled);
+  const setAllGeofencesVisible = useGeofenceStore((s) => s.setAllGeofencesVisible);
+  const clearAllGeofences = useGeofenceStore((s) => s.clearAllGeofences);
   const importGeoJSON = useGeofenceStore((s) => s.importGeoJSON);
   const exportGeoJSON = useGeofenceStore((s) => s.exportGeoJSON);
 
@@ -56,6 +64,11 @@ export const GeofenceSidebar: React.FC = memo(() => {
     toggleGeofenceVisible(g.id);
   };
 
+  const handleToggleEnabled = (e: React.MouseEvent, g: Geofence) => {
+    e.stopPropagation();
+    toggleGeofenceEnabled(g.id);
+  };
+
   const handleDuplicate = (e: React.MouseEvent, g: Geofence) => {
     e.stopPropagation();
     duplicateGeofence(g.id);
@@ -67,6 +80,14 @@ export const GeofenceSidebar: React.FC = memo(() => {
       deleteGeofence(g.id);
       commandManager.sendCommand('geofence.delete', { geofence_id: g.id });
       if (selectedId === g.id) clearSelection();
+    }
+  };
+
+  const handleClearAll = () => {
+    if (geofences.length === 0) return;
+    if (confirm(`Are you sure you want to delete ALL ${geofences.length} geofence(s)?`)) {
+      clearAllGeofences();
+      clearSelection();
     }
   };
 
@@ -108,6 +129,17 @@ export const GeofenceSidebar: React.FC = memo(() => {
 
           <div className="flex items-center space-x-1">
             <button
+              onClick={() => setShowBatchOps(!showBatchOps)}
+              className={`p-1 rounded border transition ${
+                showBatchOps
+                  ? 'bg-[#1B2530] border-[#5B8FB9] text-[#5B8FB9]'
+                  : 'bg-[#11171E] border-[#2B3743] text-[#A9B3BD] hover:text-[#E7EBEF]'
+              }`}
+              title="Toggle Batch Management Operations"
+            >
+              <SlidersHorizontal className="w-3 h-3" />
+            </button>
+            <button
               onClick={handleExport}
               className="p-1 rounded bg-[#11171E] border border-[#2B3743] hover:border-[#5B8FB9] text-[#A9B3BD] hover:text-[#E7EBEF] transition"
               title="Export Geofences as GeoJSON"
@@ -130,6 +162,42 @@ export const GeofenceSidebar: React.FC = memo(() => {
             />
           </div>
         </div>
+
+        {/* Batch Operations Bar */}
+        {showBatchOps && (
+          <div className="p-1.5 rounded bg-[#0B0F14] border border-[#2B3743] grid grid-cols-3 gap-1 text-[10px]">
+            <button
+              onClick={() => setAllGeofencesEnabled(true)}
+              className="py-1 px-1 rounded bg-[#151D26] hover:bg-[#1B2530] text-[#4F9A72] border border-[#2B3743] font-bold text-center transition"
+            >
+              ENABLE ALL
+            </button>
+            <button
+              onClick={() => setAllGeofencesEnabled(false)}
+              className="py-1 px-1 rounded bg-[#151D26] hover:bg-[#1B2530] text-[#C75A5A] border border-[#2B3743] font-bold text-center transition"
+            >
+              DISABLE ALL
+            </button>
+            <button
+              onClick={() => setAllGeofencesVisible(true)}
+              className="py-1 px-1 rounded bg-[#151D26] hover:bg-[#1B2530] text-[#5B8FB9] border border-[#2B3743] font-bold text-center transition"
+            >
+              SHOW ALL
+            </button>
+            <button
+              onClick={() => setAllGeofencesVisible(false)}
+              className="py-1 px-1 rounded bg-[#151D26] hover:bg-[#1B2530] text-[#707C88] border border-[#2B3743] font-bold text-center transition"
+            >
+              HIDE ALL
+            </button>
+            <button
+              onClick={handleClearAll}
+              className="col-span-2 py-1 px-1 rounded bg-[#C75A5A]/20 hover:bg-[#C75A5A]/30 text-[#C75A5A] border border-[#C75A5A]/40 font-bold text-center transition"
+            >
+              CLEAR ALL GEOFENCES
+            </button>
+          </div>
+        )}
 
         {/* Search */}
         <div className="relative">
@@ -206,6 +274,19 @@ export const GeofenceSidebar: React.FC = memo(() => {
                 </div>
 
                 <div className="flex items-center space-x-1">
+                  {/* Enable / Disable */}
+                  <button
+                    onClick={(e) => handleToggleEnabled(e, g)}
+                    className="p-1 transition"
+                    title={g.enabled ? 'Disable Geofence' : 'Enable Geofence'}
+                  >
+                    {g.enabled ? (
+                      <Power className="w-3.5 h-3.5 text-[#4F9A72]" />
+                    ) : (
+                      <PowerOff className="w-3.5 h-3.5 text-[#C75A5A]" />
+                    )}
+                  </button>
+
                   {/* Show / Hide */}
                   <button
                     onClick={(e) => handleToggleVisible(e, g)}

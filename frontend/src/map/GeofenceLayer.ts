@@ -374,40 +374,177 @@ export class GeofenceLayer {
     this.handleMarkers.forEach((m) => m.remove());
     this.handleMarkers = [];
 
-    if (!geofence || !this.map || geofence.geometry_type !== 'POLYGON') return;
+    if (!geofence || !this.map) return;
 
-    geofence.coordinates.forEach((coord, idx) => {
-      const el = document.createElement('div');
-      el.className =
-        'w-3.5 h-3.5 rounded-full bg-[#5B8FB9] border-2 border-[#E7EBEF] shadow cursor-move hover:scale-125 transition-transform';
+    // ── 1. POLYGON HANDLES ──────────────────────────────────────────────────
+    if (geofence.geometry_type === 'POLYGON' && geofence.coordinates) {
+      // Corner vertex drag handles
+      geofence.coordinates.forEach((coord, idx) => {
+        const el = document.createElement('div');
+        el.className =
+          'w-3.5 h-3.5 rounded-full bg-[#5B8FB9] border-2 border-[#E7EBEF] shadow-md cursor-move hover:scale-125 hover:bg-[#60A5FA] transition-transform';
+        el.title = `Drag vertex #${idx + 1} (${coord[0].toFixed(5)}, ${coord[1].toFixed(5)})`;
 
-      const marker = new maplibregl.Marker({ element: el, draggable: true })
-        .setLngLat([coord[1], coord[0]])
-        .addTo(this.map!);
+        const marker = new maplibregl.Marker({ element: el, draggable: true })
+          .setLngLat([coord[1], coord[0]])
+          .addTo(this.map!);
 
-      marker.on('drag', () => {
-        const lngLat = marker.getLngLat();
-        const currentGfs = useGeofenceStore.getState().geofences;
-        const target = currentGfs.find((g) => g.id === geofence.id);
-        if (target) {
-          const updatedCoords = [...target.coordinates];
-          updatedCoords[idx] = [lngLat.lat, lngLat.lng];
-          useGeofenceStore.getState().updateGeofence(geofence.id, { coordinates: updatedCoords });
-        }
-      });
-
-      marker.on('dragend', () => {
-        const lngLat = marker.getLngLat();
-        commandManager.sendCommand('geofence.move_vertex', {
-          geofence_id: geofence.id,
-          vertex_index: idx,
-          latitude: lngLat.lat,
-          longitude: lngLat.lng,
+        marker.on('drag', () => {
+          const lngLat = marker.getLngLat();
+          const currentGfs = useGeofenceStore.getState().geofences;
+          const target = currentGfs.find((g) => g.id === geofence.id);
+          if (target) {
+            const updatedCoords = [...target.coordinates];
+            updatedCoords[idx] = [lngLat.lat, lngLat.lng];
+            useGeofenceStore.getState().updateGeofence(geofence.id, { coordinates: updatedCoords });
+          }
         });
+
+        marker.on('dragend', () => {
+          const lngLat = marker.getLngLat();
+          commandManager.sendCommand('geofence.move_vertex', {
+            geofence_id: geofence.id,
+            vertex_index: idx,
+            latitude: lngLat.lat,
+            longitude: lngLat.lng,
+          });
+        });
+
+        this.handleMarkers.push(marker);
       });
 
-      this.handleMarkers.push(marker);
-    });
+      // Midpoint "+" insert markers between consecutive vertices
+      const coords = geofence.coordinates;
+      if (coords.length >= 3) {
+        for (let i = 0; i < coords.length; i++) {
+          const c1 = coords[i];
+          const c2 = coords[(i + 1) % coords.length];
+          const midLat = (c1[0] + c2[0]) / 2;
+          const midLon = (c1[1] + c2[1]) / 2;
+
+          const midEl = document.createElement('div');
+          midEl.className =
+            'w-2.5 h-2.5 rounded-full bg-[#1B2530] border border-[#5B8FB9] text-[8px] font-bold text-[#5B8FB9] flex items-center justify-center cursor-pointer hover:scale-150 hover:bg-[#5B8FB9] hover:text-[#0B0F14] transition-transform shadow';
+          midEl.title = `Click to add vertex between #${i + 1} and #${((i + 1) % coords.length) + 1}`;
+
+          const insertIdx = i + 1;
+          midEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            useGeofenceStore.getState().addVertexToGeofence(geofence.id, insertIdx, [midLat, midLon]);
+          });
+
+          const midMarker = new maplibregl.Marker({ element: midEl, draggable: false })
+            .setLngLat([midLon, midLat])
+            .addTo(this.map!);
+
+          this.handleMarkers.push(midMarker);
+        }
+      }
+    }
+
+    // ── 2. CIRCLE HANDLES ───────────────────────────────────────────────────
+    else if (geofence.geometry_type === 'CIRCLE') {
+      const center = geofence.center || (geofence.coordinates && geofence.coordinates[0]);
+      if (center) {
+        // Center position drag handle
+        const centerEl = document.createElement('div');
+        centerEl.className =
+          'w-4 h-4 rounded-full bg-[#5B8FB9] border-2 border-[#E7EBEF] shadow-lg cursor-move hover:scale-125 transition-transform flex items-center justify-center text-[8px] text-[#0B0F14] font-bold';
+        centerEl.title = `Drag circle center position (${center[0].toFixed(5)}, ${center[1].toFixed(5)})`;
+
+        const centerMarker = new maplibregl.Marker({ element: centerEl, draggable: true })
+          .setLngLat([center[1], center[0]])
+          .addTo(this.map!);
+
+        centerMarker.on('drag', () => {
+          const lngLat = centerMarker.getLngLat();
+          useGeofenceStore.getState().updateGeofence(geofence.id, {
+            center: [lngLat.lat, lngLat.lng],
+            coordinates: [[lngLat.lat, lngLat.lng]],
+          });
+        });
+
+        centerMarker.on('dragend', () => {
+          const lngLat = centerMarker.getLngLat();
+          commandManager.sendCommand('geofence.update', {
+            geofence_id: geofence.id,
+            center: [lngLat.lat, lngLat.lng],
+            coordinates: [[lngLat.lat, lngLat.lng]],
+          });
+        });
+
+        this.handleMarkers.push(centerMarker);
+
+        // Radius edge handle (on East boundary)
+        const radius = geofence.radius ?? 200;
+        const earthRadius = 6371000;
+        const dLon = (radius / (earthRadius * Math.cos((Math.PI * center[0]) / 180))) * (180 / Math.PI);
+        const edgeEl = document.createElement('div');
+        edgeEl.className =
+          'w-3 h-3 rounded-full bg-[#4F9A72] border-2 border-[#E7EBEF] shadow cursor-ew-resize hover:scale-150 transition-transform';
+        edgeEl.title = `Drag to adjust circle radius (current: ${radius.toFixed(0)}m)`;
+
+        const edgeMarker = new maplibregl.Marker({ element: edgeEl, draggable: true })
+          .setLngLat([center[1] + dLon, center[0]])
+          .addTo(this.map!);
+
+        edgeMarker.on('drag', () => {
+          const lngLat = edgeMarker.getLngLat();
+          const newRadius = Math.max(10, this.calculateDistance(center[0], center[1], lngLat.lat, lngLat.lng));
+          useGeofenceStore.getState().updateGeofence(geofence.id, { radius: newRadius });
+        });
+
+        edgeMarker.on('dragend', () => {
+          const lngLat = edgeMarker.getLngLat();
+          const newRadius = Math.max(10, this.calculateDistance(center[0], center[1], lngLat.lat, lngLat.lng));
+          commandManager.sendCommand('geofence.update', {
+            geofence_id: geofence.id,
+            radius: newRadius,
+          });
+        });
+
+        this.handleMarkers.push(edgeMarker);
+      }
+    }
+
+    // ── 3. CORRIDOR HANDLES ─────────────────────────────────────────────────
+    else if (geofence.geometry_type === 'CORRIDOR' && geofence.coordinates) {
+      geofence.coordinates.forEach((coord, idx) => {
+        const el = document.createElement('div');
+        el.className =
+          'w-3.5 h-3.5 rounded-full bg-[#5B8FB9] border-2 border-[#E7EBEF] shadow cursor-move hover:scale-125 transition-transform';
+        el.title = `Drag corridor waypoint #${idx + 1}`;
+
+        const marker = new maplibregl.Marker({ element: el, draggable: true })
+          .setLngLat([coord[1], coord[0]])
+          .addTo(this.map!);
+
+        marker.on('drag', () => {
+          const lngLat = marker.getLngLat();
+          const currentGfs = useGeofenceStore.getState().geofences;
+          const target = currentGfs.find((g) => g.id === geofence.id);
+          if (target) {
+            const updatedCoords = [...target.coordinates];
+            updatedCoords[idx] = [lngLat.lat, lngLat.lng];
+            useGeofenceStore.getState().updateGeofence(geofence.id, { coordinates: updatedCoords });
+          }
+        });
+
+        marker.on('dragend', () => {
+          const lngLat = marker.getLngLat();
+          const currentGfs = useGeofenceStore.getState().geofences;
+          const target = currentGfs.find((g) => g.id === geofence.id);
+          if (target) {
+            commandManager.sendCommand('geofence.update', {
+              geofence_id: geofence.id,
+              coordinates: target.coordinates,
+            });
+          }
+        });
+
+        this.handleMarkers.push(marker);
+      });
+    }
   }
 
   /** Generates [lon, lat][] circle boundary for GeoJSON */
