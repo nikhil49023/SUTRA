@@ -58,18 +58,21 @@ class SutraFsdAutopilotNode(Node):
         self.pos = (0.0, 0.0, 0.0)
         self.vel = (0.0, 0.0, 0.0)
         self.acc = (0.0, 0.0, 0.0)
+        self.dist_force = (0.0, 0.0, 0.0)  # Aerodynamic disturbance feedforward from SutraNeuroFlight
         self.has_pose = False
         self.is_airborne = False
         self.active_trajectory: Trajectory3D = None
         self.traj_start_time = self.get_clock().now()
 
-        # Mission Waypoints (Ring crossing corridor)
-        self.waypoints = [
-            (0.0, 0.0, 4.0),
-            (-10.0, 0.0, 4.0),
-            (0.0, 0.0, 4.0),
-            (10.0, 0.0, 4.0),
-        ]
+        # Multi-Layered 3D Echelon Swarm Routes (Gate G5 compliant - altitudes 3.6m to 4.4m)
+        default_swarm_routes = {
+            "uav_alpha": [(-12.0, 0.0, 3.6), (12.0, 0.0, 3.6), (-12.0, 0.0, 3.6)],   # West -> East
+            "uav_beta":  [(12.0, 0.0, 3.8), (-12.0, 0.0, 3.8), (12.0, 0.0, 3.8)],    # East -> West
+            "uav_gamma": [(0.0, 12.0, 4.0), (0.0, -12.0, 4.0), (0.0, 12.0, 4.0)],   # North -> South
+            "uav_delta": [(0.0, -12.0, 4.2), (0.0, 12.0, 4.2), (0.0, -12.0, 4.2)],  # South -> North
+            "uav_epsilon": [(0.0, 0.0, 4.4), (6.0, 6.0, 4.4), (0.0, 8.0, 4.4), (-6.0, 6.0, 4.4), (-8.0, 0.0, 4.4), (0.0, -8.0, 4.4), (6.0, -6.0, 4.4)], # Center Orbit
+        }
+        self.waypoints = default_swarm_routes.get(self.drone_id, [(0.0, 0.0, 4.0), (10.0, 0.0, 4.0), (-10.0, 0.0, 4.0)])
         self.wp_idx = 0
 
         # Peer swarm states: id -> ((x,y,z), (vx,vy,vz))
@@ -84,6 +87,14 @@ class SutraFsdAutopilotNode(Node):
         self.create_subscription(Odometry, f"/model/{self.drone_id}/odometry", self._on_odom, 10)
         self.create_subscription(LaserScan, f"/{self.drone_id}/rangefinder/distance", self._on_laser, 10)
 
+        # Subscriptions for Cross-Subsystem Neural & Swarm Interfacing
+        self.create_subscription(
+            TwistStamped, f"/{self.drone_id}/neuro_flight/feedforward_twist", self._on_neuro_feedforward, 10
+        )
+        self.create_subscription(
+            PoseStamped, f"/sutra/gnc/{self.drone_id}/retask_target", self._on_retask_target, 10
+        )
+
         # Subscribe to all peer drones for 3D Occupancy & CBF Safety
         for peer_id in ["uav_alpha", "uav_beta", "uav_gamma", "uav_delta", "uav_epsilon"]:
             if peer_id != self.drone_id:
@@ -96,7 +107,20 @@ class SutraFsdAutopilotNode(Node):
 
         # 50Hz Autopilot Loop
         self.timer = self.create_timer(0.02, self._autopilot_loop_50hz)
-        self.get_logger().info(f"🚗✈️ [{self.drone_id}] SUTRA-FSD Autopilot ACTIVE — Tesla Occupancy & Spline Engine Ready")
+        self.get_logger().info(f"🚗✈️ [{self.drone_id}] SUTRA-FSD Autopilot ACTIVE — 3D Echelon & NeuroFlight Feedforward Enabled")
+
+    def _on_neuro_feedforward(self, msg: TwistStamped):
+        """Captures 3D aerodynamic disturbance force from SutraNeuroFlightNet."""
+        self.dist_force = (msg.twist.linear.x, msg.twist.linear.y, msg.twist.linear.z)
+
+    def _on_retask_target(self, msg: PoseStamped):
+        """Dynamically retasks waypoint queue upon SwarmRAFT consensus target lock."""
+        p = msg.pose.position
+        target_z = self.waypoints[0][2] if len(self.waypoints) > 0 else 4.0
+        self.waypoints = [(p.x, p.y, target_z)]
+        self.wp_idx = 0
+        self.get_logger().info(f"🎯 [{self.drone_id}] SUTRA-FSD Retasked to ({p.x:.2f}, {p.y:.2f}, {target_z:.2f})")
+
 
     def _on_odom(self, msg: Odometry):
         p = msg.pose.pose.position
@@ -175,10 +199,20 @@ class SutraFsdAutopilotNode(Node):
         )
         self.acc = (safe_ax, safe_ay, safe_az)
 
-        # Integrate safe acceleration to velocity command
-        cmd_vx = self.vel[0] + safe_ax * 0.02
-        cmd_vy = self.vel[1] + safe_ay * 0.02
-        cmd_vz = self.vel[2] + safe_az * 0.02
+        # Integrate safe acceleration + SutraNeuroFlight aerodynamic disturbance cancellation
+        # If wind/downwash pushes (+fx), feedforward applies proactive (-fx) counter-acceleration
+        ff_ax = - 0.35 * self.dist_force[0]
+        ff_ay = - 0.35 * self.dist_force[1]
+        ff_az = - 0.35 * self.dist_force[2]
+
+        total_ax = safe_ax + ff_ax
+        total_ay = safe_ay + ff_ay
+        total_az = safe_az + ff_az
+
+        cmd_vx = self.vel[0] + total_ax * 0.02
+        cmd_vy = self.vel[1] + total_ay * 0.02
+        cmd_vz = self.vel[2] + total_az * 0.02
+
 
         # Clamp speed to cruise speed
         speed = math.sqrt(cmd_vx**2 + cmd_vy**2 + cmd_vz**2)

@@ -21,7 +21,8 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 from geometry_msgs.msg import Pose, Point, Quaternion, Vector3, Twist, PoseStamped
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu, NavSatFix, FluidPressure, MagneticField
-from std_msgs.msg import String
+from std_msgs.msg import String, Float32MultiArray
+
 
 
 class VioEKF2Filter:
@@ -51,6 +52,9 @@ class VioEKF2Filter:
         # Covariance diagonal estimates (high initial uncertainty for fast convergence)
         self.cov_p = [10.0, 10.0, 10.0]
         self.cov_v = [0.5, 0.5, 0.5]
+
+        # Dynamic 5D Sensor Reliability Vector from SutraNeuroFlight [IMU, Baro, GPS, VIO/Cam, Mag]
+        self.sensor_reliability = [1.0, 1.0, 1.0, 1.0, 1.0]
 
         # Temporal observation buffer for attention weighting (SelfAttentionVO)
         self.obs_history: List[Tuple[float, float, float, float]] = []  # (x, y, z, timestamp)
@@ -92,12 +96,14 @@ class VioEKF2Filter:
     def update_gps(self, x: float, y: float, z: float, timestamp: float):
         """
         EKF Measurement update step using GPS position fix.
+        Dynamically scaled by SutraNeuroFlight GPS reliability alpha_gps.
         """
         self.last_gps_time = timestamp
-        self.gps_healthy = True
+        alpha_gps = self.sensor_reliability[2] if len(self.sensor_reliability) > 2 else 1.0
+        self.gps_healthy = (alpha_gps > 0.40)
 
         # Kalman gain (K ~ P / (P + R))
-        r_gps = 0.5  # GPS measurement noise variance
+        r_gps = 0.5 / max(0.01, alpha_gps)  # Low reliability -> R explodes -> K -> 0 (gates jammed GPS)
         for i in range(3):
             meas = [x, y, z][i]
             k = self.cov_p[i] / (self.cov_p[i] + r_gps)
@@ -107,7 +113,7 @@ class VioEKF2Filter:
     def update_vio(self, x: float, y: float, z: float, q: Tuple[float, float, float, float], timestamp: float):
         """
         EKF Measurement update step using Visual-Inertial Odometry (/camera/odom).
-        Enhanced with SelfAttentionVO temporal weighting (arXiv:2404.17745).
+        Enhanced with SelfAttentionVO temporal weighting (arXiv:2404.17745) and NeuroFlight camera reliability.
         """
         self.last_vio_time = timestamp
         self.state_q = list(q)
@@ -117,8 +123,9 @@ class VioEKF2Filter:
         if len(self.obs_history) > 10:
             self.obs_history.pop(0)
 
-        # Dynamic measurement variance adjusted by temporal attention
-        r_vio = 0.1
+        # Dynamic measurement variance adjusted by temporal attention & NeuroFlight camera reliability
+        alpha_cam = self.sensor_reliability[3] if len(self.sensor_reliability) > 3 else 1.0
+        r_vio = 0.1 / max(0.01, alpha_cam)
         if self.enable_attention and len(self.obs_history) >= 3:
             pts = [(ox, oy, oz) for ox, oy, oz, _ in self.obs_history]
             mean_x = sum(p[0] for p in pts) / len(pts)
@@ -142,8 +149,9 @@ class VioEKF2Filter:
         """
         if pressure_pa <= 0.0:
             return
+        alpha_baro = self.sensor_reliability[1] if len(self.sensor_reliability) > 1 else 1.0
         z_baro = 44330.0 * (1.0 - math.pow(pressure_pa / 101325.0, 0.190295))
-        r_baro = 0.25  # Barometer measurement noise variance
+        r_baro = 0.25 / max(0.01, alpha_baro)  # Barometer measurement noise variance
         k = self.cov_p[2] / (self.cov_p[2] + r_baro)
         self.state_p[2] = self.state_p[2] + k * (z_baro - self.state_p[2])
         self.cov_p[2] = (1.0 - k) * self.cov_p[2]
@@ -152,6 +160,7 @@ class VioEKF2Filter:
         """
         EKF Magnetometer heading update step to reject yaw gyro drift.
         Computes magnetic yaw angle and updates orientation quaternion.
+
         """
         if abs(bx) < 1e-6 and abs(by) < 1e-6:
             return
@@ -257,12 +266,24 @@ class VIOLocalizationNode(Node):
         self.sub_mag = self.create_subscription(
             MagneticField, f"/{self.drone_id}/magnetometer", self._mag_cb, sensor_qos
         )
+        self.sub_reliability = self.create_subscription(
+            Float32MultiArray, f"/{self.drone_id}/neuro_flight/sensor_reliability", self._reliability_cb, 10
+        )
+        self.sub_reliability_fallback = self.create_subscription(
+            Float32MultiArray, f"/sutra/gnc/{self.drone_id}/sensor_reliability", self._reliability_cb, 10
+        )
 
         # 50Hz State Output Timer
         self.timer = self.create_timer(0.02, self._publish_state_50hz)
         self.get_logger().info(
-            f"👁️ VIO Localization EKF2 Node Initialized [{self.drone_id}] | GPS/Baro/Mag Fallback Monitoring Active"
+            f"👁️ VIO Localization EKF2 Node Initialized [{self.drone_id}] | Dynamic NeuroFlight Gating & Fallback Active"
         )
+
+    def _reliability_cb(self, msg: Float32MultiArray):
+        """Dynamic 5D covariance gating: [alpha_imu, alpha_baro, alpha_gps, alpha_cam, alpha_mag]."""
+        if len(msg.data) >= 5:
+            self.ekf.sensor_reliability = list(msg.data)
+
 
     def _imu_cb(self, msg: Imu):
         curr_t = time.time()

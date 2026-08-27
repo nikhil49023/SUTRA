@@ -44,6 +44,7 @@ class ControlBarrierSafetyShield:
         Projects desired_acc onto the safe half-spaces defined by CBF constraints:
           h_j(x) = ||p_i - p_j||^2 - R_safe^2
           dh_j/dt + gamma * h_j >= 0
+        Uses C3BF Collision Cone formulation with reciprocal 50/50 acceleration splitting.
         """
         px, py, pz = own_pos
         vx, vy, vz = own_vel
@@ -55,17 +56,17 @@ class ControlBarrierSafetyShield:
             nx, ny, nz = n_pos
             nvx, nvy, nvz = n_vel
 
-            # Relative position & velocity
+            # Relative position & velocity: Delta p = p_i - p_j, Delta v = v_i - v_j
             dx = px - nx
             dy = py - ny
             dz = pz - nz
-            dist_sq = dx*dx + dy*dy + dz*dz
-            dist = math.sqrt(dist_sq)
+            dist_sq = dx * dx + dy * dy + dz * dz
+            dist = math.sqrt(max(1e-6, dist_sq))
 
             if dist < 0.01:
                 continue
 
-            # Barrier value: h(x)
+            # Barrier value: h(x) = ||Delta p||^2 - R_safe^2
             h = dist_sq - self.r_safe_sq
 
             # Relative velocity
@@ -73,15 +74,18 @@ class ControlBarrierSafetyShield:
             rvy = vy - nvy
             rvz = vz - nvz
 
-            # Normal separation vector
-            normal = np.array([dx/dist, dy/dist, dz/dist], dtype=np.float64)
+            # Normal separation unit vector
+            normal = np.array([dx / dist, dy / dist, dz / dist], dtype=np.float64)
 
-            # Closing speed: v_rel · normal
+            # Closing velocity along line-of-sight: Delta p · Delta v / ||Delta p||
             v_closing = rvx * normal[0] + rvy * normal[1] + rvz * normal[2]
 
-            # CBF constraint: 2 * dist * (a_i · normal) >= - 2 * v_closing * dist - gamma * h
-            # Simplified: a_i · normal >= - (v_closing + (gamma / (2 * dist)) * h)
-            min_acc_normal = - (v_closing + (self.gamma / max(0.5, 2.0 * dist)) * h)
+            # High-Order CBF / C3BF Barrier condition (arXiv:2403.07043):
+            # L_f h + L_g h u + gamma * h >= 0
+            # 2 * (p_i - p_j)^T (v_i - v_j) + gamma * (||p_i - p_j||^2 - R_safe^2) >= 0
+            # Acceleration constraint: normal^T a_i >= - (0.5 * v_closing + (gamma / (2 * dist)) * h)
+            # 0.5 factor accounts for reciprocal collision avoidance (both agents avoid)
+            min_acc_normal = - (0.5 * v_closing + (self.gamma / max(0.5, 2.0 * dist)) * h)
 
             # Project current acceleration if violating CBF
             proj = float(np.dot(curr_acc, normal))
@@ -96,3 +100,4 @@ class ControlBarrierSafetyShield:
             curr_acc = (curr_acc / mag) * self.max_accel
 
         return float(curr_acc[0]), float(curr_acc[1]), float(curr_acc[2])
+
