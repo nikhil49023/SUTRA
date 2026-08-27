@@ -112,4 +112,10 @@ kaggle/
 *.usd
 *.usda
 *.usdc
+*.mtl
+*.mp4
+*.avi
+*.webm
+sutra_ws/src/sutra_sim/models/*/meshes/
 .firecrawl/
+
