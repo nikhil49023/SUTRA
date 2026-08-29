@@ -15,6 +15,7 @@ import maplibregl from 'maplibre-gl';
 import { Geofence } from '../types/geofence';
 import { useSelectionStore } from '../stores/selectionStore';
 import { useGeofenceStore } from '../stores/geofenceStore';
+import { useAppStore } from '../stores/appStore';
 import { useMapStore } from '../stores/mapStore';
 import { commandManager } from '../communication/CommandManager';
 
@@ -139,8 +140,18 @@ export class GeofenceLayer {
         source: this.drawingSourceId,
         filter: ['==', ['geometry-type'], 'Polygon'],
         paint: {
-          'fill-color': '#5B8FB9',
-          'fill-opacity': 0.22,
+          'fill-color': [
+            'match', ['get', 'zone_type'],
+            'SAFE',      '#10B981',
+            'safe',      '#10B981',
+            'SAFE_ZONE', '#10B981',
+            'WARNING',   '#F59E0B',
+            'warning',   '#F59E0B',
+            'NO_FLY',    '#EF4444',
+            'no_fly',    '#EF4444',
+            '#10B981',
+          ],
+          'fill-opacity': 0.28,
         },
       });
 
@@ -150,7 +161,17 @@ export class GeofenceLayer {
         source: this.drawingSourceId,
         filter: ['!=', ['geometry-type'], 'Point'],
         paint: {
-          'line-color': '#5B8FB9',
+          'line-color': [
+            'match', ['get', 'zone_type'],
+            'SAFE',      '#10B981',
+            'safe',      '#10B981',
+            'SAFE_ZONE', '#10B981',
+            'WARNING',   '#F59E0B',
+            'warning',   '#F59E0B',
+            'NO_FLY',    '#EF4444',
+            'no_fly',    '#EF4444',
+            '#10B981',
+          ],
           'line-width': 2.5,
           'line-dasharray': [4, 2],
         },
@@ -163,7 +184,17 @@ export class GeofenceLayer {
         filter: ['==', ['geometry-type'], 'Point'],
         paint: {
           'circle-radius': 5,
-          'circle-color': '#5B8FB9',
+          'circle-color': [
+            'match', ['get', 'zone_type'],
+            'SAFE',      '#10B981',
+            'safe',      '#10B981',
+            'SAFE_ZONE', '#10B981',
+            'WARNING',   '#F59E0B',
+            'warning',   '#F59E0B',
+            'NO_FLY',    '#EF4444',
+            'no_fly',    '#EF4444',
+            '#10B981',
+          ],
           'circle-stroke-width': 2,
           'circle-stroke-color': '#FFFFFF',
         },
@@ -178,6 +209,7 @@ export class GeofenceLayer {
           const id = e.features[0].properties?.id;
           if (id) {
             useSelectionStore.getState().selectGeofence(id);
+            useAppStore.getState().setInspectorOpen(true);
             commandManager.sendCommand('GEOFENCE_SELECT', { geofence_id: id });
           }
         }
@@ -272,7 +304,7 @@ export class GeofenceLayer {
       return;
     }
 
-    const { active_geometry_type } = useGeofenceStore.getState();
+    const { active_geometry_type, active_zone_type } = useGeofenceStore.getState();
     const features: any[] = [];
 
     // 1. Add vertex dots for all placed points
@@ -280,7 +312,7 @@ export class GeofenceLayer {
       features.push({
         type: 'Feature',
         id: `vertex-${idx}`,
-        properties: { isVertex: true, vertexIndex: idx },
+        properties: { isVertex: true, vertexIndex: idx, zone_type: active_zone_type },
         geometry: {
           type: 'Point',
           coordinates: [p[1], p[0]],
@@ -293,7 +325,7 @@ export class GeofenceLayer {
       features.push({
         type: 'Feature',
         id: 'preview-dot',
-        properties: { isPreview: true },
+        properties: { isPreview: true, zone_type: active_zone_type },
         geometry: {
           type: 'Point',
           coordinates: [preview[1], preview[0]],
@@ -314,7 +346,7 @@ export class GeofenceLayer {
       }
       features.push({
         type: 'Feature',
-        properties: { isShape: true },
+        properties: { isShape: true, zone_type: active_zone_type },
         geometry: {
           type: 'Polygon',
           coordinates: [this.generateCirclePolygon(center[0], center[1], radius)],
@@ -323,7 +355,7 @@ export class GeofenceLayer {
     } else if (active_geometry_type === 'CORRIDOR' && drawingCoords.length >= 2) {
       features.push({
         type: 'Feature',
-        properties: { isShape: true },
+        properties: { isShape: true, zone_type: active_zone_type },
         geometry: {
           type: 'Polygon',
           coordinates: [this.generateCorridorPolygon(drawingCoords, 50)],
@@ -333,7 +365,7 @@ export class GeofenceLayer {
       const closed = [...drawingCoords, drawingCoords[0]];
       features.push({
         type: 'Feature',
-        properties: { isShape: true },
+        properties: { isShape: true, zone_type: active_zone_type },
         geometry: {
           type: 'Polygon',
           coordinates: [closed.map((p) => [p[1], p[0]])],
@@ -342,7 +374,7 @@ export class GeofenceLayer {
     } else if (drawingCoords.length === 2) {
       features.push({
         type: 'Feature',
-        properties: { isShape: true },
+        properties: { isShape: true, zone_type: active_zone_type },
         geometry: {
           type: 'LineString',
           coordinates: drawingCoords.map((p) => [p[1], p[0]]),
@@ -397,12 +429,34 @@ export class GeofenceLayer {
 
     // ── 1. POLYGON HANDLES ──────────────────────────────────────────────────
     if (geofence.geometry_type === 'POLYGON' && geofence.coordinates) {
+      const handleColor =
+        geofence.zone_type === 'SAFE'
+          ? '#10B981'
+          : geofence.zone_type === 'WARNING'
+          ? '#F59E0B'
+          : geofence.zone_type === 'INCLUSION'
+          ? '#3B82F6'
+          : '#EF4444';
+
       // Corner vertex drag handles
       geofence.coordinates.forEach((coord, idx) => {
         const el = document.createElement('div');
         el.className =
-          'w-3.5 h-3.5 rounded-full bg-[#5B8FB9] border-2 border-[#E7EBEF] shadow-md cursor-move hover:scale-125 hover:bg-[#60A5FA] transition-transform';
-        el.title = `Drag vertex #${idx + 1} (${coord[0].toFixed(5)}, ${coord[1].toFixed(5)})`;
+          'w-4 h-4 rounded-full border-2 border-white shadow-[0_0_8px_rgba(0,0,0,0.6)] cursor-move hover:scale-135 transition-transform flex items-center justify-center text-[8px] font-bold text-white';
+        el.style.backgroundColor = handleColor;
+        el.style.boxShadow = `0 0 10px ${handleColor}80`;
+        el.textContent = `${idx + 1}`;
+        el.title = `Vertex #${idx + 1} (${coord[0].toFixed(5)}, ${coord[1].toFixed(5)})\nDrag to move • Right-click to delete`;
+
+        // Right-click contextmenu to delete vertex
+        el.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const target = useGeofenceStore.getState().geofences.find((g) => g.id === geofence.id);
+          if (target && target.coordinates && target.coordinates.length > 3) {
+            useGeofenceStore.getState().removeVertexFromGeofence(geofence.id, idx);
+          }
+        });
 
         const marker = new maplibregl.Marker({ element: el, draggable: true })
           .setLngLat([coord[1], coord[0]])
@@ -443,8 +497,11 @@ export class GeofenceLayer {
 
           const midEl = document.createElement('div');
           midEl.className =
-            'w-2.5 h-2.5 rounded-full bg-[#1B2530] border border-[#5B8FB9] text-[8px] font-bold text-[#5B8FB9] flex items-center justify-center cursor-pointer hover:scale-150 hover:bg-[#5B8FB9] hover:text-[#0B0F14] transition-transform shadow';
-          midEl.title = `Click to add vertex between #${i + 1} and #${((i + 1) % coords.length) + 1}`;
+            'w-3 h-3 rounded-full bg-[#11171E] border-2 text-[9px] font-extrabold flex items-center justify-center cursor-pointer hover:scale-150 transition-transform shadow-md';
+          midEl.style.borderColor = handleColor;
+          midEl.style.color = handleColor;
+          midEl.textContent = '+';
+          midEl.title = `Click to insert vertex between #${i + 1} and #${((i + 1) % coords.length) + 1}`;
 
           const insertIdx = i + 1;
           midEl.addEventListener('click', (e) => {
@@ -463,13 +520,25 @@ export class GeofenceLayer {
 
     // ── 2. CIRCLE HANDLES ───────────────────────────────────────────────────
     else if (geofence.geometry_type === 'CIRCLE') {
+      const handleColor =
+        geofence.zone_type === 'SAFE'
+          ? '#10B981'
+          : geofence.zone_type === 'WARNING'
+          ? '#F59E0B'
+          : geofence.zone_type === 'INCLUSION'
+          ? '#3B82F6'
+          : '#EF4444';
+
       const center = geofence.center || (geofence.coordinates && geofence.coordinates[0]);
       if (center) {
         // Center position drag handle
         const centerEl = document.createElement('div');
         centerEl.className =
-          'w-4 h-4 rounded-full bg-[#5B8FB9] border-2 border-[#E7EBEF] shadow-lg cursor-move hover:scale-125 transition-transform flex items-center justify-center text-[8px] text-[#0B0F14] font-bold';
-        centerEl.title = `Drag circle center position (${center[0].toFixed(5)}, ${center[1].toFixed(5)})`;
+          'w-4 h-4 rounded-full border-2 border-white shadow-lg cursor-move hover:scale-135 transition-transform flex items-center justify-center text-[8px] text-white font-bold';
+        centerEl.style.backgroundColor = handleColor;
+        centerEl.style.boxShadow = `0 0 10px ${handleColor}80`;
+        centerEl.textContent = '●';
+        centerEl.title = `Center position (${center[0].toFixed(5)}, ${center[1].toFixed(5)})\nDrag to reposition circle`;
 
         const centerMarker = new maplibregl.Marker({ element: centerEl, draggable: true })
           .setLngLat([center[1], center[0]])
@@ -500,8 +569,9 @@ export class GeofenceLayer {
         const dLon = (radius / (earthRadius * Math.cos((Math.PI * center[0]) / 180))) * (180 / Math.PI);
         const edgeEl = document.createElement('div');
         edgeEl.className =
-          'w-3 h-3 rounded-full bg-[#4F9A72] border-2 border-[#E7EBEF] shadow cursor-ew-resize hover:scale-150 transition-transform';
-        edgeEl.title = `Drag to adjust circle radius (current: ${radius.toFixed(0)}m)`;
+          'w-3.5 h-3.5 rounded-full border-2 border-white shadow cursor-ew-resize hover:scale-150 transition-transform';
+        edgeEl.style.backgroundColor = handleColor;
+        edgeEl.title = `Drag to adjust radius (current: ${radius.toFixed(0)}m)`;
 
         const edgeMarker = new maplibregl.Marker({ element: edgeEl, draggable: true })
           .setLngLat([center[1] + dLon, center[0]])
@@ -528,11 +598,22 @@ export class GeofenceLayer {
 
     // ── 3. CORRIDOR HANDLES ─────────────────────────────────────────────────
     else if (geofence.geometry_type === 'CORRIDOR' && geofence.coordinates) {
+      const handleColor =
+        geofence.zone_type === 'SAFE'
+          ? '#10B981'
+          : geofence.zone_type === 'WARNING'
+          ? '#F59E0B'
+          : geofence.zone_type === 'INCLUSION'
+          ? '#3B82F6'
+          : '#EF4444';
+
       geofence.coordinates.forEach((coord, idx) => {
         const el = document.createElement('div');
         el.className =
-          'w-3.5 h-3.5 rounded-full bg-[#5B8FB9] border-2 border-[#E7EBEF] shadow cursor-move hover:scale-125 transition-transform';
-        el.title = `Drag corridor waypoint #${idx + 1}`;
+          'w-4 h-4 rounded-full border-2 border-white shadow cursor-move hover:scale-135 transition-transform flex items-center justify-center text-[8px] font-bold text-white';
+        el.style.backgroundColor = handleColor;
+        el.textContent = `${idx + 1}`;
+        el.title = `Corridor Waypoint #${idx + 1}`;
 
         const marker = new maplibregl.Marker({ element: el, draggable: true })
           .setLngLat([coord[1], coord[0]])

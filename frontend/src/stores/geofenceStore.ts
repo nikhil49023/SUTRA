@@ -86,6 +86,8 @@ interface GeofenceStoreState extends GeofenceState {
   toggleGeofenceVisible: (id: string) => void;
   setAllGeofencesEnabled: (enabled: boolean) => void;
   setAllGeofencesVisible: (visible: boolean) => void;
+  batchUpdateGeofences: (ids: string[], updates: Partial<Geofence>) => void;
+  batchDeleteGeofences: (ids: string[]) => void;
   clearAllGeofences: () => void;
   addVertexToGeofence: (id: string, index: number, coord: [number, number]) => void;
   removeVertexFromGeofence: (id: string, index: number) => void;
@@ -236,6 +238,33 @@ export const useGeofenceStore = create<GeofenceStoreState>((set, get) => ({
     set((s) => ({ geofences: s.geofences.map((g) => ({ ...g, visible })) }));
     gfs.forEach((g) => {
       commandManager.sendCommand('geofence.update', { geofence_id: g.id, visible });
+    });
+  },
+
+  batchUpdateGeofences: (ids, updates) => {
+    set((s) => ({
+      geofences: s.geofences.map((g) => (ids.includes(g.id) ? { ...g, ...updates } : g)),
+    }));
+    ids.forEach((id) => {
+      const gf = get().geofences.find((g) => g.id === id);
+      if (gf) {
+        commandManager.sendCommand('geofence.update', {
+          geofence_id: id,
+          ...updates,
+          coordinates: gf.coordinates,
+          center: gf.center,
+        });
+      }
+    });
+  },
+
+  batchDeleteGeofences: (ids) => {
+    set((s) => ({
+      geofences: s.geofences.filter((g) => !ids.includes(g.id)),
+      selected_geofence_id: ids.includes(s.selected_geofence_id || '') ? null : s.selected_geofence_id,
+    }));
+    ids.forEach((id) => {
+      commandManager.sendCommand('geofence.delete', { geofence_id: id });
     });
   },
 

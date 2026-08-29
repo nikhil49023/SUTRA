@@ -3,6 +3,7 @@ import { AlertSeverity } from './alerts';
 export type NavigationSection =
   | 'COMMAND'
   | 'MISSION'
+  | 'GEOFENCE'
   | 'GIS'
   | 'FLEET'
   | 'AI'

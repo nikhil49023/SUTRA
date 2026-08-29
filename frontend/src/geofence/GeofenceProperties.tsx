@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { useGeofenceStore } from '../stores/geofenceStore';
 import { useSelectionStore } from '../stores/selectionStore';
-import { Shield, Maximize, Eye, EyeOff, Trash2, Copy, Power, PowerOff } from 'lucide-react';
+import { Shield, Maximize, Eye, EyeOff, Trash2, Copy, Power, PowerOff, X } from 'lucide-react';
 import { formatDistance } from '../utils/formatting';
 import { mapController } from '../map/MapController';
 import { commandManager } from '../communication/CommandManager';
@@ -58,7 +58,7 @@ export const GeofenceProperties: React.FC = memo(() => {
   };
 
   return (
-    <div className="bg-[#11171E] border border-[#2B3743] rounded-lg p-3 font-mono text-xs space-y-2 select-none">
+    <div className="bg-[#11171E] border rounded-lg p-3 font-mono text-xs space-y-2 select-none transition-colors duration-200" style={{ borderColor: `${zoneColor}60` }}>
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[#2B3743] pb-1.5">
         <div className="flex items-center space-x-1.5 font-bold text-[#E7EBEF]">
@@ -161,6 +161,17 @@ export const GeofenceProperties: React.FC = memo(() => {
           title="Delete geofence"
         >
           <Trash2 className="w-3 h-3" />
+        </button>
+
+        <button
+          onClick={() => {
+            clearSelection();
+            mapController.geofenceLayer.clearHandles();
+          }}
+          className="px-2 py-1.5 rounded border border-[#2B3743] bg-[#151D26] hover:bg-[#1B2530] text-[#707C88] hover:text-[#E7EBEF] transition text-[11px]"
+          title="Deselect & Hide Dots (Esc)"
+        >
+          <X className="w-3 h-3" />
         </button>
       </div>
     </div>

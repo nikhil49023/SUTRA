@@ -17,6 +17,7 @@ import { GisLayer } from './GisLayer';
 import { commandManager } from '../communication/CommandManager';
 import { useMapStore } from '../stores/mapStore';
 import { useGeofenceStore } from '../stores/geofenceStore';
+import { useSelectionStore } from '../stores/selectionStore';
 import { rafThrottle } from '../utils/performance';
 
 export class MapController {
@@ -115,6 +116,16 @@ export class MapController {
         geofenceState.addDrawingPoint(lat, lng);
         commandManager.sendCommand('geofence.add_point', { latitude: lat, longitude: lng });
         return;
+      }
+
+      if (mapStore.interactionMode === 'SELECT' && !geofenceState.drawing_mode && this.map) {
+        const map = this.map;
+        const checkLayers = ['geofences-fill', 'waypoints-layer'].filter((l) => map.getLayer(l));
+        const rendered = checkLayers.length > 0 ? map.queryRenderedFeatures(e.point, { layers: checkLayers }) : [];
+        if (!rendered || rendered.length === 0) {
+          useSelectionStore.getState().clearSelection();
+          this.geofenceLayer.clearHandles();
+        }
       }
     });
 

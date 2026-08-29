@@ -4,6 +4,7 @@ import { NavigationSection } from '../../types/app';
 import {
   Compass,
   Route,
+  Shield,
   Mountain,
   Users,
   Brain,
@@ -16,6 +17,7 @@ import {
 const NAV_ITEMS: { id: NavigationSection; label: string; icon: any }[] = [
   { id: 'COMMAND', label: 'COMMAND', icon: Compass },
   { id: 'MISSION', label: 'MISSION', icon: Route },
+  { id: 'GEOFENCE', label: 'GEOFENCES', icon: Shield },
   { id: 'GIS', label: 'GIS INTELLIGENCE', icon: Mountain },
   { id: 'FLEET', label: 'SWARM FLEET', icon: Users },
   { id: 'AI', label: 'AI ADVISOR', icon: Brain },

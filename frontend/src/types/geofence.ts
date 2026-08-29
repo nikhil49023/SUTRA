@@ -20,6 +20,7 @@ export interface Geofence {
   area_sqm?: number;
   perimeter_m?: number;
   created_at?: number;
+  description?: string;
 }
 
 export interface GeofenceState {

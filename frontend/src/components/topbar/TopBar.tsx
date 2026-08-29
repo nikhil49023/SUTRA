@@ -4,11 +4,13 @@ import { useMissionStore } from '../../stores/missionStore';
 import { useFleetStore } from '../../stores/fleetStore';
 import { useTelemetryStore } from '../../stores/telemetryStore';
 import { useAIStore } from '../../stores/aiStore';
+import { useGeofenceStore } from '../../stores/geofenceStore';
+import { useSelectionStore } from '../../stores/selectionStore';
 import { useAuthStore } from '../../security/authStore';
 import { ConnectionStatus } from '../../communication/ConnectionStatus';
 import { SessionStatus } from '../../security/SessionStatus';
 import { AuditViewModal } from '../../security/AuditViewModal';
-import { ShieldAlert, Battery, Satellite, Brain, FileText } from 'lucide-react';
+import { ShieldAlert, Shield, Edit3, Battery, Satellite, Brain, FileText } from 'lucide-react';
 
 export const TopBar: React.FC = memo(() => {
   const setEmergencyModalOpen = useAppStore((s) => s.setEmergencyModalOpen);
@@ -75,6 +77,28 @@ export const TopBar: React.FC = memo(() => {
             {lowestBattery.toFixed(0)}%
           </span>
         </div>
+
+        {/* Geofences & Edit Button */}
+        <button
+          onClick={() => {
+            const gfs = useGeofenceStore.getState().geofences;
+            useAppStore.getState().setInspectorOpen(true);
+            if (gfs.length > 0) {
+              useSelectionStore.getState().selectGeofence(gfs[0].id);
+            } else {
+              useSelectionStore.getState().selectObject('GEOFENCE', null);
+            }
+          }}
+          className="flex items-center space-x-1.5 bg-[#11171E] hover:bg-[#1B2530] px-2 py-1 rounded border border-[#2B3743] hover:border-[#5B8FB9] transition cursor-pointer"
+          title="Access & Edit Geofences"
+        >
+          <Shield className="w-3 h-3 text-[#5B8FB9]" />
+          <span className="text-[#707C88]">FENCE:</span>
+          <span className="font-bold text-[#E7EBEF] tabular-nums">{useGeofenceStore.getState().geofences.length}</span>
+          <span className="text-[9px] px-1 rounded bg-[#1B2530] text-[#5B8FB9] font-bold border border-[#5B8FB9]/40 ml-0.5">
+            EDIT
+          </span>
+        </button>
 
         {/* AI Status */}
         <div className="flex items-center space-x-1.5 bg-[#11171E] px-2 py-1 rounded border border-[#2B3743]">

@@ -5,9 +5,11 @@
  */
 
 import React, { useEffect, useCallback } from 'react';
-import { MousePointer2, Hand, MapPin, Shield, Ruler, X } from 'lucide-react';
+import { MousePointer2, Hand, MapPin, Shield, Edit3, Ruler, X } from 'lucide-react';
 import { useMapStore, MapInteractionMode } from '../stores/mapStore';
 import { useGeofenceStore } from '../stores/geofenceStore';
+import { useSelectionStore } from '../stores/selectionStore';
+import { useAppStore } from '../stores/appStore';
 import { commandManager } from '../communication/CommandManager';
 
 interface ToolButton {
@@ -43,7 +45,7 @@ const TOOLS: ToolButton[] = [
   {
     mode: 'DRAW_GEOFENCE',
     icon: <Shield className="w-4 h-4" />,
-    label: 'Geofence',
+    label: '+ Fence',
     shortcut: 'G',
     activeClass: 'bg-[#151D26] border-[#C49A4A] text-[#C49A4A] shadow-[0_0_8px_rgba(196,154,74,0.3)]',
   },
@@ -86,6 +88,29 @@ export const MapInteractionToolbox: React.FC = () => {
     }
   }, [interactionMode, drawing_mode, setInteractionMode, startDrawing, cancelDrawing]);
 
+  const handleEditFence = useCallback(() => {
+    const gfs = useGeofenceStore.getState().geofences;
+    const sel = useSelectionStore.getState();
+    useAppStore.getState().setInspectorOpen(true);
+
+    if (sel.selected_type === 'GEOFENCE' && sel.selected_id) {
+      // already selected
+    } else if (gfs.length > 0) {
+      sel.selectGeofence(gfs[0].id);
+      commandManager.sendCommand('GEOFENCE_SELECT', { geofence_id: gfs[0].id });
+    } else {
+      sel.selectObject('GEOFENCE', null);
+      startDrawing('NO_FLY', 'POLYGON');
+      setInteractionMode('DRAW_GEOFENCE');
+      commandManager.sendCommand('geofence.start_drawing', {
+        zone_type: 'NO_FLY',
+        geometry_type: 'POLYGON',
+      });
+      return;
+    }
+    setInteractionMode('SELECT');
+  }, [setInteractionMode, startDrawing]);
+
   // Keyboard shortcuts (only when map is focused, not in text inputs)
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (['INPUT', 'SELECT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
@@ -100,12 +125,17 @@ export const MapInteractionToolbox: React.FC = () => {
     }
     // Tool shortcuts (only when no modifiers)
     if (e.ctrlKey || e.altKey || e.metaKey) return;
+    if (e.key.toUpperCase() === 'E') {
+      e.stopPropagation();
+      handleEditFence();
+      return;
+    }
     const tool = TOOLS.find((t) => t.shortcut === e.key.toUpperCase());
     if (tool) {
       e.stopPropagation();
       handleToolSelect(tool.mode);
     }
-  }, [interactionMode, drawing_mode, handleToolSelect, cancelDrawing, setInteractionMode]);
+  }, [interactionMode, drawing_mode, handleToolSelect, handleEditFence, cancelDrawing, setInteractionMode]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown, { capture: true });
@@ -119,6 +149,9 @@ export const MapInteractionToolbox: React.FC = () => {
     }
     setInteractionMode('SELECT');
   };
+
+  const selectedType = useSelectionStore((s) => s.selected_type);
+  const isEditingFence = selectedType === 'GEOFENCE' && interactionMode === 'SELECT';
 
   return (
     <div className="flex flex-col gap-1">
@@ -146,6 +179,22 @@ export const MapInteractionToolbox: React.FC = () => {
             </React.Fragment>
           );
         })}
+
+        {/* Dedicated EDIT GEOFENCE Button */}
+        <div className="h-px bg-[#2B3743]" />
+        <button
+          onClick={handleEditFence}
+          className={`flex items-center gap-2 px-3 py-2 text-[11px] font-mono font-medium transition-all whitespace-nowrap border rounded-none border-transparent ${
+            isEditingFence
+              ? 'bg-[#1B2530] border-[#5B8FB9] text-[#5B8FB9] shadow-[0_0_8px_rgba(91,143,185,0.3)] font-bold'
+              : 'text-[#5B8FB9] hover:text-[#E7EBEF] hover:bg-[#151D26]'
+          }`}
+          title="Edit Geofence Parameters & Boundaries (E)"
+        >
+          <Edit3 className="w-4 h-4 text-[#5B8FB9]" />
+          <span>Edit Fence</span>
+          <span className="ml-auto text-[9px] opacity-50">[E]</span>
+        </button>
       </div>
 
       {/* Cancel badge shown when an active tool is selected */}

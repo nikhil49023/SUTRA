@@ -23,9 +23,11 @@ import { ErrorBoundary } from '../common/ErrorBoundary';
 import { DebugPanel } from '../debug/DebugPanel';
 import { MapView } from '../../map/MapView';
 import { PrimaryFlightDisplay } from '../../hud/PrimaryFlightDisplay';
+import { useSelectionStore } from '../../stores/selectionStore';
+import { mapController } from '../../map/MapController';
 import { MultiDroneDebugPanel } from '../../hud/MultiDroneDebugPanel';
 import { MissionPlanner } from '../../mission/MissionPlanner';
-import { GeofenceSidebar } from '../../geofence/GeofenceSidebar';
+import { GeofenceSidebarSection } from '../../geofence/GeofenceSidebarSection';
 import { FleetPanel } from '../../fleet/FleetPanel';
 import { GisPanel } from '../../gis/GisPanel';
 import { AiPanel } from '../../ai/AiPanel';
@@ -63,12 +65,17 @@ export const TacticalLayout: React.FC = () => {
 
       switch (e.key.toUpperCase()) {
         case 'M': setActiveSection('MISSION'); break;
+        case 'G': setActiveSection('GEOFENCE'); break;
         case 'F': setActiveSection('FLEET'); break;
         case 'I': setActiveSection('GIS'); break;
         case 'A': setActiveSection('AI'); break;
         case 'H': useAppStore.getState().toggleHud(); break;
         case 'R': setEmergencyModalOpen(true, 'ALL'); break;
-        case 'ESCAPE': useAppStore.getState().setActiveSection('COMMAND'); break;
+        case 'ESCAPE':
+          useSelectionStore.getState().clearSelection();
+          mapController.geofenceLayer.clearHandles();
+          useAppStore.getState().setActiveSection('COMMAND');
+          break;
       }
     };
 
@@ -87,10 +94,17 @@ export const TacticalLayout: React.FC = () => {
 
       {/* 2. MAIN CENTER BODY */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Left Sidebar */}
+        {/* Left Navigation Sidebar */}
         <ErrorBoundary fallbackTitle="SIDEBAR">
           <Sidebar />
         </ErrorBoundary>
+
+        {/* Dedicated Geofence Management & Creation Sidebar Section */}
+        {activeSection === 'GEOFENCE' && (
+          <ErrorBoundary fallbackTitle="GEOFENCE OPERATIONS SIDEBAR">
+            <GeofenceSidebarSection />
+          </ErrorBoundary>
+        )}
 
         {/* Central Map & Overlaid Context Panels */}
         <div className="flex-1 flex flex-col relative overflow-hidden">

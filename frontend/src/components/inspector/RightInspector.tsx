@@ -8,6 +8,7 @@ import { DroneInspector } from '../../fleet/DroneInspector';
 import { WaypointEditor } from '../../mission/WaypointEditor';
 import { GeofenceEditor } from '../../geofence/GeofenceEditor';
 import { GeofenceProperties } from '../../geofence/GeofenceProperties';
+import { GeofenceSidebar } from '../../geofence/GeofenceSidebar';
 import { ChevronRight, ChevronLeft, Cpu, Activity } from 'lucide-react';
 
 export const RightInspector: React.FC = memo(() => {
@@ -53,9 +54,13 @@ export const RightInspector: React.FC = memo(() => {
         <div className="space-y-3">
           <GeofenceEditor />
           <GeofenceProperties />
+          <GeofenceSidebar />
         </div>
       ) : (
-        <SystemOverview />
+        <div className="space-y-3">
+          <SystemOverview />
+          <GeofenceSidebar />
+        </div>
       )}
     </aside>
   );
@@ -84,7 +89,23 @@ const SystemOverview: React.FC = memo(() => {
         </div>
         <div className="flex justify-between items-center">
           <span className="text-[#707C88]">GEOFENCE ZONES:</span>
-          <span className="font-bold text-[#E7EBEF] tabular-nums">{geofenceCount} Active</span>
+          <div className="flex items-center space-x-1.5">
+            <span className="font-bold text-[#E7EBEF] tabular-nums">{geofenceCount} Active</span>
+            <button
+              onClick={() => {
+                const gfs = useGeofenceStore.getState().geofences;
+                if (gfs.length > 0) {
+                  useSelectionStore.getState().selectGeofence(gfs[0].id);
+                } else {
+                  useSelectionStore.getState().selectObject('GEOFENCE', null);
+                }
+              }}
+              className="px-1.5 py-0.5 rounded bg-[#1B2530] border border-[#5B8FB9]/60 hover:bg-[#223040] hover:border-[#5B8FB9] text-[#5B8FB9] font-bold text-[10px] transition"
+              title="Access & Edit Geofences"
+            >
+              EDIT
+            </button>
+          </div>
         </div>
         <div className="flex justify-between items-center">
           <span className="text-[#707C88]">ORCA COLLISION BUFFER:</span>

@@ -1,7 +1,9 @@
-import React, { memo } from 'react';
+import React, { useState, memo } from 'react';
 import { useGeofenceStore } from '../stores/geofenceStore';
+import { useSelectionStore } from '../stores/selectionStore';
 import { useMapStore } from '../stores/mapStore';
 import { commandManager } from '../communication/CommandManager';
+import { mapController } from '../map/MapController';
 import { ZoneType, GeometryType } from '../types/geofence';
 import { Shield, Hexagon, Circle, Route, Check, X, Undo2 } from 'lucide-react';
 
@@ -14,10 +16,20 @@ export const GeofenceToolbar: React.FC = memo(() => {
   const undoDrawingPoint = useGeofenceStore((s) => s.undoDrawingPoint);
   const cancelDrawing = useGeofenceStore((s) => s.cancelDrawing);
 
+  const [zoneName, setZoneName] = useState('');
   const setInteractionMode = useMapStore((s) => s.setInteractionMode);
 
   const handleStartDrawing = (zoneType: ZoneType, geometryType: GeometryType) => {
-    // 1. Set local drawing state
+    // 1. Set local drawing state & default name
+    const count = useGeofenceStore.getState().geofences.length + 1;
+    const defaultName =
+      zoneType === 'SAFE'
+        ? `Safe Area ${count}`
+        : zoneType === 'WARNING'
+        ? `Warning Sector ${count}`
+        : `Restricted Zone ${count}`;
+    setZoneName(defaultName);
+
     startDrawing(zoneType, geometryType);
     // 2. Activate DRAW_GEOFENCE mode on map (shows banner + correct crosshair cursor)
     setInteractionMode('DRAW_GEOFENCE');
@@ -32,7 +44,8 @@ export const GeofenceToolbar: React.FC = memo(() => {
     const minPoints = activeGeometryType === 'CIRCLE' ? 1 : activeGeometryType === 'CORRIDOR' ? 2 : 3;
     if (drawingPoints.length < minPoints) return;
 
-    const name = `${activeZoneType} Zone`;
+    const count = useGeofenceStore.getState().geofences.length + 1;
+    const name = zoneName.trim() || `${activeZoneType} Zone #${count}`;
     const tempId = `gf-optimistic-${Date.now()}`;
 
     let center: [number, number] | null = null;
@@ -75,13 +88,17 @@ export const GeofenceToolbar: React.FC = memo(() => {
       altitude_max: 120,
     });
 
-    // 3. Exit drawing mode (the optimistic geofence keeps the fence visible)
+    // 3. Exit drawing mode cleanly without leaving edit dots on the box!
     useGeofenceStore.setState({ drawing_mode: false, drawing_points: [], preview_point: null });
+    useSelectionStore.getState().clearSelection();
+    mapController.geofenceLayer.clearHandles();
     setInteractionMode('SELECT');
   };
 
   const handleCancel = () => {
     cancelDrawing();
+    useSelectionStore.getState().clearSelection();
+    mapController.geofenceLayer.clearHandles();
     setInteractionMode('SELECT');
     commandManager.sendCommand('geofence.cancel_drawing', {});
   };
@@ -139,10 +156,30 @@ export const GeofenceToolbar: React.FC = memo(() => {
         </>
       ) : (
         <>
-          <div className="flex items-center space-x-2 px-2.5 py-1 bg-[#1B2530] border border-[#C49A4A] rounded text-[#C49A4A] animate-pulse font-bold">
-            <span>
-              DRAWING {activeZoneType} {activeGeometryType} ({drawingPoints.length} pts)
-            </span>
+          <div className="flex items-center space-x-1.5 px-2 py-1 bg-[#151D26] border border-[#2B3743] rounded">
+            <span
+              className={`w-2 h-2 rounded-full ${
+                activeZoneType === 'SAFE'
+                  ? 'bg-[#10B981]'
+                  : activeZoneType === 'WARNING'
+                  ? 'bg-[#F59E0B]'
+                  : 'bg-[#EF4444]'
+              }`}
+            />
+            <span className="font-bold text-[#E7EBEF] text-[11px]">{activeZoneType}</span>
+            <span className="text-[#707C88] text-[10px]">({drawingPoints.length} pts)</span>
+          </div>
+
+          {/* Interactive Zone Name Input */}
+          <div className="flex items-center space-x-1.5 bg-[#0B0F14] border border-[#5B8FB9]/60 rounded px-2 py-1 shadow-inner">
+            <span className="text-[9px] font-bold text-[#5B8FB9]">NAME:</span>
+            <input
+              type="text"
+              value={zoneName}
+              onChange={(e) => setZoneName(e.target.value)}
+              placeholder="Enter zone name..."
+              className="bg-transparent text-[#E7EBEF] text-xs font-bold focus:outline-none w-36 sm:w-48 placeholder-[#707C88]"
+            />
           </div>
 
           <button
@@ -157,7 +194,8 @@ export const GeofenceToolbar: React.FC = memo(() => {
           <button
             onClick={handleFinish}
             disabled={drawingPoints.length < minPts}
-            className="px-2.5 py-1.5 rounded border border-[#4F9A72]/50 bg-[#151D26] hover:bg-[#1B2530] text-[#4F9A72] font-bold disabled:opacity-40 transition flex items-center space-x-1"
+            className="px-3 py-1.5 rounded border border-[#10B981] bg-[#10B981]/20 hover:bg-[#10B981]/30 text-[#10B981] font-bold disabled:opacity-40 transition flex items-center space-x-1 shadow"
+            title="Finish drawing and save zone (without lingering dots)"
           >
             <Check className="w-3.5 h-3.5" />
             <span>FINISH GEOFENCE</span>
@@ -165,7 +203,7 @@ export const GeofenceToolbar: React.FC = memo(() => {
 
           <button
             onClick={handleCancel}
-            className="px-2 py-1.5 rounded border border-[#C75A5A]/50 bg-[#151D26] hover:bg-[#1B2530] text-[#C75A5A] transition flex items-center space-x-1"
+            className="px-2 py-1.5 rounded border border-[#EF4444]/50 bg-[#151D26] hover:bg-[#1B2530] text-[#EF4444] transition flex items-center space-x-1"
           >
             <X className="w-3.5 h-3.5" />
             <span>CANCEL</span>
