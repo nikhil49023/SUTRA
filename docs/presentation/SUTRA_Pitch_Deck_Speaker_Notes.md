@@ -2,28 +2,28 @@
 
 > **Target Event**: Smart Horizon 48-Hour International Hackathon Grand Finals  
 > **Presentation Duration**: 5 Minutes (300 Seconds) + 3 Minutes Q&A  
-> **Team Roster**:
-> - **Nikhil** (Tech Lead / Subsystem A & B Lead)
-> - **Vedanth Sai Ram** (Subsystem C Lead / AI Perception)
-> - **Siva Kesava** (Subsystem D Lead / 3D GIS GCS)
-> - **Harika** (Subsystem E Lead / QA & Design)
-> - **Rohith Kumar** (Subsystem F Lead / CONOPS & Field Ops)
+> **Team Roster & Shift Architecture**:
+> - **Nikhil** (Tech Architect & Lead — Subsystem A: GNC & Subsystem B: Comms/Sim, Architecture Moat Defense)
+> - **Vedanth Sai Ram** (Subsystem C Lead — AI Edge Perception & Geolocation)
+> - **Siva Kesava** (Subsystem D Lead — 3D GIS GCS Dashboard)
+> - **Harika** (Subsystem E Lead — QA Verification, Presentation Delivery, NDMA CONOPS & Unit Economics)
+> - **Rohith Kumar** (Compute & Telemetry Assistant — GPU Workload Runner for C & D, GCS Live Telemetry Monitor)
 
 ---
 
 ## ⏱️ Slide-by-Slide 5-Minute Delivery Timeline
 
 ```
-00:00 ──► Slide 1: Title & Vision (Harika - 20s)
-00:20 ──► Slide 2: The Disaster Crisis (Rohith - 35s)
-00:55 ──► Slide 3: 4-Pillar Physical AI Architecture (Nikhil - 35s)
-01:30 ──► Slide 4: SUTRA-FSD Autopilot & CBF Shield (Nikhil - 45s)
-02:15 ──► Slide 5: Deep JSCC Neural Communications (Nikhil - 40s)
-02:55 ──► Slide 6: Tri-Modal Edge Perception & Geolocation (Vedanth - 40s)
-03:35 ──► Slide 7: 3D GIS GCS Command Dashboard (Siva - 35s)
-04:10 ──► Slide 8: NDMA CONOPS & Safety SOP (Rohith - 25s)
-04:35 ──► Slide 9: Empirical Benchmark Scorecard (Harika - 25s)
-05:00 ──► Slide 10: Unit Economics, Impact & Conclusion (Harika - 20s)
+00:00 ──► Slide 1: Title & Executive Brief (Harika - 20s)
+00:20 ──► Slide 2: The Disaster Crisis (Rohith - 25s / Backup: Harika)
+00:45 ──► Slide 3: 4-Pillar Physical AI Architecture (Nikhil - 35s)
+01:20 ──► Slide 4: SUTRA-FSD Autopilot & CBF Shield (Nikhil - 45s)
+02:05 ──► Slide 5: Deep JSCC Neural Communications (Nikhil - 45s)
+02:50 ──► Slide 6: Tri-Modal Edge Perception & Geolocation (Vedanth - 40s)
+03:30 ──► Slide 7: 3D GIS GCS Command Dashboard (Siva - 35s)
+04:05 ──► Slide 8: NDMA CONOPS & Tactical Deployment (Harika / Nikhil - 25s)
+04:30 ──► Slide 9: Empirical Benchmark Scorecard (Harika - 20s)
+04:50 ──► Slide 10: Unit Economics, Impact & Conclusion (Harika - 10s)
 ```
 
 ---
@@ -67,7 +67,7 @@
 
 ---
 
-### Slide 8: Subsystem F — NDMA Rescue CONOPS (Rohith — 25 Seconds)
+### Slide 8: NDMA Rescue CONOPS & Field Protocols (Harika / Nikhil — 25 Seconds)
 > *"We designed SUTRA strictly around **National Disaster Management Authority (NDMA)** operational rescue guidelines. We mapped out specific search profiles for Kedarnath flood ravines and Wayanad landslides, backed by a rigorous 3-Stage Pre-Flight Safety Verification Checklist to ensure zero field accidents."*
 
 ---

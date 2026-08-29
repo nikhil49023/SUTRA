@@ -91,52 +91,51 @@ Manual search and rescue operations in disaster-hit, forested, or conflict-prone
 
 ---
 
+## 👥 48-Hour Grand Finals Team Architecture & Hardware Compute Matrix
+
+To guarantee maximum building speed, 24/7 sprint endurance, and zero-risk jury defense during the 48-Hour Grand Finals, the team operates in a **Lead + Pair Assistant** model based on pre-hackathon commit performance and compute power:
+
+| Teammate | Machine & Compute Specs | Grand Finals Role | Primary Responsibilities | Jury Defense Ownership |
+|---|---|---|---|---|
+| **⚡ Nikhil** | **ASUS TUF A15** (RTX 3050 GPU, AMD CPU) | **Tech Architect & Subsystem A + B Lead** | Autonomous GNC, 50Hz offboard setpoints, ORCA 3D, Deep JSCC codec, Gazebo Sim 8 digital twin, full-stack integration | 🛡️ **Architecture & Moat Defense** |
+| **👁️ Vedanth Sai Ram** | **Lenovo Yoga** (Ultrabook CPU) | **Subsystem C Lead** (AI Perception) | YOLOv8-Nano TensorRT detector, Tri-Modal fusion, SAHI slicing, WGS84 DEM raycasting *(Offloads heavy GPU training/TRT builds to Rohith)* | 🛡️ **Edge AI & Geolocation Defense** |
+| **🗺️ Siva Kesava** | **Lenovo Laptop** (Intel i5 CPU) | **Subsystem D Lead** (3D GIS GCS) | React 18 + Mapbox 3D satellite view, WebGPU HUD widgets, WebSocket state machine, MAVLink router *(Offloads multi-stream load tests to Rohith)* | 🛡️ **GCS & Operator HUD Defense** |
+| **📑 Harika** | **MacBook Pro** (Apple Silicon) | **Subsystem E Lead & Field CONOPS Co-Lead** | Automated test verification suites, Master Pitch Deck delivery, Zero-Mock scorecard, NDMA disaster search profiles & unit economics | 🛡️ **Presentation Delivery & Verification Defense** |
+| **⚙️ Rohith Kumar** | **HP Victus** (Intel i7, NVIDIA RTX 4050 6GB VRAM) | **Compute & Execution Assistant** (C & D, A auxiliary) | Dedicated GPU compute runner for TensorRT builds & GCS stress tests; secondary screen GCS flight telemetry monitor | 🔒 **Zero Independent Q&A Risk** (Backline Support) |
+
+---
+
 ## 👤 Teammate Activation & Role Guidelines
 
 When a user introduces themselves by name, automatically activate their exact role guidelines:
 
-### 1. 🚁 ROHITH KUMAR — Subsystem F Lead (Tactical Operations & Field Deployment)
-- **Folder**: `docs/conops/` ONLY | **Branch**: `feature/subsystem-f-ops` ONLY | **Doc**: `docs/conops/DOCS.md`
-- **Subsystem Status**: ✅ **OFFICIALLY ASSIGNED & SPECIFIED (100% Non-Coding Operational Scope)**
-- **Strict Access Scope & Repository Isolation Policy**:
-  - 🔒 **STRICT SUBSYSTEM SCOPE LOCK**: Rohith and any AI agent operating for Rohith are **STRICTLY RESTRICTED TO `docs/conops/` ONLY**.
-  - 🚫 **ZERO WRITE / COMMIT ACCESS OUTSIDE SUBSYSTEM F**: Rohith has **ZERO ACCESS** to modify, inspect, or commit to Subsystem A (`sutra_gnc`), Subsystem B (`sutra_comms`), Subsystem C (`sutra_perception`), Subsystem D (`sutra_gcs`), Subsystem E (`docs/`), `dev`, or `main`.
-  - 🎯 **MANDATORY EFFORT FOCUS DIRECTIVE**: Rohith and his AI agents MUST focus 100% of their operational effort on Subsystem F deliverables:
-    1. **Module F1 (NDMA Rescue CONOPS)**: Kedarnath flood & Wayanad landslide search corridor profiles.
-    2. **Module F2 (Field Deployment SOP)**: Pre-flight physical & telemetry checklists, ground safety boundaries, emergency field abort procedures.
-    3. **Module F3 (Tactical Rescue Storytelling)**: Operational mission narrative for jury defense & presentation.
-- **Pre-Work Action**: Run Rule 0 (`git status`, `git branch --show-current`, `git fetch origin dev && git merge origin/dev --no-edit`).
+### 1. ⚙️ ROHITH KUMAR — Compute & Execution Assistant (Assisting Subsystems C & D)
+- **Role Scope**: **Execution & Compute Support ONLY** under direction of Subsystem Leads Vedanth (C), Siva (D), or Nikhil (A).
+- **Assigned Tasks**:
+  - Running GPU-heavy PyTorch batch inferences and TensorRT FP16 engine compilations for Vedanth on his RTX 4050.
+  - Running multi-stream GCS load tests and WebGPU telemetry capture for Siva.
+  - Ground telemetry and mission flight log logging during live demonstration.
+- **Jury Defense & Q&A Protocol**: **ZERO independent technical Q&A exposure**. All architectural, algorithmic, and operational questions are fielded by Nikhil, Vedanth, Siva, or Harika.
 
 ### 2. 📡 NIKHIL — Tech Architect & Subsystem A + B Lead (GNC, Comms & Sim) ⚡ **[TECH LEAD]**
 - **Folder**: `sutra_ws/src/sutra_gnc/`, `sutra_ws/src/sutra_comms/`, & `sutra_ws/src/sutra_sim/` | **Branch**: `feature/subsystem-a-gnc` & `feature/subsystem-b-comms` | **Docs**: `sutra_ws/src/sutra_gnc/DOCS.md`, `sutra_ws/src/sutra_comms/DOCS.md`
-- **Cross-Branch Access**: ✅ **UNRESTRICTED** — As Tech Lead, Nikhil has direct takeover authority over Subsystem A (GNC & Flight Control) and unrestricted access across ALL branches (`feature/*`, `dev`, `main`).
-- **Pre-Work Action**: Run Rule 0 (`git status`, `git branch --show-current`, `git fetch origin dev && git merge origin/dev`).
+- **Cross-Branch Access**: ✅ **UNRESTRICTED** — Unrestricted takeover authority and push access across ALL branches (`feature/*`, `dev`, `main`).
 - **Tasks**: Autonomous PX4 offboard navigation, 50Hz setpoints, VIO localization, ORCA 3D collision avoidance, 802.11s mesh routing, SwarmRAFT consensus, Deep JSCC encoder/decoder, and Gazebo Sim 8 digital twin worlds.
 
-### 3. 👁️ VEDANTH SAI RAM — Subsystem C Lead (AI Perception)
+### 3. 👁️ VEDANTH SAI RAM — Subsystem C Lead (AI Perception & Geolocation)
 - **Folder**: `sutra_ws/src/sutra_perception/` | **Branch**: `feature/subsystem-c-perception` | **Doc**: `sutra_ws/src/sutra_perception/DOCS.md`
-- **Pre-Work Action**: Run Rule 0 (`git status`, `git branch --show-current`, `git fetch origin dev && git merge origin/dev`).
+- **Pair Assistant**: Rohith Kumar (provides RTX 4050 GPU compute for model conversion & stress benchmarking).
 - **Tasks**: YOLOv8-Nano TensorRT survivor/threat detector (`detector_node.py`), WGS84 GPS raycasting from 2D bounding boxes, and Tri-Modal spatial cross-attention fusion.
-- **Inter-Subsystem Interfaces**:
-  - Consumes `/sutra/gnc/{drone_id}/pose_stamped` from Subsystem A for DEM terrain raycasting.
-  - Streams target classifications (`Survivor`, `Threat/Fire`, `Safe Corridor`) aligned with Subsystem F NDMA rescue categories.
-  - Feeds bounding box telemetry to Subsystem B (`mesh_node`) for Deep JSCC neural transmission.
 
 ### 4. 🗺️ SIVA KESAVA — Subsystem D Lead (3D GIS GCS Dashboard)
 - **Folder**: `sutra_ws/src/sutra_gcs/` | **Branch**: `feature/subsystem-d-gcs` | **Doc**: `sutra_ws/src/sutra_gcs/DOCS.md`
-- **Pre-Work Action**: Run Rule 0 (`git status`, `git branch --show-current`, `git fetch origin dev && git merge origin/dev`).
+- **Pair Assistant**: Rohith Kumar (provides multi-stream client testing & HUD rendering verification).
 - **Tasks**: Mapbox GL JS 3D satellite view & drone markers (`src/App.tsx`), WebGPU real-time telemetry HUD widgets, ATAK/WinTAK Cursor-on-Target XML streamer, survivor alert stream, and 1-click Emergency RTL button.
-- **Inter-Subsystem Interfaces**:
-  - Renders Subsystem F search corridor polygons and NDMA staging geofence overlays on 3D Mapbox viewer.
-  - Displays Pre-Flight SOP checklist verification badges on WebGPU HUD.
-  - Connects to Subsystem B WebSocket gateway (`ws_port: 9090`) maintaining 60.0 FPS HUD performance under 5 UAV streams.
 
-### 5. 📑 HARIKA — Subsystem E Lead (Docs, Verification Audits & Presentation Design)
+### 5. 📑 HARIKA — Subsystem E Lead & Field CONOPS Co-Lead (Docs, Audits & Pitch Delivery)
 - **Folder**: `docs/` & `scripts/` | **Branch**: `feature/subsystem-e-docs`
-- **Pre-Work Action**: Run Rule 0 (`git status`, `git branch --show-current`, `git fetch origin dev && git merge origin/dev`).
-- **Tasks**: Gate Audits G1–G6 verification, system whitepapers, roadmaps, flight logs, Master Pitch Deck formatting, presentation slide deck design, and visual media creation.
-- **Commit Mandate**: Sync and audit all subsystem `DOCS.md` benchmark tables against real test outputs.
-- **Verification**: `pytest sutra_ws/src/sutra_*/test/` and `cd sutra_ws/src/sutra_gcs && npm run build`
+- **Co-Lead Support**: Tech Lead Nikhil.
+- **Tasks**: Gate Audits G1–G6 verification, Master Pitch Deck delivery & formatting, Zero-Mock benchmark scorecards, NDMA Kedarnath/Wayanad operational profiles, and presentation leadership.
 
 ---
 

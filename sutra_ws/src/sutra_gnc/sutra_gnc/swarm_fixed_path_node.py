@@ -106,6 +106,49 @@ RING_CROSSING_ROUTES = {
     "uav_epsilon": [(0.0, 0.0, 3.8), (-3.708, 11.413, 3.8), (0.0, 0.0, 3.8), (3.708, -11.413, 3.8)],
 }
 
+# 3D Submerged Disaster Flood World Search Routes (Altitude 48m-56m over 220x220m Terrain)
+DISASTER_FLOOD_ROUTES = {
+    "uav_alpha": [
+        ( 30.0,   0.0, 50.0),
+        ( 20.0,  25.0, 50.0),
+        (-15.0,  20.0, 50.0),
+        (-35.0,   0.0, 50.0),
+        (-15.0, -25.0, 50.0),
+        ( 20.0, -20.0, 50.0),
+    ],
+    "uav_beta": [
+        (  0.0,  35.0, 48.0),
+        ( 20.0,  15.0, 48.0),
+        ( 25.0, -20.0, 48.0),
+        (  0.0, -35.0, 48.0),
+        (-25.0, -15.0, 48.0),
+        (-20.0,  20.0, 48.0),
+    ],
+    "uav_gamma": [
+        ( 35.0,  35.0, 52.0),
+        ( 10.0,  10.0, 52.0),
+        (-10.0, -10.0, 52.0),
+        (-35.0, -35.0, 52.0),
+        (-10.0, -10.0, 52.0),
+        ( 10.0,  10.0, 52.0),
+    ],
+    "uav_delta": [
+        (-35.0,  35.0, 54.0),
+        (-10.0,  10.0, 54.0),
+        ( 10.0, -10.0, 54.0),
+        ( 35.0, -35.0, 54.0),
+        ( 10.0, -10.0, 54.0),
+        (-10.0,  10.0, 54.0),
+    ],
+    "uav_epsilon": [
+        ( 45.0,   0.0, 56.0),
+        ( 15.0,  40.0, 56.0),
+        (-35.0,  30.0, 56.0),
+        (-40.0, -30.0, 56.0),
+        ( 15.0, -40.0, 56.0),
+    ],
+}
+
 # Drone visual colours (for RViz markers)
 DRONE_COLOURS = {
     "uav_alpha":   (0.0, 0.8, 1.0, 1.0),   # Cyan
@@ -124,7 +167,7 @@ class SwarmFixedPathNode(Node):
 
         # ── Parameters ────────────────────────────────────────────────────────
         self.declare_parameter("drone_id", "uav_alpha")
-        self.declare_parameter("route_mode", "standard")     # "standard" | "ring_crossing"
+        self.declare_parameter("route_mode", "standard")     # "standard" | "ring_crossing" | "disaster_flood"
         self.declare_parameter("cruise_speed", 3.0)          # m/s
         self.declare_parameter("waypoint_radius", 2.2)       # proximity threshold
         self.declare_parameter("takeoff_altitude", 4.0)      # m — must match route Z
@@ -149,8 +192,11 @@ class SwarmFixedPathNode(Node):
         # Route for this drone
         if self.route_mode == "ring_crossing":
             self.waypoints = RING_CROSSING_ROUTES.get(self.drone_id, RING_CROSSING_ROUTES["uav_alpha"])
+        elif self.route_mode == "disaster_flood":
+            self.waypoints = DISASTER_FLOOD_ROUTES.get(self.drone_id, DISASTER_FLOOD_ROUTES["uav_alpha"])
         else:
             self.waypoints = DRONE_ROUTES.get(self.drone_id, DRONE_ROUTES["uav_alpha"])
+
 
         self.wp_idx = 0
         self.colour = DRONE_COLOURS.get(self.drone_id, (1.0, 1.0, 1.0, 1.0))
