@@ -18,6 +18,8 @@ class ZoneType(str, Enum):
     NO_FLY = "NO_FLY"
     WARNING = "WARNING"
     SAFE = "SAFE"
+    INCLUSION = "INCLUSION"
+    EXCLUSION = "EXCLUSION"
 
     @property
     def fill_color(self) -> str:
@@ -26,6 +28,8 @@ class ZoneType(str, Enum):
             ZoneType.NO_FLY: "rgba(239, 68, 68, 0.25)",
             ZoneType.WARNING: "rgba(245, 158, 11, 0.25)",
             ZoneType.SAFE: "rgba(16, 185, 129, 0.25)",
+            ZoneType.INCLUSION: "rgba(59, 130, 246, 0.25)",
+            ZoneType.EXCLUSION: "rgba(239, 68, 68, 0.25)",
         }[self]
 
     @property
@@ -35,6 +39,8 @@ class ZoneType(str, Enum):
             ZoneType.NO_FLY: "#ef4444",
             ZoneType.WARNING: "#f59e0b",
             ZoneType.SAFE: "#10b981",
+            ZoneType.INCLUSION: "#3b82f6",
+            ZoneType.EXCLUSION: "#ef4444",
         }[self]
 
     @property
@@ -43,6 +49,8 @@ class ZoneType(str, Enum):
             ZoneType.NO_FLY: "CRITICAL",
             ZoneType.WARNING: "WARNING",
             ZoneType.SAFE: "INFO",
+            ZoneType.INCLUSION: "INFO",
+            ZoneType.EXCLUSION: "CRITICAL",
         }[self]
 
 
@@ -72,6 +80,7 @@ class Geofence:
     corridor_width: float = 50.0  # meters for corridor
     altitude_min: float = 0.0  # meters AGL
     altitude_max: float = 120.0  # meters AGL
+    priority: int = 3
     visible: bool = True
     color: Optional[str] = None
     created_at: float = field(default_factory=time.time)

@@ -129,6 +129,10 @@ class WebSocketGatewayServer:
         self.sim_progress = 0.0
         self.sim_is_rtl = False
 
+        # Geofence breach dedup: key=(drone_id:geofence_id:severity), value=last_alert_time
+        self._geofence_alert_dedup: Dict[str, float] = {}
+        self._geofence_alert_lock = threading.Lock()
+
         # Seed initial mission if empty
         self._seed_initial_mission()
 
@@ -537,10 +541,10 @@ class WebSocketGatewayServer:
                 return {"cleared": True}
 
             elif cmd_type in ("mission.validate", "MISSION_VALIDATE"):
-                valid, reasons = self.mission_mgr.validate_mission()
-                if not valid:
-                    raise ValueError(f"Validation failed: {', '.join(reasons)}")
-                return {"valid": True, "reasons": reasons}
+                report = self.mission_mgr.validate_mission()
+                if not report.valid:
+                    raise ValueError(f"Validation failed: {', '.join(report.errors)}")
+                return {"valid": report.valid, "errors": report.errors, "warnings": report.warnings, "info": report.info}
 
             # Mission Lifecycle & Dangerous Flight Operations
             elif cmd_type in ("mission.start", "MISSION_START"):
@@ -643,6 +647,14 @@ class WebSocketGatewayServer:
                 return {"drone_id": drone_id}
 
             # Geofence
+            elif cmd_type in ("geofence.select", "GEOFENCE_SELECT"):
+                gf_id = payload.get("geofence_id")
+                from dataclasses import replace as dc_replace
+                self.state_store.update_state(
+                    lambda s: dc_replace(s, geofence_state=dc_replace(s.geofence_state, selected_geofence_id=gf_id))
+                )
+                return {"selected_geofence_id": gf_id}
+
             elif cmd_type in ("geofence.start_drawing", "GEOFENCE_START_DRAWING"):
                 self.geofence_ctrl.start_drawing(
                     zone_type=ZoneType(payload.get("zone_type", "NO_FLY")),
@@ -658,56 +670,70 @@ class WebSocketGatewayServer:
                 name = payload.get("name") or "New Geofence"
                 zone_type_str = payload.get("zone_type", "NO_FLY")
                 geometry_type_str = payload.get("geometry_type", "POLYGON")
-                raw_coords = payload.get("coordinates") or payload.get("points")
+                raw_coords = payload.get("coordinates") or payload.get("points") or []
+                raw_center = payload.get("center")
+                radius = float(payload.get("radius", 200.0))
+                corridor_width = float(payload.get("corridor_width", 50.0))
+                altitude_min = float(payload.get("altitude_min", 0.0))
+                altitude_max = float(payload.get("altitude_max", 120.0))
+                priority = int(payload.get("priority", 3))
+                enabled = bool(payload.get("enabled", True))
+                visible = bool(payload.get("visible", True))
+
+                parsed = []
+                for c in raw_coords:
+                    if isinstance(c, (list, tuple)) and len(c) >= 2:
+                        parsed.append((float(c[0]), float(c[1])))
+                    elif isinstance(c, dict):
+                        lat = float(c.get("lat", c.get("latitude", 0)))
+                        lng = float(c.get("lng", c.get("longitude", 0)))
+                        parsed.append((lat, lng))
+
+                center = None
+                if raw_center:
+                    if isinstance(raw_center, (list, tuple)) and len(raw_center) >= 2:
+                        center = (float(raw_center[0]), float(raw_center[1]))
+                    elif isinstance(raw_center, dict):
+                        center = (float(raw_center.get("lat", raw_center.get("latitude", 0))), float(raw_center.get("lng", raw_center.get("longitude", 0))))
+                elif geometry_type_str == "CIRCLE" and parsed:
+                    center = parsed[0]
 
                 gf = None
 
-                # Try controller path first (drawing_mode was active with server-side points)
+                # Try controller path first if drawing mode is active
                 current_gf_state = self.state_store.get_state().geofence_state
                 if current_gf_state.drawing_mode:
-                    # If frontend also sent coordinates, inject them into the controller state
-                    if raw_coords and len(raw_coords) >= 3:
-                        parsed = []
-                        for c in raw_coords:
-                            if isinstance(c, (list, tuple)) and len(c) >= 2:
-                                parsed.append((float(c[0]), float(c[1])))
-                            elif isinstance(c, dict):
-                                lat = float(c.get("lat", c.get("latitude", 0)))
-                                lng = float(c.get("lng", c.get("longitude", 0)))
-                                parsed.append((lat, lng))
-                        if parsed:
-                            from dataclasses import replace as dc_replace
-                            self.state_store.update_state(
-                                lambda s: dc_replace(
-                                    s,
-                                    geofence_state=dc_replace(
-                                        s.geofence_state,
-                                        drawing_points=parsed,
-                                    ),
-                                )
+                    if parsed:
+                        from dataclasses import replace as dc_replace
+                        self.state_store.update_state(
+                            lambda s: dc_replace(
+                                s,
+                                geofence_state=dc_replace(
+                                    s.geofence_state,
+                                    drawing_points=parsed,
+                                ),
                             )
+                        )
                     gf = self.geofence_ctrl.finish_drawing(name)
 
-                # Fallback: create directly from coordinates in payload
-                if gf is None and raw_coords and len(raw_coords) >= 3:
-                    parsed = []
-                    for c in raw_coords:
-                        if isinstance(c, (list, tuple)) and len(c) >= 2:
-                            parsed.append((float(c[0]), float(c[1])))
-                        elif isinstance(c, dict):
-                            lat = float(c.get("lat", c.get("latitude", 0)))
-                            lng = float(c.get("lng", c.get("longitude", 0)))
-                            parsed.append((lat, lng))
-                    if len(parsed) >= 3:
-                        gf = self.geofence_svc.create_geofence(
-                            name=name,
-                            zone_type=ZoneType(zone_type_str),
-                            geometry_type=GeometryType(geometry_type_str),
-                            coordinates=parsed,
-                        )
+                # Fallback / direct creation
+                if gf is None:
+                    gf = self.geofence_svc.create_geofence(
+                        name=name,
+                        zone_type=ZoneType(zone_type_str),
+                        geometry_type=GeometryType(geometry_type_str),
+                        coordinates=parsed,
+                        center=center,
+                        radius=radius,
+                        corridor_width=corridor_width,
+                        altitude_min=altitude_min,
+                        altitude_max=altitude_max,
+                        priority=priority,
+                        enabled=enabled,
+                        visible=visible,
+                    )
 
                 if gf:
-                    # Gateway also emits geofence.created (deduplication handled by event_id)
                     self.event_bus.emit(
                         "geofence.created",
                         payload={"geofence": serialize_obj(gf)},
@@ -716,8 +742,7 @@ class WebSocketGatewayServer:
                     )
                     return serialize_obj(gf)
                 else:
-                    raise ValueError("Geofence creation failed: requires at least 3 points for polygon or valid coordinates")
-
+                    raise ValueError("Geofence creation failed: invalid parameters")
 
             elif cmd_type in ("geofence.cancel_drawing", "GEOFENCE_CANCEL_DRAWING"):
                 self.geofence_ctrl.cancel_drawing()
@@ -730,16 +755,34 @@ class WebSocketGatewayServer:
                     updated_fields["name"] = payload["name"]
                 if "zone_type" in payload:
                     updated_fields["zone_type"] = ZoneType(payload["zone_type"])
+                if "geometry_type" in payload:
+                    updated_fields["geometry_type"] = GeometryType(payload["geometry_type"])
                 if "altitude_min" in payload:
                     updated_fields["altitude_min"] = float(payload["altitude_min"])
                 if "altitude_max" in payload:
                     updated_fields["altitude_max"] = float(payload["altitude_max"])
+                if "priority" in payload:
+                    updated_fields["priority"] = int(payload["priority"])
+                if "radius" in payload:
+                    updated_fields["radius"] = float(payload["radius"])
+                if "corridor_width" in payload:
+                    updated_fields["corridor_width"] = float(payload["corridor_width"])
+                if "center" in payload and payload["center"]:
+                    c = payload["center"]
+                    if isinstance(c, (list, tuple)) and len(c) >= 2:
+                        updated_fields["center"] = (float(c[0]), float(c[1]))
                 if "visible" in payload:
                     updated_fields["visible"] = bool(payload["visible"])
                 if "enabled" in payload:
                     updated_fields["enabled"] = bool(payload["enabled"])
                 if "coordinates" in payload:
-                    updated_fields["coordinates"] = payload["coordinates"]
+                    coords = []
+                    for c in payload["coordinates"]:
+                        if isinstance(c, (list, tuple)) and len(c) >= 2:
+                            coords.append((float(c[0]), float(c[1])))
+                        elif isinstance(c, dict):
+                            coords.append((float(c.get("lat", 0)), float(c.get("lng", 0))))
+                    updated_fields["coordinates"] = coords
                 gf = self.geofence_svc.update_geofence(gf_id, **updated_fields)
                 if gf:
                     self.event_bus.emit("geofence.updated", payload={"geofence": serialize_obj(gf), "geofence_id": gf_id}, correlation_id=corr_id, state_version=self.state_store.state_version)

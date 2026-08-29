@@ -49,6 +49,9 @@ class GeofenceService:
         corridor_width: float = 50.0,
         altitude_min: float = 0.0,
         altitude_max: float = 120.0,
+        priority: int = 3,
+        enabled: bool = True,
+        visible: bool = True,
         description: str = "",
     ) -> Geofence:
         """Instantiates and registers a new geofence."""
@@ -63,6 +66,9 @@ class GeofenceService:
             corridor_width=corridor_width,
             altitude_min=altitude_min,
             altitude_max=altitude_max,
+            priority=priority,
+            enabled=enabled,
+            visible=visible,
             description=description,
             created_at=time.time(),
             updated_at=time.time(),
@@ -97,8 +103,9 @@ class GeofenceService:
                     "corridor_width": g.corridor_width,
                     "altitude_min": g.altitude_min,
                     "altitude_max": g.altitude_max,
+                    "priority": g.priority,
                     "enabled": g.enabled,
-                    "visible": True,
+                    "visible": g.visible,
                     "created_at": g.created_at,
                 }
             },
@@ -120,6 +127,26 @@ class GeofenceService:
             else:
                 new_list.append(g)
 
+        if target is None and "name" in kwargs:
+            target = Geofence(
+                id=geofence_id,
+                name=kwargs.get("name", "Zone"),
+                zone_type=kwargs.get("zone_type", ZoneType.NO_FLY),
+                geometry_type=kwargs.get("geometry_type", GeometryType.POLYGON),
+                coordinates=kwargs.get("coordinates", []),
+                center=kwargs.get("center"),
+                radius=kwargs.get("radius", 200.0),
+                corridor_width=kwargs.get("corridor_width", 50.0),
+                altitude_min=kwargs.get("altitude_min", 0.0),
+                altitude_max=kwargs.get("altitude_max", 120.0),
+                priority=kwargs.get("priority", 3),
+                enabled=kwargs.get("enabled", True),
+                visible=kwargs.get("visible", True),
+                created_at=time.time(),
+                updated_at=time.time(),
+            )
+            new_list.append(target)
+
         if target:
             self.state_store.update_state(
                 lambda s: replace(
@@ -129,7 +156,26 @@ class GeofenceService:
             )
             self.event_bus.emit(
                 "geofence.updated",
-                payload={"geofence_id": target.id, "name": target.name},
+                payload={
+                    "geofence_id": target.id,
+                    "name": target.name,
+                    "geofence": {
+                        "id": target.id,
+                        "name": target.name,
+                        "zone_type": target.zone_type.value,
+                        "geometry_type": target.geometry_type.value,
+                        "coordinates": [list(c) for c in (target.coordinates or [])],
+                        "center": list(target.center) if target.center else None,
+                        "radius": target.radius,
+                        "corridor_width": target.corridor_width,
+                        "altitude_min": target.altitude_min,
+                        "altitude_max": target.altitude_max,
+                        "priority": target.priority,
+                        "enabled": target.enabled,
+                        "visible": target.visible,
+                        "created_at": target.created_at,
+                    },
+                },
                 source="geofence_service",
             )
             return target
