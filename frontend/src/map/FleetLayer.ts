@@ -83,11 +83,22 @@ export class FleetLayer {
 
         // Heading wrapper
         const headingWrapperEl = document.createElement('div');
-        headingWrapperEl.className = 'relative w-8 h-8 flex items-center justify-center';
+        headingWrapperEl.className = 'relative w-9 h-9 flex items-center justify-center';
 
         const headingCircleEl = document.createElement('div');
-        headingCircleEl.className = 'w-8 h-8 rounded-full border flex items-center justify-center transition-transform';
-        headingCircleEl.innerHTML = `<svg viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor"><path d="M12 2L4 20L12 16L20 20L12 2Z" /></svg>`;
+        headingCircleEl.className = 'w-9 h-9 rounded-full border flex items-center justify-center transition-transform';
+        headingCircleEl.innerHTML = `<svg viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="2.8" fill="currentColor" fill-opacity="0.85" />
+          <polygon points="12,1.5 14.5,4.5 9.5,4.5" fill="currentColor" stroke="none" />
+          <line x1="12" y1="12" x2="5.5" y2="5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+          <line x1="12" y1="12" x2="18.5" y2="5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+          <line x1="12" y1="12" x2="5.5" y2="18.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+          <line x1="12" y1="12" x2="18.5" y2="18.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+          <circle cx="5.5" cy="5.5" r="2.6" stroke="currentColor" stroke-width="1.3" fill="currentColor" fill-opacity="0.25" />
+          <circle cx="18.5" cy="5.5" r="2.6" stroke="currentColor" stroke-width="1.3" fill="currentColor" fill-opacity="0.25" />
+          <circle cx="5.5" cy="18.5" r="2.6" stroke="currentColor" stroke-width="1.3" fill="currentColor" fill-opacity="0.25" />
+          <circle cx="18.5" cy="18.5" r="2.6" stroke="currentColor" stroke-width="1.3" fill="currentColor" fill-opacity="0.25" />
+        </svg>`;
 
         const pingEl = document.createElement('div');
         pingEl.className = 'absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#C49A4A] rounded-full animate-ping';
@@ -135,19 +146,19 @@ export class FleetLayer {
       entry.callsignEl.textContent = drone.callsign.split(' ')[0];
       entry.batteryEl.textContent = `${drone.battery.toFixed(0)}%`;
 
-      // 3. Heading ring + chevron color
+      // 3. Heading ring + drone symbol color
       entry.headingCircleEl.style.transform = `rotate(${drone.heading}deg)`;
       if (isSelected) {
-        entry.headingCircleEl.className = 'w-8 h-8 rounded-full border flex items-center justify-center transition-transform border-[#6FA4CE] bg-[#151D26] shadow-[0_0_12px_rgba(91,143,185,0.4)]';
+        entry.headingCircleEl.className = 'w-9 h-9 rounded-full border flex items-center justify-center transition-transform border-[#6FA4CE] bg-[#151D26] shadow-[0_0_12px_rgba(91,143,185,0.4)]';
       } else if (isLeader) {
-        entry.headingCircleEl.className = 'w-8 h-8 rounded-full border flex items-center justify-center transition-transform border-[#C49A4A] bg-[#151D26]';
+        entry.headingCircleEl.className = 'w-9 h-9 rounded-full border flex items-center justify-center transition-transform border-[#C49A4A] bg-[#151D26]';
       } else {
-        entry.headingCircleEl.className = 'w-8 h-8 rounded-full border flex items-center justify-center transition-transform border-[#2B3743] bg-[#11171E]';
+        entry.headingCircleEl.className = 'w-9 h-9 rounded-full border flex items-center justify-center transition-transform border-[#2B3743] bg-[#11171E]';
       }
-      // SVG chevron color
+      // SVG drone symbol color
       const svg = entry.headingCircleEl.querySelector('svg');
       if (svg) {
-        svg.className.baseVal = `w-5 h-5 ${isSelected ? 'text-[#6FA4CE]' : isLeader ? 'text-[#C49A4A]' : 'text-[#5B8FB9]'}`;
+        svg.className.baseVal = `w-6 h-6 ${isSelected ? 'text-[#6FA4CE]' : isLeader ? 'text-[#C49A4A]' : 'text-[#5B8FB9]'}`;
       }
 
       // 4. Leader ping dot

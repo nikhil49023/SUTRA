@@ -21,7 +21,7 @@ export const HeadingTape: React.FC<HeadingTapeProps> = ({ heading }) => {
   };
 
   return (
-    <div className="relative w-48 h-9 rounded bg-[#11171E]/95 border border-[#2B3743] overflow-hidden flex items-center justify-center select-none font-mono">
+    <div className="relative w-40 sm:w-48 h-8 rounded-md bg-[#11171E] border border-[#2B3743] overflow-hidden flex items-center justify-center select-none font-mono shadow-inner">
       {/* Sliding tape */}
       <div
         className="absolute flex items-center space-x-6 transition-transform duration-75"
@@ -34,21 +34,21 @@ export const HeadingTape: React.FC<HeadingTapeProps> = ({ heading }) => {
           const isCardinal = deg % 90 === 0;
           return (
             <div key={deg} className="flex flex-col items-center w-6">
-              <span className={`text-[9px] font-bold ${isCardinal ? 'text-[#E7EBEF]' : 'text-[#707C88]'}`}>
+              <span className={`text-[8px] font-bold ${isCardinal ? 'text-[#5B8FB9]' : 'text-[#707C88]'}`}>
                 {deg % 90 === 0 ? getCardinal(deg) : deg}
               </span>
-              <div className={`h-1.5 w-[1.5px] ${isCardinal ? 'bg-[#E7EBEF]' : 'bg-[#3A4856]'}`} />
+              <div className={`h-1.5 w-[1.5px] ${isCardinal ? 'bg-[#5B8FB9]' : 'bg-[#2B3743]'}`} />
             </div>
           );
         })}
       </div>
 
       {/* Center Pointer Triangle */}
-      <div className="absolute top-0 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[6px] border-t-[#E7EBEF] z-10" />
+      <div className="absolute top-0 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[5px] border-t-[#5B8FB9] z-10" />
 
       {/* Current heading numeric readout */}
-      <div className="absolute bottom-0.5 px-1.5 py-0.2 bg-[#0B0F14]/90 rounded border border-[#5B8FB9] text-[10px] font-bold text-[#E7EBEF] z-10 tabular-nums">
-        {Math.round(normalizedHeading).toString().padStart(3, '0')}° {getCardinal(normalizedHeading)}
+      <div className="absolute bottom-0.5 px-2 py-0 bg-[#0B0F14]/90 rounded border border-[#5B8FB9]/50 text-[9px] font-bold text-[#E7EBEF] z-10 tabular-nums shadow">
+        {Math.round(normalizedHeading).toString().padStart(3, '0')}° <span className="text-[#5B8FB9]">{getCardinal(normalizedHeading)}</span>
       </div>
     </div>
   );

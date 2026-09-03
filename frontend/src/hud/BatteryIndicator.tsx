@@ -1,5 +1,5 @@
 import React from 'react';
-import { Battery, BatteryCharging, BatteryWarning } from 'lucide-react';
+import { Battery, BatteryWarning } from 'lucide-react';
 
 interface BatteryIndicatorProps {
   batteryPercent: number;
@@ -16,20 +16,20 @@ export const BatteryIndicator: React.FC<BatteryIndicatorProps> = ({
   const isCritical = batteryPercent <= 10;
 
   return (
-    <div className="flex flex-col space-y-1 font-mono text-xs select-none">
+    <div className="flex flex-col space-y-1 font-mono text-xs select-none w-28 sm:w-32">
       <div className="flex justify-between items-center bg-[#11171E] px-2 py-1 rounded border border-[#2B3743]">
-        <div className="flex items-center space-x-1.5">
+        <div className="flex items-center space-x-1 text-[#707C88] text-[9px] font-bold">
           {isCritical ? (
-            <BatteryWarning className="w-4 h-4 text-[#C75A5A] animate-pulse" />
+            <BatteryWarning className="w-3 h-3 text-[#C75A5A] animate-pulse" />
           ) : isLow ? (
-            <BatteryWarning className="w-4 h-4 text-[#C49A4A]" />
+            <BatteryWarning className="w-3 h-3 text-[#C49A4A]" />
           ) : (
-            <Battery className="w-4 h-4 text-[#4F9A72]" />
+            <Battery className="w-3 h-3 text-[#4F9A72]" />
           )}
-          <span className="text-[10px] text-[#707C88]">BATTERY</span>
+          <span>BATT</span>
         </div>
         <span
-          className={`font-bold text-sm tabular-nums ${
+          className={`font-bold text-xs sm:text-sm tabular-nums ${
             isCritical
               ? 'text-[#C75A5A] animate-pulse'
               : isLow
@@ -51,9 +51,9 @@ export const BatteryIndicator: React.FC<BatteryIndicatorProps> = ({
         />
       </div>
 
-      <div className="flex justify-between text-[10px] text-[#707C88] px-1">
-        <span>{batteryVoltage.toFixed(1)}V</span>
-        <span>{batteryCurrent.toFixed(1)}A</span>
+      <div className="flex justify-between text-[9px] text-[#707C88] bg-[#151D26] px-1.5 py-0.5 rounded border border-[#2B3743] tabular-nums">
+        <span>{batteryVoltage.toFixed(1)} V</span>
+        <span>{batteryCurrent.toFixed(1)} A</span>
       </div>
     </div>
   );

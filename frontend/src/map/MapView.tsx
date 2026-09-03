@@ -16,6 +16,7 @@ import { useMissionStore } from '../stores/missionStore';
 import { useFleetStore } from '../stores/fleetStore';
 import { useGeofenceStore } from '../stores/geofenceStore';
 import { useGISStore } from '../stores/gisStore';
+import { useAIStore } from '../stores/aiStore';
 import { useSelectionStore } from '../stores/selectionStore';
 import { useMapStore } from '../stores/mapStore';
 import { useAppStore } from '../stores/appStore';
@@ -50,9 +51,11 @@ export const MapView: React.FC = () => {
     const fs = useFleetStore.getState();
     const gs = useGeofenceStore.getState();
     const gis = useGISStore.getState();
+    const ai = useAIStore.getState();
     const sel = useSelectionStore.getState();
-    return { ms, fs, gs, gis, sel };
+    return { ms, fs, gs, gis, ai, sel };
   }, []);
+
 
   // ── Wire waypoint drag → route line (pure JS, no React renders during drag) ──
   useEffect(() => {
@@ -77,15 +80,16 @@ export const MapView: React.FC = () => {
     mapController.attachMap(mapInstance);
 
     if (mapInstance.isStyleLoaded()) {
-      const { ms, fs, gs, gis, sel } = getLayerState();
-      syncAll(ms, fs, gs, gis, sel);
+      const { ms, fs, gs, gis, ai, sel } = getLayerState();
+      syncAll(ms, fs, gs, gis, ai, sel);
     }
 
     // Fired after map style switch — re-add all layers
     const unsubStyle = mapPersistence.onStyleLoaded(() => {
-      const { ms, fs, gs, gis, sel } = getLayerState();
-      syncAll(ms, fs, gs, gis, sel);
+      const { ms, fs, gs, gis, ai, sel } = getLayerState();
+      syncAll(ms, fs, gs, gis, ai, sel);
     });
+
 
     return () => {
       unsubStyle();
@@ -114,11 +118,12 @@ export const MapView: React.FC = () => {
     return unsub;
   }, []);
 
-  // ── Selection change — re-render waypoints + geofences with new highlight ────
+  // ── Selection change — re-render waypoints + geofences + AI targets with new highlight ────
   useEffect(() => {
     const unsub = useSelectionStore.subscribe((sel) => {
       const ms = useMissionStore.getState();
       const gs = useGeofenceStore.getState();
+      const ai = useAIStore.getState();
       mapController.waypointLayer.renderWaypoints(
         ms.waypoints,
         ms.active_waypoint_index,
@@ -127,6 +132,10 @@ export const MapView: React.FC = () => {
       mapController.geofenceLayer.updateGeofences(
         gs.geofences,
         sel.selected_type === 'GEOFENCE' ? sel.selected_id : null
+      );
+      mapController.aiTargetLayer.updateTargets(
+        ai.tracked_targets,
+        sel.selected_type === 'TARGET' ? sel.selected_id : null
       );
     });
     return unsub;
@@ -180,6 +189,19 @@ export const MapView: React.FC = () => {
     });
     return unsub;
   }, []);
+
+  // ── AI Target layer (Subsystem C perception driven) ───────────────────────────
+  useEffect(() => {
+    const unsub = useAIStore.subscribe((ai) => {
+      const sel = useSelectionStore.getState();
+      mapController.aiTargetLayer.updateTargets(
+        ai.tracked_targets,
+        sel.selected_type === 'TARGET' ? sel.selected_id : null
+      );
+    });
+    return unsub;
+  }, []);
+
 
   // ── Map controls ───────────────────────────────────────────────────────────────
   const handleZoomIn = () => mapPersistence.getMap()?.zoomIn();
@@ -359,7 +381,7 @@ const MapStatusBar = React.memo(
 );
 
 // ── Helper used by onStyleLoaded ────────────────────────────────────────────────
-function syncAll(ms: any, fs: any, gs: any, gis: any, sel: any) {
+function syncAll(ms: any, fs: any, gs: any, gis: any, ai: any, sel: any) {
   mapController.routeLayer.updateRoute(ms.waypoints, ms.home_latitude, ms.home_longitude);
   mapController.waypointLayer.renderWaypoints(
     ms.waypoints,
@@ -376,4 +398,9 @@ function syncAll(ms: any, fs: any, gs: any, gis: any, sel: any) {
   );
   mapController.formationLayer.updateFormation(fs);
   mapController.gisLayer.updateGis(gis);
+  mapController.aiTargetLayer.updateTargets(
+    ai?.tracked_targets || [],
+    sel.selected_type === 'TARGET' ? sel.selected_id : null
+  );
 }
+

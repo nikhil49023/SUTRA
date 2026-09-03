@@ -1,7 +1,7 @@
 import React from 'react';
 import { useFleetStore } from '../stores/fleetStore';
 import { commandManager } from '../communication/CommandManager';
-import { ShieldCheck, Crosshair, Activity, Plus, Trash2 } from 'lucide-react';
+import { Crosshair, Plus, Trash2 } from 'lucide-react';
 
 export const FormationStatus: React.FC = () => {
   const { drones, formation, spacing, selectedDroneId, setSelectedDroneId } = useFleetStore();
@@ -53,91 +53,94 @@ export const FormationStatus: React.FC = () => {
   };
 
   return (
-    <div className="bg-[#0f141c]/90 border border-slate-800 rounded-lg p-3 font-mono text-xs space-y-2.5 select-none">
+    <div className="bg-[#11171E] border border-[#2B3743] rounded-lg p-3 sm:p-4 font-mono text-xs space-y-3 select-none">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
-        <div className="flex items-center space-x-1.5 font-bold text-slate-200">
-          <Crosshair className="w-3.5 h-3.5 text-cyan-400" />
-          <span>SWARM KINEMATICS & TARGET TRACKING</span>
+      <div className="flex items-center justify-between border-b border-[#2B3743] pb-2">
+        <div className="flex items-center space-x-2">
+          <div className="w-6 h-6 rounded bg-[#151D26] border border-[#5B8FB9]/40 flex items-center justify-center">
+            <Crosshair className="w-3.5 h-3.5 text-[#5B8FB9]" />
+          </div>
+          <div>
+            <span className="font-bold text-[#E7EBEF]">SWARM KINEMATICS & TARGET TRACKING</span>
+            <span className="text-[10px] text-[#707C88] ml-2">// ORCA 3D SEPARATION</span>
+          </div>
         </div>
-        <div className="flex items-center space-x-1">
-          <button
-            onClick={handleAddDrone}
-            className="px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/60 hover:bg-cyan-900 text-cyan-300 text-[10px] flex items-center space-x-1"
-            title="Spawn additional UAV into swarm"
-          >
-            <Plus className="w-3 h-3" />
-            <span>ADD UAV</span>
-          </button>
-        </div>
+        <button
+          onClick={handleAddDrone}
+          className="px-2.5 py-1 rounded bg-[#151D26] hover:bg-[#1B2530] border border-[#5B8FB9]/50 text-[#5B8FB9] hover:text-[#E7EBEF] text-[10px] font-bold flex items-center space-x-1.5 transition"
+          title="Spawn additional UAV into swarm"
+        >
+          <Plus className="w-3 h-3" />
+          <span>ADD UAV</span>
+        </button>
       </div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-4 gap-1.5 text-[10px]">
-        <div className="bg-slate-950 p-1.5 rounded border border-slate-800">
-          <span className="text-slate-400 block">FORMATION</span>
-          <span className="font-bold text-amber-400">{formation}</span>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
+        <div className="bg-[#151D26] p-2 rounded border border-[#2B3743]">
+          <span className="text-[#707C88] block">FORMATION</span>
+          <span className="font-bold text-[#C49A4A] text-xs mt-0.5">{formation}</span>
         </div>
 
-        <div className="bg-slate-950 p-1.5 rounded border border-slate-800">
-          <span className="text-slate-400 block">MOVING UAVs</span>
-          <span className="font-bold text-emerald-400 tabular-nums">
+        <div className="bg-[#151D26] p-2 rounded border border-[#2B3743]">
+          <span className="text-[#707C88] block">MOVING UAVs</span>
+          <span className="font-bold text-[#4F9A72] text-xs mt-0.5 tabular-nums">
             {movingCount}/{droneCount} Active
           </span>
         </div>
 
-        <div className="bg-slate-950 p-1.5 rounded border border-slate-800">
-          <span className="text-slate-400 block">TARGETS</span>
-          <span className="font-bold text-cyan-300 tabular-nums">
+        <div className="bg-[#151D26] p-2 rounded border border-[#2B3743]">
+          <span className="text-[#707C88] block">TARGETS</span>
+          <span className="font-bold text-[#5B8FB9] text-xs mt-0.5 tabular-nums">
             {targetsAssigned}/{droneCount} Assigned
           </span>
         </div>
 
-        <div className="bg-slate-950 p-1.5 rounded border border-slate-800">
-          <span className="text-slate-400 block">INTEGRITY</span>
-          <span className="font-bold text-emerald-300 tabular-nums">{integrityPct}%</span>
+        <div className="bg-[#151D26] p-2 rounded border border-[#2B3743]">
+          <span className="text-[#707C88] block">INTEGRITY</span>
+          <span className="font-bold text-[#4F9A72] text-xs mt-0.5 tabular-nums">{integrityPct}%</span>
         </div>
       </div>
 
       {/* Per-Drone Trajectory Table */}
-      <div className="space-y-1">
-        <div className="text-[10px] text-slate-400 font-bold px-1 flex justify-between">
-          <span>UAV / ROLE</span>
-          <span>DIST TO TARGET / SPEED</span>
+      <div className="space-y-1.5">
+        <div className="text-[10px] text-[#707C88] font-bold px-1 flex justify-between uppercase">
+          <span>UAV / Role / Location</span>
+          <span>Target Delta / Speed</span>
         </div>
 
-        <div className="max-h-40 overflow-y-auto space-y-1 pr-0.5">
+        <div className="max-h-48 overflow-y-auto space-y-1.5 custom-scrollbar pr-0.5">
           {droneDetails.map((d) => {
             const isSelected = selectedDroneId === d.drone_id;
             return (
               <div
                 key={d.drone_id}
                 onClick={() => setSelectedDroneId(d.drone_id)}
-                className={`p-1.5 rounded border text-[10px] flex items-center justify-between cursor-pointer transition ${
+                className={`p-2 rounded-lg border text-[10px] flex items-center justify-between cursor-pointer transition ${
                   isSelected
-                    ? 'bg-cyan-950/60 border-cyan-500 text-cyan-200'
-                    : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
+                    ? 'bg-[#1B2530] border-[#5B8FB9] text-[#E7EBEF]'
+                    : 'bg-[#151D26] border-[#2B3743] text-[#A9B3BD] hover:border-[#3A4856]'
                 }`}
               >
                 <div className="flex flex-col">
-                  <div className="font-bold flex items-center space-x-1">
-                    <span className={d.is_leader ? 'text-amber-400' : 'text-slate-200'}>
+                  <div className="font-bold flex items-center space-x-1.5">
+                    <span className={d.is_leader ? 'text-[#C49A4A]' : 'text-[#E7EBEF]'}>
                       {d.is_leader ? '★ ' : ''}
                       {d.callsign}
                     </span>
-                    <span className="text-[9px] text-slate-500 font-normal">({d.role})</span>
+                    <span className="text-[9px] text-[#707C88] font-normal">({d.role})</span>
                   </div>
-                  <div className="text-[9px] text-slate-400 tabular-nums">
+                  <div className="text-[9px] text-[#707C88] tabular-nums mt-0.5">
                     {d.latitude.toFixed(5)}, {d.longitude.toFixed(5)} ({d.altitude.toFixed(0)}m)
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-3">
                   <div className="text-right">
-                    <div className="font-bold text-emerald-400 tabular-nums">
+                    <div className="font-bold text-[#4F9A72] tabular-nums">
                       Δ {d.distToTargetMeters.toFixed(1)}m
                     </div>
-                    <div className="text-[9px] text-slate-400 tabular-nums">
+                    <div className="text-[9px] text-[#707C88] tabular-nums">
                       {d.speed.toFixed(1)} m/s · {d.battery.toFixed(0)}%
                     </div>
                   </div>
@@ -148,10 +151,10 @@ export const FormationStatus: React.FC = () => {
                         e.stopPropagation();
                         handleRemoveDrone(d.drone_id);
                       }}
-                      className="p-1 text-slate-600 hover:text-rose-400 rounded"
+                      className="p-1 text-[#707C88] hover:text-[#C75A5A] hover:bg-[#11171E] rounded transition"
                       title="Remove UAV from formation"
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>

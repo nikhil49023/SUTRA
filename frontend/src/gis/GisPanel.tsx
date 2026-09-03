@@ -10,42 +10,44 @@ export const GisPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'TERRAIN' | 'LOS' | 'RF' | 'WEATHER' | 'MEASURE'>('TERRAIN');
 
   return (
-    <div className="h-full flex flex-col space-y-3 p-3 overflow-y-auto font-mono text-xs">
-      {/* Tab Navigation */}
-      <div className="flex space-x-1 bg-slate-900/80 p-1 rounded-lg border border-slate-800">
-        {[
-          { id: 'TERRAIN', label: 'ELEVATION', icon: Mountain },
-          { id: 'LOS', label: 'LOS RAY', icon: Eye },
-          { id: 'RF', label: 'RF MESH', icon: Radio },
-          { id: 'WEATHER', label: 'WEATHER', icon: Cloud },
-          { id: 'MEASURE', label: 'MEASURE', icon: Ruler },
-        ].map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`flex-1 py-1.5 rounded flex items-center justify-center space-x-1.5 transition font-bold ${
-                isActive
-                  ? 'bg-cyan-950 border border-cyan-500/50 text-cyan-300'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
+    <div className="h-full w-full overflow-y-auto p-3 sm:p-4 md:p-6 font-mono text-xs custom-scrollbar">
+      <div className="max-w-7xl mx-auto flex flex-col space-y-3 sm:space-y-4">
+        {/* Tab Navigation */}
+        <div className="flex flex-wrap sm:flex-nowrap gap-1.5 bg-[#11171E] p-1.5 rounded-lg border border-[#2B3743]">
+          {[
+            { id: 'TERRAIN', label: 'ELEVATION PROFILE', icon: Mountain },
+            { id: 'LOS', label: 'LINE-OF-SIGHT RAY', icon: Eye },
+            { id: 'RF', label: 'RF MESH HEATMAP', icon: Radio },
+            { id: 'WEATHER', label: 'METEOROLOGY', icon: Cloud },
+            { id: 'MEASURE', label: 'SPATIAL MEASURE', icon: Ruler },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex-1 py-2 px-3 rounded-md flex items-center justify-center space-x-2 transition font-bold text-xs ${
+                  isActive
+                    ? 'bg-[#1B2530] border border-[#5B8FB9] text-[#E7EBEF] shadow-[0_0_10px_rgba(91,143,185,0.15)] ring-1 ring-[#5B8FB9]/50'
+                    : 'text-[#707C88] hover:text-[#E7EBEF] hover:bg-[#151D26] border border-transparent'
+                }`}
+              >
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#5B8FB9]' : 'text-[#707C88]'}`} />
+                <span className="truncate">{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
 
-      {/* Tab Content */}
-      <div className="flex-1 space-y-3">
-        {activeTab === 'TERRAIN' && <TerrainPanel />}
-        {activeTab === 'LOS' && <LosPanel />}
-        {activeTab === 'RF' && <RfPanel />}
-        {activeTab === 'WEATHER' && <WeatherPanel />}
-        {activeTab === 'MEASURE' && <MeasurementPanel />}
+        {/* Tab Content */}
+        <div className="flex-1">
+          {activeTab === 'TERRAIN' && <TerrainPanel />}
+          {activeTab === 'LOS' && <LosPanel />}
+          {activeTab === 'RF' && <RfPanel />}
+          {activeTab === 'WEATHER' && <WeatherPanel />}
+          {activeTab === 'MEASURE' && <MeasurementPanel />}
+        </div>
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import { wsClient } from '../communication/WebSocketClient';
 import { Radio, Play } from 'lucide-react';
 
 export const RfPanel: React.FC = () => {
-  const { rf_enabled, toggleOverlay } = useGISStore();
+  const { rf_enabled } = useGISStore();
 
   const handleRunRf = () => {
     wsClient.sendCommand('GIS_RUN_RF', {
@@ -14,33 +14,42 @@ export const RfPanel: React.FC = () => {
   };
 
   return (
-    <div className="bg-[#0f141c]/90 border border-slate-800 rounded-lg p-3 font-mono text-xs space-y-3 select-none">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-        <div className="flex items-center space-x-1.5 font-bold text-slate-200">
-          <Radio className="w-3.5 h-3.5 text-cyan-400" />
-          <span>RF MESH PROPAGATION HEATMAP</span>
+    <div className="bg-[#11171E] border border-[#2B3743] rounded-lg p-3 sm:p-4 font-mono text-xs space-y-3 select-none">
+      <div className="flex items-center justify-between border-b border-[#2B3743] pb-2">
+        <div className="flex items-center space-x-2">
+          <div className="w-6 h-6 rounded bg-[#151D26] border border-[#5B8FB9]/40 flex items-center justify-center">
+            <Radio className="w-3.5 h-3.5 text-[#5B8FB9]" />
+          </div>
+          <div>
+            <span className="font-bold text-[#E7EBEF]">RF MESH PROPAGATION HEATMAP</span>
+            <span className="text-[10px] text-[#707C88] ml-2">// SWARM-RAFT LINK BUDGET</span>
+          </div>
         </div>
         <button
           onClick={handleRunRf}
-          className="px-2 py-0.5 rounded bg-cyan-950 border border-cyan-500/50 text-cyan-300 hover:bg-cyan-900 text-[10px] font-bold flex items-center space-x-1"
+          className="px-2.5 py-1 rounded bg-[#151D26] hover:bg-[#1B2530] border border-[#5B8FB9]/50 text-[#5B8FB9] hover:text-[#E7EBEF] text-[10px] font-bold flex items-center space-x-1.5 transition"
         >
-          <Play className="w-2.5 h-2.5" />
+          <Play className="w-3 h-3 fill-current" />
           <span>COMPUTE</span>
         </button>
       </div>
 
-      <div className="bg-slate-900/60 p-2.5 rounded border border-slate-800 space-y-2 text-[11px]">
-        <div className="flex justify-between">
-          <span className="text-slate-400">FREQUENCY:</span>
-          <span className="font-bold text-slate-200">2.4 GHz ISM / 915 MHz</span>
+      <div className="bg-[#151D26] p-3 rounded-lg border border-[#2B3743] space-y-2.5 text-[11px]">
+        <div className="flex justify-between items-center">
+          <span className="text-[#707C88] font-bold">OPERATING FREQUENCY:</span>
+          <span className="font-bold text-[#E7EBEF] bg-[#11171E] px-2 py-0.5 rounded border border-[#2B3743]">2.4 GHz ISM / 915 MHz</span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-slate-400">FREE-SPACE PATH LOSS:</span>
-          <span className="font-bold text-emerald-400 tabular-nums">-74 dBm @ 1.2km</span>
+        <div className="flex justify-between items-center">
+          <span className="text-[#707C88] font-bold">FREE-SPACE PATH LOSS (FSPL):</span>
+          <span className="font-bold text-[#4F9A72] tabular-nums">-74.2 dBm @ 1.2km</span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-slate-400">SWARM-RAFT MESH SNR:</span>
-          <span className="font-bold text-cyan-300 tabular-nums">+18.5 dB (EXCELLENT)</span>
+        <div className="flex justify-between items-center">
+          <span className="text-[#707C88] font-bold">SWARM-RAFT MESH SNR:</span>
+          <span className="font-bold text-[#5B8FB9] tabular-nums">+18.5 dB (EXCELLENT)</span>
+        </div>
+        <div className="flex justify-between items-center pt-1 border-t border-[#2B3743]/60">
+          <span className="text-[#707C88] font-bold">PACKET DELIVERY RATIO:</span>
+          <span className="font-bold text-[#4F9A72] tabular-nums">99.8% (MESH LAYER 2)</span>
         </div>
       </div>
     </div>
