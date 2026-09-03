@@ -123,6 +123,11 @@ Manual search and rescue operations in disaster-hit, forested, or conflict-prone
 5. **Mandatory Jury Feedback Incorporation Loop (NHCE Rule 6.1)**: Any feedback requested by jury members during Evaluation 1 or 2 must be immediately logged into `docs/hackathon/JURY_FEEDBACK_TRACKER.md`. Code changes resolving jury items must be accompanied by dedicated test assertions and committed with tags before the subsequent evaluation.
 6. **24/7 Workstation Attendance Invariant (NHCE Rule 3.4 & General Rule 7)**: The allocated desk in the Library must NEVER be left empty. At least 2 team members must remain at the table at all times, including all meal and high-tea shifts.
 7. **Tech Lead Override**: Nikhil has unrestricted cross-branch commit and push access across all branches (`feature/*`, `dev`, `main`). All other teammates remain restricted to their assigned feature branch.
+8. **Active Documentation Protocol (The Living Documentation Standard)**:
+   - **Continuous Benchmark Synchronization**: Whenever code, models, or algorithms change, the corresponding subsystem `DOCS.md` MUST immediately be updated with measured, verbatim terminal outputs from real runs before declaring work complete.
+   - **Live Jury Feedback Tracking**: `docs/hackathon/JURY_FEEDBACK_TRACKER.md` is an active runtime document updated dynamically during each evaluation round, recording judge queries, assigned owners, and verified commit hashes.
+   - **Interactive Offline Browser Portals**: Master artifacts such as `SUTRA_OFFLINE_PORTAL.html` and `docs/presentation/SUTRA_Master_Pitch_Deck.html` must remain active, self-contained, and runnable offline on localhost without external API dependencies.
+   - **Executable Runbooks**: Every architectural claim or performance assertion must be accompanied by an exact, copy-pasteable bash command that reproduces the result deterministically in < 15 seconds.
 
 ---
 

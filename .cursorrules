@@ -10,6 +10,12 @@
 - **ATOMIC VERIFICATION & COMMIT**: Every bug fix, test addition, or feature must be verified via `pytest` / `npm run build`, staged, and committed with conventional semantic syntax (`feat:`, `fix:`, `test:`, `docs:`).
 - **MANDATORY PUSH BEFORE DECLARING COMPLETION**: An AI agent or teammate is STRICTLY FORBIDDEN from declaring a task "done" or "complete" if uncommitted changes exist in `git status`. Push immediately to `origin <assigned-branch>`.
 
+## 📑 ACTIVE DOCUMENTATION PROTOCOL (THE LIVING DOCUMENTATION STANDARD)
+- **Continuous Benchmark Sync**: Whenever code changes, the corresponding subsystem `DOCS.md` MUST immediately be updated with measured, verbatim terminal outputs from live runs before pushing.
+- **Live Jury Feedback Ledger**: `docs/hackathon/JURY_FEEDBACK_TRACKER.md` is an active runtime document updated in real time as the jury speaks during Evaluations 1, 2, and 3.
+- **Interactive Offline Portals**: Artifacts like `SUTRA_OFFLINE_PORTAL.html` and `docs/presentation/SUTRA_Master_Pitch_Deck.html` must remain updated, self-contained, and runnable offline on localhost.
+- **Executable Runbooks**: Every architectural claim must link to an executable, deterministic bash command that reproduces the result in < 15 seconds.
+
 ## 🎯 Mission & Hackathon Context
 - **Event**: Smart Horizon 48-Hour International Hackathon (NHCE Bengaluru, Sept 3–5, 2026)
 - **Team ID**: `SHIH26-TID-361` | **Venue**: **Library** (Defence & SpaceTech Track)
