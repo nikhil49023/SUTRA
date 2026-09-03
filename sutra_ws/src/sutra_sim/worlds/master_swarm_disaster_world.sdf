@@ -25,9 +25,9 @@ Features:
     <spherical_coordinates>
       <surface_model>EARTH_WGS84</surface_model>
       <world_frame_orientation>ENU</world_frame_orientation>
-      <latitude_deg>37.774929</latitude_deg>
-      <longitude_deg>-122.419416</longitude_deg>
-      <elevation>0.0</elevation>
+      <latitude_deg>12.934444</latitude_deg>
+      <longitude_deg>77.691722</longitude_deg>
+      <elevation>920.0</elevation>
       <heading_deg>0.0</heading_deg>
     </spherical_coordinates>
 
