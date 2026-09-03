@@ -7,7 +7,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 
 class AIMode(str, Enum):
@@ -120,11 +120,17 @@ class TrackedTarget:
     latitude: float
     longitude: float
     altitude_m: float
-    speed_mps: float
-    heading_deg: float
-    confidence: float
-    source: str
+    speed_mps: float = 0.0
+    heading_deg: float = 0.0
+    confidence: float = 1.0
+    source: str = "PERCEPTION"
+    drone_id: Optional[str] = None
+    modalities: List[str] = field(default_factory=list)
+    tracking_status: str = "TRACKED"
+    history: List[Dict[str, Any]] = field(default_factory=list)
+    first_seen: float = field(default_factory=time.time)
     last_seen: float = field(default_factory=time.time)
+
 
 
 @dataclass(frozen=True)

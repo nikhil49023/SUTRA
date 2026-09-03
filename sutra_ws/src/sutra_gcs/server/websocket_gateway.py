@@ -47,6 +47,7 @@ from geofence.geometry import GeofenceGeometry
 from geofence.models import GeometryType, ZoneType
 from gis.gis_controller import GISController, get_gis_controller
 from ai.ai_manager import AIManager, ai_manager
+from communication.adapters.perception_subsystem_adapter import perception_adapter
 from server.command_processor import CommandProcessor, CommandResult, get_command_processor
 
 # Phase 13 Security Imports
@@ -133,6 +134,9 @@ class WebSocketGatewayServer:
         self._geofence_alert_dedup: Dict[str, float] = {}
         self._geofence_alert_lock = threading.Lock()
 
+        # Subsystem C AI Perception Ingestion Adapter
+        self.perception_adapter = perception_adapter
+
         # Seed initial mission if empty
         self._seed_initial_mission()
 
@@ -154,10 +158,13 @@ class WebSocketGatewayServer:
             self.mission_mgr.add_waypoint(37.7760, -122.4215, 25.0, 5.0)
 
     def start(self):
-        """Starts WebSocket server and 10Hz kinematics loop."""
+        """Starts WebSocket server, perception adapter, and 10Hz kinematics loop."""
         self.is_running = True
         self.server_thread = threading.Thread(target=self._run_async_server, daemon=True)
         self.server_thread.start()
+
+        # Start Subsystem C perception adapter
+        self.perception_adapter.start(try_ros=True)
 
         # Start background 10Hz multi-drone simulation loop
         self.sim_thread = threading.Thread(target=self._run_simulation_loop, daemon=True)
@@ -167,6 +174,8 @@ class WebSocketGatewayServer:
 
     def stop(self):
         self.is_running = False
+        if self.perception_adapter:
+            self.perception_adapter.stop()
 
     def _run_async_server(self):
         self.loop = asyncio.new_event_loop()
@@ -841,6 +850,25 @@ class WebSocketGatewayServer:
             elif cmd_type in ("ai.ask", "AI_ASK"):
                 reply = self.ai_mgr.ask_assistant(payload.get("query", ""))
                 return {"reply": reply}
+
+            elif cmd_type in ("ai.inject_target", "AI_INJECT_TARGET"):
+                res = self.perception_adapter.inject_fused_target(payload.get("target") or payload)
+                return {"injected_count": len(res), "targets": [t.target_id for t in res]}
+
+            elif cmd_type in ("ai.clear_targets", "AI_CLEAR_TARGETS"):
+                from dataclasses import replace
+                self.state_store.update_state(
+                    lambda s: replace(
+                        s,
+                        ai_state=replace(
+                            s.ai_state,
+                            tracked_targets=[],
+                            last_update=time.time(),
+                        ),
+                    )
+                )
+                self.event_bus.emit("ai.state_updated", payload={"tracked_targets": []}, correlation_id=corr_id, state_version=self.state_store.state_version)
+                return {"cleared": True}
 
             elif cmd_type in ("alert.acknowledge", "ALERT_ACKNOWLEDGE"):
                 alert_id = payload.get("alert_id")

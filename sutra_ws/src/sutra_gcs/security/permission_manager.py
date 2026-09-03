@@ -143,6 +143,10 @@ COMMAND_PERMISSION_MATRIX: Dict[str, Permission] = {
     "AI_DECISION": Permission.AI_COMMAND,
     "ai.ask": Permission.AI_READ,
     "AI_ASK": Permission.AI_READ,
+    "ai.inject_target": Permission.AI_COMMAND,
+    "AI_INJECT_TARGET": Permission.AI_COMMAND,
+    "ai.clear_targets": Permission.AI_COMMAND,
+    "AI_CLEAR_TARGETS": Permission.AI_COMMAND,
 
     # Alerts & System
     "alert.acknowledge": Permission.TELEMETRY_READ,
