@@ -30,6 +30,7 @@ import { useGISStore } from '../stores/gisStore';
 import { useAIStore } from '../stores/aiStore';
 import { useRiskStore } from '../stores/riskStore';
 import { useAlertStore } from '../stores/alertStore';
+import { useDefensiveUpgradesStore } from '../stores/defensiveUpgradesStore';
 import { useCommunicationStore } from '../stores/communicationStore';
 import { useAuthStore } from '../security/authStore';
 import { commandManager } from './CommandManager';
@@ -308,6 +309,7 @@ class MessageRouter {
     if (Array.isArray(snapshot.alerts)) {
       useAlertStore.getState().hydrateFromSnapshot(snapshot.alerts);
     }
+    useDefensiveUpgradesStore.getState().hydrateFromSnapshot(snapshot);
   }
 
   private recordEventId(eventId: string): void {

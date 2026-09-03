@@ -39,6 +39,31 @@ interface AppStoreState extends ApplicationState {
   emergencyModalOpen: boolean;
   emergencyTargetDrone: string;
 
+  // Mode: Operations Mode vs Engineering Mode
+  viewMode: 'OPERATIONS' | 'ENGINEERING';
+  toggleViewMode: () => void;
+  setViewMode: (mode: 'OPERATIONS' | 'ENGINEERING') => void;
+
+  // Defensive Upgrades Modals
+  failureLabOpen: boolean;
+  setFailureLabOpen: (open: boolean) => void;
+  replayOpen: boolean;
+  setReplayOpen: (open: boolean) => void;
+  rescueHandoffOpen: boolean;
+  setRescueHandoffOpen: (open: boolean) => void;
+  chargingLogisticsOpen: boolean;
+  setChargingLogisticsOpen: (open: boolean) => void;
+  provenanceOpen: boolean;
+  setProvenanceOpen: (open: boolean) => void;
+  halOpen: boolean;
+  setHalOpen: (open: boolean) => void;
+  degradationOpen: boolean;
+  setDegradationOpen: (open: boolean) => void;
+  architectureBoundaryOpen: boolean;
+  setArchitectureBoundaryOpen: (open: boolean) => void;
+  safetyGateOpen: boolean;
+  setSafetyGateOpen: (open: boolean) => void;
+
   // Actions
   setActiveSection: (section: NavigationSection) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
@@ -81,6 +106,29 @@ export const useAppStore = create<AppStoreState>((set) => ({
   hudRefreshRateHz: 60,
   emergencyModalOpen: false,
   emergencyTargetDrone: 'ALL',
+
+  viewMode: 'OPERATIONS',
+  failureLabOpen: false,
+  replayOpen: false,
+  rescueHandoffOpen: false,
+  chargingLogisticsOpen: false,
+  provenanceOpen: false,
+  halOpen: false,
+  degradationOpen: false,
+  architectureBoundaryOpen: false,
+  safetyGateOpen: false,
+
+  toggleViewMode: () => set((s) => ({ viewMode: s.viewMode === 'OPERATIONS' ? 'ENGINEERING' : 'OPERATIONS' })),
+  setViewMode: (mode) => set({ viewMode: mode }),
+  setFailureLabOpen: (open) => set({ failureLabOpen: open }),
+  setReplayOpen: (open) => set({ replayOpen: open }),
+  setRescueHandoffOpen: (open) => set({ rescueHandoffOpen: open }),
+  setChargingLogisticsOpen: (open) => set({ chargingLogisticsOpen: open }),
+  setProvenanceOpen: (open) => set({ provenanceOpen: open }),
+  setHalOpen: (open) => set({ halOpen: open }),
+  setDegradationOpen: (open) => set({ degradationOpen: open }),
+  setArchitectureBoundaryOpen: (open) => set({ architectureBoundaryOpen: open }),
+  setSafetyGateOpen: (open) => set({ safetyGateOpen: open }),
 
   setActiveSection: (section) => set({ activeSection: section }),
   setSidebarCollapsed: (collapsed) => set({ isSidebarCollapsed: collapsed }),

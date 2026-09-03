@@ -109,6 +109,14 @@ class WebSocketClient {
     return this.sendEnvelope(commandType, payload);
   }
 
+  public send(data: any): boolean {
+    if (typeof data === 'string') return this.sendRaw(data);
+    if (data?.command || data?.command_type) {
+      return this.sendCommand(data.command || data.command_type, data.payload || {});
+    }
+    return this.sendRaw(JSON.stringify(data));
+  }
+
   public requestStateSnapshot(): void {
     this.sendRaw(JSON.stringify({ type: 'REQUEST_STATE_SNAPSHOT', timestamp: Date.now() }));
   }

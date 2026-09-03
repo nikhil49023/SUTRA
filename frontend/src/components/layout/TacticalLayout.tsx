@@ -39,6 +39,17 @@ import { wsClient } from '../../communication/WebSocketClient';
 import { NavigationSection } from '../../types/app';
 import { Route, Users, Mountain, Brain, Settings, Compass, Shield, ShieldAlert, X } from 'lucide-react';
 
+// SUTRA 7 Defensive Upgrades Modals
+import { FailureLabModal } from '../failure/FailureLabModal';
+import { MissionReplayModal } from '../replay/MissionReplayModal';
+import { GroundRescueHandoffModal } from '../rescue/GroundRescueHandoffModal';
+import { MultiStationChargingModal } from '../logistics/MultiStationChargingModal';
+import { DecisionProvenanceModal } from '../provenance/DecisionProvenanceModal';
+import { HardwareAbstractionModal } from '../hal/HardwareAbstractionModal';
+import { SensorDegradationModal } from '../degradation/SensorDegradationModal';
+import { ArchitectureBoundaryModal } from '../architecture/ArchitectureBoundaryModal';
+import { MissionSafetyGateModal } from '../mission/MissionSafetyGateModal';
+
 // ── Memoized panels — mount once, stay mounted, toggled via CSS visibility ─────
 const MissionPlannerPanel = memo(() => <MissionPlanner />);
 const GeofencePanelMemo = memo(() => <GeofencePanel />);
@@ -271,6 +282,17 @@ export const TacticalLayout: React.FC = () => {
       <AlertManager />
       <EmergencyModal />
       <DebugPanel />
+
+      {/* SUTRA 7 Defensive Upgrades Modals */}
+      <FailureLabModal />
+      <MissionReplayModal />
+      <GroundRescueHandoffModal />
+      <MultiStationChargingModal />
+      <DecisionProvenanceModal />
+      <HardwareAbstractionModal />
+      <SensorDegradationModal />
+      <ArchitectureBoundaryModal />
+      <MissionSafetyGateModal />
     </div>
   );
 };

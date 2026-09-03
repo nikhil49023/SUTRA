@@ -53,6 +53,15 @@ from prepositioning import get_prepositioning_optimizer
 from risk import get_risk_engine, get_dynamic_mapping_bridge, RiskModelWeights
 from server.command_processor import CommandProcessor, CommandResult, get_command_processor
 
+# SUTRA 7 Defensive Upgrades Imports
+from simulation.failure_engine import failure_engine
+from mission.replay_recorder import replay_recorder
+from rescue.ground_handoff import rescue_handoff_manager
+from logistics.charging_stations import logistics_manager
+from explainability.provenance import provenance_store
+from hal.flight_controller_hal import hal_manager
+
+
 # Phase 13 Security Imports
 from security import (
     auth_manager,
@@ -344,6 +353,12 @@ class WebSocketGatewayServer:
             "ai": serialize_obj(state.ai_state),
             "alerts": serialize_obj(state.alert_state.alerts),
             "communication": serialize_obj(state.communication_state),
+            "failure_lab": failure_engine.get_status_dict(),
+            "replay": replay_recorder.get_status_dict(),
+            "rescue_handoff": rescue_handoff_manager.get_status_dict(),
+            "logistics": logistics_manager.get_status_dict(),
+            "provenance": provenance_store.get_status_dict(),
+            "hal": hal_manager.get_status_dict(),
         })
 
     async def _process_incoming_command(self, websocket: Any, data: Dict[str, Any], conn_id: str):
@@ -1377,6 +1392,105 @@ class WebSocketGatewayServer:
             elif cmd_type in ("charging.get_stations", "CHARGING_GET_STATIONS"):
                 stations = self.prepositioning_opt.get_charging_stations()
                 return {"charging_stations": [s.to_dict() for s in stations]}
+
+            # ==========================================================
+            # 5. SUTRA 7 DEFENSIVE UPGRADES COMMAND HANDLERS
+            # ==========================================================
+            # Priority 1: Failure Injection Engine
+            elif cmd_type in ("failure.inject", "FAILURE_INJECT"):
+                f_type = payload.get("failure_type", "GPS_LOSS")
+                t_drone = payload.get("target_drone", "UAV-02")
+                res = failure_engine.inject_failure(f_type, t_drone)
+                self.event_bus.emit(
+                    "failure.injected",
+                    payload={"event": serialize_obj(res), "failure_lab": failure_engine.get_status_dict()},
+                    source="failure_engine"
+                )
+                return failure_engine.get_status_dict()
+
+            elif cmd_type in ("failure.clear", "FAILURE_CLEAR"):
+                f_type = payload.get("failure_type", "GPS_LOSS")
+                failure_engine.clear_failure(f_type)
+                self.event_bus.emit(
+                    "failure.cleared",
+                    payload={"failure_type": f_type, "failure_lab": failure_engine.get_status_dict()},
+                    source="failure_engine"
+                )
+                return failure_engine.get_status_dict()
+
+            elif cmd_type in ("failure.clear_all", "FAILURE_CLEAR_ALL"):
+                failure_engine.clear_all_failures()
+                self.event_bus.emit(
+                    "failure.cleared_all",
+                    payload={"failure_lab": failure_engine.get_status_dict()},
+                    source="failure_engine"
+                )
+                return failure_engine.get_status_dict()
+
+            # Priority 3: Realistic Sensor Degradation
+            elif cmd_type in ("sensor.degrade", "SENSOR_DEGRADE"):
+                deg = failure_engine.set_sensor_degradation(**payload)
+                return {"degradation": serialize_obj(deg)}
+
+            # Priority 4: Ground Rescue Handoff
+            elif cmd_type in ("rescue.dispatch", "RESCUE_DISPATCH"):
+                rep_id = payload.get("report_id", "sar-ndma-01")
+                t_name = payload.get("assigned_team")
+                res = rescue_handoff_manager.dispatch_ground_team(rep_id, t_name)
+                self.event_bus.emit(
+                    "rescue.dispatched",
+                    payload={"report": serialize_obj(res), "rescue_handoff": rescue_handoff_manager.get_status_dict()},
+                    source="ground_handoff"
+                )
+                return rescue_handoff_manager.get_status_dict()
+
+            # Priority 5: Multi-Station Logistics Optimization
+            elif cmd_type in ("logistics.optimize", "LOGISTICS_OPTIMIZE"):
+                d_id = payload.get("drone_id", "UAV-02")
+                lat = float(payload.get("latitude", 12.9716))
+                lon = float(payload.get("longitude", 77.5946))
+                alt = float(payload.get("altitude", 25.0))
+                bat = float(payload.get("battery", 22.0))
+                res = logistics_manager.evaluate_optimal_station(d_id, lat, lon, alt, bat)
+                return serialize_obj(res)
+
+            # Priority 6: Evidence & Decision Provenance
+            elif cmd_type in ("provenance.record", "PROVENANCE_RECORD"):
+                rec = provenance_store.record_decision(
+                    decision=payload.get("decision", "Re-route UAV-03"),
+                    drone_id=payload.get("drone_id", "UAV-03"),
+                    reason=payload.get("reason", "Hazard avoidance"),
+                    evidence=payload.get("evidence", "Tri-modal sensor anomaly"),
+                    confidence_pct=float(payload.get("confidence_pct", 91.0)),
+                    risk_before=float(payload.get("risk_before", 84.5)),
+                    risk_after=float(payload.get("risk_after", 93.7)),
+                    alternative_considered=payload.get("alternative_considered", "Continue corridor"),
+                    rejected_because=payload.get("rejected_because", "Safety threshold exceeded"),
+                )
+                return serialize_obj(rec)
+
+            # Priority 7: Hardware Abstraction Layer
+            elif cmd_type in ("hal.set_platform", "HAL_SET_PLATFORM"):
+                plat = payload.get("platform", "PX4")
+                ok = hal_manager.set_platform(plat)
+                return {"platform": plat, "success": ok, "hal": hal_manager.get_status_dict()}
+
+            # Priority 2: Mission Replay AAR
+            elif cmd_type in ("replay.set_cursor", "REPLAY_SET_CURSOR"):
+                replay_recorder.set_cursor(int(payload.get("index", 0)))
+                return replay_recorder.get_status_dict()
+
+            elif cmd_type in ("replay.set_speed", "REPLAY_SET_SPEED"):
+                replay_recorder.set_playback_speed(float(payload.get("speed", 1.0)))
+                return replay_recorder.get_status_dict()
+
+            elif cmd_type in ("replay.play", "REPLAY_PLAY"):
+                replay_recorder.play()
+                return replay_recorder.get_status_dict()
+
+            elif cmd_type in ("replay.pause", "REPLAY_PAUSE"):
+                replay_recorder.pause()
+                return replay_recorder.get_status_dict()
 
             else:
                 raise ValueError(f"Unknown operational command_type: {cmd_type}")

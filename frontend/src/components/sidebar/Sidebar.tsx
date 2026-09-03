@@ -13,6 +13,9 @@ import {
   ShieldAlert,
   ChevronLeft,
   ChevronRight,
+  AlertTriangle,
+  Clock,
+  LifeBuoy,
 } from 'lucide-react';
 
 import { useGeofenceNotificationStore } from '../../geofence/GeofenceNotificationStore';
@@ -99,6 +102,48 @@ export const Sidebar: React.FC = memo(() => {
             </button>
           );
         })}
+      </div>
+
+      {/* Defensive Audit Quick Shortcuts */}
+      <div className="p-2 border-t border-[#2B3743] space-y-1">
+        {!isSidebarCollapsed && (
+          <div className="px-2 py-0.5 text-[9px] text-[#707C88] font-mono font-bold tracking-wider uppercase">
+            Defensive Labs
+          </div>
+        )}
+
+        <button
+          onClick={() => useAppStore.getState().setFailureLabOpen(true)}
+          className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md font-mono text-xs font-bold transition text-[#EF4444] bg-[#1C0F13]/80 hover:bg-[#1C0F13] border border-[#EF4444]/40 hover:border-[#EF4444]"
+          title="Open SUTRA Failure Lab"
+        >
+          <div className="flex items-center space-x-2">
+            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 text-[#EF4444]" />
+            {!isSidebarCollapsed && <span className="text-[10px] tracking-wide truncate">FAILURE LAB</span>}
+          </div>
+        </button>
+
+        <button
+          onClick={() => useAppStore.getState().setReplayOpen(true)}
+          className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md font-mono text-xs font-bold transition text-[#5B8FB9] bg-[#11171E] hover:bg-[#151D26] border border-[#2B3743] hover:border-[#5B8FB9]"
+          title="Open Forensic Mission Replay"
+        >
+          <div className="flex items-center space-x-2">
+            <Clock className="w-3.5 h-3.5 flex-shrink-0 text-[#5B8FB9]" />
+            {!isSidebarCollapsed && <span className="text-[10px] tracking-wide truncate">REPLAY AAR</span>}
+          </div>
+        </button>
+
+        <button
+          onClick={() => useAppStore.getState().setRescueHandoffOpen(true)}
+          className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md font-mono text-xs font-bold transition text-[#10B981] bg-[#11171E] hover:bg-[#151D26] border border-[#2B3743] hover:border-[#10B981]"
+          title="Open Ground Rescue Coordination"
+        >
+          <div className="flex items-center space-x-2">
+            <LifeBuoy className="w-3.5 h-3.5 flex-shrink-0 text-[#10B981]" />
+            {!isSidebarCollapsed && <span className="text-[10px] tracking-wide truncate">RESCUE TEAM</span>}
+          </div>
+        </button>
       </div>
 
       {/* Footer / Collapse Toggle */}

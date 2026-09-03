@@ -4,6 +4,7 @@
 
 import React, { useState, memo } from 'react';
 import { useMissionStore, MISSION_PRESETS } from '../stores/missionStore';
+import { useAppStore } from '../stores/appStore';
 import { useFleetStore } from '../stores/fleetStore';
 import { commandManager } from '../communication/CommandManager';
 import { ProtectedAction } from '../security/ProtectedAction';
@@ -71,12 +72,15 @@ export const MissionToolbar: React.FC = memo(() => {
         <ProtectedAction permission="mission.execute" disabledTooltip="Pilot / Commander role required">
           {!isRunning && !isPaused && !isRtl ? (
             <button
-              onClick={startMission}
+              onClick={() => {
+                useAppStore.getState().setSafetyGateOpen(true);
+              }}
               disabled={waypoints.length === 0}
-              className="px-3.5 py-1.5 rounded bg-[#10B981] hover:bg-[#059669] disabled:opacity-40 text-white font-extrabold flex items-center space-x-1.5 shadow-[0_0_12px_rgba(16,185,129,0.4)] transition active:scale-95"
+              className="px-3.5 py-1.5 rounded bg-[#10B981] hover:bg-[#059669] disabled:opacity-40 text-white font-extrabold flex items-center space-x-1.5 shadow-[0_0_12px_rgba(16,185,129,0.4)] transition active:scale-95 cursor-pointer"
+              title="Audit Pre-Execution Safety Gate before Swarm Launch"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
-              <span>START MISSION</span>
+              <span>SAFETY GATE & START</span>
             </button>
           ) : isRunning ? (
             <div className="flex items-center space-x-1">
