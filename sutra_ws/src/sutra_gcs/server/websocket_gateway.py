@@ -850,9 +850,28 @@ class WebSocketGatewayServer:
                 self.formation_eng.change_spacing(spacing)
                 return {"spacing": spacing}
 
-            elif cmd_type in ("fleet.set_leader", "FLEET_SET_LEADER"):
-                leader_id = payload.get("leader_id", "drone_alpha")
+            elif cmd_type in ("fleet.set_leader", "FLEET_SET_LEADER", "drone.set_leader", "DRONE_SET_LEADER"):
+                leader_id = payload.get("leader_id") or payload.get("drone_id") or "drone_alpha"
                 self.fleet_mgr.set_leader(leader_id)
+                self.event_bus.emit(
+                    "fleet.leader_changed",
+                    payload={"leader_id": leader_id},
+                    correlation_id=corr_id,
+                    state_version=self.state_store.state_version,
+                )
+                self.event_bus.emit(
+                    "alert.created",
+                    payload={
+                        "alert": {
+                            "severity": "INFO",
+                            "title": "SWARM LEADER CHANGED",
+                            "message": f"Swarm leadership transferred to {leader_id.upper()}.",
+                            "source": "fleet_manager",
+                        }
+                    },
+                    correlation_id=corr_id,
+                    state_version=self.state_store.state_version,
+                )
                 return {"leader_id": leader_id}
 
             elif cmd_type in ("fleet.add_drone", "FLEET_ADD_DRONE"):
