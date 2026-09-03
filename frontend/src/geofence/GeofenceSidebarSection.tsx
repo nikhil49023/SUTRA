@@ -15,6 +15,9 @@ import { Geofence, ZoneType, GeometryType } from '../types/geofence';
 import { AIRSPACE_PRESETS } from './GeofencePresets';
 import { GeofenceFormatService } from './GeofenceFormatService';
 import { evaluateDroneGeofenceProximity } from './GeofenceBreachEngine';
+import { useGeofenceNotificationStore } from './GeofenceNotificationStore';
+import { GeofenceNotificationBanner } from './GeofenceNotificationBanner';
+import { GeofenceNotifications } from './GeofenceNotifications';
 import {
   Shield,
   Hexagon,
@@ -38,6 +41,7 @@ import {
   Square,
   Sparkles,
   Radio,
+  AlertOctagon,
   Plus,
   Layers,
   ChevronDown,
@@ -74,9 +78,10 @@ export const GeofenceSidebarSection: React.FC = memo(() => {
   const clearSelection = useSelectionStore((s) => s.clearSelection);
   const setInteractionMode = useMapStore((s) => s.setInteractionMode);
   const drones = useFleetStore((s) => s.drones);
+  const notifications = useGeofenceNotificationStore((s) => s.notifications);
 
   // Local UI States
-  const [activeTab, setActiveTab] = useState<'MANAGE' | 'CREATE' | 'PRESETS' | 'RADAR'>('MANAGE');
+  const [activeTab, setActiveTab] = useState<'MANAGE' | 'CREATE' | 'PRESETS' | 'RADAR' | 'NOTIFICATIONS'>('MANAGE');
   const [zoneName, setZoneName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'ALL' | ZoneType>('ALL');
@@ -84,6 +89,10 @@ export const GeofenceSidebarSection: React.FC = memo(() => {
   const [showBatchOps, setShowBatchOps] = useState(false);
   const [batchAltMin, setBatchAltMin] = useState<number>(0);
   const [batchAltMax, setBatchAltMax] = useState<number>(120);
+
+  const activeRedZoneCount = notifications.filter(
+    (n) => n.severity === 'CRITICAL_RED_ZONE' && !n.acknowledged
+  ).length;
 
   // Compute fleet centroid for preset insertion
   const droneList = Object.values(drones);
@@ -359,21 +368,29 @@ export const GeofenceSidebarSection: React.FC = memo(() => {
         </div>
       </div>
 
-      {/* 2. Sub-Navigation Tabs */}
+      {/* 2. Dynamic Rising Red Zone Breach Banner */}
+      <div className="px-2 pt-2">
+        <GeofenceNotificationBanner onViewAllNotifications={() => setActiveTab('NOTIFICATIONS')} />
+      </div>
+
+      {/* 3. Sub-Navigation Tabs */}
       <div className="flex p-1.5 bg-[#151D26] border-b border-[#2B3743] space-x-1">
         {[
           { id: 'MANAGE', label: 'MANAGE', icon: Layers },
-          { id: 'CREATE', label: '+ MAKE FENCE', icon: Plus },
+          { id: 'NOTIFICATIONS', label: 'ALERTS', icon: AlertOctagon, badge: activeRedZoneCount },
+          { id: 'CREATE', label: '+ MAKE', icon: Plus },
           { id: 'PRESETS', label: 'PRESETS', icon: Sparkles },
           { id: 'RADAR', label: 'RADAR', icon: Radio },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
+          const badge = (tab as any).badge;
+
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex-1 py-1.5 rounded flex items-center justify-center space-x-1 font-bold text-[10px] transition ${
+              className={`flex-1 py-1.5 rounded flex items-center justify-center space-x-1 font-bold text-[10px] transition relative ${
                 isActive
                   ? 'bg-[#1B2530] border border-[#5B8FB9] text-[#5B8FB9] shadow'
                   : 'text-[#707C88] hover:text-[#E7EBEF] hover:bg-[#11171E]'
@@ -381,13 +398,22 @@ export const GeofenceSidebarSection: React.FC = memo(() => {
             >
               <Icon className="w-3 h-3" />
               <span>{tab.label}</span>
+              {typeof badge === 'number' && badge > 0 && (
+                <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-ping ml-0.5" />
+              )}
             </button>
           );
         })}
       </div>
 
-      {/* 3. Tab Contents */}
+      {/* 4. Tab Contents */}
       <div className="flex-1 overflow-y-auto p-2.5 space-y-3">
+        {/* ── NOTIFICATIONS SECTION ── */}
+        {activeTab === 'NOTIFICATIONS' && (
+          <div className="h-full flex flex-col">
+            <GeofenceNotifications />
+          </div>
+        )}
         {/* ── A. CREATE NEW GEOFENCE SECTION ── */}
         {activeTab === 'CREATE' && (
           <div className="space-y-3">

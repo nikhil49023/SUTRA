@@ -5,12 +5,13 @@ import { useFleetStore } from '../../stores/fleetStore';
 import { useTelemetryStore } from '../../stores/telemetryStore';
 import { useAIStore } from '../../stores/aiStore';
 import { useGeofenceStore } from '../../stores/geofenceStore';
+import { useGeofenceNotificationStore } from '../../geofence/GeofenceNotificationStore';
 import { useSelectionStore } from '../../stores/selectionStore';
 import { useAuthStore } from '../../security/authStore';
 import { ConnectionStatus } from '../../communication/ConnectionStatus';
 import { SessionStatus } from '../../security/SessionStatus';
 import { AuditViewModal } from '../../security/AuditViewModal';
-import { ShieldAlert, Shield, Battery, Satellite, Brain, FileText } from 'lucide-react';
+import { ShieldAlert, Shield, Battery, Satellite, Brain, FileText, AlertOctagon } from 'lucide-react';
 
 export const TopBar: React.FC = memo(() => {
   const setEmergencyModalOpen = useAppStore((s) => s.setEmergencyModalOpen);
@@ -27,6 +28,10 @@ export const TopBar: React.FC = memo(() => {
   const lowestBattery = droneList.length
     ? Math.min(...droneList.map((d) => d.battery))
     : 100;
+
+  const activeRedZoneCount = useGeofenceNotificationStore((s) =>
+    s.notifications.filter((n) => n.severity === 'CRITICAL_RED_ZONE' && !n.acknowledged).length
+  );
 
   return (
     <header className="h-12 bg-[#0B0F14] border-b border-[#2B3743] px-3 sm:px-4 flex items-center justify-between text-[#E7EBEF] font-mono text-xs select-none shadow-md z-40 flex-shrink-0">
@@ -89,26 +94,36 @@ export const TopBar: React.FC = memo(() => {
           </span>
         </div>
 
-        {/* Geofences & Edit Button */}
+        {/* Geofences & Edit Button with Active Red Zone Breach Indicator */}
         <button
           onClick={() => {
-            const gfs = useGeofenceStore.getState().geofences;
-            useAppStore.getState().setInspectorOpen(true);
-            if (gfs.length > 0) {
-              useSelectionStore.getState().selectGeofence(gfs[0].id);
-            } else {
-              useSelectionStore.getState().selectObject('GEOFENCE', null);
-            }
+            useAppStore.getState().setActiveSection('GEOFENCE');
           }}
-          className="flex items-center space-x-1.5 bg-[#11171E] hover:bg-[#1B2530] px-2.5 py-1 rounded border border-[#2B3743] hover:border-[#5B8FB9] transition cursor-pointer"
-          title="Access & Edit Geofences"
+          className={`flex items-center space-x-1.5 px-2.5 py-1 rounded border transition cursor-pointer ${
+            activeRedZoneCount > 0
+              ? 'bg-[#1C0F13] border-[#EF4444] text-[#EF4444] shadow-[0_0_12px_rgba(239,68,68,0.4)] animate-pulse'
+              : 'bg-[#11171E] hover:bg-[#1B2530] border-[#2B3743] hover:border-[#5B8FB9]'
+          }`}
+          title={activeRedZoneCount > 0 ? `${activeRedZoneCount} Active Red Zone Intrusions!` : 'Access & Manage Geofences'}
         >
-          <Shield className="w-3.5 h-3.5 text-[#5B8FB9]" />
+          {activeRedZoneCount > 0 ? (
+            <AlertOctagon className="w-3.5 h-3.5 text-[#EF4444] animate-bounce" />
+          ) : (
+            <Shield className="w-3.5 h-3.5 text-[#5B8FB9]" />
+          )}
           <span className="text-[#707C88]">FENCE:</span>
-          <span className="font-bold text-[#E7EBEF] tabular-nums">{useGeofenceStore.getState().geofences.length}</span>
-          <span className="text-[9px] px-1 py-0.2 rounded bg-[#1B2530] text-[#5B8FB9] font-bold border border-[#5B8FB9]/40 ml-0.5">
-            EDIT
+          <span className={`font-bold tabular-nums ${activeRedZoneCount > 0 ? 'text-[#EF4444]' : 'text-[#E7EBEF]'}`}>
+            {useGeofenceStore.getState().geofences.length}
           </span>
+          {activeRedZoneCount > 0 ? (
+            <span className="text-[9px] px-1.5 py-0.2 rounded bg-[#EF4444] text-white font-extrabold ml-0.5 animate-pulse">
+              {activeRedZoneCount} BREACH
+            </span>
+          ) : (
+            <span className="text-[9px] px-1 py-0.2 rounded bg-[#1B2530] text-[#5B8FB9] font-bold border border-[#5B8FB9]/40 ml-0.5">
+              GEOFENCE
+            </span>
+          )}
         </button>
 
         {/* AI Status */}
