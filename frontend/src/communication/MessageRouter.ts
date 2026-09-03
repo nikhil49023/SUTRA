@@ -267,6 +267,11 @@ class MessageRouter {
       useRiskStore.setState({ forecast: payload });
     } else if (topic === 'prepositioning.updated' && payload.recommendations) {
       useRiskStore.setState({ recommendations: payload.recommendations });
+    } else if (topic === 'risk.theater_changed' && payload) {
+      if (payload.temporal_map) useRiskStore.setState({ temporalMap: payload.temporal_map });
+      if (payload.zone) useRiskStore.setState({ selectedZone: payload.zone, selectedTheater: `${payload.zone.place_name} (${payload.zone.state})` });
+    } else if ((topic === 'risk.disaster_zones' || topic === 'alerts.national_feed') && payload.disaster_zones) {
+      useRiskStore.setState({ disasterZones: payload.disaster_zones });
     }
 
     // Alert Events
