@@ -97,13 +97,16 @@ class PredictiveRiskEngine:
                 cell_lon = (min_lon + max_lon) / 2.0
                 cell_id = f"Z_{r:02d}_{c:02d}"
 
-                # Synthesize baseline terrain & vulnerability variation
-                # Center has low elevation (river basin), edges have higher ground
+                # Synthesize 10-variable baseline terrain & vulnerability variation
                 dist_from_center = math.sqrt((r - half_rows)**2 + (c - half_cols)**2)
                 elev = 12.0 + dist_from_center * 4.5
+                slope = max(1.0, min(35.0, dist_from_center * 2.5))
                 flood_susc = max(0.1, min(0.95, 1.0 - (elev / 45.0)))
+                building_inst = 0.2 + (0.3 if r in (3, 4, 5) else 0.05)
                 pop_exp = 0.2 + 0.6 * math.exp(-0.5 * (dist_from_center / 3.0)**2)
                 infra_exp = 0.3 if (r in (4, 5) or c in (4, 5)) else 0.15
+                comm_qual = max(0.4, 0.95 - dist_from_center * 0.05)
+                energy_cost = min(0.8, 0.15 + dist_from_center * 0.08)
 
                 cell = RiskGridCell(
                     cell_id=cell_id,
@@ -111,7 +114,12 @@ class PredictiveRiskEngine:
                     longitude=cell_lon,
                     bounds=(min_lat, min_lon, max_lat, max_lon),
                     elevation_m=elev,
+                    slope_deg=slope,
                     flood_susceptibility=flood_susc,
+                    building_instability_index=building_inst,
+                    comm_link_quality=comm_qual,
+                    drone_transit_energy_cost=energy_cost,
+                    airspace_clearance_index=0.92,
                     population_exposure=pop_exp,
                     infrastructure_exposure=infra_exp,
                     accessibility_index=0.85,
@@ -138,17 +146,22 @@ class PredictiveRiskEngine:
 
                 grid_cells: List[RiskGridCell] = []
                 for base in self._grid_template:
-                    # Clone and populate horizon parameters
+                    # Clone and populate 10 horizon parameters
                     cell = RiskGridCell(
                         cell_id=base.cell_id,
                         latitude=base.latitude,
                         longitude=base.longitude,
                         bounds=base.bounds,
                         elevation_m=base.elevation_m,
+                        slope_deg=base.slope_deg,
                         forecast_rainfall_rate_mm_h=rain_rate,
                         accumulated_rainfall_mm=accum_rain,
-                        wind_speed_mps=wind_speed,
                         flood_susceptibility=base.flood_susceptibility,
+                        building_instability_index=base.building_instability_index,
+                        wind_speed_mps=wind_speed,
+                        comm_link_quality=base.comm_link_quality,
+                        drone_transit_energy_cost=base.drone_transit_energy_cost,
+                        airspace_clearance_index=base.airspace_clearance_index,
                         population_exposure=base.population_exposure,
                         infrastructure_exposure=base.infrastructure_exposure,
                         accessibility_index=max(0.1, base.accessibility_index - (0.15 * h if rain_rate > 30 else 0)),
@@ -172,13 +185,12 @@ class PredictiveRiskEngine:
                     if h in (1, 2) and score >= 61.0 and not base.confirmed_flooded:
                         sev = AlertSeverity.CRITICAL if score >= 81.0 else AlertSeverity.WARNING
                         alert = RiskAlert(
-                            severity=sev,
-                            cell_id=cell.cell_id,
-                            latitude=cell.latitude,
-                            longitude=cell.longitude,
-                            risk_score=score,
+                            alert_id=f"alert_{cell.cell_id}_{h}h",
+                            level=sev,
                             title=f"{cell.cell_id}: Risk escalating to {cat.value} (+{h}h)",
                             message=f"{explanation} (Forecast: {rain_rate:.0f} mm/h rain)",
+                            affected_cells=[cell.cell_id],
+                            max_risk_score=score,
                             primary_factor=factors[0].name,
                             lead_time_hours=float(h),
                         )

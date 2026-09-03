@@ -1263,6 +1263,42 @@ class WebSocketGatewayServer:
                     "recommendations": [r.to_dict() for r in recs],
                 }
 
+            elif cmd_type in ("risk.synthesize_mission", "RISK_SYNTHESIZE_MISSION"):
+                alert_id = str(payload.get("alert_id", "IMD-NDRF-2026-BLR-01"))
+                p_name = str(payload.get("place_name", "Disaster Target Zone"))
+                dist = str(payload.get("district", "Operational District"))
+                st = str(payload.get("state", "State"))
+                t_lat = payload.get("latitude")
+                t_lon = payload.get("longitude")
+                plan = self.prepositioning_opt.synthesize_mission_from_risk(
+                    alert_id=alert_id,
+                    place_name=p_name,
+                    district=dist,
+                    state=st,
+                    target_lat=float(t_lat) if t_lat is not None else None,
+                    target_lon=float(t_lon) if t_lon is not None else None,
+                )
+                return {"success": True, "synthesis_plan": plan.to_dict()}
+
+            elif cmd_type in ("mission.dynamic_replan", "MISSION_DYNAMIC_REPLAN"):
+                hazard_cell = str(payload.get("hazard_cell_id", "Z_04_04"))
+                h_type = str(payload.get("hazard_type", "COLLAPSED_STRUCTURE_BLOCKAGE"))
+                d_id = str(payload.get("reporting_drone_id", "drone_alpha"))
+                res = self.prepositioning_opt.trigger_dynamic_replanning(
+                    detected_hazard_cell_id=hazard_cell,
+                    hazard_type=h_type,
+                    reporting_drone_id=d_id,
+                )
+                t_map = self.risk_eng.get_temporal_map()
+                return {"success": True, "replanning": res, "temporal_map": t_map.to_dict() if t_map else None}
+
+            elif cmd_type in ("charging.reserve_and_swap", "CHARGING_RESERVE_AND_SWAP"):
+                d_id = str(payload.get("drone_id", "drone_bravo"))
+                bat = float(payload.get("current_battery_pct", 22.0))
+                res = self.prepositioning_opt.autonomous_charging_divert_and_swap(d_id, bat)
+                stations = self.prepositioning_opt.get_charging_stations()
+                return {"success": res.get("success", False), "swap": res, "charging_stations": [s.to_dict() for s in stations]}
+
             elif cmd_type in ("risk.set_theater", "RISK_SET_THEATER"):
                 lat = float(payload.get("latitude", 12.9345))
                 lon = float(payload.get("longitude", 77.6912))
