@@ -13,7 +13,7 @@ import sys
 import threading
 import time
 import uuid
-from dataclasses import asdict, is_dataclass
+from dataclasses import asdict, is_dataclass, replace
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
@@ -124,8 +124,8 @@ class WebSocketGatewayServer:
         self._telemetry_sequence: Dict[str, int] = {}
         self._seq_lock = threading.Lock()
 
-        # Simulation Kinematics
-        self.sim_running = True
+        # Simulation Kinematics — Starts stationary at Waypoint 1, moves ONLY when mission started
+        self.sim_running = False
         self.sim_target_wp = 1
         self.sim_progress = 0.0
         self.sim_is_rtl = False
@@ -157,6 +157,24 @@ class WebSocketGatewayServer:
             self.mission_mgr.add_waypoint(37.7765, -122.4175, 30.0, 8.0)
             self.mission_mgr.add_waypoint(37.7780, -122.4195, 35.0, 7.0)
             self.mission_mgr.add_waypoint(37.7760, -122.4215, 25.0, 5.0)
+
+        wps = self.mission_mgr.get_waypoints()
+        if wps:
+            # Settle entire swarm fleet directly at Waypoint 1
+            wp1 = wps[0]
+            self.fleet_mgr.seed_default_fleet(origin_lat=wp1.latitude, origin_lon=wp1.longitude, origin_alt=wp1.altitude)
+            self.state_store.update_state(
+                lambda s: replace(
+                    s,
+                    mission_state=replace(
+                        s.mission_state,
+                        state="READY",
+                        active_waypoint_index=1,
+                        mission_progress=0.0,
+                        waypoints=wps,
+                    ),
+                )
+            )
 
     def _seed_initial_geofences(self):
         current_gfs = self.geofence_svc.get_all_geofences()
@@ -683,9 +701,14 @@ class WebSocketGatewayServer:
 
             # Mission Lifecycle & Dangerous Flight Operations
             elif cmd_type in ("mission.start", "MISSION_START", "mission.restart"):
+                wps = self.mission_mgr.get_waypoints()
+                if cmd_type in ("mission.restart", "MISSION_RESTART") and wps:
+                    wp1 = wps[0]
+                    self.fleet_mgr.seed_default_fleet(origin_lat=wp1.latitude, origin_lon=wp1.longitude, origin_alt=wp1.altitude)
+
                 self.sim_running = True
                 self.sim_is_rtl = False
-                self.sim_target_wp = 1
+                self.sim_target_wp = 2 if len(wps) > 1 else 1
                 self.mission_mgr.start_mission()
                 self.state_store.update_state(
                     lambda s: replace(
@@ -693,14 +716,14 @@ class WebSocketGatewayServer:
                         mission_state=replace(
                             s.mission_state,
                             state="MISSION",
-                            active_waypoint_index=1,
+                            active_waypoint_index=self.sim_target_wp,
                             mission_progress=0.0,
                         ),
                     )
                 )
                 self.event_bus.emit(
                     "mission.started",
-                    payload={"status": "MISSION", "state": "MISSION", "active_waypoint_index": 1, "mission_progress": 0.0},
+                    payload={"status": "MISSION", "state": "MISSION", "active_waypoint_index": self.sim_target_wp, "mission_progress": 0.0},
                     correlation_id=corr_id,
                     state_version=self.state_store.state_version,
                 )
@@ -710,14 +733,14 @@ class WebSocketGatewayServer:
                         "alert": {
                             "severity": "INFO",
                             "title": "MISSION STARTED",
-                            "message": "Autonomous swarm waypoint mission started. Navigating to WP 1.",
+                            "message": f"Autonomous swarm waypoint mission started. Departing WP 1 toward WP {self.sim_target_wp}.",
                             "source": "mission_engine",
                         }
                     },
                     correlation_id=corr_id,
                     state_version=self.state_store.state_version,
                 )
-                return {"status": "MISSION", "state": "MISSION", "active_waypoint_index": 1}
+                return {"status": "MISSION", "state": "MISSION", "active_waypoint_index": self.sim_target_wp}
 
             elif cmd_type in ("mission.pause", "MISSION_PAUSE"):
                 self.sim_running = False
@@ -1158,7 +1181,7 @@ class WebSocketGatewayServer:
         leader_bat = max(5.0, leader.battery - 0.015)
 
         # 1. Update Leader Waypoint Trajectory Navigation & Progression
-        current_mission_status = "HOLD"
+        current_mission_status = "READY"
         active_wp_idx = 1
         prog_pct = 0.0
         dist_rem = 0.0
@@ -1174,6 +1197,15 @@ class WebSocketGatewayServer:
                 dist_rem = RouteCalculator.calculate_distance(leader_lat, leader_lon, t_lat, t_lon)
                 eta_s = round(dist_rem / max(2.0, leader_spd), 1)
                 prog_pct = 100.0
+
+                step_m = min(dist_rem, 6.0 * dt)
+                ratio = step_m / dist_rem if dist_rem > 0 else 1.0
+                leader_lat += (t_lat - leader_lat) * ratio
+                leader_lon += (t_lon - leader_lon) * ratio
+                leader_alt += (t_alt - leader_alt) * min(1.0, 2.0 * dt)
+                leader_hdg = RouteCalculator.calculate_bearing(leader_lat, leader_lon, t_lat, t_lon)
+                leader_spd = 6.0
+
             elif self.sim_running:
                 current_mission_status = "MISSION"
                 target_wp = wps[active_wp_idx - 1]
@@ -1247,8 +1279,31 @@ class WebSocketGatewayServer:
                     leader_hdg = bearing
                     leader_spd = 6.0
             else:
-                current_mission_status = "HOLD"
-                prog_pct = round(((active_wp_idx - 1) / max(1, len(wps))) * 100.0, 1)
+                # Mission NOT running: Stationary hold
+                is_pre_flight = (self.sim_target_wp <= 1 and not self.sim_is_rtl)
+                current_mission_status = "READY" if is_pre_flight else "HOLD"
+                leader_spd = 0.0
+
+                if is_pre_flight and wps:
+                    # Settle leader directly at Waypoint 1
+                    target_wp = wps[0]
+                    leader_lat = target_wp.latitude
+                    leader_lon = target_wp.longitude
+                    leader_alt = target_wp.altitude
+                    if len(wps) > 1:
+                        leader_hdg = RouteCalculator.calculate_bearing(
+                            wps[0].latitude, wps[0].longitude, wps[1].latitude, wps[1].longitude
+                        )
+                    active_wp_idx = 1
+                    prog_pct = 0.0
+
+                # Compute total distance along all segments
+                dist_rem = 0.0
+                for i in range(len(wps) - 1):
+                    dist_rem += RouteCalculator.calculate_distance(
+                        wps[i].latitude, wps[i].longitude, wps[i + 1].latitude, wps[i + 1].longitude
+                    )
+                eta_s = round(dist_rem / 6.0, 1)
 
         # 1.5. Periodic 2Hz Mission Progress Event Broadcast
         self._sim_tick_count = getattr(self, "_sim_tick_count", 0) + 1
@@ -1300,32 +1355,40 @@ class WebSocketGatewayServer:
                 new_spd = leader_spd
                 new_bat = leader_bat
             else:
-                # Move follower toward its target position in formation
-                dist_to_target = RouteCalculator.calculate_distance(
-                    drone.latitude, drone.longitude, target_lat, target_lon
-                )
-                bearing_to_target = RouteCalculator.calculate_bearing(
-                    drone.latitude, drone.longitude, target_lat, target_lon
-                )
-
-                if dist_to_target > 0.4:
-                    f_max_speed = max(7.0, leader_spd * 1.3)
-                    step_m = min(dist_to_target, f_max_speed * dt)
-                    ratio = step_m / dist_to_target if dist_to_target > 0 else 1.0
-
-                    new_lat = drone.latitude + (target_lat - drone.latitude) * ratio
-                    new_lon = drone.longitude + (target_lon - drone.longitude) * ratio
-                    new_alt = drone.altitude + (target_alt - drone.altitude) * min(1.0, 2.5 * dt)
-                    new_hdg = bearing_to_target if dist_to_target > 1.0 else leader_hdg
-                    new_spd = min(12.0, max(2.0, step_m / dt))
-                else:
+                if not self.sim_running and not self.sim_is_rtl:
+                    # When not running, snap follower directly into its designated formation slot at 0 m/s
                     new_lat = target_lat
                     new_lon = target_lon
                     new_alt = target_alt
                     new_hdg = leader_hdg
-                    new_spd = leader_spd
+                    new_spd = 0.0
+                else:
+                    # Move follower toward its target position in formation
+                    dist_to_target = RouteCalculator.calculate_distance(
+                        drone.latitude, drone.longitude, target_lat, target_lon
+                    )
+                    bearing_to_target = RouteCalculator.calculate_bearing(
+                        drone.latitude, drone.longitude, target_lat, target_lon
+                    )
 
-                new_bat = max(5.0, drone.battery - 0.015)
+                    if dist_to_target > 0.4:
+                        f_max_speed = max(7.0, leader_spd * 1.3)
+                        step_m = min(dist_to_target, f_max_speed * dt)
+                        ratio = step_m / dist_to_target if dist_to_target > 0 else 1.0
+
+                        new_lat = drone.latitude + (target_lat - drone.latitude) * ratio
+                        new_lon = drone.longitude + (target_lon - drone.longitude) * ratio
+                        new_alt = drone.altitude + (target_alt - drone.altitude) * min(1.0, 2.5 * dt)
+                        new_hdg = bearing_to_target if dist_to_target > 1.0 else leader_hdg
+                        new_spd = min(12.0, max(2.0, step_m / dt))
+                    else:
+                        new_lat = target_lat
+                        new_lon = target_lon
+                        new_alt = target_alt
+                        new_hdg = leader_hdg
+                        new_spd = leader_spd
+
+                new_bat = max(5.0, drone.battery - (0.015 if self.sim_running else 0.001))
 
             updated_drone = replace(
                 drone,
