@@ -7,6 +7,8 @@ export type NavigationSection =
   | 'GIS'
   | 'FLEET'
   | 'AI'
+  | 'DISASTER_INTEL'
+  | 'RISK'
   | 'LIVEOPS'
   | 'SETTINGS';
 

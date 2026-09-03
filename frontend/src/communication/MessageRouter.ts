@@ -28,6 +28,7 @@ import { useTelemetryStore } from '../stores/telemetryStore';
 import { useGeofenceStore } from '../stores/geofenceStore';
 import { useGISStore } from '../stores/gisStore';
 import { useAIStore } from '../stores/aiStore';
+import { useRiskStore } from '../stores/riskStore';
 import { useAlertStore } from '../stores/alertStore';
 import { useCommunicationStore } from '../stores/communicationStore';
 import { useAuthStore } from '../security/authStore';
@@ -257,6 +258,15 @@ class MessageRouter {
     // AI Events
     else if (topic.startsWith('ai.')) {
       useAIStore.getState().updateFromEvent(topic, payload);
+    }
+
+    // Predictive Disaster Risk, Forecast & Pre-Positioning Events
+    else if (topic === 'risk.updated' && payload) {
+      useRiskStore.setState({ temporalMap: payload });
+    } else if (topic === 'forecast.updated' && payload) {
+      useRiskStore.setState({ forecast: payload });
+    } else if (topic === 'prepositioning.updated' && payload.recommendations) {
+      useRiskStore.setState({ recommendations: payload.recommendations });
     }
 
     // Alert Events
