@@ -90,17 +90,18 @@ class WeightedRiskModel(RiskModel):
             f_flood_score = 100.0
             flood_desc = "Drone camera confirmed active surface inundation"
         else:
-            elev_factor = max(0.0, min(1.0, (50.0 - cell.elevation_m) / 50.0))
-            f_flood_score = (cell.flood_susceptibility * 0.7 + elev_factor * 0.3) * 100.0
+            f_flood_score = min(100.0, cell.flood_susceptibility * 100.0)
             flood_desc = f"Hydrological basin susceptibility ({cell.flood_susceptibility:.2f})"
 
-        # Variable 3: Terrain / Elevation & Slope Steepness
+        # Variable 3: Terrain / Slope Steepness & Hydrological Depression
         if cell.confirmed_debris:
             f_terrain_score = 95.0
-            terrain_desc = "Drone camera confirmed structural debris/blockage"
+            terrain_desc = "Drone camera confirmed structural debris/landslide blockage"
         else:
-            f_terrain_score = max(5.0, min(95.0, 100.0 - cell.elevation_m * 1.8))
-            terrain_desc = f"Slope: {cell.slope_deg:.1f}° | Elevation: {cell.elevation_m:.1f}m MSL"
+            slope_contrib = min(100.0, (cell.slope_deg / 30.0) * 100.0)
+            basin_contrib = cell.flood_susceptibility * 100.0
+            f_terrain_score = max(5.0, min(95.0, slope_contrib * 0.5 + basin_contrib * 0.5))
+            terrain_desc = f"Slope steepness: {cell.slope_deg:.1f}° | Basin depression: {cell.flood_susceptibility*100:.0f}%"
 
         # Variable 4: Building & Structural Instability
         if cell.confirmed_debris:

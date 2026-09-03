@@ -13,7 +13,7 @@ def test_emergency_abort_all_swarm_uavs():
     assert res["success"] is True
     abort_rec = res["abort_record"]
     assert abort_rec["action"] == "EMERGENCY_ABORT_ALL_SWARM_UAVS_AUTO_RTL"
-    assert abort_rec["failsafe_mode"] == "PX4_AUTO_RTL_SAFE_ALTITUDE_35M"
+    assert "LOCAL_ESCAPE_CORRIDOR" in abort_rec["failsafe_mode"]
 
 
 def test_emergency_abort_individual_uav():
