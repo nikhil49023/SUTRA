@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { useFleetStore } from '../stores/fleetStore';
 import { useSelectionStore } from '../stores/selectionStore';
 import { wsClient } from '../communication/WebSocketClient';
-import { Radio, ShieldAlert } from 'lucide-react';
+import { Radio, ShieldAlert, Star } from 'lucide-react';
 import { formatCoordinates } from '../utils/formatting';
 
 export const DroneInspector: React.FC = memo(() => {
@@ -10,12 +10,17 @@ export const DroneInspector: React.FC = memo(() => {
   const selectedType = useSelectionStore((s) => s.selected_type);
   const drones = useFleetStore((s) => s.drones);
   const leaderId = useFleetStore((s) => s.leader_id);
+  const setLeader = useFleetStore((s) => s.setLeader);
 
   const drone = selectedType === 'DRONE' && selectedId ? drones[selectedId] : null;
 
   if (!drone) return null;
 
   const isLeader = drone.drone_id === leaderId || drone.is_leader;
+
+  const handlePromoteLeader = () => {
+    setLeader(drone.drone_id);
+  };
 
   const handleRtlDrone = () => {
     wsClient.sendCommand('EMERGENCY_RTL', { drone_id: drone.drone_id });
@@ -28,10 +33,18 @@ export const DroneInspector: React.FC = memo(() => {
           <Radio className="w-3.5 h-3.5" />
           <span>DRONE TELEMETRY: {drone.callsign}</span>
         </div>
-        {isLeader && (
-          <span className="px-1.5 py-0.2 rounded bg-[#1B2530] border border-[#C49A4A] text-[#C49A4A] text-[10px] font-bold">
+        {isLeader ? (
+          <span className="px-1.5 py-0.2 rounded bg-[#1B2530] border border-[#C49A4A] text-[#C49A4A] text-[10px] font-bold shadow-[0_0_8px_rgba(196,154,74,0.3)]">
             ★ SWARM LEADER
           </span>
+        ) : (
+          <button
+            onClick={handlePromoteLeader}
+            className="px-2 py-0.5 rounded bg-[#151D26] hover:bg-[#C49A4A] hover:text-[#0B0F14] border border-[#C49A4A]/60 text-[#C49A4A] text-[10px] font-bold transition flex items-center space-x-1 active:scale-95"
+          >
+            <Star className="w-3 h-3 fill-current" />
+            <span>MAKE LEADER</span>
+          </button>
         )}
       </div>
 
@@ -75,14 +88,24 @@ export const DroneInspector: React.FC = memo(() => {
         </div>
       )}
 
-      {/* Individual Emergency RTL Button */}
-      <button
-        onClick={handleRtlDrone}
-        className="w-full py-1.5 rounded bg-[#1B2530] border border-[#C75A5A]/60 hover:bg-[#C75A5A] hover:text-white text-[#C75A5A] font-bold transition flex items-center justify-center space-x-1.5 active:scale-95"
-      >
-        <ShieldAlert className="w-3.5 h-3.5" />
-        <span>COMMAND {drone.callsign.split(' ')[0]} RTL</span>
-      </button>
+      <div className="flex items-center space-x-2">
+        {!isLeader && (
+          <button
+            onClick={handlePromoteLeader}
+            className="flex-1 py-1.5 rounded bg-[#1B2530] border border-[#C49A4A]/60 hover:bg-[#C49A4A] hover:text-[#0B0F14] text-[#C49A4A] font-bold transition flex items-center justify-center space-x-1.5 active:scale-95"
+          >
+            <Star className="w-3.5 h-3.5 fill-current" />
+            <span>PROMOTE TO LEADER</span>
+          </button>
+        )}
+        <button
+          onClick={handleRtlDrone}
+          className={`${isLeader ? 'w-full' : 'flex-1'} py-1.5 rounded bg-[#1B2530] border border-[#C75A5A]/60 hover:bg-[#C75A5A] hover:text-white text-[#C75A5A] font-bold transition flex items-center justify-center space-x-1.5 active:scale-95`}
+        >
+          <ShieldAlert className="w-3.5 h-3.5" />
+          <span>COMMAND {drone.callsign.split(' ')[0]} RTL</span>
+        </button>
+      </div>
     </div>
   );
 });

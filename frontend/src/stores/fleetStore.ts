@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { DroneState, FleetState, FormationType } from '../types/fleet';
+import { commandManager } from '../communication/CommandManager';
+import { useTelemetryStore } from './telemetryStore';
 
 interface FleetStoreState extends FleetState {
   selectedDroneId: string;
@@ -111,10 +113,21 @@ export const useFleetStore = create<FleetStoreState>((set) => ({
     set((s) => {
       const mergedDrones = fleetState.drones || s.drones;
       const leaderId = fleetState.leader_id || s.leader_id || Object.keys(mergedDrones)[0] || 'drone_alpha';
+      const updatedDrones = { ...mergedDrones };
+      for (const dId of Object.keys(updatedDrones)) {
+        const isLead = dId === leaderId;
+        if (updatedDrones[dId]) {
+          updatedDrones[dId] = {
+            ...updatedDrones[dId],
+            is_leader: isLead,
+            role: isLead ? 'LEADER' : (updatedDrones[dId].role === 'LEADER' ? 'WINGMAN' : updatedDrones[dId].role),
+          };
+        }
+      }
       return {
         ...s,
         ...fleetState,
-        drones: mergedDrones,
+        drones: updatedDrones,
         leader_id: leaderId,
       };
     }),
@@ -151,7 +164,6 @@ export const useFleetStore = create<FleetStoreState>((set) => ({
         };
       }
       // Shallow-equality guard: return same state reference if nothing changed.
-      // Prevents re-renders on duplicate or identical telemetry ticks (very common at 10Hz+).
       let changed = false;
       for (const key of Object.keys(dronePartial) as (keyof DroneState)[]) {
         if ((dronePartial as any)[key] !== (existing as any)[key]) {
@@ -159,7 +171,7 @@ export const useFleetStore = create<FleetStoreState>((set) => ({
           break;
         }
       }
-      if (!changed) return s; // Same reference — zero subscribers notified
+      if (!changed) return s;
       return {
         drones: {
           ...s.drones,
@@ -188,7 +200,30 @@ export const useFleetStore = create<FleetStoreState>((set) => ({
       formation,
       spacing: spacing !== undefined ? spacing : s.spacing,
     })),
-  setLeader: (leader_id) => set({ leader_id }),
+  setLeader: (leader_id) => {
+    set((s) => {
+      const updatedDrones = { ...s.drones };
+      for (const dId of Object.keys(updatedDrones)) {
+        const isLead = dId === leader_id;
+        if (updatedDrones[dId]) {
+          updatedDrones[dId] = {
+            ...updatedDrones[dId],
+            is_leader: isLead,
+            role: isLead ? 'LEADER' : (updatedDrones[dId].role === 'LEADER' ? 'WINGMAN' : updatedDrones[dId].role),
+          };
+        }
+      }
+      return {
+        leader_id,
+        selectedDroneId: leader_id,
+        drones: updatedDrones,
+      };
+    });
+    commandManager.sendCommand('fleet.set_leader', { leader_id, drone_id: leader_id });
+    try {
+      useTelemetryStore.getState().setActiveDroneId(leader_id);
+    } catch (_) {}
+  },
   setShowGuides: (show_guides) => set({ show_guides }),
   setGuidesVisible: (show_guides) => set({ show_guides }),
   updateFromEvent: (topic, payload) =>
@@ -200,8 +235,27 @@ export const useFleetStore = create<FleetStoreState>((set) => ({
           spacing: payload.spacing !== undefined ? payload.spacing : s.spacing,
         };
       }
-      if (topic === 'fleet.drone_updated' && payload && payload.leader_id) {
-        return { ...s, leader_id: payload.leader_id };
+      if ((topic === 'fleet.leader_changed' || topic === 'fleet.drone_updated') && payload && payload.leader_id) {
+        const newLeaderId = payload.leader_id;
+        const updatedDrones = { ...s.drones };
+        for (const dId of Object.keys(updatedDrones)) {
+          const isLead = dId === newLeaderId;
+          if (updatedDrones[dId]) {
+            updatedDrones[dId] = {
+              ...updatedDrones[dId],
+              is_leader: isLead,
+              role: isLead ? 'LEADER' : (updatedDrones[dId].role === 'LEADER' ? 'WINGMAN' : updatedDrones[dId].role),
+            };
+          }
+        }
+        try {
+          useTelemetryStore.getState().setActiveDroneId(newLeaderId);
+        } catch (_) {}
+        return {
+          ...s,
+          leader_id: newLeaderId,
+          drones: updatedDrones,
+        };
       }
       if (topic === 'fleet.drone_added' && payload && payload.drone) {
         return {

@@ -11,11 +11,11 @@ import { GpsIndicator } from './GpsIndicator';
 import { ConnectionIndicator } from './ConnectionIndicator';
 import { AlertOverlay } from './AlertOverlay';
 import { TelemetryState } from '../types/telemetry';
-import { ShieldCheck, ChevronDown } from 'lucide-react';
+import { ShieldCheck, ChevronDown, Star } from 'lucide-react';
 
 export const PrimaryFlightDisplay: React.FC = () => {
   const { activeDroneId, setActiveDroneId, getTelemetry } = useTelemetryStore();
-  const { drones } = useFleetStore();
+  const { drones, leader_id, setLeader } = useFleetStore();
   const missionState = useMissionStore();
 
   // High-frequency local state decoupled from main app render tree
@@ -55,6 +55,7 @@ export const PrimaryFlightDisplay: React.FC = () => {
   }
 
   const isCritical = telemetry.battery_percent <= 10;
+  const isLeader = activeDroneId === leader_id;
 
   return (
     <div className="relative w-full bg-[#0B0F14]/98 border-t border-[#2B3743] backdrop-blur-md px-3 sm:px-6 py-2 flex items-center justify-between shadow-[0_-4px_20px_rgba(0,0,0,0.6)] text-[#E7EBEF] select-none z-20 flex-shrink-0">
@@ -77,10 +78,20 @@ export const PrimaryFlightDisplay: React.FC = () => {
             >
               {Object.values(drones).map((d) => (
                 <option key={d.drone_id} value={d.drone_id}>
-                  {d.is_leader ? '★ ' : ''}{d.callsign}
+                  {d.drone_id === leader_id || d.is_leader ? '★ ' : ''}{d.callsign}
                 </option>
               ))}
             </select>
+            {!isLeader && (
+              <button
+                onClick={() => setLeader(activeDroneId)}
+                title="Promote selected UAV to Swarm Leader"
+                className="px-1.5 py-0.5 rounded bg-[#151D26] hover:bg-[#C49A4A] hover:text-[#0B0F14] border border-[#C49A4A]/60 text-[#C49A4A] text-[10px] font-bold transition flex items-center space-x-0.5 active:scale-95"
+              >
+                <Star className="w-2.5 h-2.5 fill-current" />
+                <span>LEAD</span>
+              </button>
+            )}
           </div>
           <div className="text-[9px] font-mono text-[#707C88] px-0.5">
             PROG: <span className="text-[#5B8FB9] font-bold">{missionState.mission_progress.toFixed(0)}%</span> | WP: <span className="text-[#4F9A72] font-bold">{missionState.active_waypoint_index}</span>
