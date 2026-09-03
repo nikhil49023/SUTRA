@@ -25,10 +25,12 @@ export const DisasterIntelPanel: React.FC = () => {
     recommendations,
     chargingStations,
     selectedCellId,
+    selectedTheater,
     isLoading,
     fetchRiskData,
     setActiveHorizon,
     selectCell,
+    selectTheater,
     injectDisasterScenario,
     executePrepositioning,
     rejectPrepositioning,
@@ -39,6 +41,13 @@ export const DisasterIntelPanel: React.FC = () => {
     const interval = setInterval(fetchRiskData, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  const THEATERS = [
+    { name: 'NHCE Bengaluru (Hackathon Venue)', lat: 12.9345, lon: 77.6912, label: '📍 NHCE BENGALURU' },
+    { name: 'Kedarnath Basin (Mandakini River)', lat: 30.7352, lon: 79.0669, label: '🏔️ KEDARNATH' },
+    { name: 'Wayanad Meppadi (Landslide Zone)', lat: 11.5300, lon: 76.1300, label: '🌿 WAYANAD' },
+    { name: 'Tactical Urban Grid (Default)', lat: 37.7749, lon: -122.4194, label: '🏙️ URBAN GRID' },
+  ];
 
   const currentGrid = temporalMap?.horizons[activeHorizon];
   const activeObservation = forecast?.observations.find((o) => {
@@ -78,6 +87,8 @@ export const DisasterIntelPanel: React.FC = () => {
           <div>
             <h2 className="text-sm font-bold tracking-wider text-slate-100">PREDICTIVE DISASTER RISK</h2>
             <div className="text-[10px] text-slate-400 flex items-center space-x-2">
+              <span>THEATER: <strong className="text-cyan-400">{selectedTheater}</strong></span>
+              <span>•</span>
               <span>PROVIDER: <strong className="text-cyan-400">{forecast?.provider_name || 'SIMULATION'}</strong></span>
               <span>•</span>
               <span className="text-emerald-400">HEALTHY (100% ONLINE)</span>
@@ -92,6 +103,29 @@ export const DisasterIntelPanel: React.FC = () => {
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-cyan-400' : ''}`} />
         </button>
+      </div>
+
+      {/* Operational Disaster Theater Switcher */}
+      <div className="bg-slate-900/60 p-2 rounded-lg border border-slate-800 space-y-1.5">
+        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center justify-between">
+          <span>OPERATIONAL DISASTER THEATER (COORDINATES & LIVE IMD INGESTION)</span>
+          <span className="text-cyan-400 text-[9px]">{currentGrid ? `${currentGrid.center_lat.toFixed(4)}°N, ${currentGrid.center_lon.toFixed(4)}°E` : ''}</span>
+        </div>
+        <div className="grid grid-cols-4 gap-1">
+          {THEATERS.map((th) => (
+            <button
+              key={th.name}
+              onClick={() => selectTheater(th.name, th.lat, th.lon)}
+              className={`px-1.5 py-1 text-[9px] font-bold rounded border truncate transition-all ${
+                selectedTheater.includes(th.name.split(' ')[0])
+                  ? 'bg-cyan-950/80 border-cyan-500 text-cyan-300 shadow-sm shadow-cyan-900/30'
+                  : 'bg-slate-950 hover:bg-slate-800 border-slate-800 text-slate-400'
+              }`}
+            >
+              {th.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Meteorological Telemetry Stream */}
