@@ -3,18 +3,22 @@
  * Subsystem: Tactical Airspace Management & Containment (Enterprise Deployment Level)
  */
 
-import React, { useState, memo } from 'react';
+import React, { useState, memo, useMemo } from 'react';
 import { GeofenceToolbar } from './GeofenceToolbar';
 import { GeofenceSidebar } from './GeofenceSidebar';
 import { GeofenceEditor } from './GeofenceEditor';
 import { GeofenceProperties } from './GeofenceProperties';
 import { GeofenceBreachRadar } from './GeofenceBreachRadar';
+import { GeofenceNotifications } from './GeofenceNotifications';
+import { GeofenceNotificationBanner } from './GeofenceNotificationBanner';
 import { AIRSPACE_PRESETS } from './GeofencePresets';
 import { GeofenceFormatService } from './GeofenceFormatService';
 import { useGeofenceStore } from '../stores/geofenceStore';
+import { useGeofenceNotificationStore } from './GeofenceNotificationStore';
 import { useSelectionStore } from '../stores/selectionStore';
 import { useFleetStore } from '../stores/fleetStore';
 import { commandManager } from '../communication/CommandManager';
+import { evaluateDroneGeofenceProximity } from './GeofenceBreachEngine';
 import {
   Shield,
   Radio,
@@ -29,12 +33,14 @@ import {
   Hexagon,
   Route,
   AlertTriangle,
+  AlertOctagon,
+  Bell,
   FileCode,
   Layers,
 } from 'lucide-react';
 
 export const GeofencePanel: React.FC = memo(() => {
-  const [activeTab, setActiveTab] = useState<'RADAR' | 'MANAGER' | 'PRESETS' | 'EXCHANGE'>('MANAGER');
+  const [activeTab, setActiveTab] = useState<'RADAR' | 'MANAGER' | 'PRESETS' | 'EXCHANGE' | 'NOTIFICATIONS'>('MANAGER');
   const [importText, setImportText] = useState('');
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [copiedFormat, setCopiedFormat] = useState<string | null>(null);
@@ -44,17 +50,22 @@ export const GeofencePanel: React.FC = memo(() => {
   const selectedId = useSelectionStore((s) => s.selected_id);
   const selectGeofence = useSelectionStore((s) => s.selectGeofence);
   const drones = useFleetStore((s) => s.drones);
+  const notifications = useGeofenceNotificationStore((s) => s.notifications);
 
   const noFlyCount = geofences.filter((g) => g.zone_type === 'NO_FLY' || g.zone_type === 'EXCLUSION').length;
   const warningCount = geofences.filter((g) => g.zone_type === 'WARNING').length;
   const safeCount = geofences.filter((g) => g.zone_type === 'SAFE' || g.zone_type === 'INCLUSION').length;
   const activeCount = geofences.filter((g) => g.enabled).length;
 
+  const activeRedZoneNotifCount = notifications.filter(
+    (n) => n.severity === 'CRITICAL_RED_ZONE' && !n.acknowledged
+  ).length;
+
   const selectedGf =
     selectedType === 'GEOFENCE' ? geofences.find((g) => g.id === selectedId) : null;
 
   // Compute fleet centroid for preset placement
-  const droneList = Object.values(drones);
+  const droneList = useMemo(() => Object.values(drones), [drones]);
   const centerLat = droneList.length > 0
     ? droneList.reduce((acc, d) => acc + d.latitude, 0) / droneList.length
     : 37.7749;
@@ -171,7 +182,7 @@ export const GeofencePanel: React.FC = memo(() => {
   };
 
   return (
-    <div className="h-full flex flex-col space-y-3 p-3 overflow-y-auto font-mono text-xs select-none">
+    <div className="h-full flex flex-col space-y-3 p-3 overflow-y-auto font-mono text-xs select-none custom-scrollbar">
       {/* 1. Header Metrics & Airspace Status Bar */}
       <div className="bg-[#11171E] border border-[#2B3743] rounded-lg p-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center space-x-2.5">
@@ -219,21 +230,27 @@ export const GeofencePanel: React.FC = memo(() => {
         </div>
       </div>
 
-      {/* 2. Navigation Tabs */}
+      {/* 2. DYNAMIC RISING RED ZONE BREACH ALERT BANNER (Rises on any tab when breach occurs!) */}
+      <GeofenceNotificationBanner onViewAllNotifications={() => setActiveTab('NOTIFICATIONS')} />
+
+      {/* 3. Navigation Tabs */}
       <div className="flex space-x-1 bg-[#11171E] p-1 rounded-lg border border-[#2B3743]">
         {[
           { id: 'MANAGER', label: 'ZONE MANAGER & EDITOR', icon: Sliders },
+          { id: 'NOTIFICATIONS', label: 'RED ZONE NOTIFICATIONS', icon: AlertOctagon, badge: activeRedZoneNotifCount },
           { id: 'RADAR', label: 'AIRSPACE RADAR & BREACHES', icon: Radio },
           { id: 'PRESETS', label: 'TACTICAL PRESETS', icon: Sparkles },
           { id: 'EXCHANGE', label: 'SPATIAL EXCHANGE (GEOJSON/KML)', icon: FileCode },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
+          const badgeCount = (tab as any).badge;
+
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex-1 py-2 rounded flex items-center justify-center space-x-2 transition font-bold text-xs ${
+              className={`flex-1 py-2 rounded flex items-center justify-center space-x-2 transition font-bold text-xs relative ${
                 isActive
                   ? 'bg-[#1B2530] border border-[#5B8FB9] text-[#5B8FB9] shadow-[0_0_12px_rgba(91,143,185,0.2)]'
                   : 'text-[#707C88] hover:text-[#E7EBEF] hover:bg-[#151D26]'
@@ -241,12 +258,17 @@ export const GeofencePanel: React.FC = memo(() => {
             >
               <Icon className="w-3.5 h-3.5" />
               <span>{tab.label}</span>
+              {typeof badgeCount === 'number' && badgeCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-[#EF4444] text-white text-[9px] font-extrabold animate-pulse">
+                  {badgeCount}
+                </span>
+              )}
             </button>
           );
         })}
       </div>
 
-      {/* 3. Tab Content Bodies */}
+      {/* 4. Tab Content Bodies */}
       {activeTab === 'MANAGER' && (
         <div className="space-y-3 flex-1 flex flex-col min-h-0">
           <GeofenceToolbar />
@@ -283,6 +305,12 @@ export const GeofencePanel: React.FC = memo(() => {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {activeTab === 'NOTIFICATIONS' && (
+        <div className="space-y-3 flex-1 flex flex-col min-h-0">
+          <GeofenceNotifications />
         </div>
       )}
 
