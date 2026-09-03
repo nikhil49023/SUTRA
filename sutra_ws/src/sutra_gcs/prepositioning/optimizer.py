@@ -420,7 +420,7 @@ class PrepositioningOptimizer:
             "operator_id": operator_id,
             "reason": reason,
             "action": "EMERGENCY_ABORT_ALL_SWARM_UAVS_AUTO_RTL",
-            "failsafe_mode": "PX4_AUTO_RTL_SAFE_ALTITUDE_35M",
+            "failsafe_mode": "PX4_EVALUATE_LOCAL_ESCAPE_CORRIDOR_SAFE_ALTITUDE_AUTO_RTL",
         }
 
         self.audit.log_command(
