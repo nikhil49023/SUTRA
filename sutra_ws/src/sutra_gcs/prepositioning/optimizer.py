@@ -319,19 +319,52 @@ class PrepositioningOptimizer:
         """
         Identifies nearest safe charging station -> Reserves bay -> Diverts low-battery drone ->
         Automatically dispatches standby reserve drone to search area.
+        If all 4/4 bays occupied: Evaluates alternate staging or triggers safe precautionary landing.
         """
         station = self.charging_stations.get("STATION-01")
-        if not station:
-            return {"success": False, "error": "No charging stations online"}
+        
+        # 1. Charger Unavailable Contingency Handling (4/4 bays full)
+        if not station or station.available_bays <= 0:
+            alt_staging = self.safe_staging_zones[0]
+            can_reach_alt = current_battery_pct >= 15.0
 
-        if station.available_bays <= 0:
-            return {"success": False, "error": "All charging bays currently occupied"}
+            if can_reach_alt:
+                contingency_status = "CHARGER_UNAVAILABLE_DIVERTED_TO_ALTERNATE_STAGING"
+                action_text = f"Primary charging station bays full (4/4). Diverted {low_battery_drone_id} to {alt_staging.name}"
+                target_coords = [alt_staging.latitude, alt_staging.longitude]
+            else:
+                contingency_status = "CHARGER_UNAVAILABLE_EMERGENCY_HOLDING_LANDING"
+                action_text = f"Primary charger full and battery critical ({current_battery_pct:.0f}%). Executing immediate high-ground emergency landing"
+                target_coords = [self.risk_engine.center_lat + 0.001, self.risk_engine.center_lon + 0.001]
 
+            swap_record = {
+                "timestamp": time.time(),
+                "diverted_drone_id": low_battery_drone_id,
+                "diverted_battery_pct": current_battery_pct,
+                "charging_station_id": station.station_id if station else "NONE",
+                "reserved_bay": 0,
+                "charging_pad_coords": target_coords,
+                "reserve_dispatched_drone_id": "drone_delta",
+                "status": contingency_status,
+                "contingency_action": action_text,
+            }
+
+            self.audit.log_command(
+                command_id=f"charge_contingency_{uuid.uuid4().hex[:6]}",
+                command_type="charging.contingency",
+                user="AUTONOMOUS_ENERGY_CONTROLLER",
+                target=low_battery_drone_id,
+                result="ACCEPTED",
+                reason=action_text,
+                payload=swap_record,
+            )
+            self.event_bus.emit("charging.contingency", payload=swap_record, source="prepositioning_optimizer")
+            return {"success": True, "swap_record": swap_record, "contingency": True}
+
+        # 2. Standard Charging Bay Reservation & Reserve Drone Swap
         with self._lock:
-            # Reserve charging bay
             station.reserved_drones.append(low_battery_drone_id)
 
-        # Select reserve drone from standby fleet
         fleet = self.fleet_manager.get_fleet()
         standby_candidates = [
             d.drone_id for d in fleet.drones.values()
@@ -372,7 +405,60 @@ class PrepositioningOptimizer:
             f"Dispatching reserve {reserve_drone_id} to maintain continuous search coverage."
         )
 
-        return {"success": True, "swap_record": swap_record}
+        return {"success": True, "swap_record": swap_record, "contingency": False}
+
+    # =========================================================================
+    # 4. EMERGENCY HUMAN MISSION ABORT
+    # =========================================================================
+    def emergency_abort_all(self, reason: str = "Operator emergency abort", operator_id: str = "commander") -> Dict[str, Any]:
+        """
+        Commands all active swarm UAVs to immediately abort mission, disengage from search,
+        and execute safe high-altitude return-to-launch (RTL) / precautionary landing.
+        """
+        abort_record = {
+            "timestamp": time.time(),
+            "operator_id": operator_id,
+            "reason": reason,
+            "action": "EMERGENCY_ABORT_ALL_SWARM_UAVS_AUTO_RTL",
+            "failsafe_mode": "PX4_AUTO_RTL_SAFE_ALTITUDE_35M",
+        }
+
+        self.audit.log_command(
+            command_id=f"abort_{uuid.uuid4().hex[:6]}",
+            command_type="mission.emergency_abort_all",
+            user=operator_id,
+            target="ALL_SWARM_UAVS",
+            result="EXECUTED",
+            reason=reason,
+            payload=abort_record,
+        )
+
+        self.event_bus.emit("mission.emergency_abort_all", payload=abort_record, source="prepositioning_optimizer")
+        return {"success": True, "abort_record": abort_record}
+
+    def emergency_abort_uav(self, drone_id: str, reason: str = "Operator UAV abort", operator_id: str = "commander") -> Dict[str, Any]:
+        """Commands an individual UAV to abort search and return to landing pad."""
+        abort_record = {
+            "timestamp": time.time(),
+            "drone_id": drone_id,
+            "operator_id": operator_id,
+            "reason": reason,
+            "action": f"EMERGENCY_ABORT_UAV_{drone_id.upper()}_AUTO_RTL",
+            "failsafe_mode": "PX4_AUTO_RTL",
+        }
+
+        self.audit.log_command(
+            command_id=f"abort_{drone_id}_{uuid.uuid4().hex[:6]}",
+            command_type="mission.emergency_abort_uav",
+            user=operator_id,
+            target=drone_id,
+            result="EXECUTED",
+            reason=reason,
+            payload=abort_record,
+        )
+
+        self.event_bus.emit("mission.emergency_abort_uav", payload=abort_record, source="prepositioning_optimizer")
+        return {"success": True, "abort_record": abort_record}
 
     # =========================================================================
     # 4. STANDARD PRE-POSITIONING FORMULATION
