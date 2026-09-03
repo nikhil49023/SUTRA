@@ -34,6 +34,7 @@ import { AiPanel } from '../../ai/AiPanel';
 import { SettingsPanel } from '../settings/SettingsPanel';
 import { wsClient } from '../../communication/WebSocketClient';
 import { NavigationSection } from '../../types/app';
+import { Route, Users, Mountain, Brain, Settings, Compass, X } from 'lucide-react';
 
 // ── Memoized panels — mount once, stay mounted, toggled via CSS visibility ─────
 const MissionPlannerPanel = memo(() => <MissionPlanner />);
@@ -43,6 +44,34 @@ const AiPanelMemo = memo(() => <AiPanel />);
 const SettingsPanelMemo = memo(() => <SettingsPanel />);
 
 const OVERLAY_SECTIONS: NavigationSection[] = ['MISSION', 'FLEET', 'GIS', 'AI', 'SETTINGS'];
+
+const SECTION_METADATA: Record<string, { title: string; subtitle: string; icon: any }> = {
+  MISSION: {
+    title: 'TACTICAL MISSION PLANNER',
+    subtitle: 'Autonomous Waypoint Corridor & Pre-Flight Validation Engine',
+    icon: Route,
+  },
+  FLEET: {
+    title: 'SWARM FLEET CONTROL & FORMATION MATRIX',
+    subtitle: 'Multi-UAV Kinematics, Target Tracking & ORCA 3D Separation',
+    icon: Users,
+  },
+  GIS: {
+    title: 'GIS TERRAIN & RF PROPAGATION INTELLIGENCE',
+    subtitle: 'Elevation Profiler, 1st Fresnel Line-of-Sight & Mesh Diagnostics',
+    icon: Mountain,
+  },
+  AI: {
+    title: 'AI MISSION ADVISOR & PERCEPTION SUBSYSTEM',
+    subtitle: 'YOLOv8 SAR Detections, Ground Raycast Geolocation & NLP Commander',
+    icon: Brain,
+  },
+  SETTINGS: {
+    title: 'SYSTEM CONFIGURATION & ENVIRONMENT',
+    subtitle: 'Display Units, Tactical Basemaps & Communication Parameters',
+    icon: Settings,
+  },
+};
 
 export const TacticalLayout: React.FC = () => {
   const activeSection = useAppStore((s) => s.activeSection);
@@ -84,6 +113,8 @@ export const TacticalLayout: React.FC = () => {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const showOverlay = OVERLAY_SECTIONS.includes(activeSection);
+  const activeMeta = SECTION_METADATA[activeSection];
+  const SectionIcon = activeMeta?.icon || Compass;
 
   return (
     <div className="h-screen w-screen flex flex-col bg-[#0B0F14] text-[#E7EBEF] overflow-hidden select-none">
@@ -115,18 +146,42 @@ export const TacticalLayout: React.FC = () => {
             </ErrorBoundary>
           </div>
 
-          {/*
-            Contextual Overlay Container:
-            - Always mounted (avoids heavy re-mount cost on every section switch)
-            - Visibility toggled via `display` style (instant, no paint cost)
-            - NO backdrop-blur-md — GPU blur was causing frame drops on section change
-            - Each inner panel is React.memo — stable after first mount
-          */}
+          {/* Contextual Overlay Container with Tactical Header Ribbon */}
           <div
-            className="absolute inset-0 z-20 overflow-hidden"
-            style={{ display: showOverlay ? 'block' : 'none' }}
+            className="absolute inset-0 z-20 overflow-hidden flex flex-col bg-[#0B0F14]/95 backdrop-blur-[2px]"
+            style={{ display: showOverlay ? 'flex' : 'none' }}
           >
-            <div className="w-full h-full bg-[#0B0F14]/92 overflow-hidden">
+            {/* Overlay Header Ribbon */}
+            {activeMeta && (
+              <div className="h-11 bg-[#11171E] border-b border-[#2B3743] px-4 flex items-center justify-between font-mono text-xs flex-shrink-0 z-10">
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-6 h-6 rounded bg-[#1B2530] border border-[#5B8FB9]/50 flex items-center justify-center text-[#5B8FB9]">
+                    <SectionIcon className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-[#E7EBEF] tracking-wide">{activeMeta.title}</span>
+                    <span className="hidden md:inline text-[10px] text-[#707C88] ml-2 font-normal">
+                      // {activeMeta.subtitle}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setActiveSection('COMMAND')}
+                    className="px-2.5 py-1 rounded bg-[#151D26] hover:bg-[#1B2530] border border-[#2B3743] hover:border-[#5B8FB9] text-[#A9B3BD] hover:text-[#E7EBEF] text-[11px] font-bold flex items-center space-x-1.5 transition"
+                    title="Close overlay and return to map (Esc)"
+                  >
+                    <span>CLOSE</span>
+                    <kbd className="px-1 py-0.2 rounded bg-[#0B0F14] border border-[#2B3743] text-[9px] text-[#707C88]">ESC</kbd>
+                    <X className="w-3.5 h-3.5 ml-0.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Overlay Body */}
+            <div className="flex-1 w-full overflow-hidden">
               <ErrorBoundary fallbackTitle="MISSION SUBSYSTEM">
                 <div style={{ display: activeSection === 'MISSION' ? 'block' : 'none', width: '100%', height: '100%' }}>
                   <MissionPlannerPanel />

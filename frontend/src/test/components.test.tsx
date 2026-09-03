@@ -9,10 +9,10 @@ import { HeadingTape } from '../hud/HeadingTape';
 import { MissionSummary } from '../mission/MissionSummary';
 import { FormationPanel } from '../fleet/FormationPanel';
 
-describe('SMART HORIZON GCS — UI Components & HUD Renderers', () => {
+describe('VAAYU SWARM GCS — UI Components & HUD Renderers', () => {
   it('renders TopBar with brand title, mission badge and emergency RTL button', () => {
     render(<TopBar />);
-    expect(screen.getByText('SMART HORIZON')).toBeInTheDocument();
+    expect(screen.getByText('VAAYU SWARM')).toBeInTheDocument();
     expect(screen.getByText('EMERGENCY RTL')).toBeInTheDocument();
   });
 
@@ -21,7 +21,7 @@ describe('SMART HORIZON GCS — UI Components & HUD Renderers', () => {
     expect(screen.getByText('COMMAND')).toBeInTheDocument();
     expect(screen.getByText('MISSION')).toBeInTheDocument();
     expect(screen.getByText('SWARM FLEET')).toBeInTheDocument();
-    expect(screen.getByText('GIS INTELLIGENCE')).toBeInTheDocument();
+    expect(screen.getByText('GIS INTEL')).toBeInTheDocument();
     expect(screen.getByText('AI ADVISOR')).toBeInTheDocument();
   });
 
@@ -32,8 +32,8 @@ describe('SMART HORIZON GCS — UI Components & HUD Renderers', () => {
 
   it('renders ArtificialHorizon with pitch & roll', () => {
     const { container } = render(<ArtificialHorizon pitch={5.5} roll={-10.2} />);
-    expect(container.querySelector('.w-48.h-48')).toBeInTheDocument();
-    expect(screen.getByText('-10.2°')).toBeInTheDocument();
+    expect(container.querySelector('.rounded-full')).toBeInTheDocument();
+    expect(screen.getByText(/P:\+6° R:-10°/)).toBeInTheDocument();
   });
 
   it('renders HeadingTape with degree markers', () => {

@@ -77,7 +77,7 @@ export const DebugPanel: React.FC = () => {
       <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
         <div className="flex items-center space-x-1.5 font-bold text-cyan-300 text-[11px]">
           <Zap className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-          <span>SMART HORIZON PROTOCOL DEBUGGER</span>
+          <span>VAAYU SWARM PROTOCOL DEBUGGER</span>
         </div>
         <button
           onClick={() => setIsOpen(false)}

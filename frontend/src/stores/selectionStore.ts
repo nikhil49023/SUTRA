@@ -6,6 +6,7 @@ interface SelectionStoreState extends SelectionState {
   selectDrone: (droneId: string) => void;
   selectWaypoint: (waypointId: string | number) => void;
   selectGeofence: (geofenceId: string) => void;
+  selectTarget: (targetId: string | number) => void;
   clearSelection: () => void;
   setHoveredId: (id: string | null) => void;
 }
@@ -19,6 +20,8 @@ export const useSelectionStore = create<SelectionStoreState>((set) => ({
   selectDrone: (droneId) => set({ selected_type: 'DRONE', selected_id: droneId }),
   selectWaypoint: (waypointId) => set({ selected_type: 'WAYPOINT', selected_id: String(waypointId) }),
   selectGeofence: (geofenceId) => set({ selected_type: 'GEOFENCE', selected_id: geofenceId }),
+  selectTarget: (targetId) => set({ selected_type: 'TARGET', selected_id: String(targetId) }),
   clearSelection: () => set({ selected_type: 'NONE', selected_id: null }),
   setHoveredId: (hovered_id) => set({ hovered_id }),
 }));
+

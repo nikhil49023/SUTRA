@@ -37,7 +37,7 @@ export interface ApplicationState {
   app_version: string;
 }
 
-export type SelectedObjectType = 'DRONE' | 'WAYPOINT' | 'GEOFENCE' | 'NONE';
+export type SelectedObjectType = 'DRONE' | 'WAYPOINT' | 'GEOFENCE' | 'TARGET' | 'NONE';
 
 export interface SelectionState {
   selected_type: SelectedObjectType;
