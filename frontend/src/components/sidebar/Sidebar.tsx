@@ -14,6 +14,8 @@ import {
   ChevronRight,
 } from 'lucide-react';
 
+import { useGeofenceNotificationStore } from '../../geofence/GeofenceNotificationStore';
+
 const NAV_ITEMS: { id: NavigationSection; label: string; shortcut: string; icon: any }[] = [
   { id: 'COMMAND', label: 'COMMAND', shortcut: 'ESC', icon: Compass },
   { id: 'MISSION', label: 'MISSION', shortcut: 'M', icon: Route },
@@ -31,6 +33,10 @@ export const Sidebar: React.FC = memo(() => {
   const isSidebarCollapsed = useAppStore((s) => s.isSidebarCollapsed);
   const toggleSidebar = useAppStore((s) => s.toggleSidebar);
 
+  const activeRedZoneCount = useGeofenceNotificationStore((s) =>
+    s.notifications.filter((n) => n.severity === 'CRITICAL_RED_ZONE' && !n.acknowledged).length
+  );
+
   return (
     <aside
       className={`h-full bg-[#0B0F14] border-r border-[#2B3743] flex flex-col justify-between transition-all duration-200 z-30 select-none flex-shrink-0 ${
@@ -46,26 +52,44 @@ export const Sidebar: React.FC = memo(() => {
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = activeSection === item.id;
+          const isGeofenceBreached = item.id === 'GEOFENCE' && activeRedZoneCount > 0;
 
           return (
             <button
               key={item.id}
               onClick={() => setActiveSection(item.id)}
               className={`w-full flex items-center justify-between px-2.5 py-2 rounded-md font-mono text-xs font-bold transition group ${
-                isActive
+                isGeofenceBreached
+                  ? 'bg-[#1C0F13] border-l-2 border-l-[#EF4444] border border-[#EF4444] text-[#EF4444] shadow-[0_0_15px_rgba(239,68,68,0.4)] animate-pulse'
+                  : isActive
                   ? 'bg-[#1B2530] border-l-2 border-l-[#5B8FB9] border border-[#2B3743] text-[#E7EBEF] shadow-[0_0_12px_rgba(91,143,185,0.15)]'
                   : 'text-[#707C88] hover:text-[#E7EBEF] hover:bg-[#151D26] border border-transparent'
               }`}
               title={`${item.label} (${item.shortcut})`}
             >
               <div className="flex items-center space-x-2.5 min-w-0">
-                <Icon className={`w-4 h-4 flex-shrink-0 transition ${isActive ? 'text-[#5B8FB9]' : 'text-[#707C88] group-hover:text-[#A9B3BD]'}`} />
-                {!isSidebarCollapsed && <span className="truncate tracking-wide text-[11px]">{item.label}</span>}
+                <Icon className={`w-4 h-4 flex-shrink-0 transition ${
+                  isGeofenceBreached ? 'text-[#EF4444] animate-bounce' : isActive ? 'text-[#5B8FB9]' : 'text-[#707C88] group-hover:text-[#A9B3BD]'
+                }`} />
+                {!isSidebarCollapsed && (
+                  <span className="truncate tracking-wide text-[11px] flex items-center space-x-1">
+                    <span>{item.label}</span>
+                    {isGeofenceBreached && (
+                      <span className="px-1 py-0.2 rounded-full bg-[#EF4444] text-white text-[8px] font-extrabold ml-1">
+                        {activeRedZoneCount}
+                      </span>
+                    )}
+                  </span>
+                )}
               </div>
 
               {!isSidebarCollapsed && (
                 <kbd className={`px-1 py-0.2 rounded text-[9px] font-mono border transition ${
-                  isActive ? 'bg-[#11171E] border-[#5B8FB9]/40 text-[#5B8FB9]' : 'bg-[#11171E] border-[#2B3743] text-[#707C88]'
+                  isGeofenceBreached
+                    ? 'bg-[#1C0F13] border-[#EF4444] text-[#EF4444]'
+                    : isActive
+                    ? 'bg-[#11171E] border-[#5B8FB9]/40 text-[#5B8FB9]'
+                    : 'bg-[#11171E] border-[#2B3743] text-[#707C88]'
                 }`}>
                   {item.shortcut}
                 </kbd>

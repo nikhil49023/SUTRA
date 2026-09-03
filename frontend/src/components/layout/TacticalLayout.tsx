@@ -27,29 +27,37 @@ import { useSelectionStore } from '../../stores/selectionStore';
 import { mapController } from '../../map/MapController';
 import { MultiDroneDebugPanel } from '../../hud/MultiDroneDebugPanel';
 import { MissionPlanner } from '../../mission/MissionPlanner';
+import { GeofencePanel } from '../../geofence/GeofencePanel';
 import { GeofenceSidebarSection } from '../../geofence/GeofenceSidebarSection';
 import { FleetPanel } from '../../fleet/FleetPanel';
 import { GisPanel } from '../../gis/GisPanel';
 import { AiPanel } from '../../ai/AiPanel';
 import { SettingsPanel } from '../settings/SettingsPanel';
+import { GlobalGeofenceBreachMonitor } from '../../geofence/GlobalGeofenceBreachMonitor';
 import { wsClient } from '../../communication/WebSocketClient';
 import { NavigationSection } from '../../types/app';
-import { Route, Users, Mountain, Brain, Settings, Compass, X } from 'lucide-react';
+import { Route, Users, Mountain, Brain, Settings, Compass, Shield, X } from 'lucide-react';
 
 // ── Memoized panels — mount once, stay mounted, toggled via CSS visibility ─────
 const MissionPlannerPanel = memo(() => <MissionPlanner />);
+const GeofencePanelMemo = memo(() => <GeofencePanel />);
 const FleetPanelMemo = memo(() => <FleetPanel />);
 const GisPanelMemo = memo(() => <GisPanel />);
 const AiPanelMemo = memo(() => <AiPanel />);
 const SettingsPanelMemo = memo(() => <SettingsPanel />);
 
-const OVERLAY_SECTIONS: NavigationSection[] = ['MISSION', 'FLEET', 'GIS', 'AI', 'SETTINGS'];
+const OVERLAY_SECTIONS: NavigationSection[] = ['MISSION', 'GEOFENCE', 'FLEET', 'GIS', 'AI', 'SETTINGS'];
 
 const SECTION_METADATA: Record<string, { title: string; subtitle: string; icon: any }> = {
   MISSION: {
     title: 'TACTICAL MISSION PLANNER',
     subtitle: 'Autonomous Waypoint Corridor & Pre-Flight Validation Engine',
     icon: Route,
+  },
+  GEOFENCE: {
+    title: 'TACTICAL GEOFENCE OPERATIONS CENTER',
+    subtitle: '3D Airspace Containment, Red Zone Intrusion Notifications & Altitude Envelopes',
+    icon: Shield,
   },
   FLEET: {
     title: 'SWARM FLEET CONTROL & FORMATION MATRIX',
@@ -117,7 +125,10 @@ export const TacticalLayout: React.FC = () => {
   const SectionIcon = activeMeta?.icon || Compass;
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-[#0B0F14] text-[#E7EBEF] overflow-hidden select-none">
+    <div className="h-screen w-screen flex flex-col bg-[#0B0F14] text-[#E7EBEF] overflow-hidden select-none relative">
+      {/* GLOBAL REAL-TIME GEOFENCE RED ZONE BREACH MONITOR & TOAST ALERTS */}
+      <GlobalGeofenceBreachMonitor />
+
       {/* 1. TOP BAR */}
       <ErrorBoundary fallbackTitle="TOP BAR">
         <TopBar />
@@ -185,6 +196,11 @@ export const TacticalLayout: React.FC = () => {
               <ErrorBoundary fallbackTitle="MISSION SUBSYSTEM">
                 <div style={{ display: activeSection === 'MISSION' ? 'block' : 'none', width: '100%', height: '100%' }}>
                   <MissionPlannerPanel />
+                </div>
+              </ErrorBoundary>
+              <ErrorBoundary fallbackTitle="GEOFENCE SUBSYSTEM">
+                <div style={{ display: activeSection === 'GEOFENCE' ? 'block' : 'none', width: '100%', height: '100%' }}>
+                  <GeofencePanelMemo />
                 </div>
               </ErrorBoundary>
               <ErrorBoundary fallbackTitle="FLEET SUBSYSTEM">

@@ -334,13 +334,20 @@ export const useGeofenceStore = create<GeofenceStoreState>((set, get) => ({
     }),
 
   hydrateFromSnapshot: (state) =>
-    set((s) => ({
-      ...s,
-      ...state,
-      geofences: Array.isArray((state as any).geofences)
-        ? (state as any).geofences.map(normalizeGeofence)
-        : s.geofences,
-    })),
+    set((s) => {
+      let gfs = s.geofences;
+      const rawGfs = (state as any)?.geofences;
+      if (Array.isArray(rawGfs) && rawGfs.length > 0) {
+        gfs = rawGfs.map(normalizeGeofence);
+      } else if (rawGfs && typeof rawGfs === 'object' && Object.keys(rawGfs).length > 0) {
+        gfs = Object.values(rawGfs).map(normalizeGeofence);
+      }
+      return {
+        ...s,
+        ...state,
+        geofences: gfs,
+      };
+    }),
 
   updateFromEvent: (topic, payload) =>
     set((s) => {

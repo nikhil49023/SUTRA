@@ -38,16 +38,31 @@ export function calculateGeodesicDistance(lat1: number, lon1: number, lat2: numb
 }
 
 /**
+ * Normalizes coordinate pair [a, b] to [lat, lon]
+ */
+function normalizeVertex(c: [number, number]): [number, number] {
+  if (!c || c.length < 2) return [0, 0];
+  // If first number is outside valid latitude [-90, 90], it must be longitude
+  if (Math.abs(c[0]) > 90 && Math.abs(c[1]) <= 90) {
+    return [c[1], c[0]]; // Flip [lon, lat] -> [lat, lon]
+  }
+  return [c[0], c[1]];
+}
+
+/**
  * High-performance 2D Ray-Casting algorithm to determine if a point is inside a polygon
  */
 export function isPointInPolygon(lat: number, lon: number, polygon: [number, number][]): boolean {
   if (!polygon || polygon.length < 3) return false;
   let inside = false;
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const xi = polygon[i][0];
-    const yi = polygon[i][1];
-    const xj = polygon[j][0];
-    const yj = polygon[j][1];
+    const p1 = normalizeVertex(polygon[i]);
+    const p2 = normalizeVertex(polygon[j]);
+
+    const xi = p1[0]; // lat
+    const yi = p1[1]; // lon
+    const xj = p2[0]; // lat
+    const yj = p2[1]; // lon
 
     const intersect = yi > lon !== yj > lon && lat < ((xj - xi) * (lon - yi)) / (yj - yi) + xi;
     if (intersect) inside = !inside;
