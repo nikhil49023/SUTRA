@@ -1,0 +1,105 @@
+import { create } from 'zustand';
+import { ApplicationState, NavigationSection, MapStyleType } from '../types/app';
+
+const STORAGE_MAP_STYLE_KEY = 'sh_gcs_map_style_preference';
+
+function loadStoredMapStyle(): MapStyleType {
+  try {
+    const saved = localStorage.getItem(STORAGE_MAP_STYLE_KEY);
+    if (saved && ['tactical-dark', 'satellite', 'terrain', 'streets'].includes(saved)) {
+      return saved as MapStyleType;
+    }
+  } catch (e) {
+    // Ignore storage parse error
+  }
+  return 'tactical-dark';
+}
+
+function saveMapStyle(style: MapStyleType) {
+  try {
+    localStorage.setItem(STORAGE_MAP_STYLE_KEY, style);
+  } catch (e) {
+    // Ignore storage write error
+  }
+}
+
+interface AppStoreState extends ApplicationState {
+  activeSection: NavigationSection;
+  isSidebarCollapsed: boolean;
+  isInspectorOpen: boolean;
+  isHudOpen: boolean;
+  isConsoleOpen: boolean;
+  activeConsoleTab: 'TELEMETRY' | 'MISSION' | 'SAFETY' | 'COMMUNICATION' | 'AI' | 'SYSTEM';
+  theme: 'dark-tactical' | 'satellite' | 'high-contrast';
+  units: 'metric' | 'imperial';
+  mapStyle: MapStyleType;
+  mapStyleLoading: boolean;
+  telemetryRateHz: number;
+  hudRefreshRateHz: number;
+  emergencyModalOpen: boolean;
+  emergencyTargetDrone: string;
+
+  // Actions
+  setActiveSection: (section: NavigationSection) => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+  toggleSidebar: () => void;
+  setInspectorOpen: (open: boolean) => void;
+  toggleInspector: () => void;
+  setHudOpen: (open: boolean) => void;
+  toggleHud: () => void;
+  setConsoleOpen: (open: boolean) => void;
+  toggleConsole: () => void;
+  setActiveConsoleTab: (tab: 'TELEMETRY' | 'MISSION' | 'SAFETY' | 'COMMUNICATION' | 'AI' | 'SYSTEM') => void;
+  setTheme: (theme: 'dark-tactical' | 'satellite' | 'high-contrast') => void;
+  setUnits: (units: 'metric' | 'imperial') => void;
+  setMapStyle: (style: MapStyleType) => void;
+  setMapStyleLoading: (loading: boolean) => void;
+  setEmergencyModalOpen: (open: boolean, targetDrone?: string) => void;
+  hydrateFromSnapshot: (appState: Partial<ApplicationState>) => void;
+}
+
+export const useAppStore = create<AppStoreState>((set) => ({
+  application_status: 'READY',
+  backend_connected: false,
+  websocket_connected: false,
+  mavlink_connected: false,
+  simulation_mode: true,
+  current_user: 'TACTICAL_OPERATOR',
+  app_version: '1.0.0',
+
+  activeSection: 'COMMAND',
+  isSidebarCollapsed: false,
+  isInspectorOpen: true,
+  isHudOpen: true,
+  isConsoleOpen: true,
+  activeConsoleTab: 'TELEMETRY',
+  theme: 'dark-tactical',
+  units: 'metric',
+  mapStyle: loadStoredMapStyle(),
+  mapStyleLoading: false,
+  telemetryRateHz: 10,
+  hudRefreshRateHz: 60,
+  emergencyModalOpen: false,
+  emergencyTargetDrone: 'ALL',
+
+  setActiveSection: (section) => set({ activeSection: section }),
+  setSidebarCollapsed: (collapsed) => set({ isSidebarCollapsed: collapsed }),
+  toggleSidebar: () => set((s) => ({ isSidebarCollapsed: !s.isSidebarCollapsed })),
+  setInspectorOpen: (open) => set({ isInspectorOpen: open }),
+  toggleInspector: () => set((s) => ({ isInspectorOpen: !s.isInspectorOpen })),
+  setHudOpen: (open) => set({ isHudOpen: open }),
+  toggleHud: () => set((s) => ({ isHudOpen: !s.isHudOpen })),
+  setConsoleOpen: (open) => set({ isConsoleOpen: open }),
+  toggleConsole: () => set((s) => ({ isConsoleOpen: !s.isConsoleOpen })),
+  setActiveConsoleTab: (tab) => set({ activeConsoleTab: tab }),
+  setTheme: (theme) => set({ theme }),
+  setUnits: (units) => set({ units }),
+  setMapStyle: (mapStyle) => {
+    saveMapStyle(mapStyle);
+    set({ mapStyle });
+  },
+  setMapStyleLoading: (mapStyleLoading) => set({ mapStyleLoading }),
+  setEmergencyModalOpen: (open, targetDrone = 'ALL') =>
+    set({ emergencyModalOpen: open, emergencyTargetDrone: targetDrone }),
+  hydrateFromSnapshot: (appState) => set((s) => ({ ...s, ...appState })),
+}));
