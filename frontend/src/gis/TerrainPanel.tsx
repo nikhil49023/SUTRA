@@ -1,16 +1,37 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGISStore } from '../stores/gisStore';
-import { wsClient } from '../communication/WebSocketClient';
-import { Mountain, Play } from 'lucide-react';
+import { commandManager } from '../communication/CommandManager';
+import { Mountain, Play, Layers } from 'lucide-react';
 
 export const TerrainPanel: React.FC = () => {
-  const { elevation_samples } = useGISStore();
+  const { elevation_samples, setElevationSamples } = useGISStore();
+  const [source, setSource] = useState('DEM_SRTM');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  const handleRunElevation = () => {
-    wsClient.sendCommand('GIS_RUN_ELEVATION', {
-      start_point: [37.774929, -122.419416],
-      end_point: [37.779, -122.4155],
-    });
+  const handleRunElevation = async () => {
+    setIsAnalyzing(true);
+    try {
+      const resp = await commandManager.sendCommandAsync('gis.run_elevation', {
+        start_point: [37.774929, -122.419416],
+        end_point: [37.779, -122.4155],
+        source,
+      });
+      const samples = resp?.result?.samples || (Array.isArray(resp?.result) ? resp.result : null);
+      if (samples && Array.isArray(samples)) {
+        setElevationSamples(
+          samples.map((s: any) => ({
+            dist: s.distance_along_m ?? s.dist ?? 0,
+            elev: s.elevation_m ?? s.elev ?? 0,
+            lat: s.latitude ?? s.lat ?? 0,
+            lon: s.longitude ?? s.lon ?? 0,
+          }))
+        );
+      }
+    } catch (e) {
+      console.warn('Elevation run error:', e);
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const maxElev = elevation_samples.length
