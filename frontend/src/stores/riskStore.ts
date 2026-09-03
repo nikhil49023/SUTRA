@@ -33,6 +33,7 @@ export interface RiskGridCell {
   confirmed_flooded: boolean;
   confirmed_debris: boolean;
   risk_score: number;
+  uncertainty_margin?: number;
   category: 'LOW' | 'MODERATE' | 'HIGH' | 'VERY_HIGH' | 'CRITICAL';
   confidence: number;
   factors: FactorScore[];
@@ -358,6 +359,9 @@ interface RiskStoreState {
   synthesizeMission: (alertId: string) => Promise<RiskMissionSynthesisPlan | null>;
   triggerDynamicReplanning: (hazardCellId: string, hazardType?: string, reportingDroneId?: string) => Promise<boolean>;
   reserveChargingBayAndSwap: (droneId: string, currentBatPct?: number) => Promise<boolean>;
+  simulateChargerFullContingency: (droneId?: string) => Promise<boolean>;
+  emergencyAbortAll: () => Promise<boolean>;
+  emergencyAbortUAV: (droneId: string) => Promise<boolean>;
   toggleOfflineMeshMode: () => Promise<void>;
   injectDisasterScenario: (eventType: string, boost: number) => Promise<void>;
   executePrepositioning: (recId: string) => Promise<boolean>;
@@ -573,6 +577,75 @@ export const useRiskStore = create<RiskStoreState>((set, get) => ({
       return true;
     } catch (e) {
       console.error('Failed to reserve charging bay:', e);
+      return false;
+    }
+  },
+
+  simulateChargerFullContingency: async (droneId: string = 'drone_bravo') => {
+    const { replanningLog } = get();
+    const contingencyRecord = {
+      timestamp: Date.now() / 1000,
+      trigger_event: 'CHARGER_UNAVAILABLE_4_BAYS_FULL',
+      hazard_cell_id: 'STATION-01',
+      reporting_drone_id: droneId,
+      action_taken: 'DIVERTED_TO_ALTERNATE_SAFE_STAGING_NORTH_RIDGE',
+      detour_heading_offset_deg: 60.0,
+      min_orca_clearance_m: 4.2,
+    };
+    set({ replanningLog: [contingencyRecord, ...replanningLog] });
+
+    try {
+      wsClient.sendEnvelope('charging.reserve_and_swap', {
+        drone_id: droneId,
+        current_battery_pct: 18.0,
+      });
+      return true;
+    } catch (e) {
+      console.error('Failed to execute charger contingency:', e);
+      return false;
+    }
+  },
+
+  emergencyAbortAll: async () => {
+    const { replanningLog } = get();
+    const abortRecord = {
+      timestamp: Date.now() / 1000,
+      trigger_event: 'OPERATOR_EMERGENCY_ABORT_ALL',
+      hazard_cell_id: 'ALL_SECTORS',
+      reporting_drone_id: 'COMMANDER_OVERRIDE',
+      action_taken: 'ALL_UAVS_DISENGAGED_CLIMBED_35M_AND_EXECUTING_AUTO_RTL',
+      detour_heading_offset_deg: 180.0,
+      min_orca_clearance_m: 5.0,
+    };
+    set({ replanningLog: [abortRecord, ...replanningLog] });
+
+    try {
+      wsClient.sendEnvelope('mission.abort_all', { reason: 'Commander manual emergency abort' });
+      return true;
+    } catch (e) {
+      console.error('Failed to abort mission:', e);
+      return false;
+    }
+  },
+
+  emergencyAbortUAV: async (droneId: string) => {
+    const { replanningLog } = get();
+    const abortRecord = {
+      timestamp: Date.now() / 1000,
+      trigger_event: `OPERATOR_EMERGENCY_ABORT_${droneId.toUpperCase()}`,
+      hazard_cell_id: 'SWARM_FORMATION',
+      reporting_drone_id: droneId,
+      action_taken: `DISENGAGED_${droneId.toUpperCase()}_AND_RETURNING_TO_BASE`,
+      detour_heading_offset_deg: 180.0,
+      min_orca_clearance_m: 5.0,
+    };
+    set({ replanningLog: [abortRecord, ...replanningLog] });
+
+    try {
+      wsClient.sendEnvelope('mission.abort_uav', { drone_id: droneId });
+      return true;
+    } catch (e) {
+      console.error('Failed to abort UAV:', e);
       return false;
     }
   },

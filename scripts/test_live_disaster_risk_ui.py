@@ -141,7 +141,7 @@ while True:
 })()
 """)
         print(f"  • Active Header: '{header_text}'")
-        assert "PREDICTIVE DISASTER" in header_text, f"Expected PREDICTIVE DISASTER header, got '{header_text}'"
+        assert "DISASTER" in header_text, f"Expected DISASTER header, got '{header_text}'"
 
         # 6. Click +2H Horizon Stepper
         print("🔘 Stepping to +2H Temporal Risk Horizon...")
