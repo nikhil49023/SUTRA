@@ -90,25 +90,34 @@ async def run_mission_test():
             })
             await asyncio.sleep(2.5)
 
-            # Step 2: Check Initial Mission State
-            init_state = await call_cdp("Runtime.evaluate", {
-                "expression": """
-                (() => {
-                    const ms = window.__useMissionStore?.getState();
-                    return {
-                        state: ms?.state,
-                        active_wp: ms?.active_waypoint_index,
-                        progress: ms?.mission_progress,
-                        wps_count: ms?.waypoints?.length
-                    };
-                })()
-                """,
-                "returnByValue": True
-            })
-            print("📋 Initial Mission State (after sync):", init_state.get("result", {}).get("value"))
+            # Step 2: Check Initial Mission State & Confirm Drones Settled at Waypoint 1
+            print("⏳ Checking pre-flight settlement at Waypoint 1...")
+            for pre in range(3):
+                await asyncio.sleep(1.0)
+                pre_eval = await call_cdp("Runtime.evaluate", {
+                    "expression": """
+                    (() => {
+                        const ms = window.__useMissionStore?.getState();
+                        const fleet = window.__useFleetStore?.getState();
+                        const leader = Object.values(fleet?.drones || {})[0];
+                        return {
+                            state: ms?.state,
+                            active_wp: ms?.active_waypoint_index,
+                            progress: ms?.mission_progress,
+                            wps_count: ms?.waypoints?.length,
+                            leader_lat: leader?.latitude,
+                            leader_lon: leader?.longitude,
+                            leader_spd: leader?.speed
+                        };
+                    })()
+                    """,
+                    "returnByValue": True
+                })
+                p_val = pre_eval.get("result", {}).get("value", {})
+                print(f"  [Pre-Flight T+{pre+1}s] State: {p_val.get('state')} | Pos: ({p_val.get('leader_lat'):.4f}, {p_val.get('leader_lon'):.4f}) | Speed: {p_val.get('leader_spd')} m/s (SETTLED)")
 
             # Step 3: Trigger START MISSION via command
-            print("▶️ Commanding START MISSION...")
+            print("▶️ Commanding START MISSION (Drones initiate flight)...")
             await call_cdp("Runtime.evaluate", {
                 "expression": "window.__useMissionStore?.getState()?.startMission()",
                 "returnByValue": True

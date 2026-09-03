@@ -110,7 +110,9 @@ export const useMissionStore = create<MissionStoreState>((set, get) => ({
 
   // Command Dispatchers
   startMission: () => {
-    set({ state: 'MISSION', active_waypoint_index: 1, mission_progress: 0 });
+    const wps = get().waypoints;
+    const target = wps.length > 1 ? 2 : 1;
+    set({ state: 'MISSION', active_waypoint_index: target, mission_progress: 0 });
     commandManager.sendCommand('mission.start', {});
   },
 
@@ -130,7 +132,9 @@ export const useMissionStore = create<MissionStoreState>((set, get) => ({
   },
 
   restartMission: () => {
-    set({ state: 'MISSION', active_waypoint_index: 1, mission_progress: 0 });
+    const wps = get().waypoints;
+    const target = wps.length > 1 ? 2 : 1;
+    set({ state: 'MISSION', active_waypoint_index: target, mission_progress: 0 });
     commandManager.sendCommand('mission.restart', {});
   },
 
