@@ -16,10 +16,15 @@ export interface RiskGridCell {
   longitude: number;
   bounds: [number, number, number, number];
   elevation_m: number;
+  slope_deg?: number;
   forecast_rainfall_rate_mm_h: number;
   accumulated_rainfall_mm: number;
   wind_speed_mps: number;
   flood_susceptibility: number;
+  building_instability_index?: number;
+  comm_link_quality?: number;
+  drone_transit_energy_cost?: number;
+  airspace_clearance_index?: number;
   population_exposure: number;
   infrastructure_exposure: number;
   accessibility_index: number;
@@ -76,6 +81,9 @@ export interface ForecastObservation {
   confidence: number;
   freshness_s: number;
   is_stale: boolean;
+  issued_at?: number;
+  feed_status?: 'LIVE' | 'SIMULATION' | 'STALE' | 'OFFLINE_MESH_CACHE';
+  verification_hash?: string;
 }
 
 export interface ForecastHorizon {
@@ -84,8 +92,11 @@ export interface ForecastHorizon {
   observations: ForecastObservation[];
   provider_name: string;
   provider_health: 'HEALTHY' | 'DEGRADED' | 'STALE' | 'OFFLINE';
+  feed_status?: 'LIVE' | 'SIMULATION' | 'STALE' | 'OFFLINE_MESH_CACHE';
+  feed_latency_ms?: number;
   last_successful_sync: number;
   stale_warning: string | null;
+  offline_mesh_mode?: boolean;
 }
 
 export interface RiskAlert {
@@ -130,6 +141,30 @@ export interface ChargingStation {
   battery_capacity_pct: number;
   power_source: string;
   status: 'READY' | 'CHARGING' | 'DEPLOYING' | 'MAINTENANCE' | 'OFFLINE';
+  reserved_drones?: string[];
+}
+
+export interface RiskMissionSynthesisPlan {
+  plan_id: string;
+  alert_id: string;
+  place_name: string;
+  district: string;
+  state: string;
+  risk_score: number;
+  risk_category: string;
+  search_area_km2: number;
+  search_polygon_coords: [number, number][];
+  num_drones_required: number;
+  assigned_drone_ids: string[];
+  battery_required_pct: number;
+  safe_battery_margin_pct: number;
+  staging_location_name: string;
+  staging_coords: [number, number];
+  charging_station_id: string;
+  mission_waypoints: any[];
+  status: 'SYNTHESIZED' | 'DISPATCHED' | 'EXECUTING' | 'REPLANNED' | 'COMPLETED';
+  generated_at: number;
+  replanning_history?: any[];
 }
 
 export interface NationalDisasterZone {
@@ -152,6 +187,8 @@ export interface NationalDisasterZone {
   published_at: number;
   valid_until: number;
   source_url: string;
+  confidence?: number;
+  verification_sig?: string;
 }
 
 export const DEFAULT_NATIONAL_DISASTER_ZONES: NationalDisasterZone[] = [
@@ -175,6 +212,8 @@ export const DEFAULT_NATIONAL_DISASTER_ZONES: NationalDisasterZone[] = [
     published_at: Date.now() / 1000 - 1200,
     valid_until: Date.now() / 1000 + 28800,
     source_url: 'https://mausam.imd.gov.in',
+    confidence: 0.96,
+    verification_sig: 'SIG-IMD-BLR-894A',
   },
   {
     alert_id: 'IMD-NDRF-2026-KED-02',
@@ -196,6 +235,8 @@ export const DEFAULT_NATIONAL_DISASTER_ZONES: NationalDisasterZone[] = [
     published_at: Date.now() / 1000 - 2400,
     valid_until: Date.now() / 1000 + 36000,
     source_url: 'https://mausam.imd.gov.in',
+    confidence: 0.98,
+    verification_sig: 'SIG-NDMA-KED-993F',
   },
   {
     alert_id: 'IMD-NDRF-2026-WAY-03',
@@ -217,6 +258,8 @@ export const DEFAULT_NATIONAL_DISASTER_ZONES: NationalDisasterZone[] = [
     published_at: Date.now() / 1000 - 3600,
     valid_until: Date.now() / 1000 + 43200,
     source_url: 'https://mausam.imd.gov.in',
+    confidence: 0.95,
+    verification_sig: 'SIG-NDRF-WAY-741C',
   },
   {
     alert_id: 'IMD-NDRF-2026-SHI-04',
@@ -238,6 +281,8 @@ export const DEFAULT_NATIONAL_DISASTER_ZONES: NationalDisasterZone[] = [
     published_at: Date.now() / 1000 - 7200,
     valid_until: Date.now() / 1000 + 21600,
     source_url: 'https://mausam.imd.gov.in',
+    confidence: 0.91,
+    verification_sig: 'SIG-IMD-MND-320D',
   },
   {
     alert_id: 'IMD-NDRF-2026-GHY-05',
@@ -259,6 +304,8 @@ export const DEFAULT_NATIONAL_DISASTER_ZONES: NationalDisasterZone[] = [
     published_at: Date.now() / 1000 - 10800,
     valid_until: Date.now() / 1000 + 50400,
     source_url: 'https://mausam.imd.gov.in',
+    confidence: 0.93,
+    verification_sig: 'SIG-CWC-GHY-118E',
   },
   {
     alert_id: 'IMD-NDRF-2026-PUN-06',
@@ -280,6 +327,8 @@ export const DEFAULT_NATIONAL_DISASTER_ZONES: NationalDisasterZone[] = [
     published_at: Date.now() / 1000 - 14400,
     valid_until: Date.now() / 1000 + 18000,
     source_url: 'https://mausam.imd.gov.in',
+    confidence: 0.88,
+    verification_sig: 'SIG-SDMA-PUN-550A',
   },
 ];
 
@@ -295,6 +344,9 @@ interface RiskStoreState {
   selectedZone: NationalDisasterZone | null;
   selectedCellId: string | null;
   selectedTheater: string;
+  synthesisPlan: RiskMissionSynthesisPlan | null;
+  offlineMeshMode: boolean;
+  replanningLog: any[];
   isLoading: boolean;
 
   fetchRiskData: () => Promise<void>;
@@ -303,6 +355,10 @@ interface RiskStoreState {
   selectCell: (cellId: string | null) => void;
   selectTheater: (name: string, lat: number, lon: number) => Promise<void>;
   selectDisasterZone: (alertId: string) => Promise<void>;
+  synthesizeMission: (alertId: string) => Promise<RiskMissionSynthesisPlan | null>;
+  triggerDynamicReplanning: (hazardCellId: string, hazardType?: string, reportingDroneId?: string) => Promise<boolean>;
+  reserveChargingBayAndSwap: (droneId: string, currentBatPct?: number) => Promise<boolean>;
+  toggleOfflineMeshMode: () => Promise<void>;
   injectDisasterScenario: (eventType: string, boost: number) => Promise<void>;
   executePrepositioning: (recId: string) => Promise<boolean>;
   rejectPrepositioning: (recId: string) => Promise<boolean>;
@@ -314,12 +370,30 @@ export const useRiskStore = create<RiskStoreState>((set, get) => ({
   forecast: null,
   activeAlerts: [],
   recommendations: [],
-  chargingStations: [],
+  chargingStations: [
+    {
+      station_id: 'STATION-01',
+      name: 'Tactical Fast-Deploy Station Alpha (48V Solar Hybrid)',
+      latitude: 12.9330,
+      longitude: 77.6890,
+      elevation_m: 905.0,
+      total_bays: 4,
+      occupied_bays: 1,
+      available_bays: 3,
+      battery_capacity_pct: 92.0,
+      power_source: 'SOLAR_HYBRID_48V',
+      status: 'READY',
+      reserved_drones: [],
+    }
+  ],
   disasterZones: DEFAULT_NATIONAL_DISASTER_ZONES,
   selectedZoneId: 'IMD-NDRF-2026-BLR-01',
   selectedZone: DEFAULT_NATIONAL_DISASTER_ZONES[0],
   selectedCellId: null,
   selectedTheater: 'Bellandur / Varthur Basin, Bengaluru (Karnataka)',
+  synthesisPlan: null,
+  offlineMeshMode: false,
+  replanningLog: [],
   isLoading: false,
 
   fetchRiskData: async () => {
@@ -382,6 +456,135 @@ export const useRiskStore = create<RiskStoreState>((set, get) => ({
     } catch (e) {
       console.error('Failed to select disaster zone:', e);
       set({ isLoading: false });
+    }
+  },
+
+  synthesizeMission: async (alertId: string) => {
+    const { selectedZone } = get();
+    const zone = selectedZone || DEFAULT_NATIONAL_DISASTER_ZONES[0];
+    
+    // Optimistic synthesis plan formulation
+    const dummyPlan: RiskMissionSynthesisPlan = {
+      plan_id: `plan_${Date.now().toString(16).slice(-6)}`,
+      alert_id: alertId,
+      place_name: zone.place_name,
+      district: zone.district,
+      state: zone.state,
+      risk_score: 84.5,
+      risk_category: 'CRITICAL',
+      search_area_km2: 0.045,
+      search_polygon_coords: [
+        [zone.latitude - 0.0015, zone.longitude - 0.0015],
+        [zone.latitude - 0.0015, zone.longitude + 0.0015],
+        [zone.latitude + 0.0015, zone.longitude + 0.0015],
+        [zone.latitude + 0.0015, zone.longitude - 0.0015],
+      ],
+      num_drones_required: 3,
+      assigned_drone_ids: ['drone_alpha', 'drone_bravo', 'drone_charlie'],
+      battery_required_pct: 46.5,
+      safe_battery_margin_pct: 53.5,
+      staging_location_name: 'North Ridge Safe Staging Pad (915m MSL)',
+      staging_coords: [zone.latitude + 0.004, zone.longitude + 0.002],
+      charging_station_id: 'STATION-01',
+      mission_waypoints: [
+        { index: 0, type: 'TAKEOFF_STAGING', alt: 25.0, action: 'STAGING_ASCENT' },
+        { index: 1, type: 'SEARCH_CORRIDOR_A', alt: 30.0, action: 'TRI_MODAL_SCAN' },
+        { index: 2, type: 'SEARCH_CORRIDOR_B', alt: 30.0, action: 'SURVIVOR_GEO_RAYCAST' },
+        { index: 3, type: 'SEARCH_CORRIDOR_C', alt: 28.0, action: 'DEBRIS_MAPPING' },
+        { index: 4, type: 'RETURN_STAGING_CHARGER', alt: 0.0, action: 'PRECISION_LAND_CHARGING_BAY' },
+      ],
+      status: 'SYNTHESIZED',
+      generated_at: Date.now() / 1000,
+    };
+
+    set({ synthesisPlan: dummyPlan });
+
+    try {
+      wsClient.sendEnvelope('risk.synthesize_mission', {
+        alert_id: alertId,
+        place_name: zone.place_name,
+        district: zone.district,
+        state: zone.state,
+        latitude: zone.latitude,
+        longitude: zone.longitude,
+      });
+    } catch (e) {
+      console.error('Failed to synthesize mission:', e);
+    }
+    return dummyPlan;
+  },
+
+  triggerDynamicReplanning: async (hazardCellId: string, hazardType: string = 'COLLAPSED_STRUCTURE_BLOCKAGE', reportingDroneId: string = 'drone_alpha') => {
+    const { synthesisPlan, replanningLog } = get();
+    const newRecord = {
+      timestamp: Date.now() / 1000,
+      trigger_event: hazardType,
+      hazard_cell_id: hazardCellId,
+      reporting_drone_id: reportingDroneId,
+      action_taken: 'INVALIDATED_HAZARD_CORRIDOR_AND_REDISTRIBUTED_SWARM',
+      detour_heading_offset_deg: 45.0,
+      min_orca_clearance_m: 3.8,
+    };
+
+    if (synthesisPlan) {
+      set({
+        synthesisPlan: {
+          ...synthesisPlan,
+          status: 'REPLANNED',
+          replanning_history: [...(synthesisPlan.replanning_history || []), newRecord],
+        },
+        replanningLog: [newRecord, ...replanningLog],
+      });
+    } else {
+      set({ replanningLog: [newRecord, ...replanningLog] });
+    }
+
+    try {
+      wsClient.sendEnvelope('mission.dynamic_replan', {
+        hazard_cell_id: hazardCellId,
+        hazard_type: hazardType,
+        reporting_drone_id: reportingDroneId,
+      });
+      return true;
+    } catch (e) {
+      console.error('Failed to trigger dynamic replanning:', e);
+      return false;
+    }
+  },
+
+  reserveChargingBayAndSwap: async (droneId: string, currentBatPct: number = 22.0) => {
+    const { chargingStations } = get();
+    const station = chargingStations[0];
+    if (station && station.available_bays > 0) {
+      const updatedStations = chargingStations.map((s) => ({
+        ...s,
+        occupied_bays: s.occupied_bays + 1,
+        available_bays: Math.max(0, s.available_bays - 1),
+        reserved_drones: [...(s.reserved_drones || []), droneId],
+      }));
+      set({ chargingStations: updatedStations });
+    }
+
+    try {
+      wsClient.sendEnvelope('charging.reserve_and_swap', {
+        drone_id: droneId,
+        current_battery_pct: currentBatPct,
+      });
+      return true;
+    } catch (e) {
+      console.error('Failed to reserve charging bay:', e);
+      return false;
+    }
+  },
+
+  toggleOfflineMeshMode: async () => {
+    const { offlineMeshMode } = get();
+    const nextState = !offlineMeshMode;
+    set({ offlineMeshMode: nextState });
+    try {
+      wsClient.sendEnvelope('forecast.toggle_offline_mesh_mode', { enabled: nextState });
+    } catch (e) {
+      console.error('Failed to toggle offline mode:', e);
     }
   },
 
