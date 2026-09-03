@@ -142,11 +142,13 @@ interface RiskStoreState {
   recommendations: PrepositioningRecommendation[];
   chargingStations: ChargingStation[];
   selectedCellId: string | null;
+  selectedTheater: string;
   isLoading: boolean;
 
   fetchRiskData: () => Promise<void>;
   setActiveHorizon: (horizon: string) => void;
   selectCell: (cellId: string | null) => void;
+  selectTheater: (name: string, lat: number, lon: number) => Promise<void>;
   injectDisasterScenario: (eventType: string, boost: number) => Promise<void>;
   executePrepositioning: (recId: string) => Promise<boolean>;
   rejectPrepositioning: (recId: string) => Promise<boolean>;
@@ -160,6 +162,7 @@ export const useRiskStore = create<RiskStoreState>((set, get) => ({
   recommendations: [],
   chargingStations: [],
   selectedCellId: null,
+  selectedTheater: 'NHCE Bengaluru (Grand Finale)',
   isLoading: false,
 
   fetchRiskData: async () => {
@@ -181,6 +184,21 @@ export const useRiskStore = create<RiskStoreState>((set, get) => ({
 
   selectCell: (cellId: string | null) => {
     set({ selectedCellId: cellId });
+  },
+
+  selectTheater: async (name: string, lat: number, lon: number) => {
+    set({ selectedTheater: name, isLoading: true });
+    try {
+      wsClient.sendEnvelope('risk.set_theater', {
+        name,
+        latitude: lat,
+        longitude: lon,
+      });
+      set({ isLoading: false });
+    } catch (e) {
+      console.error('Failed to set theater:', e);
+      set({ isLoading: false });
+    }
   },
 
   injectDisasterScenario: async (eventType: string, boost: number) => {
