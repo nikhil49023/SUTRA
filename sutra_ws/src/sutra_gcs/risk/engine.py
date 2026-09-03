@@ -256,6 +256,15 @@ class PredictiveRiskEngine:
             logger.info(f"[RiskEngine] Observation override applied to {cell_id}")
         return updated
 
+    def set_center_coordinates(self, center_lat: float, center_lon: float) -> None:
+        """Dynamically shifts the 10x10 risk matrix to a new disaster theater center."""
+        with self._lock:
+            self.center_lat = center_lat
+            self.center_lon = center_lon
+            self._initialize_grid_template()
+        self.evaluate_temporal_risk_map()
+        logger.info(f"[RiskEngine] Updated operational center to [{center_lat:.6f}, {center_lon:.6f}]")
+
 
 # Global singleton
 _global_risk_engine: Optional[PredictiveRiskEngine] = None

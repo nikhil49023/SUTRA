@@ -1228,6 +1228,22 @@ class WebSocketGatewayServer:
                 t_map = self.risk_eng.get_temporal_map()
                 return {"success": updated, "temporal_map": t_map.to_dict() if t_map else None}
 
+            elif cmd_type in ("risk.set_theater", "RISK_SET_THEATER"):
+                lat = float(payload.get("latitude", 12.9345))
+                lon = float(payload.get("longitude", 77.6912))
+                self.risk_eng.set_center_coordinates(lat, lon)
+                self.forecast_svc.set_default_coordinates(lat, lon)
+                self.prepositioning_opt.evaluate_prepositioning()
+                t_map = self.risk_eng.get_temporal_map()
+                horizon = self.forecast_svc.get_forecast_horizon()
+                return {
+                    "success": True,
+                    "theater": payload.get("name", "Custom Theater"),
+                    "coordinates": [lat, lon],
+                    "temporal_map": t_map.to_dict() if t_map else None,
+                    "forecast": horizon.to_dict() if horizon else None,
+                }
+
             elif cmd_type in ("forecast.get_forecast", "FORECAST_GET_FORECAST"):
                 force = bool(payload.get("force_refresh", False))
                 horizon = self.forecast_svc.get_forecast_horizon(force_refresh=force)
