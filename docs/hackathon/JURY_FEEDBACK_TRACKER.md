@@ -24,16 +24,17 @@
 | **TOTAL EVAL 1** | **100** | | |
 
 ### Verbatim Feedback & Requested Modifications:
-- [ ] **Feedback Item 1**:  
-  - *Jury Suggestion*:  
-  - *Assigned To*:  
-  - *Target Resolution by*: Eval 2 Start  
-  - *Implemented Fix & Code Diff*:  
-- [ ] **Feedback Item 2**:  
-  - *Jury Suggestion*:  
-  - *Assigned To*:  
-  - *Target Resolution by*: Eval 2 Start  
-  - *Implemented Fix & Code Diff*:  
+- [x] **Feedback Item 1 (Real-World Deployment & Execution Under Government Frameworks)**:  
+  - *Jury Suggestion*: Heavy focus on real-world deployment, physical field execution, and institutional compatibility with government disaster management bodies (NDMA, NDRF, SDRF). How do exhausted jawans operate this? How do you overcome the 25-minute battery limit? How does it pack, transport, and deploy in real disasters like Wayanad or Kedarnath?
+  - *Assigned To*: Nikhil (Tech Architect) & Rohith Kumar / Harika (Subsystem F CONOPS Leads)  
+  - *Target Resolution by*: Eval 2 Start (Resolved Immediately for Eval 1 Defense)  
+  - *Implemented Fix & Documentation*:
+    1. Authored authoritative disaster operational audit: [`docs/conops/NDMA_IRS_FIELD_DEPLOYMENT_AUDIT.md`](../conops/NDMA_IRS_FIELD_DEPLOYMENT_AUDIT.md).
+    2. Formally mapped SUTRA into the NDMA **Incident Response System (IRS)** as an **Autonomous Aerial Reconnaissance Unit (AARU)** reporting directly to the Operations Section Chief (OSC).
+    3. Engineered the **180-Second Rapid Staging & Cold-Start SOP** (two IP67 Pelican 1650 cases, quick-release folding arms, automated sensor BIST).
+    4. Engineered the **4+1 Leapfrog Swarm Rotation** solving battery flight limits for continuous 24-hour persistent search.
+    5. Established the **Zero-Pilot Touchscreen UX** (bounding-box polygon tasking, zero manual joystick flying for stressed rescuers).
+    6. Grounded regulatory and wireless spectrum compliance in **Rule 50 of DGCA Drone Rules 2021** (General power to exempt for disaster management), **Section 34/38 of the Disaster Management Act 2005**, and **WPC de-licensed 5.8 GHz / 865 MHz ISM bands**.
 
 ---
 
