@@ -138,6 +138,14 @@ COMMAND_PERMISSION_MATRIX: Dict[str, Permission] = {
     "GIS_RUN_LOS": Permission.GIS_ANALYZE,
     "gis.run_rf": Permission.GIS_ANALYZE,
     "GIS_RUN_RF": Permission.GIS_ANALYZE,
+    "gis.run_slope": Permission.GIS_ANALYZE,
+    "GIS_RUN_SLOPE": Permission.GIS_ANALYZE,
+    "gis.run_weather": Permission.GIS_ANALYZE,
+    "GIS_RUN_WEATHER": Permission.GIS_ANALYZE,
+    "gis.run_search_grid": Permission.GIS_ANALYZE,
+    "GIS_RUN_SEARCH_GRID": Permission.GIS_ANALYZE,
+    "gis.toggle_overlay": Permission.GIS_ANALYZE,
+    "GIS_TOGGLE_OVERLAY": Permission.GIS_ANALYZE,
 
     # AI
     "ai.run_analysis": Permission.AI_READ,

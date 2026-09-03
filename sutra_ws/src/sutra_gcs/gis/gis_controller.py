@@ -170,24 +170,69 @@ class GISController:
         )
         self.event_bus.emit("gis.grid_created", payload={"waypoints": len(wps)}, source="gis_controller")
 
-    def run_measurement(
-        self, p1: Tuple[float, float], p2: Tuple[float, float]
-    ) -> MeasurementResult:
-        """Executes point-to-point measurement."""
-        res = measurement_tool.measure_line(p1, p2)
+    def run_slope_analysis(
+        self, start_p: Tuple[float, float], end_p: Tuple[float, float]
+    ) -> Dict[str, Any]:
+        """Computes slope gradient and classification along path."""
+        rep = elevation_profile_generator.generate_profile(
+            start_p[0], start_p[1], end_p[0], end_p[1]
+        )
+        slope_rep = slope_analyzer.analyze_profile_slope(rep)
+        
+        result = {
+            "avg_slope_deg": slope_rep.avg_slope_deg,
+            "max_slope_deg": slope_rep.max_slope_deg,
+            "category": slope_rep.category.value,
+            "steepest_point": {
+                "lat": slope_rep.steepest_point.latitude,
+                "lon": slope_rep.steepest_point.longitude,
+                "elev": slope_rep.steepest_point.elevation_m,
+            },
+        }
+
         self.state_store.update_state(
             lambda s: replace(
                 s,
                 gis_state=replace(
                     s.gis_state,
-                    measurement_start=p1,
-                    measurement_end=p2,
-                    measurement_enabled=True,
+                    selected_analysis="SLOPE",
+                    analysis_status="COMPLETED",
+                    slope_enabled=True,
                 ),
             )
         )
-        self.event_bus.emit("gis.measurement_completed", payload={"dist": res.distance_m}, source="gis_controller")
-        return res
+        self.event_bus.emit("gis.slope_updated", payload=result, source="gis_controller")
+        return result
+
+    def run_weather_analysis(self, wind_speed: float = 4.2, wind_gusts: float = 6.5, visibility_km: float = 10.0, precip_mm: float = 0.0) -> Dict[str, Any]:
+        """Assesses tactical weather conditions against UAV flight limits."""
+        from .models import WeatherData
+        weather_data = WeatherData(
+            temperature_c=21.5,
+            humidity_percent=58.0,
+            pressure_hpa=1013.25,
+            wind_speed_mps=wind_speed,
+            wind_direction_deg=230.0,
+            wind_gusts_mps=wind_gusts,
+            visibility_km=visibility_km,
+            precipitation_mm=precip_mm,
+            cloud_cover_percent=20.0,
+            available=True,
+        )
+        rep = weather_analyzer.evaluate_weather(weather_data)
+        result = {
+            "risk_level": rep.risk_level,
+            "wind_status": rep.wind_status,
+            "visibility_status": rep.visibility_status,
+            "precipitation_status": rep.precipitation_status,
+            "reasons": rep.reasons,
+            "temperature_c": weather_data.temperature_c,
+            "wind_speed_mps": weather_data.wind_speed_mps,
+            "pressure_hpa": weather_data.pressure_hpa,
+            "humidity_percent": weather_data.humidity_percent,
+        }
+        self.event_bus.emit("gis.weather_updated", payload=result, source="gis_controller")
+        return result
 
 
 # Global singleton

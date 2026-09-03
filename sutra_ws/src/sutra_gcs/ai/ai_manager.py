@@ -74,8 +74,8 @@ class AIManager:
                 telem.drone_id: eta_predictor.predict(
                     drone_id=telem.drone_id,
                     current_speed_mps=telem.ground_speed,
-                    dist_to_next_wp_m=state.mission_state.active_segment_distance,
-                    dist_remaining_mission_m=state.mission_state.total_distance,
+                    dist_to_next_wp_m=getattr(state.mission_state, "active_segment_distance", 100.0),
+                    dist_remaining_mission_m=getattr(state.mission_state, "distance_remaining", 500.0),
                     dist_to_home_m=500.0,
                 )
             }

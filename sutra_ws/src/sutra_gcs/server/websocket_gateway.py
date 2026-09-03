@@ -58,6 +58,7 @@ from security import (
     input_validator,
     rate_limiter,
     security_audit_logger,
+    command_authorizer,
     SecurityEventType,
     SecretManager,
     get_security_config,
@@ -78,14 +79,16 @@ def serialize_obj(obj: Any) -> Any:
     if isinstance(obj, Path):
         return str(obj)
     if is_dataclass(obj) and not isinstance(obj, type):
-        res = {}
-        for k, v in asdict(obj).items():
-            res[k] = serialize_obj(v)
-        return res
+        try:
+            return {k: serialize_obj(v) for k, v in asdict(obj).items()}
+        except Exception:
+            return {k: serialize_obj(getattr(obj, k)) for k in obj.__dataclass_fields__}
     if isinstance(obj, dict):
         return {str(k): serialize_obj(v) for k, v in obj.items()}
     if isinstance(obj, (list, tuple, set)):
         return [serialize_obj(item) for item in obj]
+    if hasattr(obj, "__dict__"):
+        return {k: serialize_obj(v) for k, v in obj.__dict__.items() if not k.startswith("_")}
     return str(obj)
 
 
@@ -524,9 +527,14 @@ class WebSocketGatewayServer:
                 limit=int(payload.get("limit", 100)),
             )
             await websocket.send(json.dumps({
-                "type": "AUDIT_LOG_RESPONSE",
+                "type": "COMMAND_ACK",
+                "command_id": command_id,
+                "command_type": cmd_type,
                 "correlation_id": corr_id,
-                "records": records,
+                "status": "ACCEPTED",
+                "result": {"records": records, "events": records, "count": len(records)},
+                "error": None,
+                "state_version": self.state_store.state_version,
                 "timestamp": time.time(),
             }))
             return
@@ -1062,24 +1070,75 @@ class WebSocketGatewayServer:
 
             # GIS
             elif cmd_type in ("gis.run_elevation", "GIS_RUN_ELEVATION"):
-                return self.gis_ctrl.run_elevation_profile(
+                rep = self.gis_ctrl.run_elevation_profile(
                     tuple(payload.get("start_point", (37.7749, -122.4194))),
                     tuple(payload.get("end_point", (37.779, -122.4155))),
                 )
+                return serialize_obj(rep)
 
             elif cmd_type in ("gis.run_los", "GIS_RUN_LOS"):
-                return self.gis_ctrl.run_los_analysis(
+                res = self.gis_ctrl.run_los_analysis(
                     tuple(payload.get("obs_point", (37.7749, -122.4194))),
                     float(payload.get("obs_alt", 25.0)),
                     tuple(payload.get("target_point", (37.778, -122.4165))),
                     float(payload.get("target_alt", 35.0)),
                 )
+                return serialize_obj(res)
 
             elif cmd_type in ("gis.run_rf", "GIS_RUN_RF"):
-                return self.gis_ctrl.run_rf_analysis(
+                grid = self.gis_ctrl.run_rf_analysis(
                     tuple(payload.get("center_point", (37.7749, -122.4194))),
                     float(payload.get("radius_m", 2500.0)),
                 )
+                return serialize_obj(grid)
+
+            elif cmd_type in ("gis.run_slope", "GIS_RUN_SLOPE"):
+                res = self.gis_ctrl.run_slope_analysis(
+                    tuple(payload.get("start_point", (37.7749, -122.4194))),
+                    tuple(payload.get("end_point", (37.779, -122.4155))),
+                )
+                return serialize_obj(res)
+
+            elif cmd_type in ("gis.run_weather", "GIS_RUN_WEATHER"):
+                res = self.gis_ctrl.run_weather_analysis(
+                    wind_speed=float(payload.get("wind_speed", 4.2)),
+                    wind_gusts=float(payload.get("wind_gusts", 6.5)),
+                    visibility_km=float(payload.get("visibility_km", 10.0)),
+                    precip_mm=float(payload.get("precip_mm", 0.0)),
+                )
+                return serialize_obj(res)
+
+            elif cmd_type in ("gis.run_search_grid", "GIS_RUN_SEARCH_GRID"):
+                from gis.models import SearchGridConfig, SearchPattern
+                bounds = payload.get("bounds_coordinates") or [
+                    (37.7745, -122.4200),
+                    (37.7760, -122.4200),
+                    (37.7760, -122.4180),
+                    (37.7745, -122.4180),
+                ]
+                pat_str = payload.get("pattern", "LAWN_MOWER")
+                pat = SearchPattern.LAWN_MOWER
+                if pat_str == "PERIMETER":
+                    pat = SearchPattern.PERIMETER
+                elif pat_str == "GRID":
+                    pat = SearchPattern.GRID
+
+                cfg = SearchGridConfig(
+                    bounds_coordinates=[(float(p[0]), float(p[1])) for p in bounds],
+                    pattern=pat,
+                    spacing_m=float(payload.get("spacing_m", 30.0)),
+                    altitude_m=float(payload.get("altitude_m", 25.0)),
+                    speed_mps=float(payload.get("speed_mps", 6.0)),
+                    orientation_deg=float(payload.get("orientation_deg", 0.0)),
+                )
+                self.gis_ctrl.run_search_grid(cfg)
+                return {"grid_generated": True, "pattern": pat.value}
+
+            elif cmd_type in ("gis.toggle_overlay", "GIS_TOGGLE_OVERLAY"):
+                overlay = payload.get("overlay_name", "terrain")
+                enabled = bool(payload.get("enabled", True))
+                self.gis_ctrl.toggle_overlay(overlay, enabled)
+                return {"overlay": overlay, "enabled": enabled}
 
             # AI
             elif cmd_type in ("ai.run_analysis", "AI_RUN_ANALYSIS"):
@@ -1122,6 +1181,11 @@ class WebSocketGatewayServer:
                 )
                 self.event_bus.emit("alert.acknowledged", payload={"alert_id": alert_id}, correlation_id=corr_id, state_version=self.state_store.state_version)
                 return {"alert_id": alert_id}
+
+            elif cmd_type in ("security.get_audit_log", "SECURITY_GET_AUDIT_LOG"):
+                limit = int(payload.get("limit", 50))
+                events = security_audit_logger.query(limit=limit)
+                return {"events": serialize_obj(events), "count": len(events)}
 
             else:
                 raise ValueError(f"Unknown operational command_type: {cmd_type}")
