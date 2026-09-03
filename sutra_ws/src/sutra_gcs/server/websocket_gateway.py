@@ -48,6 +48,9 @@ from geofence.models import GeometryType, ZoneType
 from gis.gis_controller import GISController, get_gis_controller
 from ai.ai_manager import AIManager, ai_manager
 from communication.adapters.perception_subsystem_adapter import perception_adapter
+from forecast import get_forecast_service
+from prepositioning import get_prepositioning_optimizer
+from risk import get_risk_engine, get_dynamic_mapping_bridge, RiskModelWeights
 from server.command_processor import CommandProcessor, CommandResult, get_command_processor
 
 # Phase 13 Security Imports
@@ -115,6 +118,10 @@ class WebSocketGatewayServer:
         self.geofence_svc = get_geofence_service()
         self.gis_ctrl = get_gis_controller()
         self.ai_mgr = ai_manager
+        self.forecast_svc = get_forecast_service()
+        self.risk_eng = get_risk_engine()
+        self.prepositioning_opt = get_prepositioning_optimizer()
+        self.dynamic_map_bridge = get_dynamic_mapping_bridge()
 
         self.ws_clients: Set[Any] = set()
         self.client_sessions: Dict[Any, str] = {}  # websocket -> session_id
@@ -1182,6 +1189,96 @@ class WebSocketGatewayServer:
                 limit = int(payload.get("limit", 50))
                 events = security_audit_logger.query(limit=limit)
                 return {"events": serialize_obj(events), "count": len(events)}
+
+            # --- Predictive Disaster Risk & Forecast Engine Handlers ---
+            elif cmd_type in ("risk.get_grid", "RISK_GET_GRID"):
+                grid = self.risk_eng.get_current_grid()
+                return {"grid": grid.to_dict() if grid else None}
+
+            elif cmd_type in ("risk.get_temporal_map", "RISK_GET_TEMPORAL_MAP", "risk.evaluate", "RISK_EVALUATE"):
+                t_map = self.risk_eng.evaluate_temporal_risk_map()
+                alerts = self.risk_eng.get_active_alerts()
+                return {
+                    "temporal_map": t_map.to_dict(),
+                    "alerts": [a.to_dict() for a in alerts],
+                }
+
+            elif cmd_type in ("risk.set_weights", "RISK_SET_WEIGHTS"):
+                w = RiskModelWeights(
+                    rainfall=float(payload.get("rainfall", 0.25)),
+                    flood=float(payload.get("flood", 0.25)),
+                    terrain=float(payload.get("terrain", 0.15)),
+                    population=float(payload.get("population", 0.15)),
+                    infrastructure=float(payload.get("infrastructure", 0.10)),
+                    wind=float(payload.get("wind", 0.05)),
+                    accessibility=float(payload.get("accessibility", 0.05)),
+                )
+                self.risk_eng.set_weights(w)
+                t_map = self.risk_eng.get_temporal_map()
+                return {"success": True, "temporal_map": t_map.to_dict() if t_map else None}
+
+            elif cmd_type in ("risk.apply_override", "RISK_APPLY_OVERRIDE"):
+                cell_id = str(payload.get("cell_id", ""))
+                flooded = payload.get("confirmed_flooded")
+                debris = payload.get("confirmed_debris")
+                survivors = payload.get("survivor_count")
+                updated = self.risk_eng.apply_observation_override(
+                    cell_id, flooded, debris, survivors
+                )
+                t_map = self.risk_eng.get_temporal_map()
+                return {"success": updated, "temporal_map": t_map.to_dict() if t_map else None}
+
+            elif cmd_type in ("forecast.get_forecast", "FORECAST_GET_FORECAST"):
+                force = bool(payload.get("force_refresh", False))
+                horizon = self.forecast_svc.get_forecast_horizon(force_refresh=force)
+                return {"forecast": horizon.to_dict()}
+
+            elif cmd_type in ("forecast.set_provider", "FORECAST_SET_PROVIDER"):
+                p_name = str(payload.get("provider", "SIMULATION"))
+                success = self.forecast_svc.set_active_provider(p_name)
+                horizon = self.forecast_svc.get_forecast_horizon()
+                return {"success": success, "forecast": horizon.to_dict()}
+
+            elif cmd_type in ("forecast.inject_event", "FORECAST_INJECT_EVENT"):
+                ev_type = str(payload.get("event_type", "CLOUD_BURST"))
+                sev = str(payload.get("severity", "CRITICAL"))
+                msg = str(payload.get("message", "Simulated heavy cloudburst inundation"))
+                boost = float(payload.get("rainfall_boost", 35.0))
+                res = self.forecast_svc.inject_disaster_event(ev_type, sev, msg, boost)
+                # Trigger risk recalculation
+                self.risk_eng.evaluate_temporal_risk_map()
+                self.prepositioning_opt.evaluate_prepositioning()
+                return {
+                    "injection": res,
+                    "temporal_map": self.risk_eng.get_temporal_map().to_dict(),
+                    "recommendations": [r.to_dict() for r in self.prepositioning_opt.get_recommendations()],
+                }
+
+            elif cmd_type in ("forecast.get_health", "FORECAST_GET_HEALTH"):
+                return self.forecast_svc.get_health_status()
+
+            elif cmd_type in ("prepositioning.get_recommendations", "PREPOSITIONING_GET_RECOMMENDATIONS", "prepositioning.evaluate", "PREPOSITIONING_EVALUATE"):
+                recs = self.prepositioning_opt.evaluate_prepositioning()
+                stations = self.prepositioning_opt.get_charging_stations()
+                return {
+                    "recommendations": [r.to_dict() for r in recs],
+                    "charging_stations": [s.to_dict() for s in stations],
+                }
+
+            elif cmd_type in ("prepositioning.execute", "PREPOSITIONING_EXECUTE"):
+                rec_id = str(payload.get("recommendation_id", ""))
+                res = self.prepositioning_opt.execute_recommendation(rec_id, operator_id=session_id)
+                return res
+
+            elif cmd_type in ("prepositioning.reject", "PREPOSITIONING_REJECT"):
+                rec_id = str(payload.get("recommendation_id", ""))
+                reason = str(payload.get("reason", "Operator manual override"))
+                res = self.prepositioning_opt.reject_recommendation(rec_id, operator_id=session_id, reason=reason)
+                return res
+
+            elif cmd_type in ("charging.get_stations", "CHARGING_GET_STATIONS"):
+                stations = self.prepositioning_opt.get_charging_stations()
+                return {"charging_stations": [s.to_dict() for s in stations]}
 
             else:
                 raise ValueError(f"Unknown operational command_type: {cmd_type}")

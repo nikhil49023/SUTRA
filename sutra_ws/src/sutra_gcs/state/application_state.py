@@ -18,6 +18,7 @@ from .geofence_state import GeofenceState
 from .gis_state import GISState
 from .map_state import MapState
 from .mission_state import MissionState
+from .risk_state import RiskState
 from .telemetry_state import TelemetryState
 
 logger = logging.getLogger("sutra_gcs.state_store")
@@ -42,6 +43,7 @@ class ApplicationState:
     gis_state: GISState = field(default_factory=GISState)
     communication_state: CommunicationState = field(default_factory=CommunicationState)
     ai_state: AIState = field(default_factory=AIState)
+    risk_state: RiskState = field(default_factory=RiskState)
 
     application_status: str = "READY"
     backend_connected: bool = True
