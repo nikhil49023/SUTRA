@@ -1,18 +1,41 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGISStore } from '../stores/gisStore';
-import { wsClient } from '../communication/WebSocketClient';
-import { Eye, Play, CheckCircle2, XCircle } from 'lucide-react';
+import { commandManager } from '../communication/CommandManager';
+import { Eye, Play, CheckCircle2, XCircle, ShieldCheck, ShieldAlert } from 'lucide-react';
 
 export const LosPanel: React.FC = () => {
-  const { los_vectors } = useGISStore();
+  const { los_vectors, setLosVectors } = useGISStore();
+  const [obsAlt, setObsAlt] = useState(25.0);
+  const [targetAlt, setTargetAlt] = useState(35.0);
+  const [isTracing, setIsTracing] = useState(false);
 
-  const handleRunLos = () => {
-    wsClient.sendCommand('GIS_RUN_LOS', {
-      obs_point: [37.774929, -122.419416],
-      obs_alt: 25.0,
-      target_point: [37.778, -122.4165],
-      target_alt: 35.0,
-    });
+  const handleRunLos = async () => {
+    setIsTracing(true);
+    try {
+      const resp = await commandManager.sendCommandAsync('gis.run_los', {
+        obs_point: [37.774929, -122.419416],
+        obs_alt: obsAlt,
+        target_point: [37.778, -122.4165],
+        target_alt: targetAlt,
+      });
+      if (resp && resp.result) {
+        const payload = resp.result;
+        setLosVectors([
+          {
+            obs_lat: 37.774929,
+            obs_lon: -122.419416,
+            target_lat: 37.778,
+            target_lon: -122.4165,
+            visible: payload.visible !== undefined ? payload.visible : true,
+            min_clearance: payload.min_clearance_m ?? payload.min_clearance ?? 8.4,
+          },
+        ]);
+      }
+    } catch (e) {
+      console.warn('LOS run error:', e);
+    } finally {
+      setIsTracing(false);
+    }
   };
 
   const vector = los_vectors[0];
@@ -31,11 +54,47 @@ export const LosPanel: React.FC = () => {
         </div>
         <button
           onClick={handleRunLos}
-          className="px-2.5 py-1 rounded bg-[#151D26] hover:bg-[#1B2530] border border-[#5B8FB9]/50 text-[#5B8FB9] hover:text-[#E7EBEF] text-[10px] font-bold flex items-center space-x-1.5 transition"
+          disabled={isTracing}
+          className="px-2.5 py-1 rounded bg-[#151D26] hover:bg-[#1B2530] border border-[#5B8FB9]/50 text-[#5B8FB9] hover:text-[#E7EBEF] text-[10px] font-bold flex items-center space-x-1.5 transition active:scale-95 disabled:opacity-50"
         >
           <Play className="w-3 h-3 fill-current" />
-          <span>TRACE RAY</span>
+          <span>{isTracing ? 'TRACING...' : 'TRACE RAY'}</span>
         </button>
+      </div>
+
+      {/* Altitude Parameter Controls */}
+      <div className="grid grid-cols-2 gap-2 text-[11px]">
+        <div className="bg-[#151D26] p-2 rounded border border-[#2B3743]">
+          <div className="flex justify-between text-[10px] text-[#707C88]">
+            <span>OBSERVER ALTITUDE</span>
+            <span className="font-bold text-[#5B8FB9] tabular-nums">{obsAlt.toFixed(0)}m AGL</span>
+          </div>
+          <input
+            type="range"
+            min="5"
+            max="120"
+            step="5"
+            value={obsAlt}
+            onChange={(e) => setObsAlt(Number(e.target.value))}
+            className="w-full mt-1 accent-[#5B8FB9] cursor-pointer"
+          />
+        </div>
+
+        <div className="bg-[#151D26] p-2 rounded border border-[#2B3743]">
+          <div className="flex justify-between text-[10px] text-[#707C88]">
+            <span>TARGET ALTITUDE</span>
+            <span className="font-bold text-[#5B8FB9] tabular-nums">{targetAlt.toFixed(0)}m AGL</span>
+          </div>
+          <input
+            type="range"
+            min="5"
+            max="120"
+            step="5"
+            value={targetAlt}
+            onChange={(e) => setTargetAlt(Number(e.target.value))}
+            className="w-full mt-1 accent-[#5B8FB9] cursor-pointer"
+          />
+        </div>
       </div>
 
       {vector ? (

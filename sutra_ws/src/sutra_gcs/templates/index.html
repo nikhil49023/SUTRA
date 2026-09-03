@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SUTRA — Tactical Ground Control Station</title>
+    <!-- Leaflet GIS CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tactical.css') }}">
+</head>
+<body>
+    <div class="tactical-container">
+        
+        <!-- ════════ TOP HEADER BAR ════════ -->
+        <header class="topbar">
+            <div class="brand">
+                <span class="pulse-indicator"></span>
+                <span class="brand-title">SUTRA TACTICAL GCS</span>
+                <span class="badge badge-primary">v2.1.0-PYTHON</span>
+            </div>
+
+            <div class="swarm-status-bar">
+                <div class="drone-pill active" id="pill-alpha" onclick="selectActiveDrone('drone_alpha')">
+                    <span class="status-dot green"></span> ALPHA (LDR)
+                </div>
+                <div class="drone-pill" id="pill-bravo" onclick="selectActiveDrone('drone_bravo')">
+                    <span class="status-dot green"></span> BRAVO (WING)
+                </div>
+                <div class="drone-pill" id="pill-charlie" onclick="selectActiveDrone('drone_charlie')">
+                    <span class="status-dot green"></span> CHARLIE (SCOUT)
+                </div>
+                <div class="drone-pill" id="pill-delta" onclick="selectActiveDrone('drone_delta')">
+                    <span class="status-dot green"></span> DELTA (RELAY)
+                </div>
+            </div>
+
+            <div class="operator-panel">
+                <span class="operator-tag" id="operator-badge">🎖️ COMMANDER: OFFGRID_LEAD</span>
+                <span class="mesh-tag" id="mesh-link-badge">MESH: 98% (12ms)</span>
+                <button onclick="emergencyStop()" class="btn btn-danger btn-emergency">🛑 EMERGENCY ALL-STOP</button>
+            </div>
+        </header>
+
+        <!-- ════════ MASTER NAVIGATION TABS ════════ -->
+        <nav class="nav-tabs">
+            <button class="nav-item active" onclick="switchTab('dashboard')">🛰️ DASHBOARD</button>
+            <button class="nav-item" onclick="switchTab('planner')">🗺️ MISSION PLANNER</button>
+            <button class="nav-item" onclick="switchTab('gis')">🌐 GIS & RF LOS</button>
+            <button class="nav-item" onclick="switchTab('swarm')">🦅 SWARM OPS</button>
+            <button class="nav-item" onclick="switchTab('comms')">📡 COMMS & MAVLINK</button>
+            <button class="nav-item" onclick="switchTab('ai')">👁️ AI PERCEPTION</button>
+            <button class="nav-item" onclick="switchTab('replay')">📼 FLIGHT REPLAY</button>
+            <button class="nav-item" onclick="switchTab('settings')">⚙️ SECURITY & OPS</button>
+        </nav>
+
+        <!-- ════════ MAIN WORKSPACE ════════ -->
+        <main class="workspace">
+
+            <!-- ════════ TAB 1: MASTER DASHBOARD (3-COLUMN) ════════ -->
+            <div id="view-dashboard" class="tab-view active">
+                <div class="three-column-grid">
+                    
+                    <!-- LEFT COLUMN: CONTROLS & NLP -->
+                    <aside class="side-panel left">
+                        <div class="panel-title">Flight Operations</div>
+                        <div class="btn-grid">
+                            <button onclick="armDrone()" class="btn btn-primary" id="btn-arm">⚙️ ARM (50Hz)</button>
+                            <button onclick="takeoffDrone(15)" class="btn btn-success">🚀 TAKEOFF 15M</button>
+                            <button onclick="rtlDrone()" class="btn btn-warning">🏠 RTL HOME</button>
+                            <button onclick="emergencyStop()" class="btn btn-danger">🛑 MOTOR KILL</button>
+                        </div>
+
+                        <div class="panel-title" style="margin-top: 10px;">Swarm Formations</div>
+                        <div class="btn-grid">
+                            <button onclick="setFormation('V_FORMATION')" class="btn">🦅 V-WEDGE</button>
+                            <button onclick="setFormation('GRID_SEARCH')" class="btn">📡 SAR GRID</button>
+                            <button onclick="setFormation('PERIMETER_BOX')" class="btn">📦 PERIMETER</button>
+                        </div>
+
+                        <div class="panel-title" style="margin-top: 10px;">Tactical AI Voice/Text</div>
+                        <div class="nlp-box">
+                            <input type="text" id="nlp-input" placeholder="e.g. 'takeoff 20m', 'grid search'..." onkeydown="if(event.key==='Enter') sendNLPCommand()">
+                            <button onclick="sendNLPCommand()" class="btn btn-primary">SEND</button>
+                        </div>
+                        <div id="nlp-feedback" style="font-size: 9px; color: #10b981; margin-top: 4px;">Ready for voice/text commands.</div>
+
+                        <div class="panel-title" style="margin-top: 10px;">System Console Log</div>
+                        <div class="console-box" id="console-logs"></div>
+                    </aside>
+
+                    <!-- CENTER COLUMN: INTERACTIVE GIS MAP -->
+                    <section class="center-panel">
+                        <div id="tactical-map"></div>
+                        <div class="map-overlay-top">
+                            <span id="map-drone-status" style="color: #00f2fe; font-weight: 700;">ACTIVE: ALPHA</span> |
+                            <span id="wp-counter" style="color: #10b981; font-weight: 600;">0 WPs</span>
+                            <button onclick="uploadWaypoints()" class="btn btn-primary" style="padding: 2px 6px; font-size: 9px;">UPLOAD</button>
+                            <button onclick="clearWaypoints()" class="btn" style="padding: 2px 6px; font-size: 9px;">CLEAR</button>
+                        </div>
+                        <div class="map-overlay-bottom">
+                            <div><span style="color: #94a3b8;">FLIGHT STATUS: </span><span id="status-banner-text" style="color: #00f2fe; font-weight: 700;">STANDBY</span></div>
+                            <div><span style="color: #94a3b8;">ORCA 3D: </span><span style="color: #10b981; font-weight: 700;">3.10m [GATE G5 OK]</span></div>
+                        </div>
+                    </section>
+
+                    <!-- RIGHT COLUMN: PFD HORIZON & TELEMETRY -->
+                    <aside class="side-panel right">
+                        <div class="panel-title">Primary Flight Display (PFD)</div>
+                        <div class="horizon-box">
+                            <canvas id="pfd-canvas"></canvas>
+                            <div class="horizon-labels">
+                                <span>PITCH: <b id="readout-pitch" style="color: #38bdf8;">0.0°</b></span>
+                                <span>ROLL: <b id="readout-roll" style="color: #38bdf8;">0.0°</b></span>
+                                <span>HDG: <b id="readout-heading" style="color: #10b981;">0°</b></span>
+                            </div>
+                        </div>
+
+                        <div class="panel-title">Avionics & Telemetry</div>
+                        <div class="telemetry-grid">
+                            <div class="telemetry-card">
+                                <div class="telemetry-card-title">ALTITUDE (AGL)</div>
+                                <div class="telemetry-card-val" id="val-alt-agl">0.0 m</div>
+                            </div>
+                            <div class="telemetry-card">
+                                <div class="telemetry-card-title">GROUND SPEED</div>
+                                <div class="telemetry-card-val" id="val-gnd-spd">0.0 m/s</div>
+                            </div>
+                            <div class="telemetry-card">
+                                <div class="telemetry-card-title">BATTERY (6S)</div>
+                                <div class="telemetry-card-val" id="val-battery-pct">100.0 %</div>
+                            </div>
+                            <div class="telemetry-card">
+                                <div class="telemetry-card-title">CLIMB RATE</div>
+                                <div class="telemetry-card-val" id="val-climb-rate">0.0 m/s</div>
+                            </div>
+                        </div>
+
+                        <div class="panel-title" style="display: flex; justify-content: space-between;">
+                            <span>AI Perception & SAR</span>
+                            <span id="sar-detection-count" style="color: #10b981; font-weight: 700;">0 TARGETS</span>
+                        </div>
+                        <div class="camera-container" id="camera-stream-box">
+                            <div class="cam-crosshair"></div>
+                            <div style="position: absolute; top: 4px; left: 6px; font-size: 8px; color: #10b981; font-weight: 700;">
+                                GIMBAL CAM (-45°) [YOLOv8]
+                            </div>
+                        </div>
+                    </aside>
+
+                </div>
+            </div>
+
+            <!-- ════════ TAB 2: MISSION PLANNER ════════ -->
+            <div id="view-planner" class="tab-view">
+                <div class="full-view-container">
+                    <div class="full-view-panel">
+                        <div class="panel-title">Interactive Waypoint Editor</div>
+                        <p style="font-size: 10px; color: #94a3b8;">
+                            Define 3D tactical flight corridors. Waypoint coordinates automatically validate against geofence limits and battery reserves.
+                        </p>
+                        <table class="tactical-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Latitude</th>
+                                    <th>Longitude</th>
+                                    <th>Alt (m)</th>
+                                    <th>Speed (m/s)</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="waypoint-table-body">
+                                <tr><td colspan="6" style="text-align: center; color: #64748b;">No waypoints created. Click on the map to add waypoints.</td></tr>
+                            </tbody>
+                        </table>
+                        <div style="margin-top: 10px; display: flex; gap: 8px;">
+                            <button onclick="validateMissionPlan()" class="btn btn-primary">🔍 VALIDATE ROUTE</button>
+                            <button onclick="exportQGCPlan()" class="btn btn-success">💾 EXPORT QGC .PLAN</button>
+                            <button onclick="clearWaypoints()" class="btn btn-danger">🗑️ CLEAR ALL</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ════════ TAB 3: GIS & RF LINE-OF-SIGHT ════════ -->
+            <div id="view-gis" class="tab-view">
+                <div class="full-view-container">
+                    <div class="full-view-panel">
+                        <div class="panel-title">Terrain Elevation Cross-Section & 1st Fresnel Zone (F1)</div>
+                        <canvas id="rf-elevation-canvas" style="width: 100%; height: 180px; background: #0b111e; border: 1px solid #1e293b; border-radius: 4px;"></canvas>
+                        <div class="telemetry-grid" style="margin-top: 10px;">
+                            <div class="telemetry-card">
+                                <div class="telemetry-card-title">TOTAL DISTANCE</div>
+                                <div class="telemetry-card-val" id="rf-dist-val">-- m</div>
+                            </div>
+                            <div class="telemetry-card">
+                                <div class="telemetry-card-title">ESTIMATED RSSI</div>
+                                <div class="telemetry-card-val" id="rf-rssi-val">-- dBm</div>
+                            </div>
+                            <div class="telemetry-card">
+                                <div class="telemetry-card-title">FRESNEL RADIUS (F1)</div>
+                                <div class="telemetry-card-val" id="rf-fresnel-val">-- m</div>
+                            </div>
+                            <div class="telemetry-card">
+                                <div class="telemetry-card-title">RF LINE-OF-SIGHT</div>
+                                <div class="telemetry-card-val" id="rf-los-status-pill" style="color: #10b981;">CLEAR</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ════════ TAB 4: SWARM COORDINATION ════════ -->
+            <div id="view-swarm" class="tab-view">
+                <div class="full-view-container">
+                    <div class="full-view-panel">
+                        <div class="panel-title">Swarm Coordination Matrix & ORCA 3D Separation</div>
+                        <table class="tactical-table">
+                            <thead>
+                                <tr>
+                                    <th>UAV Callsign</th>
+                                    <th>Role</th>
+                                    <th>State</th>
+                                    <th>Alt (AGL)</th>
+                                    <th>Battery</th>
+                                    <th>Separation</th>
+                                    <th>Gate G5</th>
+                                </tr>
+                            </thead>
+                            <tbody id="swarm-matrix-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ════════ TAB 5: COMMS & MAVLINK ════════ -->
+            <div id="view-comms" class="tab-view">
+                <div class="full-view-container">
+                    <div class="full-view-panel">
+                        <div class="panel-title">Live MAVLink v2 Telemetry Packet Stream</div>
+                        <pre id="mavlink-packet-view" style="background: #0b111e; color: #00f2fe; padding: 12px; font-size: 11px; height: 260px; overflow: auto; border: 1px solid #1e293b; border-radius: 4px;"></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ════════ TAB 6: AI PERCEPTION & SAR ════════ -->
+            <div id="view-ai" class="tab-view">
+                <div class="full-view-container">
+                    <div class="full-view-panel">
+                        <div class="panel-title">YOLOv8 SAR Detection Log & Threat Risk Index</div>
+                        <table class="tactical-table">
+                            <thead>
+                                <tr>
+                                    <th>Target ID</th>
+                                    <th>Classification</th>
+                                    <th>Confidence</th>
+                                    <th>Thermal Signature</th>
+                                    <th>GPS Lat / Lon</th>
+                                    <th>Threat Level</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ai-sar-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ════════ TAB 7: FLIGHT REPLAY ════════ -->
+            <div id="view-replay" class="tab-view">
+                <div class="full-view-container">
+                    <div class="full-view-panel">
+                        <div class="panel-title">Blackbox Keyframe Flight Data Recorder</div>
+                        <div style="display: flex; gap: 8px; align-items: center; margin-top: 10px;">
+                            <button onclick="toggleFlightReplay()" class="btn btn-primary" id="btn-replay-play">▶️ PLAY REPLAY</button>
+                            <input type="range" id="replay-slider" min="0" max="100" value="0" style="flex: 1;" oninput="scrubReplay(this.value)">
+                            <span id="replay-time-display" style="font-size: 11px; color: #00f2fe;">00:00 / 00:00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ════════ TAB 8: SECURITY RBAC & OPS ════════ -->
+            <div id="view-settings" class="tab-view">
+                <div class="full-view-container">
+                    <div class="full-view-panel">
+                        <div class="panel-title">4-Tier Role-Based Access Control (RBAC)</div>
+                        <div class="btn-grid">
+                            <button onclick="switchRole('OFFGRID_LEAD', 'COMMANDER')" class="btn btn-primary">🎖️ COMMANDER</button>
+                            <button onclick="switchRole('FLIGHT_OPS', 'OPERATOR')" class="btn btn-success">✈️ OPERATOR</button>
+                            <button onclick="switchRole('SAR_ANALYST', 'ANALYST')" class="btn btn-warning">📊 ANALYST</button>
+                            <button onclick="switchRole('PUBLIC_GUEST', 'VIEWER')" class="btn">👁️ VIEWER</button>
+                        </div>
+                    </div>
+                    <div class="full-view-panel" style="margin-top: 10px;">
+                        <div class="panel-title">Security & Command Audit Trail</div>
+                        <table class="tactical-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Source</th>
+                                    <th>Message</th>
+                                </tr>
+                            </thead>
+                            <tbody id="audit-log-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Frontend Dashboard Script -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>
