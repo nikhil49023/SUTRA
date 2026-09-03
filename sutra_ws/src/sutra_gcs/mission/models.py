@@ -14,13 +14,18 @@ from .waypoint import Waypoint, WaypointCommand
 
 class MissionStatus(str, Enum):
     """
-    Planning status of the mission flight plan.
+    Planning and execution status of the mission flight plan.
     """
 
     EMPTY = "EMPTY"
     PLANNING = "PLANNING"
     VALIDATING = "VALIDATING"
     READY = "READY"
+    RUNNING = "RUNNING"
+    HOLD = "HOLD"
+    RTL = "RTL"
+    COMPLETED = "COMPLETED"
+    ABORTED = "ABORTED"
     INVALID = "INVALID"
 
 

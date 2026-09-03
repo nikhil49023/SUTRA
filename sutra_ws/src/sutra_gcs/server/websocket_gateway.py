@@ -525,9 +525,24 @@ class WebSocketGatewayServer:
                     altitude=float(payload.get("altitude", 25.0)),
                     speed=float(payload.get("speed", 5.0)),
                 )
+                self.state_store.update_state(
+                    lambda s: replace(
+                        s,
+                        mission_state=replace(
+                            s.mission_state,
+                            waypoints=self.mission_mgr.get_waypoints(),
+                        ),
+                    )
+                )
                 self.event_bus.emit(
                     "mission.waypoint_added",
                     payload={"waypoint": serialize_obj(wp)},
+                    correlation_id=corr_id,
+                    state_version=self.state_store.state_version,
+                )
+                self.event_bus.emit(
+                    "mission.updated",
+                    payload={"mission": serialize_obj(self.mission_mgr.get_mission())},
                     correlation_id=corr_id,
                     state_version=self.state_store.state_version,
                 )
@@ -544,6 +559,15 @@ class WebSocketGatewayServer:
                     clean_kwargs = {k: v for k, v in payload.items() if k not in ("waypoint_id", "id", "version")}
                     self.mission_mgr.update_waypoint(wp_id, **clean_kwargs)
 
+                self.state_store.update_state(
+                    lambda s: replace(
+                        s,
+                        mission_state=replace(
+                            s.mission_state,
+                            waypoints=self.mission_mgr.get_waypoints(),
+                        ),
+                    )
+                )
                 wp = self.mission_mgr.get_waypoint(wp_id)
                 self.event_bus.emit(
                     "mission.waypoint_updated",
@@ -556,9 +580,24 @@ class WebSocketGatewayServer:
             elif cmd_type in ("mission.delete_waypoint", "WAYPOINT_DELETE"):
                 wp_id = payload.get("waypoint_id") or payload.get("id")
                 self.mission_mgr.delete_waypoint(wp_id)
+                self.state_store.update_state(
+                    lambda s: replace(
+                        s,
+                        mission_state=replace(
+                            s.mission_state,
+                            waypoints=self.mission_mgr.get_waypoints(),
+                        ),
+                    )
+                )
                 self.event_bus.emit(
                     "mission.waypoint_deleted",
                     payload={"waypoint_id": wp_id},
+                    correlation_id=corr_id,
+                    state_version=self.state_store.state_version,
+                )
+                self.event_bus.emit(
+                    "mission.updated",
+                    payload={"mission": serialize_obj(self.mission_mgr.get_mission())},
                     correlation_id=corr_id,
                     state_version=self.state_store.state_version,
                 )
@@ -569,6 +608,15 @@ class WebSocketGatewayServer:
                     int(payload.get("from_index", 1)),
                     int(payload.get("to_index", 1)),
                 )
+                self.state_store.update_state(
+                    lambda s: replace(
+                        s,
+                        mission_state=replace(
+                            s.mission_state,
+                            waypoints=self.mission_mgr.get_waypoints(),
+                        ),
+                    )
+                )
                 self.event_bus.emit(
                     "mission.waypoints_updated",
                     payload={"waypoints": serialize_obj(self.mission_mgr.get_waypoints())},
@@ -577,8 +625,48 @@ class WebSocketGatewayServer:
                 )
                 return {"reordered": True}
 
+            elif cmd_type in ("mission.set_waypoints", "MISSION_SET_WAYPOINTS"):
+                raw_wps = payload.get("waypoints", [])
+                self.mission_mgr.clear_waypoints()
+                for w in raw_wps:
+                    self.mission_mgr.add_waypoint(
+                        latitude=float(w.get("latitude", 0.0)),
+                        longitude=float(w.get("longitude", 0.0)),
+                        altitude=float(w.get("altitude", 25.0)),
+                        speed=float(w.get("speed", 5.0)),
+                    )
+                self.state_store.update_state(
+                    lambda s: replace(
+                        s,
+                        mission_state=replace(
+                            s.mission_state,
+                            waypoints=self.mission_mgr.get_waypoints(),
+                        ),
+                    )
+                )
+                self.event_bus.emit(
+                    "mission.updated",
+                    payload={"mission": serialize_obj(self.mission_mgr.get_mission())},
+                    correlation_id=corr_id,
+                    state_version=self.state_store.state_version,
+                )
+                return {"success": True, "count": len(self.mission_mgr.get_waypoints())}
+
             elif cmd_type in ("mission.clear", "MISSION_CLEAR"):
                 self.mission_mgr.clear_waypoints()
+                self.state_store.update_state(
+                    lambda s: replace(
+                        s,
+                        mission_state=replace(
+                            s.mission_state,
+                            waypoints=[],
+                            active_waypoint_index=1,
+                            mission_progress=0.0,
+                            distance_remaining=0.0,
+                            estimated_time_remaining=0.0,
+                        ),
+                    )
+                )
                 self.event_bus.emit(
                     "mission.updated",
                     payload={"mission": serialize_obj(self.mission_mgr.get_mission())},
@@ -594,34 +682,110 @@ class WebSocketGatewayServer:
                 return {"valid": report.valid, "errors": report.errors, "warnings": report.warnings, "info": report.info}
 
             # Mission Lifecycle & Dangerous Flight Operations
-            elif cmd_type in ("mission.start", "MISSION_START"):
+            elif cmd_type in ("mission.start", "MISSION_START", "mission.restart"):
                 self.sim_running = True
                 self.sim_is_rtl = False
                 self.sim_target_wp = 1
-                self.event_bus.emit("mission.started", payload={"status": "MISSION"}, correlation_id=corr_id, state_version=self.state_store.state_version)
-                return {"status": "MISSION"}
+                self.mission_mgr.start_mission()
+                self.state_store.update_state(
+                    lambda s: replace(
+                        s,
+                        mission_state=replace(
+                            s.mission_state,
+                            state="MISSION",
+                            active_waypoint_index=1,
+                            mission_progress=0.0,
+                        ),
+                    )
+                )
+                self.event_bus.emit(
+                    "mission.started",
+                    payload={"status": "MISSION", "state": "MISSION", "active_waypoint_index": 1, "mission_progress": 0.0},
+                    correlation_id=corr_id,
+                    state_version=self.state_store.state_version,
+                )
+                self.event_bus.emit(
+                    "alert.created",
+                    payload={
+                        "alert": {
+                            "severity": "INFO",
+                            "title": "MISSION STARTED",
+                            "message": "Autonomous swarm waypoint mission started. Navigating to WP 1.",
+                            "source": "mission_engine",
+                        }
+                    },
+                    correlation_id=corr_id,
+                    state_version=self.state_store.state_version,
+                )
+                return {"status": "MISSION", "state": "MISSION", "active_waypoint_index": 1}
 
             elif cmd_type in ("mission.pause", "MISSION_PAUSE"):
                 self.sim_running = False
-                self.event_bus.emit("mission.paused", payload={"status": "HOLD"}, correlation_id=corr_id, state_version=self.state_store.state_version)
-                return {"status": "HOLD"}
+                self.mission_mgr.pause_mission()
+                self.state_store.update_state(
+                    lambda s: replace(
+                        s,
+                        mission_state=replace(
+                            s.mission_state,
+                            state="HOLD",
+                        ),
+                    )
+                )
+                self.event_bus.emit(
+                    "mission.paused",
+                    payload={"status": "HOLD", "state": "HOLD"},
+                    correlation_id=corr_id,
+                    state_version=self.state_store.state_version,
+                )
+                return {"status": "HOLD", "state": "HOLD"}
 
             elif cmd_type in ("mission.resume", "MISSION_RESUME"):
                 self.sim_running = True
-                self.event_bus.emit("mission.resumed", payload={"status": "MISSION"}, correlation_id=corr_id, state_version=self.state_store.state_version)
-                return {"status": "MISSION"}
+                self.mission_mgr.resume_mission()
+                self.state_store.update_state(
+                    lambda s: replace(
+                        s,
+                        mission_state=replace(
+                            s.mission_state,
+                            state="MISSION",
+                        ),
+                    )
+                )
+                self.event_bus.emit(
+                    "mission.resumed",
+                    payload={"status": "MISSION", "state": "MISSION", "active_waypoint_index": self.sim_target_wp},
+                    correlation_id=corr_id,
+                    state_version=self.state_store.state_version,
+                )
+                return {"status": "MISSION", "state": "MISSION", "active_waypoint_index": self.sim_target_wp}
 
-            elif cmd_type in ("mission.rtl", "EMERGENCY_RTL", "drone.rtl"):
+            elif cmd_type in ("mission.rtl", "EMERGENCY_RTL", "drone.rtl", "mission.abort", "MISSION_ABORT"):
                 drone_id = payload.get("drone_id", "ALL")
+                self.sim_running = False
                 self.sim_is_rtl = True
-                self.event_bus.emit("mission.rtl", payload={"drone_id": drone_id}, correlation_id=corr_id, state_version=self.state_store.state_version)
+                self.mission_mgr.abort_mission()
+                self.state_store.update_state(
+                    lambda s: replace(
+                        s,
+                        mission_state=replace(
+                            s.mission_state,
+                            state="RTL",
+                        ),
+                    )
+                )
+                self.event_bus.emit(
+                    "mission.rtl",
+                    payload={"drone_id": drone_id, "status": "RTL", "state": "RTL"},
+                    correlation_id=corr_id,
+                    state_version=self.state_store.state_version,
+                )
                 self.event_bus.emit(
                     "alert.created",
                     payload={
                         "alert": {
                             "severity": "EMERGENCY",
                             "title": "EMERGENCY RTL",
-                            "message": f"Emergency RTL commanded for {drone_id}.",
+                            "message": f"Emergency RTL commanded for {drone_id}. Aborting mission.",
                             "source": "operator",
                         }
                     },
@@ -979,7 +1143,7 @@ class WebSocketGatewayServer:
     def _run_simulation_loop_tick(self, dt: float = 0.1):
         """Executes a single simulation tick updating all drone kinematics."""
         state = self.state_store.get_state()
-        wps = state.mission_state.waypoints
+        wps = self.mission_mgr.get_waypoints() or state.mission_state.waypoints
         fleet = state.fleet_state
         leader = fleet.get_leader()
 
@@ -993,43 +1157,115 @@ class WebSocketGatewayServer:
         leader_spd = leader.speed
         leader_bat = max(5.0, leader.battery - 0.015)
 
-        # 1. Update Leader Waypoint Trajectory Navigation
-        if self.sim_running and wps:
+        # 1. Update Leader Waypoint Trajectory Navigation & Progression
+        current_mission_status = "HOLD"
+        active_wp_idx = 1
+        prog_pct = 0.0
+        dist_rem = 0.0
+        eta_s = 0.0
+
+        if wps:
+            active_wp_idx = min(len(wps), max(1, self.sim_target_wp))
             if self.sim_is_rtl:
+                current_mission_status = "RTL"
                 t_lat = state.mission_state.home_latitude
                 t_lon = state.mission_state.home_longitude
                 t_alt = 20.0
-            elif 1 <= self.sim_target_wp <= len(wps):
-                target_wp = wps[self.sim_target_wp - 1]
+                dist_rem = RouteCalculator.calculate_distance(leader_lat, leader_lon, t_lat, t_lon)
+                eta_s = round(dist_rem / max(2.0, leader_spd), 1)
+                prog_pct = 100.0
+            elif self.sim_running:
+                current_mission_status = "MISSION"
+                target_wp = wps[active_wp_idx - 1]
                 t_lat = target_wp.latitude
                 t_lon = target_wp.longitude
                 t_alt = target_wp.altitude
-            else:
-                t_lat = wps[0].latitude
-                t_lon = wps[0].longitude
-                t_alt = wps[0].altitude
 
-            dist_m = RouteCalculator.calculate_distance(leader_lat, leader_lon, t_lat, t_lon)
-            bearing = RouteCalculator.calculate_bearing(leader_lat, leader_lon, t_lat, t_lon)
+                dist_to_cur = RouteCalculator.calculate_distance(leader_lat, leader_lon, t_lat, t_lon)
+                bearing = RouteCalculator.calculate_bearing(leader_lat, leader_lon, t_lat, t_lon)
 
-            if dist_m < 3.0:
-                if self.sim_target_wp < len(wps):
-                    self.sim_target_wp += 1
-                    self.event_bus.emit(
-                        "mission.waypoint_reached",
-                        payload={"waypoint_index": self.sim_target_wp - 1, "drone_id": leader.drone_id},
-                        state_version=self.state_store.state_version,
+                # Calculate remaining mission distance across upcoming segments
+                dist_rem = dist_to_cur
+                for i in range(active_wp_idx - 1, len(wps) - 1):
+                    dist_rem += RouteCalculator.calculate_distance(
+                        wps[i].latitude, wps[i].longitude, wps[i + 1].latitude, wps[i + 1].longitude
                     )
+                eta_s = round(dist_rem / max(2.0, leader_spd), 1)
+                prog_pct = round(((active_wp_idx - 1) / max(1, len(wps))) * 100.0, 1)
+
+                # Check if drone reached waypoint acceptance radius (< 3.5m)
+                if dist_to_cur < 3.5:
+                    if self.sim_target_wp < len(wps):
+                        completed_idx = self.sim_target_wp
+                        self.sim_target_wp += 1
+                        active_wp_idx = self.sim_target_wp
+                        prog_pct = round(((active_wp_idx - 1) / len(wps)) * 100.0, 1)
+
+                        self.event_bus.emit(
+                            "mission.waypoint_reached",
+                            payload={
+                                "waypoint_index": active_wp_idx,
+                                "completed_index": completed_idx,
+                                "drone_id": leader.drone_id,
+                                "mission_progress": prog_pct,
+                                "distance_remaining": dist_rem,
+                                "estimated_time_remaining": eta_s,
+                            },
+                            state_version=self.state_store.state_version,
+                        )
+                        self.mission_mgr.set_active_waypoint(active_wp_idx)
+                    else:
+                        # Reached final waypoint — complete mission and initiate RTL
+                        self.sim_running = False
+                        self.sim_is_rtl = True
+                        current_mission_status = "COMPLETED"
+                        prog_pct = 100.0
+                        self.mission_mgr.complete_mission()
+                        self.event_bus.emit(
+                            "mission.completed",
+                            payload={"status": "COMPLETED", "state": "COMPLETED", "mission_progress": 100.0},
+                            state_version=self.state_store.state_version,
+                        )
+                        self.event_bus.emit(
+                            "alert.created",
+                            payload={
+                                "alert": {
+                                    "severity": "INFO",
+                                    "title": "MISSION COMPLETED",
+                                    "message": f"Autonomous swarm successfully traversed all {len(wps)} waypoints. Returning to base.",
+                                    "source": "mission_engine",
+                                }
+                            },
+                            state_version=self.state_store.state_version,
+                        )
                 else:
-                    self.sim_target_wp = 1
+                    step_m = min(dist_to_cur, 6.0 * dt)
+                    ratio = step_m / dist_to_cur if dist_to_cur > 0 else 1.0
+                    leader_lat += (t_lat - leader_lat) * ratio
+                    leader_lon += (t_lon - leader_lon) * ratio
+                    leader_alt += (t_alt - leader_alt) * min(1.0, 2.0 * dt)
+                    leader_hdg = bearing
+                    leader_spd = 6.0
             else:
-                step_m = min(dist_m, 6.0 * dt)
-                ratio = step_m / dist_m if dist_m > 0 else 1.0
-                leader_lat += (t_lat - leader_lat) * ratio
-                leader_lon += (t_lon - leader_lon) * ratio
-                leader_alt += (t_alt - leader_alt) * min(1.0, 2.0 * dt)
-                leader_hdg = bearing
-                leader_spd = 6.0
+                current_mission_status = "HOLD"
+                prog_pct = round(((active_wp_idx - 1) / max(1, len(wps))) * 100.0, 1)
+
+        # 1.5. Periodic 2Hz Mission Progress Event Broadcast
+        self._sim_tick_count = getattr(self, "_sim_tick_count", 0) + 1
+        if self._sim_tick_count % 5 == 0 and (self.sim_running or self.sim_is_rtl):
+            self.event_bus.emit(
+                "mission.updated",
+                payload={
+                    "mission": {
+                        "state": current_mission_status,
+                        "active_waypoint_index": active_wp_idx,
+                        "mission_progress": prog_pct,
+                        "distance_remaining": dist_rem,
+                        "estimated_time_remaining": eta_s,
+                    }
+                },
+                state_version=self.state_store.state_version,
+            )
 
         # 2. Recalculate Formation Targets for ALL Drones based on updated Leader geodetics
         all_drone_ids = list(fleet.drones.keys())
@@ -1099,7 +1335,7 @@ class WebSocketGatewayServer:
                 heading=new_hdg,
                 speed=new_spd,
                 battery=new_bat,
-                flight_mode="RTL" if self.sim_is_rtl else ("MISSION" if self.sim_running else "HOLD"),
+                flight_mode=current_mission_status,
                 target_latitude=target_lat,
                 target_longitude=target_lon,
                 target_altitude=target_alt,
@@ -1110,7 +1346,7 @@ class WebSocketGatewayServer:
             )
             updated_drones[d_id] = updated_drone
 
-        # 4. Update Entire FleetState in StateStore
+        # 4. Update Entire FleetState & MissionState in StateStore
         self.state_store.update_state(
             lambda s: replace(
                 s,
@@ -1124,7 +1360,15 @@ class WebSocketGatewayServer:
                     heading=leader_hdg,
                     ground_speed=leader_spd,
                     battery_percent=leader_bat,
-                    flight_mode="RTL" if self.sim_is_rtl else ("MISSION" if self.sim_running else "HOLD"),
+                    flight_mode=current_mission_status,
+                ),
+                mission_state=replace(
+                    s.mission_state,
+                    state=current_mission_status,
+                    active_waypoint_index=active_wp_idx,
+                    mission_progress=prog_pct,
+                    distance_remaining=dist_rem,
+                    estimated_time_remaining=eta_s,
                 ),
             )
         )

@@ -414,18 +414,65 @@ class MissionManager:
                 return wp
         return None
 
+    def start_mission(self) -> None:
+        """Transitions mission status to RUNNING."""
+        self._mission = replace(self._mission, status=MissionStatus.RUNNING, active_waypoint=1, updated_at=time.time())
+        self._sync_to_app_state()
+
+    def pause_mission(self) -> None:
+        """Transitions mission status to HOLD."""
+        self._mission = replace(self._mission, status=MissionStatus.HOLD, updated_at=time.time())
+        self._sync_to_app_state()
+
+    def resume_mission(self) -> None:
+        """Resumes mission execution in status RUNNING."""
+        self._mission = replace(self._mission, status=MissionStatus.RUNNING, updated_at=time.time())
+        self._sync_to_app_state()
+
+    def abort_mission(self) -> None:
+        """Aborts mission with RTL."""
+        self._mission = replace(self._mission, status=MissionStatus.RTL, updated_at=time.time())
+        self._sync_to_app_state()
+
+    def complete_mission(self) -> None:
+        """Marks mission as COMPLETED."""
+        self._mission = replace(self._mission, status=MissionStatus.COMPLETED, updated_at=time.time())
+        self._sync_to_app_state()
+
+    def set_active_waypoint(self, index: int) -> None:
+        """Updates the active target waypoint index."""
+        self._mission = replace(self._mission, active_waypoint=index, updated_at=time.time())
+        self._sync_to_app_state()
+
     def _sync_to_app_state(self) -> None:
         """Pushes current mission model to the centralized StateStore."""
         stats = self.get_statistics()
-        state_enum = (
-            MissionStateEnum.READY
-            if self._mission.status == MissionStatus.READY
-            else (
-                MissionStateEnum.PLANNING
-                if self._mission.waypoints
-                else MissionStateEnum.IDLE
-            )
-        )
+        status_map = {
+            MissionStatus.RUNNING: MissionStateEnum.MISSION,
+            MissionStatus.HOLD: MissionStateEnum.HOLD,
+            MissionStatus.RTL: MissionStateEnum.RTL,
+            MissionStatus.COMPLETED: MissionStateEnum.COMPLETE,
+            MissionStatus.READY: MissionStateEnum.READY,
+            MissionStatus.PLANNING: MissionStateEnum.PLANNING,
+            MissionStatus.EMPTY: MissionStateEnum.IDLE,
+            MissionStatus.INVALID: MissionStateEnum.PLANNING,
+            MissionStatus.VALIDATING: MissionStateEnum.VALIDATING,
+            MissionStatus.ABORTED: MissionStateEnum.ABORTED,
+        }
+        state_enum = status_map.get(self._mission.status, MissionStateEnum.PLANNING if self._mission.waypoints else MissionStateEnum.IDLE)
+
+        # Read current progress from state store if active
+        cur_progress = 0.0
+        cur_dist_rem = stats.total_distance_m
+        cur_eta = stats.estimated_flight_time_sec
+        try:
+            existing_state = self.state_store.get_state().mission_state
+            if existing_state and existing_state.state in (MissionStateEnum.MISSION, MissionStateEnum.HOLD, MissionStateEnum.RTL):
+                cur_progress = existing_state.mission_progress
+                cur_dist_rem = existing_state.distance_remaining
+                cur_eta = existing_state.estimated_time_remaining
+        except Exception:
+            pass
 
         self.state_store.update_state(
             lambda app_state: replace(
@@ -439,9 +486,9 @@ class MissionManager:
                     home_longitude=self._mission.home_longitude,
                     selected_waypoint_id=self._selected_waypoint_id,
                     active_waypoint_index=self._mission.active_waypoint,
-                    mission_progress=0.0,
-                    distance_remaining=stats.total_distance_m,
-                    estimated_time_remaining=stats.estimated_flight_time_sec,
+                    mission_progress=cur_progress,
+                    distance_remaining=cur_dist_rem,
+                    estimated_time_remaining=cur_eta,
                     estimated_battery_required=stats.estimated_battery_drain_pct,
                     risk_level="LOW" if stats.total_distance_m < 5000 else "MEDIUM",
                     validation_status=self._mission.status.value,
