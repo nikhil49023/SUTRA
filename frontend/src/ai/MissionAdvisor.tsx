@@ -1,21 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAIStore } from '../stores/aiStore';
-import { wsClient } from '../communication/WebSocketClient';
+import { commandManager } from '../communication/CommandManager';
 import { Brain, Check, X, Sparkles, RefreshCw } from 'lucide-react';
 
 export const MissionAdvisor: React.FC = () => {
   const { recommendations, updateRecommendationStatus } = useAIStore();
+  const [isEvaluating, setIsEvaluating] = useState(false);
 
-  const handleDecision = (id: string, accept: boolean) => {
+  const handleDecision = async (id: string, accept: boolean) => {
     updateRecommendationStatus(id, accept ? 'ACCEPTED' : 'REJECTED');
-    wsClient.sendCommand('AI_DECISION', {
-      recommendation_id: id,
-      accept,
-    });
+    try {
+      await commandManager.sendCommandAsync('ai.decision', {
+        recommendation_id: id,
+        accept,
+      });
+    } catch (e) {
+      console.warn('AI Decision send error:', e);
+    }
   };
 
-  const handleRunAnalysis = () => {
-    wsClient.sendCommand('AI_RUN_ANALYSIS', {});
+  const handleRunAnalysis = async () => {
+    setIsEvaluating(true);
+    try {
+      await commandManager.sendCommandAsync('ai.run_analysis', {});
+    } catch (e) {
+      console.warn('AI Run Analysis error:', e);
+    } finally {
+      setIsEvaluating(false);
+    }
   };
 
   return (

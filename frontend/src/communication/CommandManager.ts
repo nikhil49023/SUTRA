@@ -84,6 +84,35 @@ class CommandManager {
     return commandId;
   }
 
+  public async sendCommandAsync<T = any>(
+    commandType: string,
+    payload: T,
+    options?: CommandOptions
+  ): Promise<CommandAck> {
+    return new Promise((resolve, reject) => {
+      const timeoutMs = options?.timeoutMs || this.defaultTimeoutMs;
+      this.sendCommand(commandType, payload, {
+        ...options,
+        onAck: (ack) => {
+          if (options?.onAck) options.onAck(ack);
+          if (ack.status === 'REJECTED' || ack.status === 'FAILED') {
+            reject(new Error(ack.error || 'Command failed'));
+          } else {
+            resolve(ack);
+          }
+        },
+        onTimeout: (timedOutId) => {
+          if (options?.onTimeout) options.onTimeout(timedOutId);
+          reject(new Error(`Command timed out after ${timeoutMs}ms`));
+        },
+        onRollback: (err) => {
+          if (options?.onRollback) options.onRollback(err);
+          reject(new Error(err));
+        },
+      });
+    });
+  }
+
   public handleAck(ack: CommandAck): void {
     const cmdId = ack.command_id;
     this.clearWatchdog(cmdId);
@@ -131,3 +160,7 @@ class CommandManager {
 }
 
 export const commandManager = new CommandManager();
+
+if (typeof window !== 'undefined') {
+  (window as any).__commandManager = commandManager;
+}

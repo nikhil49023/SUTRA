@@ -116,3 +116,9 @@ PERSONAL_LOG*.md
 *.personal.md
 .personal/
 docs/private/
+
+# NS-3 Simulation Binary Build Artifacts
+sutra_ws/src/sutra_comms/ns3/sutra_fanet_sim
+sutra_ws/src/sutra_comms/ns3/lib/
+sutra_ws/src/sutra_sim/ns3/sutra_fanet_sim
+sutra_ws/src/sutra_sim/ns3/lib/
