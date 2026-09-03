@@ -1,0 +1,344 @@
+<?xml version="1.0" ?>
+<!--
+Project SUTRA — Coordinated Multi-Drone Search & Rescue Stress Scenario
+World featuring disaster search corridors, thermal heat sources, 3D ruin obstacles,
+3D GPU LiDAR sensors, and 5 X3 UAV Quadcopters with gravity disabled on base_link.
+-->
+<sdf version="1.8">
+  <world name="stress_coordinated_search">
+    
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.002</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <!-- Ogre2 Rendering & Scene Broadcaster -->
+    <scene>
+      <ambient>0.4 0.4 0.4 1.0</ambient>
+      <background>0.7 0.8 1.0 1.0</background>
+      <shadows>true</shadows>
+      <grid>true</grid>
+    </scene>
+
+    <!-- Essential Gazebo Sim Plugins -->
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics" />
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster" />
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands" />
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu" />
+
+    <!-- Directional Sun Light -->
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 100 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.3 0.3 0.3 1</specular>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <!-- Ground Plane -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><plane><normal>0 0 1</normal><size>200 200</size></plane></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><plane><normal>0 0 1</normal><size>200 200</size></plane></geometry>
+          <material>
+            <ambient>0.25 0.3 0.25 1</ambient>
+            <diffuse>0.35 0.4 0.35 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 🏢 Disaster Search Corridors (Structured Concrete Ruin Walls) -->
+    <model name="disaster_corridor_wall_north">
+      <static>true</static>
+      <pose>0.0 25.0 3.0 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>50 2 6</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>50 2 6</size></box></geometry>
+          <material><ambient>0.4 0.4 0.45 1</ambient><diffuse>0.5 0.5 0.55 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="disaster_corridor_wall_south">
+      <static>true</static>
+      <pose>0.0 -25.0 3.0 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>50 2 6</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>50 2 6</size></box></geometry>
+          <material><ambient>0.4 0.4 0.45 1</ambient><diffuse>0.5 0.5 0.55 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 🏛️ 3D Ruin Obstacles (Collapsed Concrete Pillars & Rubble Blocks) -->
+    <model name="ruin_pillar_center_1">
+      <static>true</static>
+      <pose>5.0 5.0 4.0 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><cylinder><radius>0.8</radius><length>8.0</length></cylinder></geometry></collision>
+        <visual name="v">
+          <geometry><cylinder><radius>0.8</radius><length>8.0</length></cylinder></geometry>
+          <material><ambient>0.6 0.3 0.2 1</ambient><diffuse>0.7 0.4 0.3 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="ruin_pillar_center_2">
+      <static>true</static>
+      <pose>-8.0 12.0 4.0 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><cylinder><radius>0.8</radius><length>8.0</length></cylinder></geometry></collision>
+        <visual name="v">
+          <geometry><cylinder><radius>0.8</radius><length>8.0</length></cylinder></geometry>
+          <material><ambient>0.6 0.3 0.2 1</ambient><diffuse>0.7 0.4 0.3 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="rubble_block_east">
+      <static>true</static>
+      <pose>18.0 -8.0 2.5 0.2 -0.3 0.5</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>6 4 5</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>6 4 5</size></box></geometry>
+          <material><ambient>0.5 0.5 0.5 1</ambient><diffuse>0.6 0.6 0.6 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 🌡️ Thermal Heat Sources (Disaster Survivor & Debris Thermal Signatures) -->
+    <model name="survivor_thermal_source">
+      <static>true</static>
+      <pose>12.0 8.0 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><sphere><radius>0.6</radius></sphere></geometry></collision>
+        <visual name="v">
+          <geometry><sphere><radius>0.6</radius></sphere></geometry>
+          <material>
+            <ambient>1.0 0.3 0.0 1</ambient>
+            <diffuse>1.0 0.4 0.0 1</diffuse>
+            <emissive>1.0 0.5 0.0 1</emissive>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="fire_debris_thermal_source">
+      <static>true</static>
+      <pose>-15.0 -15.0 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><cylinder><radius>1.2</radius><length>0.8</length></cylinder></geometry></collision>
+        <visual name="v">
+          <geometry><cylinder><radius>1.2</radius><length>0.8</length></cylinder></geometry>
+          <material>
+            <ambient>1.0 0.1 0.0 1</ambient>
+            <diffuse>1.0 0.2 0.0 1</diffuse>
+            <emissive>1.0 0.3 0.0 1</emissive>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 🚁 UAV Alpha (Sector 1, spawn x=15m, y=0m, z=4.0m) -->
+    <model name="uav_alpha">
+      <pose>15.0 0.0 4.0 0 0 3.14159</pose>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial>
+          <mass>1.5</mass>
+          <inertia><ixx>0.03475</ixx><iyy>0.07000</iyy><izz>0.09770</izz></inertia>
+        </inertial>
+        <collision name="col"><geometry><box><size>0.47 0.47 0.11</size></box></geometry></collision>
+        <visual name="mesh"><geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry></visual>
+
+        <!-- 3D GPU LiDAR Sensor -->
+        <sensor name="uav_alpha_lidar" type="gpu_lidar">
+          <pose>0 0 0.1 0 0 0</pose>
+          <topic>/uav_alpha/lidar/points</topic>
+          <update_rate>10</update_rate>
+          <ray>
+            <scan>
+              <horizontal><samples>360</samples><resolution>1</resolution><min_angle>-3.14159</min_angle><max_angle>3.14159</max_angle></horizontal>
+              <vertical><samples>16</samples><resolution>1</resolution><min_angle>-0.261799</min_angle><max_angle>0.261799</max_angle></vertical>
+            </scan>
+            <range><min>0.1</min><max>30.0</max></range>
+          </ray>
+          <always_on>1</always_on>
+        </sensor>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name>
+        <topic>/uav_alpha/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+        <odom_publish_frequency>50</odom_publish_frequency>
+        <odom_frame>world</odom_frame>
+        <robot_base_frame>base_link</robot_base_frame>
+      </plugin>
+    </model>
+
+    <!-- 🚁 UAV Beta (Sector 2, spawn x=4.635m, y=14.265m, z=4.0m) -->
+    <model name="uav_beta">
+      <pose>4.635 14.265 4.0 0 0 -1.88496</pose>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial>
+          <mass>1.5</mass>
+          <inertia><ixx>0.03475</ixx><iyy>0.07000</iyy><izz>0.09770</izz></inertia>
+        </inertial>
+        <collision name="col"><geometry><box><size>0.47 0.47 0.11</size></box></geometry></collision>
+        <visual name="mesh"><geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry></visual>
+
+        <!-- 3D GPU LiDAR Sensor -->
+        <sensor name="uav_beta_lidar" type="gpu_lidar">
+          <pose>0 0 0.1 0 0 0</pose>
+          <topic>/uav_beta/lidar/points</topic>
+          <update_rate>10</update_rate>
+          <ray>
+            <scan>
+              <horizontal><samples>360</samples><resolution>1</resolution><min_angle>-3.14159</min_angle><max_angle>3.14159</max_angle></horizontal>
+              <vertical><samples>16</samples><resolution>1</resolution><min_angle>-0.261799</min_angle><max_angle>0.261799</max_angle></vertical>
+            </scan>
+            <range><min>0.1</min><max>30.0</max></range>
+          </ray>
+          <always_on>1</always_on>
+        </sensor>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name>
+        <topic>/uav_beta/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+        <odom_publish_frequency>50</odom_publish_frequency>
+        <odom_frame>world</odom_frame>
+        <robot_base_frame>base_link</robot_base_frame>
+      </plugin>
+    </model>
+
+    <!-- 🚁 UAV Gamma (Sector 3, spawn x=-12.135m, y=8.816m, z=4.0m) -->
+    <model name="uav_gamma">
+      <pose>-12.135 8.816 4.0 0 0 -0.62832</pose>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial>
+          <mass>1.5</mass>
+          <inertia><ixx>0.03475</ixx><iyy>0.07000</iyy><izz>0.09770</izz></inertia>
+        </inertial>
+        <collision name="col"><geometry><box><size>0.47 0.47 0.11</size></box></geometry></collision>
+        <visual name="mesh"><geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry></visual>
+
+        <!-- 3D GPU LiDAR Sensor -->
+        <sensor name="uav_gamma_lidar" type="gpu_lidar">
+          <pose>0 0 0.1 0 0 0</pose>
+          <topic>/uav_gamma/lidar/points</topic>
+          <update_rate>10</update_rate>
+          <ray>
+            <scan>
+              <horizontal><samples>360</samples><resolution>1</resolution><min_angle>-3.14159</min_angle><max_angle>3.14159</max_angle></horizontal>
+              <vertical><samples>16</samples><resolution>1</resolution><min_angle>-0.261799</min_angle><max_angle>0.261799</max_angle></vertical>
+            </scan>
+            <range><min>0.1</min><max>30.0</max></range>
+          </ray>
+          <always_on>1</always_on>
+        </sensor>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name>
+        <topic>/uav_gamma/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+        <odom_publish_frequency>50</odom_publish_frequency>
+        <odom_frame>world</odom_frame>
+        <robot_base_frame>base_link</robot_base_frame>
+      </plugin>
+    </model>
+
+    <!-- 🚁 UAV Delta (Sector 4, spawn x=-12.135m, y=-8.816m, z=4.0m) -->
+    <model name="uav_delta">
+      <pose>-12.135 -8.816 4.0 0 0 0.62832</pose>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial>
+          <mass>1.5</mass>
+          <inertia><ixx>0.03475</ixx><iyy>0.07000</iyy><izz>0.09770</izz></inertia>
+        </inertial>
+        <collision name="col"><geometry><box><size>0.47 0.47 0.11</size></box></geometry></collision>
+        <visual name="mesh"><geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry></visual>
+
+        <!-- 3D GPU LiDAR Sensor -->
+        <sensor name="uav_delta_lidar" type="gpu_lidar">
+          <pose>0 0 0.1 0 0 0</pose>
+          <topic>/uav_delta/lidar/points</topic>
+          <update_rate>10</update_rate>
+          <ray>
+            <scan>
+              <horizontal><samples>360</samples><resolution>1</resolution><min_angle>-3.14159</min_angle><max_angle>3.14159</max_angle></horizontal>
+              <vertical><samples>16</samples><resolution>1</resolution><min_angle>-0.261799</min_angle><max_angle>0.261799</max_angle></vertical>
+            </scan>
+            <range><min>0.1</min><max>30.0</max></range>
+          </ray>
+          <always_on>1</always_on>
+        </sensor>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name>
+        <topic>/uav_delta/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+        <odom_publish_frequency>50</odom_publish_frequency>
+        <odom_frame>world</odom_frame>
+        <robot_base_frame>base_link</robot_base_frame>
+      </plugin>
+    </model>
+
+    <!-- 🚁 UAV Epsilon (Sector 5, spawn x=4.635m, y=-14.265m, z=4.0m) -->
+    <model name="uav_epsilon">
+      <pose>4.635 -14.265 4.0 0 0 1.88496</pose>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial>
+          <mass>1.5</mass>
+          <inertia><ixx>0.03475</ixx><iyy>0.07000</iyy><izz>0.09770</izz></inertia>
+        </inertial>
+        <collision name="col"><geometry><box><size>0.47 0.47 0.11</size></box></geometry></collision>
+        <visual name="mesh"><geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry></visual>
+
+        <!-- 3D GPU LiDAR Sensor -->
+        <sensor name="uav_epsilon_lidar" type="gpu_lidar">
+          <pose>0 0 0.1 0 0 0</pose>
+          <topic>/uav_epsilon/lidar/points</topic>
+          <update_rate>10</update_rate>
+          <ray>
+            <scan>
+              <horizontal><samples>360</samples><resolution>1</resolution><min_angle>-3.14159</min_angle><max_angle>3.14159</max_angle></horizontal>
+              <vertical><samples>16</samples><resolution>1</resolution><min_angle>-0.261799</min_angle><max_angle>0.261799</max_angle></vertical>
+            </scan>
+            <range><min>0.1</min><max>30.0</max></range>
+          </ray>
+          <always_on>1</always_on>
+        </sensor>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name>
+        <topic>/uav_epsilon/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+        <odom_publish_frequency>50</odom_publish_frequency>
+        <odom_frame>world</odom_frame>
+        <robot_base_frame>base_link</robot_base_frame>
+      </plugin>
+    </model>
+
+  </world>
+</sdf>

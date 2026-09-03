@@ -1,0 +1,570 @@
+<?xml version="1.0" ?>
+<!--
+Project SUTRA — Phase 1: High-Fidelity Prebuilt Quadcopter Simulation World
+==========================================================================
+Integrates OpenRobotics Official X3 UAV Quadcopter (3D Collada Meshes)
+with 50Hz Velocity Control, Odometry Telemetry, and Dynamic 3D Checkpoints.
+-->
+<sdf version="1.8">
+  <world name="phase1_quadcopter_world">
+
+    <!-- Earth Gravity & Physics Engine -->
+    <gravity>0 0 -9.80665</gravity>
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_update_rate>1000</real_time_update_rate>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <!-- Ogre2 GPU Rendering & Scene Configuration -->
+    <scene>
+      <ambient>0.4 0.4 0.4 1.0</ambient>
+      <background>0.7 0.8 1.0 1.0</background>
+      <shadows>true</shadows>
+      <grid>true</grid>
+    </scene>
+
+    <!-- Required Gazebo Sim Systems -->
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics" />
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster" />
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands" />
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu" />
+
+    <!-- 💨 Dynamic Aerodynamic Wind Effects Plugin (8.5 m/s gust) -->
+    <plugin filename="gz-sim-wind-effects-system" name="gz::sim::systems::WindEffects">
+      <horizontal>
+        <magnitude>8.5</magnitude>
+        <direction>0.7071 0.7071 0</direction>
+      </horizontal>
+      <vertical>
+        <magnitude>1.2</magnitude>
+      </vertical>
+    </plugin>
+
+    <!-- Directional Sun Light -->
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 100 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.3 0.3 0.3 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <!-- Ground Plane -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>200 200</size>
+            </plane>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>200 200</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.3 0.5 0.3 1</ambient>
+            <diffuse>0.3 0.5 0.3 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 🚁 uav_alpha: Official OpenRobotics X3 UAV Quadcopter Model -->
+    <model name="uav_alpha">
+      <pose>0 0 0.2 0 0 0</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <kinematic>false</kinematic>
+        <inertial>
+          <mass>1.5</mass>
+          <inertia>
+            <ixx>0.03475</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.07000</iyy>
+            <iyz>0</iyz>
+            <izz>0.09770</izz>
+          </inertia>
+        </inertial>
+
+        <collision name="base_link_collision">
+          <geometry>
+            <box>
+              <size>0.47 0.47 0.11</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <!-- Official X3 Quadcopter Body Mesh -->
+        <visual name="x3_body_visual">
+          <pose>0 0 0 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>1.5 1.5 1.5</scale>
+              <uri>model://x3_uav/meshes/x3.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+
+        <!-- Front Left Rotor -->
+        <visual name="rotor_0_visual">
+          <pose>0.20 -0.33 0.035 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>0.15 0.15 0.15</scale>
+              <uri>model://x3_uav/meshes/propeller_ccw.dae</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.0 0.8 1.0 1</ambient>
+            <diffuse>0.0 0.8 1.0 1</diffuse>
+          </material>
+        </visual>
+
+        <!-- Rear Right Rotor -->
+        <visual name="rotor_1_visual">
+          <pose>-0.20 0.30 0.035 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>0.15 0.15 0.15</scale>
+              <uri>model://x3_uav/meshes/propeller_ccw.dae</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>1.0 0.2 0.2 1</ambient>
+            <diffuse>1.0 0.2 0.2 1</diffuse>
+          </material>
+        </visual>
+
+        <!-- Front Right Rotor -->
+        <visual name="rotor_2_visual">
+          <pose>0.20 0.33 0.035 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>0.15 0.15 0.15</scale>
+              <uri>model://x3_uav/meshes/propeller_cw.dae</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.0 0.8 1.0 1</ambient>
+            <diffuse>0.0 0.8 1.0 1</diffuse>
+          </material>
+        </visual>
+
+        <!-- Rear Left Rotor -->
+        <visual name="rotor_3_visual">
+          <pose>-0.20 -0.30 0.035 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>0.15 0.15 0.15</scale>
+              <uri>model://x3_uav/meshes/propeller_cw.dae</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>1.0 0.2 0.2 1</ambient>
+            <diffuse>1.0 0.2 0.2 1</diffuse>
+          </material>
+        </visual>
+
+        <!-- 🛰️ PHYSICAL HARDWARE PAYLOAD STACK -->
+        
+        <!-- 1. Top 360° LiDAR Sensor Puck (Livox Mid-360 / Velodyne Dome) -->
+        <visual name="lidar_base_visual">
+          <pose>0 0 0.055 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.042</radius>
+              <length>0.022</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.15 0.15 0.18 1</ambient>
+            <diffuse>0.22 0.22 0.26 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+        <visual name="lidar_optic_ring_visual">
+          <pose>0 0 0.068 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.039</radius>
+              <length>0.016</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.0 0.7 0.9 1</ambient>
+            <diffuse>0.0 0.85 1.0 1</diffuse>
+            <emissive>0.0 0.45 0.85 1</emissive>
+          </material>
+        </visual>
+        <visual name="lidar_top_cap_visual">
+          <pose>0 0 0.078 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.041</radius>
+              <length>0.008</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.12 0.12 0.14 1</ambient>
+            <diffuse>0.18 0.18 0.20 1</diffuse>
+          </material>
+        </visual>
+
+        <!-- 2. Edge AI TPU & Companion Computer (Jetson Orin / Google Coral TPU) -->
+        <visual name="edge_tpu_case_visual">
+          <pose>-0.05 0 0.038 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.085 0.065 0.022</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.1 0.1 0.12 1</ambient>
+            <diffuse>0.15 0.15 0.18 1</diffuse>
+          </material>
+        </visual>
+        <!-- Metallic Heatsink Cooling Fins -->
+        <visual name="edge_tpu_heatsink_visual">
+          <pose>-0.05 0 0.051 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.075 0.055 0.006</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.5 0.5 0.55 1</ambient>
+            <diffuse>0.7 0.7 0.75 1</diffuse>
+            <specular>0.9 0.9 0.9 1</specular>
+          </material>
+        </visual>
+        <!-- AI TPU Status LED Indicator -->
+        <visual name="edge_tpu_led_visual">
+          <pose>-0.015 0.024 0.052 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.008 0.008 0.004</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.0 1.0 0.3 1</ambient>
+            <diffuse>0.0 1.0 0.3 1</diffuse>
+            <emissive>0.0 1.0 0.3 1</emissive>
+          </material>
+        </visual>
+
+        <!-- 3. Dual-Lens Optical RGB + FLIR Thermal Gimbal Assembly -->
+        <visual name="gimbal_bracket_visual">
+          <pose>0.135 0 -0.028 0 0.15 0</pose>
+          <geometry>
+            <box>
+              <size>0.035 0.055 0.030</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.15 0.15 0.15 1</ambient>
+            <diffuse>0.2 0.2 0.2 1</diffuse>
+          </material>
+        </visual>
+        <!-- Optical RGB Camera Lens -->
+        <visual name="camera_rgb_lens_visual">
+          <pose>0.155 -0.015 -0.030 0 1.5708 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.010</radius>
+              <length>0.014</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.1 0.4 0.8 1</ambient>
+            <diffuse>0.1 0.6 0.9 1</diffuse>
+            <emissive>0.0 0.3 0.6 1</emissive>
+          </material>
+        </visual>
+        <!-- FLIR LWIR Thermal Lens (Germanium Coated) -->
+        <visual name="camera_thermal_lens_visual">
+          <pose>0.155 0.015 -0.030 0 1.5708 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.012</radius>
+              <length>0.014</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.8 0.35 0.0 1</ambient>
+            <diffuse>0.9 0.45 0.0 1</diffuse>
+            <emissive>0.7 0.25 0.0 1</emissive>
+          </material>
+        </visual>
+
+        <!-- 4. GNSS / GPS Receiver Mast & Compass Puck -->
+        <visual name="gps_mast_visual">
+          <pose>-0.10 -0.08 0.065 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.0035</radius>
+              <length>0.08</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.1 0.1 0.1 1</ambient>
+            <diffuse>0.2 0.2 0.2 1</diffuse>
+          </material>
+        </visual>
+        <visual name="gps_puck_visual">
+          <pose>-0.10 -0.08 0.108 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.022</radius>
+              <length>0.010</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.15 0.15 0.18 1</ambient>
+            <diffuse>0.25 0.25 0.30 1</diffuse>
+            <specular>0.6 0.6 0.6 1</specular>
+          </material>
+        </visual>
+
+        <!-- 5. Dual 802.11s Mesh Dipole Omnidirectional Antennas -->
+        <visual name="mesh_antenna_left_visual">
+          <pose>-0.14 0.11 0.045 0.25 -0.2 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.0032</radius>
+              <length>0.075</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.05 0.05 0.05 1</ambient>
+            <diffuse>0.1 0.1 0.1 1</diffuse>
+          </material>
+        </visual>
+        <visual name="mesh_antenna_right_visual">
+          <pose>-0.14 -0.11 0.045 -0.25 -0.2 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.0032</radius>
+              <length>0.075</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.05 0.05 0.05 1</ambient>
+            <diffuse>0.1 0.1 0.1 1</diffuse>
+          </material>
+        </visual>
+
+        <!-- 6. High-Capacity LiPo Battery Underbelly Pack -->
+        <visual name="battery_pack_visual">
+          <pose>0 0 -0.028 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.13 0.048 0.034</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.8 0.65 0.0 1</ambient>
+            <diffuse>0.9 0.75 0.0 1</diffuse>
+          </material>
+        </visual>
+
+
+        <!-- IMU Sensor -->
+        <sensor name="uav_alpha_imu" type="imu">
+          <always_on>1</always_on>
+          <update_rate>200.0</update_rate>
+          <topic>/uav_alpha/imu</topic>
+        </sensor>
+
+        <!-- 3D GPU LiDAR Sensor -->
+        <sensor name="uav_alpha_lidar" type="gpu_lidar">
+          <pose>0 0 0.1 0 0 0</pose>
+          <topic>/uav_alpha/lidar/points</topic>
+          <update_rate>10</update_rate>
+          <ray>
+            <scan>
+              <horizontal>
+                <samples>360</samples>
+                <resolution>1</resolution>
+                <min_angle>-3.14159</min_angle>
+                <max_angle>3.14159</max_angle>
+              </horizontal>
+              <vertical>
+                <samples>16</samples>
+                <resolution>1</resolution>
+                <min_angle>-0.261799</min_angle>
+                <max_angle>0.261799</max_angle>
+              </vertical>
+            </scan>
+            <range>
+              <min>0.1</min>
+              <max>30.0</max>
+            </range>
+          </ray>
+          <always_on>1</always_on>
+        </sensor>
+
+        <!-- Thermal Infrared Sensor -->
+        <sensor name="uav_alpha_thermal" type="thermal">
+          <pose>0.1 0 0 0 0 0</pose>
+          <topic>/uav_alpha/thermal/image_raw</topic>
+          <update_rate>15</update_rate>
+          <camera>
+            <horizontal_fov>1.047</horizontal_fov>
+            <image>
+              <width>640</width>
+              <height>480</height>
+              <format>L8</format>
+            </image>
+            <clip>
+              <near>0.1</near>
+              <far>100</far>
+            </clip>
+          </camera>
+          <always_on>1</always_on>
+        </sensor>
+
+        <!-- RGB Camera Sensor -->
+        <sensor name="uav_alpha_camera" type="camera">
+          <pose>0.15 0 0 0 0 0</pose>
+          <topic>/uav_alpha/camera/image_raw</topic>
+          <update_rate>30</update_rate>
+          <camera>
+            <horizontal_fov>1.3962634</horizontal_fov>
+            <image>
+              <width>1280</width>
+              <height>720</height>
+              <format>R8G8B8</format>
+            </image>
+            <clip>
+              <near>0.1</near>
+              <far>100</far>
+            </clip>
+          </camera>
+          <always_on>1</always_on>
+        </sensor>
+      </link>
+
+      <!-- Plugins for Velocity Control & Odometry -->
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name>
+        <topic>/uav_alpha/gazebo/command/twist</topic>
+        <initial_linear>0 0 0</initial_linear>
+        <initial_angular>0 0 0</initial_angular>
+      </plugin>
+
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+        <dimensions>3</dimensions>
+        <odom_publish_frequency>50</odom_publish_frequency>
+        <odom_frame>world</odom_frame>
+        <robot_base_frame>base_link</robot_base_frame>
+      </plugin>
+    </model>
+
+    <!-- High-Visibility 3D Checkpoint Gate with Vertical Beacon & Ground Projection -->
+    <model name="ring_target">
+      <static>false</static>
+      <pose>8.0 0.0 4.0 0 0 0</pose>
+      <link name="link">
+        <gravity>false</gravity>
+        <kinematic>true</kinematic>
+
+        <!-- 🌟 Vertical Laser Beacon Pillar (Extends 12m into the sky so target is visible from any angle) -->
+        <visual name="vertical_beacon_line">
+          <pose>0 0 2.0 0 0 0</pose>
+          <geometry><cylinder><radius>0.08</radius><length>12.0</length></cylinder></geometry>
+          <material>
+            <ambient>0.0 1.0 1.0 1</ambient>
+            <diffuse>0.0 1.0 1.0 1</diffuse>
+            <emissive>0.0 1.0 1.0 1</emissive>
+          </material>
+        </visual>
+
+        <!-- 🎯 Glowing Central Orb -->
+        <visual name="center_beacon">
+          <pose>0 0 0 0 0 0</pose>
+          <geometry><sphere><radius>0.6</radius></sphere></geometry>
+          <material>
+            <ambient>1.0 0.9 0.0 1</ambient>
+            <diffuse>1.0 0.9 0.0 1</diffuse>
+            <emissive>1.0 0.9 0.0 1</emissive>
+          </material>
+        </visual>
+
+        <!-- ⭕ Neon Cyan Checkpoint Ring Gate -->
+        <visual name="ring_top">
+          <pose>0 0 2.0 0 1.5708 0</pose>
+          <geometry><cylinder><radius>0.18</radius><length>4.0</length></cylinder></geometry>
+          <material>
+            <ambient>0.0 1.0 1.0 1</ambient>
+            <diffuse>0.0 1.0 1.0 1</diffuse>
+            <emissive>0.0 1.0 1.0 1</emissive>
+          </material>
+        </visual>
+
+        <visual name="ring_bottom">
+          <pose>0 0 -2.0 0 1.5708 0</pose>
+          <geometry><cylinder><radius>0.18</radius><length>4.0</length></cylinder></geometry>
+          <material>
+            <ambient>0.0 1.0 1.0 1</ambient>
+            <diffuse>0.0 1.0 1.0 1</diffuse>
+            <emissive>0.0 1.0 1.0 1</emissive>
+          </material>
+        </visual>
+
+        <visual name="ring_left">
+          <pose>0 2.0 0 1.5708 0 0</pose>
+          <geometry><cylinder><radius>0.18</radius><length>4.0</length></cylinder></geometry>
+          <material>
+            <ambient>0.0 1.0 1.0 1</ambient>
+            <diffuse>0.0 1.0 1.0 1</diffuse>
+            <emissive>0.0 1.0 1.0 1</emissive>
+          </material>
+        </visual>
+
+        <visual name="ring_right">
+          <pose>0 -2.0 0 1.5708 0 0</pose>
+          <geometry><cylinder><radius>0.18</radius><length>4.0</length></cylinder></geometry>
+          <material>
+            <ambient>0.0 1.0 1.0 1</ambient>
+            <diffuse>0.0 1.0 1.0 1</diffuse>
+            <emissive>0.0 1.0 1.0 1</emissive>
+          </material>
+        </visual>
+
+        <!-- 📍 Ground Target Projection Ring (Visible on terrain beneath checkpoint) -->
+        <visual name="ground_target_ring">
+          <pose>0 0 -3.9 0 0 0</pose>
+          <geometry><cylinder><radius>2.2</radius><length>0.02</length></cylinder></geometry>
+          <material>
+            <ambient>1.0 0.8 0.0 1</ambient>
+            <diffuse>1.0 0.8 0.0 1</diffuse>
+            <emissive>1.0 0.8 0.0 1</emissive>
+          </material>
+        </visual>
+
+      </link>
+    </model>
+
+
+  </world>
+</sdf>

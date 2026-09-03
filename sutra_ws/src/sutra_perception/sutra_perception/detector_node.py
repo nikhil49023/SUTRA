@@ -25,7 +25,9 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import time
+import threading
 from dataclasses import dataclass, field
 from typing import Any, List, Optional, Tuple
 
@@ -38,6 +40,9 @@ from sensor_msgs.msg import Image, LaserScan
 from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped
 
+# ByteTrack multi-object tracker (pure Python, no extra deps)
+from sutra_perception.bytetrack import SutraByteTracker, TrackedTarget, TrackState
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Robust ROS Image <-> OpenCV bridge with pure-Python NumPy fallback
 # ──────────────────────────────────────────────────────────────────────────────
@@ -46,9 +51,10 @@ class SutraCvBridge:
     def __init__(self):
         self._native_bridge = None
         try:
-            from cv_bridge import CvBridge
-            self._native_bridge = CvBridge()
-        except Exception:
+            if not np.__version__.startswith("2."):
+                from cv_bridge import CvBridge
+                self._native_bridge = CvBridge()
+        except BaseException:
             self._native_bridge = None
 
     def imgmsg_to_cv2(self, img_msg: Any, desired_encoding: str = "passthrough") -> np.ndarray:
@@ -92,6 +98,20 @@ class SutraCvBridge:
 
 CV_BRIDGE_AVAILABLE = True
 
+try:
+    import torch
+    TORCH_AVAILABLE = True
+    # Limit PyTorch CPU thread flooding on multi-core systems
+    torch.set_num_threads(2)
+except ImportError:
+    TORCH_AVAILABLE = False
+
+try:
+    # Limit OpenCV worker threads to prevent CPU saturation
+    cv2.setNumThreads(2)
+except Exception:
+    pass
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Gracefully handle optional ultralytics (not needed in unit-test context)
 # ──────────────────────────────────────────────────────────────────────────────
@@ -101,12 +121,16 @@ try:
 except ImportError:
     YOLO_AVAILABLE = False
 
+# TensorRT is only available on Jetson / NVIDIA hardware with TRT installed.
+# The node auto-detects .engine vs .pt by file extension and sets this flag.
+TENSORRT_ENGINE_SUFFIX = ".engine"
+
 # ──────────────────────────────────────────────────────────────────────────────
-# WGS-84 Origin — San Francisco Digital Twin (matches Gazebo SITL world)
+# WGS-84 Origin — Configurable via environment (Defaults to NHCE Bengaluru: 12.934444° N, 77.691722° E)
 # ──────────────────────────────────────────────────────────────────────────────
-ORIGIN_LAT: float = 37.774929
-ORIGIN_LON: float = -122.419416
-ORIGIN_ALT: float = 15.0          # metres ASL
+ORIGIN_LAT: float = float(os.getenv("SUTRA_ORIGIN_LAT", "12.934444"))
+ORIGIN_LON: float = float(os.getenv("SUTRA_ORIGIN_LON", "77.691722"))
+ORIGIN_ALT: float = float(os.getenv("SUTRA_ORIGIN_ALT", "920.0"))          # metres ASL (Bengaluru elevation)
 
 # Fusion confidence weights (must sum to 1.0)
 W_VISUAL:  float = 0.50
@@ -120,93 +144,21 @@ RADAR_CLUSTER_RADIUS_M: float = 1.0   # metres — cluster merge radius
 FUSION_CONFIRM_THRESH:  float = 0.60  # fused score to publish as SURVIVOR
 FUSION_POSSIBLE_THRESH: float = 0.30  # fused score to publish as POSSIBLE
 
-# YOLO COCO class IDs relevant to SAR
-SAR_CLASS_IDS = {0: "person", 26: "backpack", 28: "suitcase"}
+# SAR class mapping — supports both custom fine-tuned weights {0: person, 1: survivor, 2: debris, 3: threat}
+# and standard COCO pre-trained weights {0: person, 26: backpack, 28: suitcase}
+SAR_CLASS_IDS = {
+    0: "person",
+    1: "survivor",
+    2: "debris",
+    3: "threat",
+    26: "backpack",
+    28: "suitcase",
+}
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Pure-Python Multi-Object ByteTracker Engine
+# Data structures for Tri-Modal Fusion
 # ──────────────────────────────────────────────────────────────────────────────
-class SutraByteTrackerTrack:
-    def __init__(self, track_id: int, bbox: Tuple[float, float, float, float], score: float, label: str):
-        self.track_id = track_id
-        self.bbox = bbox  # (x1, y1, x2, y2)
-        self.score = score
-        self.label = label
-        self.hits = 1
-        self.time_since_update = 0
-        self.velocity = (0.0, 0.0)
-
-    def update(self, new_bbox: Tuple[float, float, float, float], new_score: float):
-        dx = (new_bbox[0] + new_bbox[2])/2.0 - (self.bbox[0] + self.bbox[2])/2.0
-        dy = (new_bbox[1] + new_bbox[3])/2.0 - (self.bbox[1] + self.bbox[3])/2.0
-        self.velocity = (dx, dy)
-        self.bbox = new_bbox
-        self.score = new_score
-        self.hits += 1
-        self.time_since_update = 0
-
-
-class SutraByteTracker:
-    """
-    ByteTRACK-style Multi-Object Tracker.
-    Assigns persistent IDs (e.g. Survivor-101) across consecutive video frames,
-    computes velocity vectors, and filters single-frame false positives.
-    """
-    def __init__(self, iou_threshold: float = 0.3, max_age: int = 5, min_hits: int = 2):
-        self.iou_threshold = iou_threshold
-        self.max_age = max_age
-        self.min_hits = min_hits
-        self.tracks: List[SutraByteTrackerTrack] = []
-        self.next_id = 101
-
-    @staticmethod
-    def _compute_iou(b1: Tuple[float, float, float, float], b2: Tuple[float, float, float, float]) -> float:
-        x1 = max(b1[0], b2[0])
-        y1 = max(b1[1], b2[1])
-        x2 = min(b1[2], b2[2])
-        y2 = min(b1[3], b2[3])
-        inter_area = max(0.0, x2 - x1) * max(0.0, y2 - y1)
-        b1_area = (b1[2] - b1[0]) * (b1[3] - b1[1])
-        b2_area = (b2[2] - b2[0]) * (b2[3] - b2[1])
-        union_area = b1_area + b2_area - inter_area
-        return inter_area / union_area if union_area > 0 else 0.0
-
-    def update(self, detections: List[Tuple[Tuple[float, float, float, float], float, str]]) -> List[SutraByteTrackerTrack]:
-        # Increment time_since_update for all active tracks
-        for track in self.tracks:
-            track.time_since_update += 1
-
-        unmatched_dets = list(range(len(detections)))
-        
-        # Match detections to existing tracks via IoU
-        for track in self.tracks:
-            best_iou = 0.0
-            best_det_idx = -1
-            for idx in unmatched_dets:
-                bbox, score, label = detections[idx]
-                iou = self._compute_iou(track.bbox, bbox)
-                if iou > best_iou:
-                    best_iou = iou
-                    best_det_idx = idx
-            
-            if best_iou >= self.iou_threshold and best_det_idx != -1:
-                bbox, score, label = detections[best_det_idx]
-                track.update(bbox, score)
-                unmatched_dets.remove(best_det_idx)
-
-        # Create new tracks for unmatched detections
-        for idx in unmatched_dets:
-            bbox, score, label = detections[idx]
-            new_track = SutraByteTrackerTrack(self.next_id, bbox, score, label)
-            self.next_id += 1
-            self.tracks.append(new_track)
-
-        # Remove dead tracks
-        self.tracks = [t for t in self.tracks if t.time_since_update <= self.max_age]
-
-        # Return confirmed active tracks
-        return [t for t in self.tracks if t.hits >= self.min_hits or t.time_since_update == 0]
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -464,26 +416,58 @@ class SutraDetectorNode(Node):
         self._thermal_blobs:      List[ThermalBlob]     = []
         self._radar_targets:      List[RadarTarget]     = []
         self._target_counter:     int                   = 0
+        self._state_lock:         threading.Lock        = threading.Lock()
         self._img_w: int = 640
-
         self._img_h: int = 480
 
         # ── Optional bridges / models ──────────────────────────────────────────
         self._bridge: Optional[object] = SutraCvBridge()
         self._yolo:   Optional[object] = None
+        self._using_tensorrt: bool = False
+        self._device: str = "cuda:0" if (TORCH_AVAILABLE and torch.cuda.is_available()) else "cpu"
 
         if YOLO_AVAILABLE:
             try:
-                self._yolo = YOLO(self._yolo_model_path)
-                self.get_logger().info(
-                    f"✅ YOLOv8-Nano loaded: {self._yolo_model_path}"
-                )
+                # Auto-detect TensorRT engine vs standard PyTorch model
+                if self._yolo_model_path.endswith(TENSORRT_ENGINE_SUFFIX):
+                    # TensorRT FP16 engine — ~4ms/frame on Jetson / RTX GPU
+                    self._yolo = YOLO(self._yolo_model_path)
+                    self._using_tensorrt = True
+                    self.get_logger().info(
+                        f"⚡ TensorRT FP16 engine loaded: {self._yolo_model_path} on {self._device}"
+                    )
+                else:
+                    # Standard PyTorch .pt model on GPU/CPU
+                    self._yolo = YOLO(self._yolo_model_path)
+                    if self._device != "cpu":
+                        self._yolo.to(self._device)
+                    self._using_tensorrt = False
+                    self.get_logger().info(
+                        f"✅ YOLOv8-Nano model loaded on [{self._device}]: {self._yolo_model_path}"
+                    )
+                    self.get_logger().info(
+                        "   TIP: Export to TensorRT for max GPU throughput: "
+                        "python3 tensorrt_export.py --model best_sutra.pt"
+                    )
             except Exception as exc:
                 self.get_logger().warn(f"YOLO load failed ({exc}). Running in mock mode.")
         else:
             self.get_logger().warn(
                 "ultralytics not installed — running YOLO in mock mode."
             )
+
+        # ── ByteTrack Multi-Object Tracker ────────────────────────────────────
+        # Assigns persistent IDs (Survivor-101, Threat-002) across frames.
+        # Eliminates single-frame false positives via MIN_HITS=2 gate.
+        # Recovers occluded targets via two-pass association (ByteTrack ECCV 2022).
+        self._tracker = SutraByteTracker(
+            high_conf_thresh=0.50,   # Pass 1: confident detections
+            low_conf_thresh=0.15,    # Pass 2: recover occluded targets
+            iou_thresh=0.30,         # Minimum IoU for track association
+            max_age=30,              # Frames before track is deleted (=3s @ 10Hz)
+            min_hits=2,              # Consecutive matches before confirmed
+        )
+        self.get_logger().info("🔍 ByteTrack MOT tracker initialised (MAX_AGE=30, MIN_HITS=2)")
 
         # ── QoS ───────────────────────────────────────────────────────────────
         sensor_qos = QoSProfile(
@@ -494,6 +478,7 @@ class SutraDetectorNode(Node):
         # ── Mesh Comms Feedback State ──────────────────────────────────────────
         self._mesh_snr_db: float = 25.0
         self._low_bandwidth_mode: bool = False
+        self._frame_counter: int = 0
 
         # ── Subscribers ───────────────────────────────────────────────────────
         self.create_subscription(
@@ -560,32 +545,24 @@ class SutraDetectorNode(Node):
             pass
 
     def _pose_callback(self, msg: String) -> None:
-
         """Receive drone telemetry JSON from Subsystem A (sim/fallback mode)."""
         try:
             data = json.loads(msg.data)
-            self._drone_lat = float(data.get("lat", self._drone_lat))
-            self._drone_lon = float(data.get("lon", self._drone_lon))
-            self._drone_alt = float(data.get("alt", self._drone_alt))
-            self._drone_yaw = float(data.get("yaw", self._drone_yaw))
+            with self._state_lock:
+                self._drone_lat = float(data.get("lat", self._drone_lat))
+                self._drone_lon = float(data.get("lon", self._drone_lon))
+                self._drone_alt = float(data.get("alt", self._drone_alt))
+                self._drone_yaw = float(data.get("yaw", self._drone_yaw))
         except (json.JSONDecodeError, KeyError, TypeError):
             pass  # keep previous values
 
     def _pose_stamped_callback(self, msg: PoseStamped) -> None:
-        """Receive drone pose from Subsystem A via geometry_msgs/PoseStamped.
-
-        Subsystem A (Rohith) publishes PoseStamped on /sutra/gnc/pose_stamped.
-        Position: x=East(m), y=North(m), z=Alt(m) in local NED frame.
-        We convert to GPS using to_gps() with the SITL origin.
-        """
+        """Receive drone pose from Subsystem A via geometry_msgs/PoseStamped."""
         x = msg.pose.position.x
         y = msg.pose.position.y
         z = msg.pose.position.z
         # Convert NED position → GPS
         lat, lon, alt = to_gps(x, y, z)
-        self._drone_lat = lat
-        self._drone_lon = lon
-        self._drone_alt = alt
 
         # Extract roll, pitch, yaw from quaternion (q_x, q_y, q_z, q_w)
         qx = msg.pose.orientation.x
@@ -596,32 +573,49 @@ class SutraDetectorNode(Node):
         # Roll (x-axis rotation)
         sinr_cosp = 2.0 * (qw * qx + qy * qz)
         cosr_cosp = 1.0 - 2.0 * (qx * qx + qy * qy)
-        self._drone_roll = math.atan2(sinr_cosp, cosr_cosp)
+        roll = math.atan2(sinr_cosp, cosr_cosp)
 
         # Pitch (y-axis rotation)
         sinp = 2.0 * (qw * qy - qz * qx)
         if abs(sinp) >= 1.0:
-            self._drone_pitch = math.copysign(math.pi / 2.0, sinp)
+            pitch = math.copysign(math.pi / 2.0, sinp)
         else:
-            self._drone_pitch = math.asin(sinp)
+            pitch = math.asin(sinp)
 
         # Yaw (z-axis rotation)
         siny_cosp = 2.0 * (qw * qz + qx * qy)
         cosy_cosp = 1.0 - 2.0 * (qy * qy + qz * qz)
-        self._drone_yaw = math.atan2(siny_cosp, cosy_cosp)
+        yaw = math.atan2(siny_cosp, cosy_cosp)
 
+        with self._state_lock:
+            self._drone_lat = lat
+            self._drone_lon = lon
+            self._drone_alt = alt
+            self._drone_roll = roll
+            self._drone_pitch = pitch
+            self._drone_yaw = yaw
 
     def _rgb_callback(self, msg: Image) -> None:
         """Process RGB camera frame — run YOLOv8-Nano detection."""
         if self._bridge is None:
             return
+
+        # Adapt to RF mesh jamming/degradation: skip every 2nd frame in low bandwidth mode
+        if self._low_bandwidth_mode:
+            self._frame_counter += 1
+            if self._frame_counter % 2 != 0:
+                return
+
         try:
             frame = self._bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
         except Exception:
             return
 
-        self._img_h, self._img_w = frame.shape[:2]
-        self._visual_detections = self._run_yolo(frame)
+        h, w = frame.shape[:2]
+        detections = self._run_yolo(frame)
+        with self._state_lock:
+            self._img_h, self._img_w = h, w
+            self._visual_detections = detections
 
     def _thermal_callback(self, msg: Image) -> None:
         """Process thermal camera frame — detect hot-spot blobs."""
@@ -633,11 +627,15 @@ class SutraDetectorNode(Node):
         except Exception:
             return
 
-        self._thermal_blobs = self._detect_thermal_blobs(raw)
+        blobs = self._detect_thermal_blobs(raw)
+        with self._state_lock:
+            self._thermal_blobs = blobs
 
     def _radar_callback(self, msg: LaserScan) -> None:
         """Process 2-D radar sweep — cluster returns into targets."""
-        self._radar_targets = self._cluster_radar(msg)
+        targets = self._cluster_radar(msg)
+        with self._state_lock:
+            self._radar_targets = targets
 
     # ──────────────────────────────────────────────────────────────────────────
     # Sensor processing helpers
@@ -651,7 +649,13 @@ class SutraDetectorNode(Node):
             return detections
 
         try:
-            results = self._yolo(frame, conf=YOLO_CONF_THRESHOLD, verbose=False)
+            results = self._yolo(
+                frame,
+                conf=YOLO_CONF_THRESHOLD,
+                device=self._device,
+                half=(self._device != "cpu"),
+                verbose=False
+            )
         except Exception as exc:
             self.get_logger().warn(f"YOLO inference error: {exc}")
             return detections
@@ -780,23 +784,39 @@ class SutraDetectorNode(Node):
     # ──────────────────────────────────────────────────────────────────────────
 
     def _fusion_tick(self) -> None:
-        """Merge visual, thermal, radar detections → publish fused targets."""
-        fused: List[FusedTarget] = []
+        """Merge visual, thermal, radar detections → ByteTrack → publish."""
+        try:
+            self._do_fusion_tick()
+        except Exception as e:
+            self.get_logger().error(f"[FusionEngine] Exception caught in _fusion_tick: {e}", throttle_duration_sec=2.0)
+
+    def _do_fusion_tick(self) -> None:
+        with self._state_lock:
+            v_dets = list(self._visual_detections)
+            t_blobs = list(self._thermal_blobs)
+            r_targets = list(self._radar_targets)
+            drone_alt = self._drone_alt
+            drone_lat = self._drone_lat
+            drone_lon = self._drone_lon
+            img_w = self._img_w
+            img_h = self._img_h
+
+        fused_dets: List[dict] = []   # intermediate list for tracker input
 
         # ── Step 1: seed with visual detections (highest information) ─────────
-        for vdet in self._visual_detections:
+        for vdet in v_dets:
             if vdet.gps is None:
                 continue
             score = vdet.confidence * W_VISUAL
             modalities = ["visual"]
             ev, nv = pixel_to_ned(
                 vdet.bbox.cx, vdet.bbox.cy,
-                self._img_w, self._img_h,
-                self._drone_alt, self._camera_hfov_deg,
+                img_w, img_h,
+                drone_alt, self._camera_hfov_deg,
             )
 
             # ── Step 2: thermal confirmation ──────────────────────────────────
-            for tblob in self._thermal_blobs:
+            for tblob in t_blobs:
                 iou = vdet.bbox.iou(tblob.bbox)
                 if iou > 0.15:
                     score += tblob.mean_intensity * W_THERMAL
@@ -804,7 +824,7 @@ class SutraDetectorNode(Node):
                     break  # one confirmation per visual detection
 
             # ── Step 3: radar confirmation ────────────────────────────────────
-            for rtgt in self._radar_targets:
+            for rtgt in r_targets:
                 dist_m = math.hypot(ev - rtgt.east_m, nv - rtgt.north_m)
                 if dist_m < 3.0:   # within 3 m ground radius
                     score += W_RADAR
@@ -813,22 +833,21 @@ class SutraDetectorNode(Node):
 
             score = min(score, 1.0)
             label = self._classify(vdet.label, score)
-            self._target_counter += 1
-            fused.append(FusedTarget(
-                target_id=self._target_counter,
-                label=label,
-                confidence=score,
-                gps=vdet.gps,
-                modalities=modalities,
-            ))
+            fused_dets.append({
+                "bbox":       [vdet.bbox.x1, vdet.bbox.y1, vdet.bbox.x2, vdet.bbox.y2],
+                "confidence": score,
+                "gps":        vdet.gps,
+                "modalities": modalities,
+                "label":      label,
+            })
 
         # ── Step 4: thermal-only detections (smoke / rubble scenarios) ────────
-        for tblob in self._thermal_blobs:
+        for tblob in t_blobs:
             already_fused = any(
                 tblob.bbox.iou(BBox(
                     d.bbox.x1, d.bbox.y1, d.bbox.x2, d.bbox.y2
                 )) > 0.15
-                for d in self._visual_detections
+                for d in v_dets
             )
             if already_fused:
                 continue
@@ -837,39 +856,67 @@ class SutraDetectorNode(Node):
                 continue
             ex, ny = pixel_to_ned(
                 tblob.bbox.cx, tblob.bbox.cy,
-                self._img_w, self._img_h,
-                self._drone_alt, self._camera_hfov_deg,
+                img_w, img_h,
+                drone_alt, self._camera_hfov_deg,
             )
-            gps = to_gps(ex, ny, 0.0, self._drone_lat, self._drone_lon, 0.0)
-            self._target_counter += 1
-            fused.append(FusedTarget(
-                target_id=self._target_counter,
-                label="POSSIBLE_SURVIVOR",
-                confidence=score,
-                gps=gps,
-                modalities=["thermal"],
-            ))
+            gps = to_gps(ex, ny, 0.0, drone_lat, drone_lon, 0.0)
+            fused_dets.append({
+                "bbox":       [tblob.bbox.x1, tblob.bbox.y1, tblob.bbox.x2, tblob.bbox.y2],
+                "confidence": score,
+                "gps":        gps,
+                "modalities": ["thermal"],
+                "label":      "POSSIBLE_SURVIVOR",
+            })
+
+        # ── Step 5: ByteTrack — assign persistent IDs ─────────────────────────
+        # ByteTrack two-pass association (Zhang et al., ECCV 2022):
+        #   Pass 1: match high-conf detections to existing tracks
+        #   Pass 2: recover occluded targets via low-conf detections
+        # Only CONFIRMED tracks (hit_streak >= MIN_HITS=2) are returned.
+        # Single-frame false positives are silently filtered here.
+        tracked: List[TrackedTarget] = self._tracker.update(fused_dets)
 
         # ── Publish raw detection stream ───────────────────────────────────────
+        track_counts = self._tracker.get_track_count()
         raw_msg = String()
         raw_msg.data = json.dumps({
-            "visual":  len(self._visual_detections),
-            "thermal": len(self._thermal_blobs),
-            "radar":   len(self._radar_targets),
+            "visual":          len(v_dets),
+            "thermal":         len(t_blobs),
+            "radar":           len(r_targets),
+            "fused_raw":       len(fused_dets),
+            "tracked_confirmed": len(tracked),
+            "tracker_new":     track_counts.get("NEW", 0),
+            "tracker_tracked": track_counts.get("TRACKED", 0),
+            "tracker_lost":    track_counts.get("LOST", 0),
+            "using_tensorrt":  self._using_tensorrt,
         })
         self._pub_detections.publish(raw_msg)
 
-        # ── Publish fused targets ──────────────────────────────────────────────
-        if fused:
-            payload = json.dumps({"targets": [t.to_dict() for t in fused]})
-            tgt_msg = String()
-            tgt_msg.data = payload
-            self._pub_targets.publish(tgt_msg)
-            for t in fused:
+        # ── Publish tracked targets ────────────────────────────────────────────
+        if tracked:
+            # Under low-bandwidth mesh mode (SNR < -85 dBm / RF jamming), filter out uncertain
+            # candidates and only stream confirmed high-confidence survivors (>= 0.70)
+            if self._low_bandwidth_mode:
+                publishable = [t for t in tracked if t.confidence >= 0.70]
+            else:
+                publishable = tracked
+
+            if publishable:
+                payload = json.dumps({
+                    "targets": [t.to_dict() for t in publishable],
+                    "low_bandwidth_mode": self._low_bandwidth_mode,
+                })
+                tgt_msg = String()
+                tgt_msg.data = payload
+                self._pub_targets.publish(tgt_msg)
+            for t in publishable:
+                mode_str = self._using_tensorrt
                 self.get_logger().info(
-                    f"🎯 [{t.label}] conf={t.confidence:.2f} "
-                    f"GPS=({t.gps[0]:.6f}, {t.gps[1]:.6f}) "
-                    f"src={'+'.join(t.modalities)}"
+                    f"🎯 [{t.label}-{t.track_id:03d}] "
+                    f"conf={t.confidence:.2f} age={t.age}fr "
+                    f"GPS=({t.gps[0]:.6f},{t.gps[1]:.6f}) "
+                    f"src={'+'.join(t.modalities)} "
+                    f"{'⚡TRT' if self._using_tensorrt else '🐢PT'}"
                 )
 
     # ──────────────────────────────────────────────────────────────────────────

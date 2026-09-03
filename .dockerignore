@@ -1,0 +1,15 @@
+# Never copy host build artifacts / caches into the image — they carry
+# absolute host paths that break colcon/CMake inside the container.
+**/build/
+**/install/
+**/log/
+**/__pycache__/
+**/*.egg-info/
+.git/
+.gitignore
+*.pyc
+*.engine
+*.onnx
+*.pt
+docs/
+.nv/

@@ -460,3 +460,35 @@ class TestByteTracker:
         assert tracks_f2[0].velocity == (10.0, 5.0)  # Velocity calculated
 
 
+class TestMeshBandwidthAdaptation:
+    """Validate perception adaptation under degraded/jammed RF mesh conditions."""
+
+    def test_low_bandwidth_mode_toggle_and_filtering(self):
+        from sutra_perception.detector_node import SutraDetectorNode
+        import json
+        from std_msgs.msg import String
+        import rclpy
+
+        if not rclpy.ok():
+            rclpy.init()
+
+        node = SutraDetectorNode()
+        try:
+            # Initial state
+            assert not node._low_bandwidth_mode
+
+            # Trigger mesh status callback with severe jamming (SNR = -90 dB)
+            mesh_msg = String()
+            mesh_msg.data = json.dumps({"snr_db": -90.0, "pdr": 0.45})
+            node._mesh_status_callback(mesh_msg)
+            assert node._low_bandwidth_mode is True
+
+            # Recovery (SNR = 15 dB)
+            mesh_msg.data = json.dumps({"snr_db": 15.0, "pdr": 0.99})
+            node._mesh_status_callback(mesh_msg)
+            assert node._low_bandwidth_mode is False
+        finally:
+            node.destroy_node()
+
+
+

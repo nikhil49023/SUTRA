@@ -1,0 +1,407 @@
+<?xml version="1.0" ?>
+<!--
+Project SUTRA — Stress Scenario 3: ORCA 3D Multi-Drone Swarm Crossing
+World with 5 OpenRobotics X3 UAV Quadcopters Airborne at z=4.0m,
+Central Physical 3D Obstacle Pillars, and 5 Clean 3D Ring Gate Models (No Laser Pillars).
+-->
+<sdf version="1.8">
+  <world name="stress_swarm_orca_crossing">
+    
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.002</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <!-- Essential Gazebo Sim Systems -->
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics" />
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster" />
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands" />
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu" />
+
+    <!-- Directional Sun Light -->
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 100 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.3 0.3 0.3 1</specular>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <!-- Clean Ground Plane -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><plane><normal>0 0 1</normal><size>200 200</size></plane></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><plane><normal>0 0 1</normal><size>200 200</size></plane></geometry>
+          <material>
+            <ambient>0.2 0.2 0.25 1</ambient>
+            <diffuse>0.3 0.3 0.35 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 🏛️ Physical 3D Obstacle Pillars -->
+    <model name="obstacle_pillar_1">
+      <static>true</static>
+      <pose>0.0 3.0 4.0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><cylinder><radius>0.6</radius><length>8.0</length></cylinder></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><cylinder><radius>0.6</radius><length>8.0</length></cylinder></geometry>
+          <material>
+            <ambient>0.7 0.2 0.2 1</ambient>
+            <diffuse>0.8 0.3 0.3 1</diffuse>
+            <specular>0.5 0.5 0.5 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="obstacle_pillar_2">
+      <static>true</static>
+      <pose>0.0 -3.0 4.0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><cylinder><radius>0.6</radius><length>8.0</length></cylinder></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><cylinder><radius>0.6</radius><length>8.0</length></cylinder></geometry>
+          <material>
+            <ambient>0.7 0.2 0.2 1</ambient>
+            <diffuse>0.8 0.3 0.3 1</diffuse>
+            <specular>0.5 0.5 0.5 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="obstacle_pillar_3">
+      <static>true</static>
+      <pose>3.0 0.0 4.0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><cylinder><radius>0.6</radius><length>8.0</length></cylinder></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><cylinder><radius>0.6</radius><length>8.0</length></cylinder></geometry>
+          <material>
+            <ambient>0.7 0.2 0.2 1</ambient>
+            <diffuse>0.8 0.3 0.3 1</diffuse>
+            <specular>0.5 0.5 0.5 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ⭕ Clean 3D Ring Gate Models (WITHOUT vertical laser pillars) -->
+    <model name="ring_alpha">
+      <static>true</static>
+      <pose>15.0 0.0 4.0 0 0 3.14159</pose>
+      <link name="link">
+        <gravity>false</gravity>
+        <visual name="center_beacon">
+          <pose>0 0 0 0 0 0</pose>
+          <geometry><sphere><radius>0.4</radius></sphere></geometry>
+          <material>
+            <ambient>0.0 1.0 1.0 1</ambient>
+            <diffuse>0.0 1.0 1.0 1</diffuse>
+            <emissive>0.0 1.0 1.0 1</emissive>
+          </material>
+        </visual>
+        <visual name="ring_top">
+          <pose>0 0 1.5 0 1.5708 0</pose>
+          <geometry><cylinder><radius>0.12</radius><length>3.0</length></cylinder></geometry>
+          <material><ambient>0.0 1.0 1.0 1</ambient><diffuse>0.0 1.0 1.0 1</diffuse><emissive>0.0 1.0 1.0 1</emissive></material>
+        </visual>
+        <visual name="ring_bottom">
+          <pose>0 0 -1.5 0 1.5708 0</pose>
+          <geometry><cylinder><radius>0.12</radius><length>3.0</length></cylinder></geometry>
+          <material><ambient>0.0 1.0 1.0 1</ambient><diffuse>0.0 1.0 1.0 1</diffuse><emissive>0.0 1.0 1.0 1</emissive></material>
+        </visual>
+        <visual name="ring_left">
+          <pose>0 1.5 0 1.5708 0 0</pose>
+          <geometry><cylinder><radius>0.12</radius><length>3.0</length></cylinder></geometry>
+          <material><ambient>0.0 1.0 1.0 1</ambient><diffuse>0.0 1.0 1.0 1</diffuse><emissive>0.0 1.0 1.0 1</emissive></material>
+        </visual>
+        <visual name="ring_right">
+          <pose>0 -1.5 0 1.5708 0 0</pose>
+          <geometry><cylinder><radius>0.12</radius><length>3.0</length></cylinder></geometry>
+          <material><ambient>0.0 1.0 1.0 1</ambient><diffuse>0.0 1.0 1.0 1</diffuse><emissive>0.0 1.0 1.0 1</emissive></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="ring_beta">
+      <static>true</static>
+      <pose>4.635 14.265 4.0 0 0 -1.88496</pose>
+      <link name="link">
+        <gravity>false</gravity>
+        <visual name="center_beacon">
+          <pose>0 0 0 0 0 0</pose>
+          <geometry><sphere><radius>0.4</radius></sphere></geometry>
+          <material>
+            <ambient>1.0 0.9 0.0 1</ambient>
+            <diffuse>1.0 0.9 0.0 1</diffuse>
+            <emissive>1.0 0.9 0.0 1</emissive>
+          </material>
+        </visual>
+        <visual name="ring_top">
+          <pose>0 0 1.5 0 1.5708 0</pose>
+          <geometry><cylinder><radius>0.12</radius><length>3.0</length></cylinder></geometry>
+          <material><ambient>1.0 0.9 0.0 1</ambient><diffuse>1.0 0.9 0.0 1</diffuse><emissive>1.0 0.9 0.0 1</emissive></material>
+        </visual>
+        <visual name="ring_bottom">
+          <pose>0 0 -1.5 0 1.5708 0</pose>
+          <geometry><cylinder><radius>0.12</radius><length>3.0</length></cylinder></geometry>
+          <material><ambient>1.0 0.9 0.0 1</ambient><diffuse>1.0 0.9 0.0 1</diffuse><emissive>1.0 0.9 0.0 1</emissive></material>
+        </visual>
+        <visual name="ring_left">
+          <pose>0 1.5 0 1.5708 0 0</pose>
+          <geometry><cylinder><radius>0.12</radius><length>3.0</length></cylinder></geometry>
+          <material><ambient>1.0 0.9 0.0 1</ambient><diffuse>1.0 0.9 0.0 1</diffuse><emissive>1.0 0.9 0.0 1</emissive></material>
+        </visual>
+        <visual name="ring_right">
+          <pose>0 -1.5 0 1.5708 0 0</pose>
+          <geometry><cylinder><radius>0.12</radius><length>3.0</length></cylinder></geometry>
+          <material><ambient>1.0 0.9 0.0 1</ambient><diffuse>1.0 0.9 0.0 1</diffuse><emissive>1.0 0.9 0.0 1</emissive></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="ring_gamma">
+      <static>true</static>
+      <pose>-12.135 8.816 4.0 0 0 -0.62832</pose>
+      <link name="link">
+        <gravity>false</gravity>
+        <visual name="center_beacon">
+          <pose>0 0 0 0 0 0</pose>
+          <geometry><sphere><radius>0.4</radius></sphere></geometry>
+          <material>
+            <ambient>1.0 0.2 0.8 1</ambient>
+            <diffuse>1.0 0.2 0.8 1</diffuse>
+            <emissive>1.0 0.2 0.8 1</emissive>
+          </material>
+        </visual>
+        <visual name="ring_top">
+          <pose>0 0 1.5 0 1.5708 0</pose>
+          <geometry><cylinder><radius>0.12</radius><length>3.0</length></cylinder></geometry>
+          <material><ambient>1.0 0.2 0.8 1</ambient><diffuse>1.0 0.2 0.8 1</diffuse><emissive>1.0 0.2 0.8 1</emissive></material>
+        </visual>
+        <visual name="ring_bottom">
+          <pose>0 0 -1.5 0 1.5708 0</pose>
+          <geometry><cylinder><radius>0.12</radius><length>3.0</length></cylinder></geometry>
+          <material><ambient>1.0 0.2 0.8 1</ambient><diffuse>1.0 0.2 0.8 1</diffuse><emissive>1.0 0.2 0.8 1</emissive></material>
+        </visual>
+        <visual name="ring_left">
+          <pose>0 1.5 0 1.5708 0 0</pose>
+          <geometry><cylinder><radius>0.12</radius><length>3.0</length></cylinder></geometry>
+          <material><ambient>1.0 0.2 0.8 1</ambient><diffuse>1.0 0.2 0.8 1</diffuse><emissive>1.0 0.2 0.8 1</emissive></material>
+        </visual>
+        <visual name="ring_right">
+          <pose>0 -1.5 0 1.5708 0 0</pose>
+          <geometry><cylinder><radius>0.12</radius><length>3.0</length></cylinder></geometry>
+          <material><ambient>1.0 0.2 0.8 1</ambient><diffuse>1.0 0.2 0.8 1</diffuse><emissive>1.0 0.2 0.8 1</emissive></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="ring_delta">
+      <static>true</static>
+      <pose>-12.135 -8.816 4.0 0 0 0.62832</pose>
+      <link name="link">
+        <gravity>false</gravity>
+        <visual name="center_beacon">
+          <pose>0 0 0 0 0 0</pose>
+          <geometry><sphere><radius>0.4</radius></sphere></geometry>
+          <material>
+            <ambient>0.2 1.0 0.3 1</ambient>
+            <diffuse>0.2 1.0 0.3 1</diffuse>
+            <emissive>0.2 1.0 0.3 1</emissive>
+          </material>
+        </visual>
+        <visual name="ring_top">
+          <pose>0 0 1.5 0 1.5708 0</pose>
+          <geometry><cylinder><radius>0.12</radius><length>3.0</length></cylinder></geometry>
+          <material><ambient>0.2 1.0 0.3 1</ambient><diffuse>0.2 1.0 0.3 1</diffuse><emissive>0.2 1.0 0.3 1</emissive></material>
+        </visual>
+        <visual name="ring_bottom">
+          <pose>0 0 -1.5 0 1.5708 0</pose>
+          <geometry><cylinder><radius>0.12</radius><length>3.0</length></cylinder></geometry>
+          <material><ambient>0.2 1.0 0.3 1</ambient><diffuse>0.2 1.0 0.3 1</diffuse><emissive>0.2 1.0 0.3 1</emissive></material>
+        </visual>
+        <visual name="ring_left">
+          <pose>0 1.5 0 1.5708 0 0</pose>
+          <geometry><cylinder><radius>0.12</radius><length>3.0</length></cylinder></geometry>
+          <material><ambient>0.2 1.0 0.3 1</ambient><diffuse>0.2 1.0 0.3 1</diffuse><emissive>0.2 1.0 0.3 1</emissive></material>
+        </visual>
+        <visual name="ring_right">
+          <pose>0 -1.5 0 1.5708 0 0</pose>
+          <geometry><cylinder><radius>0.12</radius><length>3.0</length></cylinder></geometry>
+          <material><ambient>0.2 1.0 0.3 1</ambient><diffuse>0.2 1.0 0.3 1</diffuse><emissive>0.2 1.0 0.3 1</emissive></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="ring_epsilon">
+      <static>true</static>
+      <pose>4.635 -14.265 4.0 0 0 1.88496</pose>
+      <link name="link">
+        <gravity>false</gravity>
+        <visual name="center_beacon">
+          <pose>0 0 0 0 0 0</pose>
+          <geometry><sphere><radius>0.4</radius></sphere></geometry>
+          <material>
+            <ambient>1.0 0.5 0.0 1</ambient>
+            <diffuse>1.0 0.5 0.0 1</diffuse>
+            <emissive>1.0 0.5 0.0 1</emissive>
+          </material>
+        </visual>
+        <visual name="ring_top">
+          <pose>0 0 1.5 0 1.5708 0</pose>
+          <geometry><cylinder><radius>0.12</radius><length>3.0</length></cylinder></geometry>
+          <material><ambient>1.0 0.5 0.0 1</ambient><diffuse>1.0 0.5 0.0 1</diffuse><emissive>1.0 0.5 0.0 1</emissive></material>
+        </visual>
+        <visual name="ring_bottom">
+          <pose>0 0 -1.5 0 1.5708 0</pose>
+          <geometry><cylinder><radius>0.12</radius><length>3.0</length></cylinder></geometry>
+          <material><ambient>1.0 0.5 0.0 1</ambient><diffuse>1.0 0.5 0.0 1</diffuse><emissive>1.0 0.5 0.0 1</emissive></material>
+        </visual>
+        <visual name="ring_left">
+          <pose>0 1.5 0 1.5708 0 0</pose>
+          <geometry><cylinder><radius>0.12</radius><length>3.0</length></cylinder></geometry>
+          <material><ambient>1.0 0.5 0.0 1</ambient><diffuse>1.0 0.5 0.0 1</diffuse><emissive>1.0 0.5 0.0 1</emissive></material>
+        </visual>
+        <visual name="ring_right">
+          <pose>0 -1.5 0 1.5708 0 0</pose>
+          <geometry><cylinder><radius>0.12</radius><length>3.0</length></cylinder></geometry>
+          <material><ambient>1.0 0.5 0.0 1</ambient><diffuse>1.0 0.5 0.0 1</diffuse><emissive>1.0 0.5 0.0 1</emissive></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 🚁 UAV Alpha (0 deg, spawn x=15m, y=0m, z=4.0m) -->
+    <model name="uav_alpha">
+      <pose>15.0 0.0 4.0 0 0 3.14159</pose>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial>
+          <mass>1.5</mass>
+          <inertia><ixx>0.03475</ixx><iyy>0.07000</iyy><izz>0.09770</izz></inertia>
+        </inertial>
+        <collision name="col"><geometry><box><size>0.47 0.47 0.11</size></box></geometry></collision>
+        <visual name="mesh"><geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry></visual>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name>
+        <topic>/uav_alpha/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+        <odom_publish_frequency>50</odom_publish_frequency>
+        <odom_frame>world</odom_frame>
+        <robot_base_frame>base_link</robot_base_frame>
+      </plugin>
+    </model>
+
+    <!-- 🚁 UAV Beta (72 deg, spawn x=4.635m, y=14.265m, z=4.0m) -->
+    <model name="uav_beta">
+      <pose>4.635 14.265 4.0 0 0 -1.88496</pose>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial>
+          <mass>1.5</mass>
+          <inertia><ixx>0.03475</ixx><iyy>0.07000</iyy><izz>0.09770</izz></inertia>
+        </inertial>
+        <collision name="col"><geometry><box><size>0.47 0.47 0.11</size></box></geometry></collision>
+        <visual name="mesh"><geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry></visual>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name>
+        <topic>/uav_beta/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+        <odom_publish_frequency>50</odom_publish_frequency>
+        <odom_frame>world</odom_frame>
+        <robot_base_frame>base_link</robot_base_frame>
+      </plugin>
+    </model>
+
+    <!-- 🚁 UAV Gamma (144 deg, spawn x=-12.135m, y=8.816m, z=4.0m) -->
+    <model name="uav_gamma">
+      <pose>-12.135 8.816 4.0 0 0 -0.62832</pose>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial>
+          <mass>1.5</mass>
+          <inertia><ixx>0.03475</ixx><iyy>0.07000</iyy><izz>0.09770</izz></inertia>
+        </inertial>
+        <collision name="col"><geometry><box><size>0.47 0.47 0.11</size></box></geometry></collision>
+        <visual name="mesh"><geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry></visual>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name>
+        <topic>/uav_gamma/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+        <odom_publish_frequency>50</odom_publish_frequency>
+        <odom_frame>world</odom_frame>
+        <robot_base_frame>base_link</robot_base_frame>
+      </plugin>
+    </model>
+
+    <!-- 🚁 UAV Delta (216 deg, spawn x=-12.135m, y=-8.816m, z=4.0m) -->
+    <model name="uav_delta">
+      <pose>-12.135 -8.816 4.0 0 0 0.62832</pose>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial>
+          <mass>1.5</mass>
+          <inertia><ixx>0.03475</ixx><iyy>0.07000</iyy><izz>0.09770</izz></inertia>
+        </inertial>
+        <collision name="col"><geometry><box><size>0.47 0.47 0.11</size></box></geometry></collision>
+        <visual name="mesh"><geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry></visual>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name>
+        <topic>/uav_delta/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+        <odom_publish_frequency>50</odom_publish_frequency>
+        <odom_frame>world</odom_frame>
+        <robot_base_frame>base_link</robot_base_frame>
+      </plugin>
+    </model>
+
+    <!-- 🚁 UAV Epsilon (288 deg, spawn x=4.635m, y=-14.265m, z=4.0m) -->
+    <model name="uav_epsilon">
+      <pose>4.635 -14.265 4.0 0 0 1.88496</pose>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial>
+          <mass>1.5</mass>
+          <inertia><ixx>0.03475</ixx><iyy>0.07000</iyy><izz>0.09770</izz></inertia>
+        </inertial>
+        <collision name="col"><geometry><box><size>0.47 0.47 0.11</size></box></geometry></collision>
+        <visual name="mesh"><geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry></visual>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name>
+        <topic>/uav_epsilon/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+        <odom_publish_frequency>50</odom_publish_frequency>
+        <odom_frame>world</odom_frame>
+        <robot_base_frame>base_link</robot_base_frame>
+      </plugin>
+    </model>
+
+  </world>
+</sdf>

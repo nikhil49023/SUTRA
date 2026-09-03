@@ -1,4 +1,18 @@
 <?xml version="1.0" ?>
+<!--
+  PROJECT SUTRA — UAV Alpha (Lead Tactical Reconnaissance Quadcopter)
+  ===================================================================
+  Author: Tech Lead Nikhil (Subsystem A + B Lead)
+  Location: sutra_ws/src/sutra_sim/models/uav_alpha_lead.sdf
+
+  Equipped with:
+    - 9-DOF Avionics Suite (Dual IMU 250Hz, Barometer 50Hz, Magnetometer 50Hz, NavSat GNSS 10Hz)
+    - 360° 3D GPU LiDAR (10Hz 32-channel OctoMap sensor)
+    - Downward Laser Altimeter / Rangefinder (50Hz WaveLander touchdown)
+    - Forward Optical 1080p RGB Camera (30Hz)
+    - Forward/Downward FLIR LWIR Thermal Camera (30Hz)
+    - High-Precision Depth PointCloud Camera (15Hz)
+-->
 <sdf version="1.8">
   <model name="uav_alpha_lead">
     <pose>0 0 0.2 0 0 0</pose>
@@ -34,26 +48,121 @@
         </material>
       </visual>
 
-      <!-- IMU Sensor Plugin for VIO & Flight Dynamics -->
+      <!-- 1. IMU (250Hz High-Rate Accelerometer + Gyroscope) -->
       <sensor name="imu_sensor" type="imu">
         <always_on>true</always_on>
-        <update_rate>200.0</update_rate>
+        <update_rate>250.0</update_rate>
         <topic>/uav_alpha/imu</topic>
         <imu>
           <angular_velocity>
-            <x><noise type="gaussian"><stddev>0.0002</stddev></noise></x>
-            <y><noise type="gaussian"><stddev>0.0002</stddev></noise></y>
-            <z><noise type="gaussian"><stddev>0.0002</stddev></noise></z>
+            <x><noise type="gaussian"><stddev>0.0002</stddev><bias_mean>0.00001</bias_mean><bias_stddev>0.000005</bias_stddev></noise></x>
+            <y><noise type="gaussian"><stddev>0.0002</stddev><bias_mean>0.00001</bias_mean><bias_stddev>0.000005</bias_stddev></noise></y>
+            <z><noise type="gaussian"><stddev>0.0002</stddev><bias_mean>0.00001</bias_mean><bias_stddev>0.000005</bias_stddev></noise></z>
           </angular_velocity>
           <linear_acceleration>
-            <x><noise type="gaussian"><stddev>0.01</stddev></noise></x>
-            <y><noise type="gaussian"><stddev>0.01</stddev></noise></y>
-            <z><noise type="gaussian"><stddev>0.01</stddev></noise></z>
+            <x><noise type="gaussian"><stddev>0.01</stddev><bias_mean>0.001</bias_mean><bias_stddev>0.0005</bias_stddev></noise></x>
+            <y><noise type="gaussian"><stddev>0.01</stddev><bias_mean>0.001</bias_mean><bias_stddev>0.0005</bias_stddev></noise></y>
+            <z><noise type="gaussian"><stddev>0.01</stddev><bias_mean>0.001</bias_mean><bias_stddev>0.0005</bias_stddev></noise></z>
           </linear_acceleration>
         </imu>
       </sensor>
 
-      <!-- RGB Optical Camera Sensor -->
+      <!-- 2. Barometer / Air Pressure (50Hz) -->
+      <sensor name="air_pressure_sensor" type="air_pressure">
+        <always_on>true</always_on>
+        <update_rate>50.0</update_rate>
+        <topic>/uav_alpha/air_pressure</topic>
+        <air_pressure>
+          <reference_altitude>0.0</reference_altitude>
+          <pressure>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>1.2</stddev>
+            </noise>
+          </pressure>
+        </air_pressure>
+      </sensor>
+
+      <!-- 3. 3-Axis Magnetometer (50Hz) -->
+      <sensor name="magnetometer_sensor" type="magnetometer">
+        <always_on>true</always_on>
+        <update_rate>50.0</update_rate>
+        <topic>/uav_alpha/magnetometer</topic>
+        <magnetometer>
+          <x><noise type="gaussian"><stddev>0.05</stddev></noise></x>
+          <y><noise type="gaussian"><stddev>0.05</stddev></noise></y>
+          <z><noise type="gaussian"><stddev>0.05</stddev></noise></z>
+        </magnetometer>
+      </sensor>
+
+      <!-- 4. NavSat GNSS (10Hz WGS84 Geolocation Fix) -->
+      <sensor name="navsat_sensor" type="navsat">
+        <always_on>true</always_on>
+        <update_rate>10.0</update_rate>
+        <topic>/uav_alpha/navsat</topic>
+        <navsat>
+          <position_sensing>
+            <horizontal><noise type="gaussian"><stddev>0.5</stddev></noise></horizontal>
+            <vertical><noise type="gaussian"><stddev>1.2</stddev></noise></vertical>
+          </position_sensing>
+          <velocity_sensing>
+            <horizontal><noise type="gaussian"><stddev>0.05</stddev></noise></horizontal>
+            <vertical><noise type="gaussian"><stddev>0.08</stddev></noise></vertical>
+          </velocity_sensing>
+        </navsat>
+      </sensor>
+
+      <!-- 5. 360° 3D GPU LiDAR (10Hz 32-Channel OctoMap Scanner) -->
+      <sensor name="lidar_sensor" type="gpu_lidar">
+        <pose>0 0 0.08 0 0 0</pose>
+        <always_on>true</always_on>
+        <update_rate>10.0</update_rate>
+        <topic>/uav_alpha/lidar/points</topic>
+        <ray>
+          <scan>
+            <horizontal>
+              <samples>720</samples>
+              <resolution>1</resolution>
+              <min_angle>-3.14159265</min_angle>
+              <max_angle>3.14159265</max_angle>
+            </horizontal>
+            <vertical>
+              <samples>32</samples>
+              <resolution>1</resolution>
+              <min_angle>-0.436332</min_angle>
+              <max_angle>0.261799</max_angle>
+            </vertical>
+          </scan>
+          <range>
+            <min>0.10</min>
+            <max>50.0</max>
+            <resolution>0.01</resolution>
+          </range>
+          <noise>
+            <type>gaussian</type>
+            <mean>0.0</mean>
+            <stddev>0.01</stddev>
+          </noise>
+        </ray>
+      </sensor>
+
+      <!-- 6. Downward Laser Altimeter / Rangefinder (50Hz WaveLander Precision) -->
+      <sensor name="rangefinder_sensor" type="gpu_lidar">
+        <pose>0 0 -0.04 0 1.5707963 0</pose>
+        <always_on>true</always_on>
+        <update_rate>50.0</update_rate>
+        <topic>/uav_alpha/rangefinder/distance</topic>
+        <ray>
+          <scan>
+            <horizontal><samples>1</samples><resolution>1</resolution><min_angle>0</min_angle><max_angle>0</max_angle></horizontal>
+            <vertical><samples>1</samples><resolution>1</resolution><min_angle>0</min_angle><max_angle>0</max_angle></vertical>
+          </scan>
+          <range><min>0.05</min><max>40.0</max><resolution>0.005</resolution></range>
+          <noise><type>gaussian</type><mean>0.0</mean><stddev>0.005</stddev></noise>
+        </ray>
+      </sensor>
+
+      <!-- 7. RGB Optical Camera Sensor (1080p @ 30Hz) -->
       <sensor name="rgb_camera" type="camera">
         <pose>0.2 0 0.05 0 0 0</pose>
         <always_on>true</always_on>
@@ -73,7 +182,7 @@
         </camera>
       </sensor>
 
-      <!-- Depth Sensor PointCloud Camera -->
+      <!-- 8. Depth Sensor PointCloud Camera (15Hz) -->
       <sensor name="depth_camera" type="depth_camera">
         <pose>0.2 0 0.02 0 0 0</pose>
         <always_on>true</always_on>
@@ -93,12 +202,24 @@
         </camera>
       </sensor>
 
-      <!-- LWIR Thermal Infrared Camera Sensor -->
+      <!-- 9. LWIR Thermal Infrared Camera Sensor (30Hz) -->
       <sensor name="thermal_camera" type="thermal">
         <pose>0.2 0 -0.05 0 0 0</pose>
         <always_on>true</always_on>
         <update_rate>30.0</update_rate>
         <topic>/uav_alpha/thermal_camera/image_raw</topic>
+        <camera>
+          <horizontal_fov>1.0471975</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>480</height>
+            <format>L8</format>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>150.0</far>
+          </clip>
+        </camera>
       </sensor>
 
     </link>

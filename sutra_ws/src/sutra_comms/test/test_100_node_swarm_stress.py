@@ -22,9 +22,11 @@ from sutra_comms.perceptron_jscc import PerceptronSemanticCommsPipeline
 
 @pytest.fixture(scope="module")
 def ros_context():
-    rclpy.init()
+    if not rclpy.ok():
+        rclpy.init()
     yield
-    rclpy.shutdown()
+    if rclpy.ok():
+        rclpy.shutdown()
 
 
 def test_100_node_swarm_topology_and_stress_audit(ros_context):

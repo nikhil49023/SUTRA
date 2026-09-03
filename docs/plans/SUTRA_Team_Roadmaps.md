@@ -1,129 +1,123 @@
-# 🚀 Project SUTRA — Autonomous SAR & Reconnaissance Swarm Master Roadmap
+# 🚀 Project SUTRA — Autonomous SAR & Reconnaissance Swarm Team Roadmaps
 
-> **Mission Objective:** Autonomous Multi-Drone Swarm System for Collaborative Search-and-Rescue (SAR), Survivor Detection, Threat Identification & Tactical Reconnaissance in Disaster-Hit, Forested, and GPS-Denied Environments.  
-> **Monorepo Root:** `/home/nikhil/Desktop/Project SUTRA`  
-> **Target Outcome:** Fully integrated, SITL-verified 5-Subsystem Pre-Prototype Architecture ready for Physical Hardware Deployment.
-
----
-
-## 🌴 3-Tier Branching & Integration Strategy
-All team members operate according to the project's 3-Tier Git Strategy:
-1. **Feature Development (`feature/subsystem-*`):** Engineers work on dedicated subsystem branches.
-2. **Buffer Integration Branch (`dev` / `buffer-integration`):** Merge code here FIRST for cross-subsystem integration testing and Gate G1–G6 metric audits.
-3. **Production Branch (`main`):** Verified stable releases after passing all pre-prototype verification gates.
+> **Grand Finale Operational Context:**  
+> **Event:** Smart Horizon: 48-Hour International Hackathon (NHCE Bengaluru, Sept 3–5, 2026)  
+> **Team ID:** `SHIH26-TID-361` | **Venue:** Library (Defence & SpaceTech Track)  
+> **Problem Statement:** **SH-DST-05** (*Autonomous Drone Swarm System for Search, Rescue & Reconnaissance in GPS-Denied / RF-Jammed Environments*)  
+> **Target Outcome:** 300/300 Marks across Evaluation 1 (100m), Evaluation 2 (100m), and Evaluation 3 (100m) with 100% resolution of the 32 Architectural Gaps.
 
 ---
 
-## 🚁 1. ROHITH KUMAR — Subsystem A (GNC & Flight Control Lead)
+## 🌴 3-Tier Branching & Git Repository Hygiene
 
-- **Role:** Lead Engineer, Subsystem A (Flight Control, PX4 Offboard Mode, VIO, ORCA Avoidance)
-- **Working Folder:** [`sutra_ws/src/sutra_gnc/`](file:///home/nikhil/Desktop/Project%20SUTRA/sutra_ws/src/sutra_gnc/)
-- **Active Branch:** `feature/subsystem-a-gnc`
-- **Verification Command:** `pytest sutra_ws/src/sutra_gnc/test/`
+```
+  [ Subsystem Feature Branches ]       [ Sandbox Testing Branch ]          [ Production Master Truth ]
+  feature/subsystem-a-gnc (Nikhil) ──┐
+  feature/subsystem-b-comms (Nikhil) ┼──► dev (Sandbox Testing) ──[Verify]──► main (Verified Production)
+  feature/subsystem-c-perception ────┤   (Cross-subsystem staging             ▲
+  feature/subsystem-d-gcs (Siva) ────┤    & sandbox validation)               │
+  feature/subsystem-e-docs (Harika) ─┤                                        │ (MANDATORY UPDATE SOURCE)
+  feature/subsystem-f-ops (Rohith) ──┘                                        │
+             ▲                                                                │
+             └─────────────────────── Pull / Sync from main ──────────────────┘
+```
 
-### Mission Roadmap:
-* **Phase 1: PX4 MicroXRCE-DDS Offboard Controller (`sutra_gnc/offboard_node.py`)**
-  - Implement ROS 2 PX4 offboard control interface publishing `OffboardControlMode` and `TrajectorySetpoint` @ 10Hz.
-  - Build state machine for smooth transition: Manual -> Position -> Offboard setpoint control.
-  - Validate 3D position lock and velocity tracking accuracy in Gazebo SITL environment.
-* **Phase 2: GPS-Denied VIO Localization & 3D Voxel OctoMap (`sutra_gnc/octomap_node.py`)**
-  - Integrate Visual-Inertial Odometry (VIO) for GPS-denied forest navigation.
-  - Integrate OctoMap 3D voxel occupancy grid generator parsing stereo depth camera and LiDAR point clouds (`sensor_msgs/msg/PointCloud2`).
-* **Phase 3: ORCA 3D Multi-Agent Swarm Collision Avoidance (`sutra_gnc/orca_avoidance.py`)**
-  - Integrate RVO2 / ORCA 3D velocity obstacle algorithm for multi-agent trajectory negotiation.
-  - Compute collision-free velocity vectors under dynamic physical constraints (max acceleration $2.5\text{ m/s}^2$, safety radius $1.5\text{m}$).
-* **Phase 4: Gate G1 & G5 Verification Audits**
-  - Conduct SITL flight simulation verifying offboard trajectory tracking and collision avoidance.
-  - Merge into `dev` branch for **Gate G1** (Physics & Telemetry) and **Gate G5** (ORCA 3D Avoidance) verification audits.
+1. **`main` is Sole Production Truth**: All subsystem feature branches MUST checkout and update directly from `main` (`git fetch origin main && git merge origin/main --no-edit`), NEVER directly from `dev`.
+2. **`dev` is Strictly a Sandbox**: Cross-subsystem integration occurs on `dev`. Once validated (232 tests passing), `dev` merges to `main`, and all subsystems pull from `main`.
+3. **The Cardinal Commit Law**: *"No teammate is allowed to work on local and say 'I didn't commit, but I completed the work.' If work is not committed and pushed to GitHub, it officially does not exist."*
 
 ---
 
-## 📡 2. NIKHIL — Subsystem B (Tech Architect, Comms & Sim Lead)
+## ⚡ 1. NIKHIL — Tech Architect & Subsystem A + B Lead (GNC, Comms & Sim)
 
-- **Role:** Tech Architect & Lead Engineer, Subsystem B (Swarm Mesh, Deep JSCC, SwarmRAFT Consensus, Gazebo Sim Ops)
-- **Working Folder:** [`sutra_ws/src/sutra_comms/`](file:///home/nikhil/Desktop/Project%20SUTRA/sutra_ws/src/sutra_comms/) & [`sutra_ws/src/sutra_sim/`](file:///home/nikhil/Desktop/Project%20SUTRA/sutra_ws/src/sutra_sim/)
-- **Active Branch:** `feature/subsystem-b-comms`
-- **Verification Command:** `pytest sutra_ws/src/sutra_comms/test/`
+* **Roles:** Tech Architect, Flight Controls & Swarm Comms Lead (Subsystem A & B)
+* **Folders:** [`sutra_ws/src/sutra_gnc/`](sutra_ws/src/sutra_gnc/), [`sutra_ws/src/sutra_comms/`](sutra_ws/src/sutra_comms/), [`sutra_ws/src/sutra_sim/`](sutra_ws/src/sutra_sim/)
+* **Branches:** `feature/subsystem-a-gnc`, `feature/subsystem-b-comms` (Unrestricted Takeover Authority across all branches)
+* **Verification Suites:** `pytest sutra_ws/src/sutra_gnc/test/` & `pytest sutra_ws/src/sutra_comms/test/`
+* **Jury Defense Ownership:** 🛡️ **GNC Flight Laws, ORCA 3D, PX4 Offboard & Deep JSCC Comms Moat**
 
-### Mission Roadmap:
-* **Phase 1: High-Fidelity Gazebo Sim 8 Digital Twin Environment (`sutra_sim/worlds/`)**
-  - Construct realistic SDF digital twin disaster worlds (`real_world_digital_twin_swarm.sdf`) featuring complex terrain elevation, forest canopy, structures, and disaster rubble.
-  - Optimize 500Hz physics solver execution maintaining Real-Time Factor (RTF) $\ge 0.98$.
-* **Phase 2: 802.11s Wi-Fi Swarm Mesh Simulation (`sutra_comms/mesh_node.py`)**
-  - Develop multi-agent mesh packet routing node with dynamic IP discovery and link quality calculation ($d^{-2.7}$ log-distance RF path loss model).
-  - Implement mesh heartbeat broadcast and telemetry relay across multi-hop node topologies.
-* **Phase 3: SwarmRAFT Distributed Consensus Engine & Deep JSCC Coding**
-  - Implement SwarmRAFT consensus protocol for autonomous leader election (< 500ms failover) and state machine log replication across swarm nodes.
-  - Implement Deep JSCC autoencoder model for low-latency image compression over noisy wireless channels (96% payload reduction, PSNR $\ge 30.0\text{ dB}$).
-* **Phase 4: Swarm Network Stress Testing & Gate G2 Audit**
-  - Test mesh throughput, Raft failover, and neural compression latency under simulated interference and high packet loss.
-  - Merge into `dev` branch for **Gate G2** (Swarm Mesh & Raft Consensus) verification audit.
+### Assigned Gap Remediation Items:
+* **Gap 8 (High)**: Replace linear pressure approximation `(p0 - p)/12.0` with standard hydrostatic barometric formula in `neuro_adaptive_flight_node.py:129`.
+* **Gap 9 (High)**: Fix GPS local ENU projection in `vio_localization.py:320-321` by subtracting local reference datum coordinates.
+* **Gap 10 (High)**: Ground the Deep JSCC defense: explain Semantic Latent Compression (512-dim) vs raw pixels, providing measured patch benchmarks.
+* **Gap 11 & 12 (High)**: Implement asynchronous UDP multicast transport for SwarmRAFT consensus and verify Linux kernel 802.11s mesh setup scripts.
+* **Gap 17 (Medium)**: Unify duplicate trajectory filters into single `BaseDifferentiableTrajectoryFilter`.
+* **Gap 18 (Medium)**: Add `from rclpy.executors import ExternalShutdownException` to `px4_offboard_controller.py:661`.
+* **Gap 25 (Medium)**: Add debug logging to `mesh_node.py` odometry callback to prevent swallowed exceptions.
+* **Gap 29 (Low)**: Align `DOCS.md` OctoMap specification with depth image voxelization rather than PointCloud2 LiDAR.
 
 ---
 
-## 👁️ 3. VEDANTH SAI RAM — Subsystem C (AI Perception & Geolocation Lead)
+## 👁️ 2. VEDANTH SAI RAM — Subsystem C Lead (AI Edge Perception)
 
-- **Role:** Lead Engineer, Subsystem C (Tri-Modal Perception, YOLOv8 TensorRT, Survivor Geolocation)
-- **Working Folder:** [`sutra_ws/src/sutra_perception/`](file:///home/nikhil/Desktop/Project%20SUTRA/sutra_ws/src/sutra_perception/)
-- **Active Branch:** `feature/subsystem-c-perception`
-- **Verification Command:** `pytest sutra_ws/src/sutra_perception/test/`
+* **Role:** Lead Engineer, Subsystem C (AI Perception, Sensor Fusion, Target Geolocation)
+* **Folder:** [`sutra_ws/src/sutra_perception/`](sutra_ws/src/sutra_perception/)
+* **Branch:** `feature/subsystem-c-perception`
+* **Pair Assistant:** Rohith Kumar (provides RTX 4050 GPU for TensorRT builds & batch inference)
+* **Verification Suite:** `pytest sutra_ws/src/sutra_perception/test/`
+* **Jury Defense Ownership:** 🛡️ **Edge AI Detection, ByteTrack MOT & WGS84 Geolocation Raycasting**
 
-### Mission Roadmap:
-* **Phase 1: YOLOv8-Nano TensorRT Edge Inference Engine (`sutra_perception/detector_node.py`)**
-  - Train YOLOv8-Nano on aerial search-and-rescue datasets (RGB & FLIR thermal human/survivor image pairs).
-  - Export and optimize engine using NVIDIA TensorRT (FP16 precision) achieving $\ge 60$ FPS on edge platforms.
-* **Phase 2: WGS84 GPS Target Raycaster (`sutra_perception/target_geolocation.py`)**
-  - Implement raycasting algorithm converting 2D survivor bounding box centroids into WGS84 GPS coordinates (Latitude, Longitude, Altitude).
-  - Calculate ray intersection with terrain digital elevation models using drone attitude (roll, pitch, yaw) and camera intrinsic parameters.
-* **Phase 3: Tri-Modal Spatial Cross-Attention Fusion (`sutra_perception/fusion_node.py`)**
-  - Develop spatial cross-attention fusion layer combining RGB visual frames, FLIR thermal heatmaps, and mmWave radar point clouds.
-  - Achieve target detection confidence threshold $\ge 90\%$ under foliage, forest canopy, and degraded visibility conditions.
-* **Phase 4: Target Geolocation Accuracy Verification & Gate G3/G4 Audit**
-  - Benchmark survivor detection and geolocation accuracy (positioning error $< 1.5\text{m}$ at 30m flight altitude).
-  - Merge into `dev` branch for **Gate G3** (Perception) and **Gate G4** (Target Geolocation) verification audits.
+### Assigned Gap Remediation Items:
+* **Gap 1 (Critical)**: Update `SAR_CLASS_IDS` in `detector_node.py:147` to support `{0: "person", 1: "survivor", 2: "debris", 3: "threat", 26: "backpack", 28: "suitcase"}`.
+* **Gap 6 (Critical)**: Wire configurable GPS reference origin (`SUTRA_ORIGIN_LAT`, `SUTRA_ORIGIN_LON`), defaulting to Bengaluru coordinates (`12.9344° N, 77.6917° E`).
+* **Gap 14 (High)**: Wire `_low_bandwidth_mode` flag inside `detector_node.py` to dynamically increase confidence threshold to 0.70 and throttle framerate under jamming.
+* **Gap 15 (High)**: Wrap `_fusion_tick` in `detector_node.py:769` in a top-level `try...except Exception as e:` block with throttled logging.
+* **Gap 16 & 26 (Medium/Low)**: Consolidate ByteTrack onto production `bytetrack.py`; deprecate and remove legacy duplicate `bytetrack_tracker.py`.
+* **Gap 27 & 28 (Low)**: Remove hardcoded Kaggle path from `train.py`; document `yolov8n_p2_sutra.yaml` in perception `DOCS.md`.
 
 ---
 
-## 🗺️ 4. SIVA KESAVA — Subsystem D (3D GIS Ground Control Station Lead)
+## 🗺️ 3. SIVA KESAVA — Subsystem D Lead (3D GIS GCS Dashboard)
 
-- **Role:** Lead Engineer, Subsystem D (3D GIS Ground Control Station & HSI Telemetry HUD)
-- **Working Folder:** [`sutra_ws/src/sutra_gcs/`](file:///home/nikhil/Desktop/Project%20SUTRA/sutra_ws/src/sutra_gcs/)
-- **Active Branch:** `feature/subsystem-d-gcs`
-- **Verification Command:** `cd sutra_ws/src/sutra_gcs && npm run build`
+* **Role:** Lead Engineer, Subsystem D (3D GIS Ground Control Station, React 18, Mapbox, WebGPU)
+* **Folder:** [`sutra_ws/src/sutra_gcs/`](sutra_ws/src/sutra_gcs/)
+* **Branch:** `feature/subsystem-d-gcs`
+* **Pair Assistant:** Rohith Kumar (provides multi-stream client testing & WebGPU rendering verification)
+* **Verification Suite:** `cd sutra_ws/src/sutra_gcs && npm run build` & browser console audit
+* **Jury Defense Ownership:** 🛡️ **GCS Dashboard, WebGPU HUD, ATAK CoT & Operator State Machine**
 
-### Mission Roadmap:
-* **Phase 1: Mapbox GL JS 3D Satellite Map Engine (`sutra_gcs/src/App.tsx`)**
-  - Build React GIS GCS dashboard integrating Mapbox GL JS 3D satellite imagery and digital terrain elevation.
-  - Implement dynamic 3D drone GLTF markers, altitude vectors, and historical search coverage trails.
-* **Phase 2: High-Throughput ROS 2 Telemetry WebSocket Bridge**
-  - Connect `rosbridge_server` WebSocket interface to stream real-time ROS 2 telemetry topics (`/uav_alpha/odometry`, `/uav_beta/odometry`, etc.).
-  - Display live telemetry updates for multi-drone swarm positions, survivor alerts, battery levels, and mesh network SNR.
-* **Phase 3: WebGPU Telemetry HUD & Control Interface (`sutra_gcs/src/components/`)**
-  - Build WebGPU-accelerated pitch/roll artificial horizon dials, link quality widgets, and survivor detection alert feeds at 60 FPS.
-  - Implement 1-Click Emergency Return-To-Launch (RTL) trigger button with failsafe confirmation modal.
-* **Phase 4: Build Optimization & Gate G6 Audit**
-  - Verify clean production build (`npm run build`) and cross-browser rendering performance.
-  - Merge into `dev` branch for **Gate G6** (3D GIS GCS Telemetry Bridge) verification audit.
+### Assigned Gap Remediation Items:
+* **Gap 4 (Critical)**: Initialize actual Mapbox GL JS 3D satellite map container with offline raster tiles, keeping radar grid as switchable overlay.
+* **Gap 5 (Critical)**: Implement experimental WebGPU shader pipeline with Canvas 2D fallback, honestly documenting rendering engine in `DOCS.md`.
+* **Gap 13 (High)**: Implement bidirectional `EMERGENCY_RTL_REQUEST` $\to$ `EMERGENCY_RTL_ACK` handshake loop in `MissionControlConsole.tsx`.
+* **Gap 19 (Medium)**: Remove static mock metrics in `DeepJsccLiveVideoGrid.tsx` and wire dynamic WebSocket telemetry stream.
+* **Gap 20 & 21 (Medium)**: Remove dead `telemetryBuffer.ts` and unify all CoT XML serialization through `atakCotStreamer.ts`.
+* **Gap 23 & 24 (Medium)**: Enable TypeScript strict mode and introduce Jest/Vitest unit tests for GCS store logic.
+* **Gap 31 (Low)**: Add exponential backoff reconnect logic ($1\text{s}, 2\text{s}, 4\text{s}, \max 10\text{s}$) in WebSocket client.
 
 ---
 
-## 📑 5. HARIKA — Subsystem E (Verification Audits, System Docs & PMO Lead)
+## 📑 4. HARIKA — Subsystem E Lead & Pitch Co-Lead (Docs, Audits & Presentation)
 
-- **Role:** Lead Engineer / PMO, Subsystem E (Documentation, Gate Audits G1-G6, Flight Logs)
-- **Working Folder:** [`docs/`](file:///home/nikhil/Desktop/Project%20SUTRA/docs/) & [`scripts/`](file:///home/nikhil/Desktop/Project%20SUTRA/scripts/)
-- **Active Branch:** `feature/subsystem-e-docs`
-- **Verification Command:** `python3 scripts/SUTRA_48Hr_Hackathon_Master_Suite.py`
+* **Role:** Lead Engineer, Subsystem E (Documentation, Automated Gate Audits, Pitch Deck Formatting & Delivery)
+* **Folder:** [`docs/`](docs/), [`scripts/`](scripts/), [`.github/`](.github/)
+* **Branch:** `feature/subsystem-e-docs`
+* **Co-Lead Support:** Tech Lead Nikhil
+* **Verification Suite:** Automated monorepo test suites & pitch deck rehearsal
+* **Jury Defense Ownership:** 🛡️ **Master Pitch Presentation Delivery, Rule 6.1 Compliance & Verification Defense**
 
-### Mission Roadmap:
-* **Phase 1: System Specifications & Interface Control Documents (ICDs)**
-  - Maintain whitepapers, system specifications, and role execution roadmaps in [`docs/guides/`](file:///home/nikhil/Desktop/Project%20SUTRA/docs/guides/) and [`docs/plans/`](file:///home/nikhil/Desktop/Project%20SUTRA/docs/plans/).
-  - Define clear ROS 2 message schemas, topic naming conventions, and parameter bounds across all 5 subsystems.
-* **Phase 2: Automated Verification Gate Audit Engine (`scripts/`)**
-  - Maintain and execute [`scripts/SUTRA_48Hr_Hackathon_Master_Suite.py`](file:///home/nikhil/Desktop/Project%20SUTRA/scripts/SUTRA_48Hr_Hackathon_Master_Suite.py) for continuous automated auditing of Verification Gates G1 through G6.
-  - Record detailed flight logs, metric pass/fail logs, and system audit certificates.
-* **Phase 3: Flight Log Telemetry Analyzer & Visual Assets**
-  - Build post-flight telemetry analyzer parsing ROS 2 bag files and PX4 `.ulg` flight logs.
-  - Maintain high-impact visual graphics and architectural schematics in [`docs/assets/`](file:///home/nikhil/Desktop/Project%20SUTRA/docs/assets/).
-* **Phase 4: Pre-Prototype Release Certification & Gate Audit Verification**
-  - Audit 100% pass rate across all verification gates (G1–G6) on `dev`.
-  - Authorize and execute final release merge from `dev` to `main` for physical hardware prototyping deployment.
+### Assigned Gap Remediation Items:
+* **Gap 3 (Critical)**: Fix `.github/workflows/ros2-ci.yml` by removing `|| true` masks and ensuring all active branches trigger CI.
+* **Gap 22 (Medium)**: Update root `requirements.txt` with `websockets>=12.0` and system library references.
+* **Gap 30 (Low)**: Maintain active runtime logging in `docs/hackathon/JURY_FEEDBACK_TRACKER.md` across Evaluation 1 & 2.
+* **Zero-Mock Scorecard**: Ensure all benchmark numbers in DOCS.md and pitch decks come verbatim from live captured stdout.
+* **Desk Anchor**: Coordinate workstation presence at the Library table (NHCE Rule 3.4).
+
+---
+
+## ⚙️ 5. ROHITH KUMAR — Subsystem F Lead & Compute Runner (Field Ops & GPU Execution)
+
+* **Role:** Field Ops Lead & Compute Execution Assistant (NDMA Rescue CONOPS, GPU Runner, Table Anchor)
+* **Folder:** [`docs/conops/`](docs/conops/), root scripts
+* **Branch:** `feature/subsystem-f-ops`
+* **Assigned Hardware:** HP Victus (Intel i7, NVIDIA RTX 4050 6GB GPU)
+* **Jury Defense Ownership:** 🔒 **Zero Independent Q&A Exposure** (Technical defense fielded by Nikhil, Vedanth, Siva, or Harika).
+
+### Assigned Gap Remediation Items:
+* **Gap 2 & 7 (Critical)**: Build and test `Dockerfile.novnc` and verify `docker-compose.yml` working directory paths.
+* **Gap 32 (Low)**: Map exact NDMA Disaster Management Guidelines (2019, Section 4.3) into `docs/conops/DOCS.md`.
+* **GPU Compute Assistance**: Run TensorRT FP16 model compilations for Vedanth; run multi-stream GCS load tests for Siva.
+* **Library Desk Anchor**: Maintain continuous physical presence at the Library table at all times (NHCE Rule 3.4).
+
+---
+*Project SUTRA — Smart Horizon 48-Hour International Hackathon Grand Finale Roadmaps.*

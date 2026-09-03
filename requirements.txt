@@ -15,5 +15,7 @@ opencv-python>=4.8.0
 ultralytics>=8.0.0
 pyyaml>=6.0
 
-# ROS 2 & Gazebo Client Libraries
+# ROS 2, Gateway & Network Utilities
 transforms3d>=0.4.1
+websockets>=12.0
+
