@@ -83,6 +83,37 @@ export interface AssistantMessage {
   timestamp: number;
 }
 
+export interface TrackedTarget {
+  target_id: string;
+  id?: string | number;
+  label: string;
+  latitude: number;
+  longitude: number;
+  altitude_m: number;
+  speed_mps?: number;
+  heading_deg?: number;
+  confidence: number;
+  source: string;
+  drone_id?: string;
+  modalities?: string[];
+  tracking_status: 'DETECTED' | 'TRACKED' | 'LOST' | string;
+  history?: { lat: number; lon: number; alt: number; ts: number }[];
+  first_seen?: number;
+  last_seen: number;
+}
+
+export interface PerceptionStatus {
+  connected: boolean;
+  status: 'CONNECTED' | 'DEGRADED' | 'OFFLINE';
+  last_message_time: number;
+  message_count: number;
+  rejected_count: number;
+  inference_fps: number;
+  inference_latency_ms: number;
+  active_tracks: number;
+  last_error?: string | null;
+}
+
 export interface AIState {
   enabled: boolean;
   mode: AIMode;
@@ -95,7 +126,10 @@ export interface AIState {
   failure_predictions: FailurePrediction[];
   recommendations: RecommendationItem[];
   threats: ThreatItem[];
+  tracked_targets: TrackedTarget[];
+  perception_status?: PerceptionStatus;
   assistant_messages: AssistantMessage[];
   overall_confidence: number;
   last_error?: string | null;
 }
+

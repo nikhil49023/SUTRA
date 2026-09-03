@@ -6,8 +6,10 @@ import {
   BatteryPrediction,
   ETAPrediction,
   FailurePrediction,
+  PerceptionStatus,
   RecommendationItem,
   ThreatItem,
+  TrackedTarget,
 } from '../types/ai';
 
 interface AIStoreState extends AIState {
@@ -15,6 +17,9 @@ interface AIStoreState extends AIState {
   addRecommendation: (rec: RecommendationItem) => void;
   updateRecommendationStatus: (id: string, status: 'ACCEPTED' | 'REJECTED' | 'DISMISSED') => void;
   addAssistantMessage: (msg: AssistantMessage) => void;
+  updateTrackedTarget: (target: TrackedTarget) => void;
+  removeTrackedTarget: (targetId: string) => void;
+  updatePerceptionStatus: (status: Partial<PerceptionStatus>) => void;
   hydrateFromSnapshot: (state: Partial<AIState>) => void;
   updateFromEvent: (topic: string, payload: any) => void;
 }
@@ -65,6 +70,18 @@ export const useAIStore = create<AIStoreState>((set) => ({
     },
   },
   threats: [],
+  tracked_targets: [],
+  perception_status: {
+    connected: false,
+    status: 'OFFLINE',
+    last_message_time: 0,
+    message_count: 0,
+    rejected_count: 0,
+    inference_fps: 0,
+    inference_latency_ms: 0,
+    active_tracks: 0,
+    last_error: null,
+  },
   failure_predictions: [
     {
       prediction_id: 'fp-1',
@@ -83,7 +100,7 @@ export const useAIStore = create<AIStoreState>((set) => ({
     {
       msg_id: 'init-1',
       sender: 'ASSISTANT',
-      text: 'Smart Horizon AI Tactical Advisor initialized. Flight plan ALPHA RECON meets all spatial separation constraints.',
+      text: 'Smart Horizon AI Tactical Advisor initialized. Subsystem C AI Perception listener online.',
       timestamp: Date.now(),
     },
   ],
@@ -99,7 +116,59 @@ export const useAIStore = create<AIStoreState>((set) => ({
     })),
   addAssistantMessage: (msg) =>
     set((s) => ({ assistant_messages: [...s.assistant_messages, msg] })),
-  hydrateFromSnapshot: (state) => set((s) => ({ ...s, ...state })),
+
+  updateTrackedTarget: (target) =>
+    set((s) => {
+      const targetId = String(target.target_id || target.id);
+      const normalizedTarget = {
+        ...target,
+        target_id: targetId,
+        id: targetId,
+        last_seen: target.last_seen || Date.now(),
+      };
+      const exists = s.tracked_targets.some((t) => String(t.target_id || t.id) === targetId);
+      const newTargets = exists
+        ? s.tracked_targets.map((t) => (String(t.target_id || t.id) === targetId ? normalizedTarget : t))
+        : [...s.tracked_targets, normalizedTarget];
+      return { tracked_targets: newTargets, last_update: Date.now() };
+    }),
+
+  removeTrackedTarget: (targetId) =>
+    set((s) => ({
+      tracked_targets: s.tracked_targets.filter((t) => String(t.target_id || t.id) !== String(targetId)),
+    })),
+
+  updatePerceptionStatus: (status) =>
+    set((s) => ({
+      perception_status: {
+        ...(s.perception_status || {
+          connected: false,
+          status: 'OFFLINE',
+          last_message_time: 0,
+          message_count: 0,
+          rejected_count: 0,
+          inference_fps: 0,
+          inference_latency_ms: 0,
+          active_tracks: 0,
+          last_error: null,
+        }),
+        ...status,
+      },
+    })),
+
+  hydrateFromSnapshot: (state) =>
+    set((s) => {
+      const hydrated = { ...s, ...state };
+      if (state.tracked_targets) {
+        hydrated.tracked_targets = state.tracked_targets.map((t) => ({
+          ...t,
+          target_id: String(t.target_id || t.id),
+          id: String(t.target_id || t.id),
+        }));
+      }
+      return hydrated;
+    }),
+
   updateFromEvent: (topic, payload) => {
     if (topic === 'ai.recommendation' && payload && payload.recommendation) {
       set((s) => ({ recommendations: [payload.recommendation, ...s.recommendations] }));
@@ -115,6 +184,70 @@ export const useAIStore = create<AIStoreState>((set) => ({
           },
         ],
       }));
+    } else if (
+      (topic === 'ai.target_detected' || topic === 'ai.target_updated' || topic === 'AI_TARGET_DETECTED' || topic === 'AI_TARGET_UPDATED') &&
+      payload
+    ) {
+      const target = payload.target || payload;
+      if (target && (target.target_id || target.id)) {
+        const targetId = String(target.target_id || target.id);
+        const normalizedTarget: TrackedTarget = {
+          target_id: targetId,
+          id: targetId,
+          label: target.label || 'SURVIVOR',
+          latitude: target.latitude !== undefined ? target.latitude : target.lat,
+          longitude: target.longitude !== undefined ? target.longitude : target.lon,
+          altitude_m: target.altitude_m !== undefined ? target.altitude_m : (target.alt || 15.0),
+          confidence: target.confidence !== undefined ? target.confidence : 1.0,
+          source: target.source || 'sutra_perception',
+          drone_id: target.drone_id || 'alpha',
+          modalities: target.modalities || ['visual'],
+          tracking_status: target.tracking_status || 'TRACKED',
+          history: target.history || [],
+          first_seen: target.first_seen || Date.now(),
+          last_seen: target.last_seen || Date.now(),
+        };
+
+        set((s) => {
+          const exists = s.tracked_targets.some((t) => String(t.target_id || t.id) === targetId);
+          const newTargets = exists
+            ? s.tracked_targets.map((t) => (String(t.target_id || t.id) === targetId ? normalizedTarget : t))
+            : [...s.tracked_targets, normalizedTarget];
+          return { tracked_targets: newTargets, last_update: Date.now() };
+        });
+      }
+    } else if ((topic === 'ai.target_lost' || topic === 'AI_TARGET_LOST') && payload) {
+      const targetId = String(payload.target_id || payload.id);
+      set((s) => ({
+        tracked_targets: s.tracked_targets.map((t) =>
+          String(t.target_id || t.id) === targetId ? { ...t, tracking_status: 'LOST' } : t
+        ),
+      }));
+    } else if (
+      (topic === 'ai.perception_status' || topic === 'AI_PERCEPTION_STATUS') &&
+      payload
+    ) {
+      set((s) => ({
+        perception_status: {
+          ...(s.perception_status || {
+            connected: false,
+            status: 'OFFLINE',
+            last_message_time: 0,
+            message_count: 0,
+            rejected_count: 0,
+            inference_fps: 0,
+            inference_latency_ms: 0,
+            active_tracks: 0,
+            last_error: null,
+          }),
+          ...payload,
+        },
+      }));
+    } else if (topic === 'ai.state_updated' && payload) {
+      if (Array.isArray(payload.tracked_targets)) {
+        set({ tracked_targets: payload.tracked_targets });
+      }
     }
   },
 }));
+
