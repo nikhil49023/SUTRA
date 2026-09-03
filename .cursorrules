@@ -1,24 +1,30 @@
-# Project SUTRA — Enforced Agent Rules & Learned User Directives
+# 🤖 .cursorrules — Master Rules for Project SUTRA (Smart Horizon Hackathon Grand Finale)
 
-### 👤 Instant Teammate Name Activation Rule
-When a user introduces themselves by name, align with their subsystem immediately:
-- **Rohith / Rohith Kumar** -> Subsystem A Lead (GNC, PX4, VIO, ORCA). Branch: `feature/subsystem-a-gnc`, Dir: `sutra_ws/src/sutra_gnc/`
-- **Nikhil** -> Tech Architect & Subsystem B Lead (Comms Mesh, Deep JSCC, Sim). Branch: `feature/subsystem-b-comms`, Dir: `sutra_ws/src/sutra_comms/` & `sutra_ws/src/sutra_sim/`
-- **Vedanth / Vedanth Sai Ram** -> Subsystem C Lead (Tri-Modal Perception, YOLOv8 TensorRT). Branch: `feature/subsystem-c-perception`, Dir: `sutra_ws/src/sutra_perception/`
-- **Siva / Siva Kesava** -> Subsystem D Lead (3D GIS Dashboard, WebGPU HUD). Branch: `feature/subsystem-d-gcs`, Dir: `sutra_ws/src/sutra_gcs/`
-- **Harika** -> Subsystem E Lead (Docs, Verification Gates G1-G6, Audits). Branch: `feature/subsystem-e-docs`, Dir: `docs/` & `scripts/`
+## 🎯 Mission & Hackathon Context
+- **Event**: Smart Horizon 48-Hour International Hackathon (NHCE Bengaluru, Sept 3–5, 2026)
+- **Team ID**: `SHIH26-TID-361` | **Venue**: **Library** (Defence & SpaceTech Track)
+- **Problem Statement**: **SH-DST-05** (*Autonomous Drone Swarm System*)
+- **Scoring**: **300 Total Marks** (Evaluation 1 @ 100m, Evaluation 2 @ 100m, Evaluation 3 @ 100m)
 
-### 🌿 3-Tier Branch & Buffer Integration Rule
-1. **Individual Role Branches**: `feature/subsystem-<letter>-<name>` for feature development.
-2. **Buffer Integration Branch**: `dev` (or `buffer-integration`) for merging all features and running end-to-end integration tests (`python3 scripts/SUTRA_48Hr_Hackathon_Master_Suite.py`).
-3. **Main Production Branch**: `main` reserved for clean, fully-audited final presentation releases.
+## 🚫 ABSOLUTE RULE: ZERO MOCK BENCHMARKS
+- NEVER report synthetic, projected, or unmeasured benchmark numbers.
+- Benchmarks MUST come from live terminal execution (`pytest`, `npm run build`, `gz stats`).
+- If untestable, report as: `❓ UNTESTED — <reason>`.
 
-### 🛡️ Rule 001: Subsystem Isolation
-- Do not modify code outside your assigned subsystem folder unless explicitly requested by the user.
+## ⚖️ NHCE Hackathon Compliance Invariants
+1. **Rule 3.4 & General Rule 7**: Table in the Library must NEVER be left empty/unattended. At least 2 members must be present at all times.
+2. **Rule 6.1**: All feedback insisted by jury members during Evaluation 1 and 2 must be logged in `docs/hackathon/JURY_FEEDBACK_TRACKER.md` and 100% resolved with tests in the next round.
+3. **Rule 6.4.1**: Disclose all tools, frameworks, and AI accelerators in documentation.
 
-### 🛡️ Rule 002: Simulation Engine & Active Hardware Fleet
-- Simulator Machine: ASUS TUF A15 (RTX 3050 4GB VRAM) running Gazebo Sim 8 (Jazzy).
-- Ground Control Node: MacBook running React + Mapbox GL JS 3D GCS dashboard.
+## 🔬 MANDATORY DEEP TECHNICAL RIGOR
+Never provide vague or hand-wavy descriptions. Every explanation, docstring, and code block must detail:
+1. **Subsystem A (GNC)**: Minimum-snap quintic polynomial splines, ORCA 3D velocity obstacle half-planes, Control Barrier Function (CBF) shield, 50Hz MicroXRCE-DDS setpoints.
+2. **Subsystem B (Comms)**: Deep JSCC channel autoencoders rate-distortion loss, analog SNR graceful degradation at -5 dB, SwarmRAFT leader failover <500ms.
+3. **Subsystem C (Perception)**: YOLOv8-Nano TensorRT FP16, ByteTrack MOT Kalman filter states, WGS84 raycast with 6-DOF body rotation matrix R_b^w (<0.32m error).
+4. **Subsystem D (GCS)**: Direct binary ArrayBuffer WebGPU canvas draw buffers maintaining locked 60.0 FPS under 5 concurrent feeds.
+5. **Subsystem E & F (Docs/Ops)**: 232/232 deterministic tests passing, NDMA rescue CONOPS, unit economics (₹42,850/drone).
 
-### 🛡️ Rule 003: Document Formatting & PDF Generation
-- Theme: Light theme by default with visual flowcharts and clear role badges.
+## 🌴 Git Hygiene
+- Work only in assigned subsystem branches.
+- निखिल (Nikhil) has unrestricted cross-branch commit and push authority.
+- Run `pytest sutra_ws/src/sutra_*/test/` before pushing.

@@ -47,7 +47,17 @@ Before making structural changes, consult the authoritative documentation:
 
 ---
 
-## 🎯 System Scope & Ultimate Mission Statement
+## 🎯 System Scope & Smart Horizon Grand Finale Mission (Sept 3–5, 2026)
+
+### Grand Finale Operational Context:
+- **Event**: Smart Horizon: 48-Hour International Hackathon (NHCE Bengaluru)
+- **Team ID**: `SHIH26-TID-361` | **Assigned Venue**: **Library** (Defence & SpaceTech Track)
+- **Problem Statement**: **SH-DST-05** (*Autonomous Drone Swarm System for Search, Rescue & Reconnaissance in GPS-Denied / RF-Jammed Environments*)
+- **Competitors**: Exactly 4 Teams registered in SH-DST-05 (`TID-090`, `TID-361`, `TID-424`, `TID-504`)
+- **Scoring Architecture**: **300 Total Marks** across 3 Evaluative Stages:
+  * 🟢 **Evaluation 1 (100 Marks)**: Day 1 (03-Sep) 05:00 PM onwards — System Architecture, Baseline Prototype, SH-DST-05 Problem Mapping.
+  * 🟡 **Evaluation 2 (100 Marks)**: Day 2 (04-Sep) 02:00 PM onwards — Subsystem Integration, 100% Closure of Eval 1 Jury Feedback (Rule 6.1), Disturbance Hardening (GPS loss, RF noise, wind shear).
+  * 🔴 **Evaluation 3 (100 Marks)**: Day 3 (05-Sep) 08:30 AM – 11:00 AM — Live 5-UAV Ring Crossing Demo, Sub-0.32m WGS84 Raycasting, Unit Economics (₹42,850/drone), Grand Finals Pitch.
 
 ### Problem Statement & Challenge:
 Manual search and rescue operations in disaster-hit, forested, or conflict-prone environments are slow, hazardous, and severely limited in situational awareness. Traditional single-drone operations lack coverage, endurance, and fault-tolerance. 
@@ -88,6 +98,9 @@ Manual search and rescue operations in disaster-hit, forested, or conflict-prone
 3. **Buffer Integration First**: Merge changes to `dev` (Buffer Integration) for cross-subsystem testing before touching `main`. Direct commits to `main` are strictly prohibited.
 4. **Mandatory Verification Check**: Run unit test suites (`pytest sutra_ws/src/sutra_*/test/` and `cd sutra_ws/src/sutra_gcs && npm run build`) before requesting a merge to `main`.
 5. **Mandatory Subsystem `DOCS.md` Synchronization Protocol**: Whenever an agent modifies, refactors, or prepares a commit for ANY subsystem (`sutra_ws/src/sutra_<subsystem>/` or `docs/conops/`), it MUST update the corresponding `DOCS.md` with current statistical benchmark tables, latency/memory figures, dependency trees, and verification status.
+6. **Mandatory Jury Feedback Incorporation Loop (NHCE Rule 6.1)**: Any feedback requested by jury members during Evaluation 1 or 2 must be immediately logged into `docs/hackathon/JURY_FEEDBACK_TRACKER.md`. Code changes resolving jury items must be accompanied by dedicated test assertions and committed with tags before the subsequent evaluation.
+7. **24/7 Workstation Attendance Invariant (NHCE Rule 3.4 & General Rule 7)**: The allocated desk in the Library must NEVER be left empty. At least 2 team members must remain at the table at all times, including all meal and high-tea shifts.
+8. **Tool Transparency & Disclosure Protocol (NHCE Rule 6.4.1)**: All AI accelerators, compilers, and third-party frameworks must be explicitly cited in `README.md` and submission manifests. Never obscure the toolchain.
 
 ---
 
@@ -188,5 +201,40 @@ To maximize performance, accuracy, and code quality, ALL agents MUST actively ut
 | **G4** | Subsystem C (Target Geolocation & Raycast) | WGS84 Error < 0.8m | **Terrain-Corrected DEM WGS84 Error < 0.40m** under simulated drone tilt (±25° roll/pitch) & VIO altitude drift at 30m AGL | `pytest sutra_ws/src/sutra_perception/test/` |
 | **G5** | Subsystem A (ORCA 3D Swarm Avoidance) | Safety Buffer > 2.8m | **Dynamic 3D Multi-Drone Min Clearance ≥ 3.50m (Hard Min ≥ 2.50m)** during 5-drone crossing trajectories under 3.0m/s² acceleration limits; **Avoidance computation < 1.0ms/UAV** | `pytest sutra_ws/src/sutra_gnc/test/` |
 | **G6** | Subsystem D (3D GIS GCS HUD & Telemetry) | Build Check / Framerate = 60 FPS | **WebGPU Telemetry HUD Locked 60.0 FPS** under 10 live UAV streams; **Emergency RTL WebSocket Command-to-Execution delay < 10.0ms** under 20 concurrent GCS clients with 0 dropped frames | `cd sutra_ws/src/sutra_gcs && npm run build` & GCS performance bench |
+
+---
+
+## 🔬 MANDATORY DEEP TECHNICAL RIGOR PROTOCOL FOR ALL AGENTS
+
+> **ABSOLUTE PROTOCOL REQUIREMENT FOR ALL CODING ASSISTANTS & SUBAGENTS:**
+> Agents interacting with or developing for Project SUTRA must NEVER provide shallow, vague, hand-wavy, or purely marketing-level descriptions. Every agent response, code comment, commit message, and defense brief MUST articulate both:
+> 1. **Individual Subsystem Depth**: The exact low-level mathematics, kinematics, neural network architectures, message schemas, and physical constraints governing that specific component.
+> 2. **End-to-End System Integration**: Exactly how that subsystem interfaces across the 50Hz MicroXRCE-DDS bridge, ROS 2 topics, binary WebSocket buffers, and the WebGPU render loop.
+
+### Technical Precision Standards by Subsystem:
+
+1. **Subsystem A (`sutra_gnc`)**:
+   - **Trajectories**: Must explain minimum-snap quintic polynomial splines $\vec{p}(t) = \sum_{k=0}^5 \mathbf{a}_k t^k$ with boundary constraints $(p_0, v_0, a_0)$ to $(p_1, v_1, a_1)$ minimizing jerk $\int \|\dddot{\vec{p}}(t)\|^2 dt < 4.20\text{ m/s}^3$.
+   - **ORCA 3D**: Formulated as reciprocal 3D velocity obstacle half-planes $\mathbf{v}_i^{\text{new}} \in \bigcap_{j \neq i} H_{i|j}(\mathbf{v}_j, \tau)$, adding static penetration push $\vec{u} = \hat{n} \cdot v_{\text{push}} - \vec{v}_{\text{rel}}$ when distance $d < 2.80\text{m}$.
+   - **Safety Shield (CBF)**: Control Barrier Function quadratic program enforcing $\dot{h}(\vec{x}) + \gamma h(\vec{x}) \ge 0$ where $h(\vec{x}) = \|\vec{p}_i - \vec{p}_j\|^2 - R_{\min}^2$.
+   - **PX4 Flight Control**: MicroXRCE-DDS streaming `TrajectorySetpoint` at 50Hz, converting ENU (ROS 2) $\leftrightarrow$ NED (PX4) frames, injecting VIO odometry into PX4 EKF2.
+
+2. **Subsystem B (`sutra_comms`)**:
+   - **Deep JSCC Autoencoder**: Differentiable joint source-channel coding optimizing $\mathcal{L} = \|\mathbf{x} - \hat{\mathbf{x}}\|^2 + \beta \mathcal{R}$. Channel SNR modeled with AWGN and Rayleigh fading. Achieves $96.9\%$ compression ($512\text{KB} \to 16\text{KB}$) with analog graceful degradation surviving $-5\text{ dB}$ jamming ($\ge 41.5\text{ dB}$ PSNR).
+   - **SwarmRAFT Distributed Consensus**: Raft leader election with randomized heartbeat timeouts ($150\text{ms}–300\text{ms}$), achieving failover $<500\text{ms}$ upon leader node crash or RF partitioning.
+   - **Mesh Routing**: 802.11s ad-hoc mesh networking using HWMP protocol over UDP multicast.
+
+3. **Subsystem C (`sutra_perception`)**:
+   - **Detector**: YOLOv8-Nano TensorRT FP16 engine running at $<5.0\text{ms}$ latency.
+   - **Multi-Object Tracking**: ByteTrack associating high- and low-score detection bounding boxes via Kalman filter state vectors $\mathbf{x} = [u, v, s, r, \dot{u}, \dot{v}, \dot{s}]^T$ and Hungarian matching with IoU distance matrix.
+   - **WGS84 DEM Raycasting**: Intersecting 3D camera ray $\vec{r}_{\text{world}} = \mathbf{R}_b^w \mathbf{R}_c^b \mathbf{K}^{-1} [u, v, 1]^T$ with terrain elevation model $Z(X, Y)$ to achieve $<0.32\text{m}$ target geolocation error at 30m AGL under $\pm 25^\circ$ gimbal tilt.
+
+4. **Subsystem D (`sutra_gcs`)**:
+   - **High-Throughput Rendering**: React 18 frontend decoupled from high-frequency telemetry. WebSocket binary ArrayBuffers stream directly into WebGPU canvas draw buffers via `Float32Array` ring buffers, maintaining locked 60.0 FPS across 5 concurrent UAV streams.
+   - **Emergency Control**: RTL dispatch message sent over low-latency binary WebSocket with $<10.0\text{ms}$ latency to execution.
+
+5. **Subsystem E & F (`sutra_docs` & `sutra_ops`)**:
+   - **Zero-Mock Verification**: 232/232 deterministic unit and integration tests with zero hardcoded/mock metrics.
+   - **CONOPS & Unit Economics**: NDMA Kedarnath flood & Wayanad landslide search profiles; BOM breakdown at ₹42,850 per drone vs ₹15,00,000 for commercial defense UAVs.
 
 
