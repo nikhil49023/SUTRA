@@ -88,13 +88,15 @@ Manual search and rescue operations in disaster-hit, forested, or conflict-prone
 ## 🌴 3-Tier Branching & Git Repository Hygiene
 
 ```
-  [ Individual Role Branches ]         [ Buffer Integration Branch ]         [ Main Production Branch ]
+  [ Subsystem Feature Branches ]       [ Sandbox Testing Branch ]          [ Production Master Truth ]
   feature/subsystem-a-gnc (Nikhil) ──┐
-  feature/subsystem-b-comms (Nikhil) ┼──► dev (Buffer Integration) ────────► main (Final Releases)
-  feature/subsystem-c-perception ────┤   (Full 6-Subsystem Integration
-  feature/subsystem-d-gcs (Siva) ────┤    Suites & Real Verification)
-  feature/subsystem-e-docs (Harika) ─┤
-  feature/subsystem-f-ops (Rohith) ──┘
+  feature/subsystem-b-comms (Nikhil) ┼──► dev (Sandbox Testing) ──[Verify]──► main (Verified Production)
+  feature/subsystem-c-perception ────┤   (Cross-subsystem staging             ▲
+  feature/subsystem-d-gcs (Siva) ────┤    & sandbox validation)               │
+  feature/subsystem-e-docs (Harika) ─┤                                        │ (MANDATORY UPDATE SOURCE)
+  feature/subsystem-f-ops (Rohith) ──┘                                        │
+             ▲                                                                │
+             └─────────────────────── Pull / Sync from main ──────────────────┘
 ```
 
 ### 🛑 THE MANDATORY COMMIT & PUSH POLICY ("NO UNCOMMITTED WORK" INVARIANT)
@@ -105,7 +107,11 @@ Manual search and rescue operations in disaster-hit, forested, or conflict-prone
 > Uncommitted code is a single point of failure that risks merge conflicts, accidental overwrites, laptop hardware crashes, and disqualification during jury code scrutiny.
 
 #### Non-Negotiable Commit & Push Protocol:
-1. **Pre-Task Synchronization**: Before beginning any task, verify active branch (`git branch --show-current`) and sync latest changes from `dev` (`git fetch origin dev && git merge origin/dev --no-edit`).
+1. **Pre-Task Synchronization from `main` (MANDATORY SOURCE OF TRUTH)**:
+   - `main` is the sole authoritative, production-verified branch.
+   - `dev` is strictly a staging sandbox for integration verification.
+   - Once sandbox tests pass on `dev`, `dev` is validated and merged into `main`.
+   - **All subsystem feature branches MUST checkout and update directly from `main`** (`git fetch origin main && git merge origin/main --no-edit`), NEVER directly from `dev`.
 2. **Atomic Verification & Commit**: Every single bug fix, mathematical adjustment, test addition, or doc update MUST immediately be verified via `pytest` / `npm run build`, staged, and committed with conventional semantic syntax:
    - `feat(<subsystem>):` New features, control laws, or node implementations
    - `fix(<subsystem>):` Bug fixes, numerical stability patches, or topic renames

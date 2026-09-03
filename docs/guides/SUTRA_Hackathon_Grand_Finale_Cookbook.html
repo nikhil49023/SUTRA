@@ -427,7 +427,7 @@
       <em>"No teammate is allowed to work on local and say 'I didn't commit, but I completed the work.' If work is not committed and pushed to GitHub, it officially does not exist."</em>
     </div>
     <ol class="step-list">
-      <li><strong>Check Branch:</strong> Verify your active branch before typing: <code>git branch --show-current</code>. Work strictly inside your assigned subsystem role branch.</li>
+      <li><strong>Sync from main (MANDATORY):</strong> Always update from <code>main</code> before starting: <code>git fetch origin main && git merge origin/main --no-edit</code>. <code>main</code> is the single verified source of truth; <code>dev</code> is strictly for sandbox testing.</li>
       <li><strong>Test Verification:</strong> Run deterministic tests to confirm zero regressions: <code>pytest sutra_ws/src/sutra_*/test/ -q</code>.</li>
       <li><strong>Stage Atomic Diffs:</strong> Never leave uncommitted diffs: <code>git add &lt;modified_files&gt;</code>.</li>
       <li><strong>Semantic Commit:</strong> Use standard prefixes: <code>feat:</code>, <code>fix:</code>, <code>test:</code>, <code>docs:</code>.</li>
