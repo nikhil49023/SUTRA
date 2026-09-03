@@ -88,13 +88,15 @@ Manual search and rescue operations in disaster-hit, forested, or conflict-prone
 ## 🌴 3-Tier Branching & Git Repository Hygiene
 
 ```
-  [ Individual Role Branches ]         [ Buffer Integration Branch ]         [ Main Production Branch ]
+  [ Subsystem Feature Branches ]       [ Sandbox Testing Branch ]          [ Production Master Truth ]
   feature/subsystem-a-gnc (Nikhil) ──┐
-  feature/subsystem-b-comms (Nikhil) ┼──► dev (Buffer Integration) ────────► main (Final Releases)
-  feature/subsystem-c-perception ────┤   (Full 6-Subsystem Integration
-  feature/subsystem-d-gcs (Siva) ────┤    Suites & Real Verification)
-  feature/subsystem-e-docs (Harika) ─┤
-  feature/subsystem-f-ops (Rohith) ──┘
+  feature/subsystem-b-comms (Nikhil) ┼──► dev (Sandbox Testing) ──[Verify]──► main (Verified Production)
+  feature/subsystem-c-perception ────┤   (Cross-subsystem staging             ▲
+  feature/subsystem-d-gcs (Siva) ────┤    & sandbox validation)               │
+  feature/subsystem-e-docs (Harika) ─┤                                        │ (MANDATORY UPDATE SOURCE)
+  feature/subsystem-f-ops (Rohith) ──┘                                        │
+             ▲                                                                │
+             └─────────────────────── Pull / Sync from main ──────────────────┘
 ```
 
 ### 🛑 THE MANDATORY COMMIT & PUSH POLICY ("NO UNCOMMITTED WORK" INVARIANT)
@@ -105,7 +107,11 @@ Manual search and rescue operations in disaster-hit, forested, or conflict-prone
 > Uncommitted code is a single point of failure that risks merge conflicts, accidental overwrites, laptop hardware crashes, and disqualification during jury code scrutiny.
 
 #### Non-Negotiable Commit & Push Protocol:
-1. **Pre-Task Synchronization**: Before beginning any task, verify active branch (`git branch --show-current`) and sync latest changes from `dev` (`git fetch origin dev && git merge origin/dev --no-edit`).
+1. **Pre-Task Synchronization from `main` (MANDATORY SOURCE OF TRUTH)**:
+   - `main` is the sole authoritative, production-verified branch.
+   - `dev` is strictly a staging sandbox for integration verification.
+   - Once sandbox tests pass on `dev`, `dev` is validated and merged into `main`.
+   - **All subsystem feature branches MUST checkout and update directly from `main`** (`git fetch origin main && git merge origin/main --no-edit`), NEVER directly from `dev`.
 2. **Atomic Verification & Commit**: Every single bug fix, mathematical adjustment, test addition, or doc update MUST immediately be verified via `pytest` / `npm run build`, staged, and committed with conventional semantic syntax:
    - `feat(<subsystem>):` New features, control laws, or node implementations
    - `fix(<subsystem>):` Bug fixes, numerical stability patches, or topic renames
@@ -123,6 +129,11 @@ Manual search and rescue operations in disaster-hit, forested, or conflict-prone
 5. **Mandatory Jury Feedback Incorporation Loop (NHCE Rule 6.1)**: Any feedback requested by jury members during Evaluation 1 or 2 must be immediately logged into `docs/hackathon/JURY_FEEDBACK_TRACKER.md`. Code changes resolving jury items must be accompanied by dedicated test assertions and committed with tags before the subsequent evaluation.
 6. **24/7 Workstation Attendance Invariant (NHCE Rule 3.4 & General Rule 7)**: The allocated desk in the Library must NEVER be left empty. At least 2 team members must remain at the table at all times, including all meal and high-tea shifts.
 7. **Tech Lead Override**: Nikhil has unrestricted cross-branch commit and push access across all branches (`feature/*`, `dev`, `main`). All other teammates remain restricted to their assigned feature branch.
+8. **Active Documentation Protocol (The Living Documentation Standard)**:
+   - **Continuous Benchmark Synchronization**: Whenever code, models, or algorithms change, the corresponding subsystem `DOCS.md` MUST immediately be updated with measured, verbatim terminal outputs from real runs before declaring work complete.
+   - **Live Jury Feedback Tracking**: `docs/hackathon/JURY_FEEDBACK_TRACKER.md` is an active runtime document updated dynamically during each evaluation round, recording judge queries, assigned owners, and verified commit hashes.
+   - **Interactive Offline Browser Portals**: Master artifacts such as `SUTRA_OFFLINE_PORTAL.html` and `docs/presentation/SUTRA_Master_Pitch_Deck.html` must remain active, self-contained, and runnable offline on localhost without external API dependencies.
+   - **Executable Runbooks**: Every architectural claim or performance assertion must be accompanied by an exact, copy-pasteable bash command that reproduces the result deterministically in < 15 seconds.
 
 ---
 
