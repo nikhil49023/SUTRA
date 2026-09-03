@@ -32,12 +32,16 @@ class NeuroAdaptiveFlightNode(Node):
     def __init__(self):
         super().__init__("neuro_adaptive_flight_node")
 
-        # ── Parameters ────────────────────────────────────────────────────────
         self.declare_parameter("drone_id", "uav_alpha")
         self.declare_parameter("onnx_model_path", "models/sutra_neuro_flight.onnx")
         self.declare_parameter("enable_feedforward", True)
-        self.declare_parameter("feedforward_gain", 0.40)  # Scaling factor for acceleration compensation
-        self.declare_parameter("use_sim_time", True)
+        self.declare_parameter("feedforward_gain", 0.40)
+        if not self.has_parameter("use_sim_time"):
+            self.declare_parameter("use_sim_time", True)
+
+
+
+
 
         self.drone_id = self.get_parameter("drone_id").value
         self.model_path = self.get_parameter("onnx_model_path").value

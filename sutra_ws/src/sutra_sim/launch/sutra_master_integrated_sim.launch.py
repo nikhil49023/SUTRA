@@ -164,21 +164,70 @@ def launch_setup(context, *args, **kwargs):
         }],
     )
 
+    # ── Subsystem A Companion Node (Neuro-Adaptive Flight) ────────────────────
+    neuro_flight_node = Node(
+        package="sutra_gnc",
+        executable="neuro_adaptive_flight_node.py",
+        name="sutra_neuro_flight_node",
+        output="screen",
+        parameters=[{"use_sim_time": True, "enable_feedforward": True}],
+    )
+
+    # ── Subsystem C Camera Streamer Node ──────────────────────────────────────
+    camera_streamer_node = Node(
+        package="sutra_perception",
+        executable="camera_streamer_node.py",
+        name="sutra_camera_streamer",
+        output="screen",
+        parameters=[{"use_sim_time": True, "fps": 30}],
+    )
+
+    # ── 5 Active 50Hz Flight Controllers (Subsystem A Swarm Motion + ORCA 3D) ──
+    def create_flight_node(drone_id: str, alt: float) -> Node:
+        return Node(
+            package="sutra_gnc",
+            executable="swarm_fixed_path_node.py",
+            name=f"sutra_flight_path_{drone_id}",
+            output="screen",
+            parameters=[{
+                "drone_id": drone_id,
+                "route_mode": "disaster_flood" if "submerged" in str(world_arg) else "standard",
+                "cruise_speed": 4.0,
+                "takeoff_altitude": alt,
+                "waypoint_radius": 3.0,
+                "orca_radius": 1.75,
+                "max_acceleration": 2.5,
+                "use_sim_time": True,
+            }],
+        )
+
+    swarm_flight_nodes = [
+        create_flight_node("uav_alpha", 50.0 if "submerged" in str(world_arg) else 4.0),
+        create_flight_node("uav_beta", 48.0 if "submerged" in str(world_arg) else 4.6),
+        create_flight_node("uav_gamma", 52.0 if "submerged" in str(world_arg) else 3.5),
+        create_flight_node("uav_delta", 54.0 if "submerged" in str(world_arg) else 4.3),
+        create_flight_node("uav_epsilon", 56.0 if "submerged" in str(world_arg) else 3.8),
+    ]
+
+
     nodes_to_launch = [
         LogInfo(msg=f"🚁 LAUNCHING SUTRA MASTER TRI-SUBSYSTEM INTEGRATED SIMULATION | World: {os.path.basename(world_path)}"),
         gazebo_process,
         TimerAction(period=2.0, actions=[ros_gz_bridge_node]),
+        TimerAction(period=3.0, actions=[camera_streamer_node]),
         TimerAction(period=3.5, actions=[parallel_sim_manager, mesh_node, jscc_node, gcs_bridge_node]),
-        TimerAction(period=4.5, actions=[detector_node, orca_avoidance_node, octomap_generator_node, coordinated_search_node]),
+        TimerAction(period=4.5, actions=[detector_node, orca_avoidance_node, octomap_generator_node, coordinated_search_node, neuro_flight_node, *swarm_flight_nodes]),
     ]
 
+
     return nodes_to_launch
+
 
 
 def generate_launch_description():
     world_arg = DeclareLaunchArgument(
         'world',
-        default_value='master_swarm_disaster_world',
+        default_value='submerged_village_flood_world',
         description='World file name inside sutra_sim/worlds/'
     )
     headless_arg = DeclareLaunchArgument(
