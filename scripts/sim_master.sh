@@ -2,7 +2,7 @@
 # ==============================================================================
 # SUTRA Shortcut: Launch Master Disaster Arena World (Bengaluru Datum)
 # ==============================================================================
-set -euo pipefail
+set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
