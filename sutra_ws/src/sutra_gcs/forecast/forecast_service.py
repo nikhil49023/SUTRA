@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 from services.event_bus import EventBus, get_event_bus
 from services.logging_service import get_logger
 from .base_provider import ForecastProvider
-from .models import ForecastHorizon, ForecastObservation, ProviderHealth, WarningLevel
+from .models import FeedStatus, ForecastHorizon, ForecastObservation, ProviderHealth, WarningLevel
 from .providers.imd_provider import IMDProvider
 from .providers.simulation_provider import SimulationForecastProvider
 from .providers.weather_api_provider import WeatherAPIProvider
@@ -42,12 +42,22 @@ class ForecastService:
         self._running = False
         self._thread: Optional[threading.Thread] = None
 
+        self.offline_mesh_mode: bool = False
+
         # Eagerly initialize first forecast
         self.refresh_forecast()
 
     @property
     def active_provider(self) -> ForecastProvider:
         return self.providers.get(self.active_provider_name, self.providers["SIMULATION"])
+
+    def set_offline_disaster_mode(self, enabled: bool) -> None:
+        """Enables resilient offline disaster mode using cached alerts and local 802.11s mesh."""
+        self.offline_mesh_mode = enabled
+        if self._current_horizon:
+            self._current_horizon.offline_mesh_mode = enabled
+        logger.info(f"[ForecastService] Offline Disaster Mesh Mode set to {enabled}")
+        self.refresh_forecast(force_refresh=True)
 
     def set_active_provider(self, provider_name: str) -> bool:
         normalized = provider_name.upper()
@@ -88,6 +98,10 @@ class ForecastService:
             logger.warning(f"[ForecastService] Provider {self.active_provider_name} degraded. Falling back to SIMULATION.")
             sim_horizon = self.providers["SIMULATION"].get_forecast(lat, lon, self.horizon_hours)
             horizon = sim_horizon
+
+        if self.offline_mesh_mode:
+            horizon.offline_mesh_mode = True
+            horizon.feed_status = FeedStatus.OFFLINE_MESH_CACHE
 
         with self._lock:
             self._current_horizon = horizon

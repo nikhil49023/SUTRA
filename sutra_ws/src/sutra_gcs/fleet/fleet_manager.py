@@ -38,6 +38,10 @@ class FleetManager:
         if not self.state_store.get_state().fleet_state.drones:
             self.seed_default_fleet()
 
+    def get_fleet(self) -> FleetState:
+        """Returns current immutable snapshot of FleetState."""
+        return self.state_store.get_state().fleet_state
+
     def register_drone(
         self,
         drone_id: str,
