@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
 ================================================================================
-PROJECT SUTRA — PURE SUBMERGED VILLAGE & DROWNING SURVIVORS DISASTER WORLD
+PROJECT SUTRA — MASTER SUBMERGED VILLAGE & DROWNING SURVIVORS DISASTER WORLD
 ================================================================================
-Author: SUTRA Autonomous Multi-Drone Swarm Architecture
-Focus: PURE VILLAGE & PEOPLE ONLY — Submerged Houses, Drowning Victims,
-       Rooftop Survivors, Flooded Alleys, and Raging Floodwaters.
-NO Choppers, NO Drones, NO Military Vehicles.
+Focus: Authentic village_corse.glb hillside village, properly oriented right-side up,
+       with lower roads and houses submerged under realistic turbulent floodwater.
+       Populated with drowning victims in water, floating survivors, wall clingers,
+       and rooftop survivors.
+STRICT SCOPE: Village, Water, and People ONLY. Zero choppers/drones/vehicles.
 ================================================================================
 """
 
@@ -16,8 +17,9 @@ import math
 import random
 import bpy
 import bmesh
+import mathutils
 
-random.seed(1337)
+random.seed(42)
 
 # Paths
 DOWNLOADS = "/home/nikhil/Downloads"
@@ -26,34 +28,23 @@ DESKTOP_WORLD = "/home/nikhil/Desktop/3D world"
 
 VILLAGE_GLB = os.path.join(DOWNLOADS, "village_corse.glb")
 MAN_GLB     = os.path.join(DOWNLOADS, "man.glb")
-FBX_MAN     = "/tmp/indian_man/source/indian man in tshirt.fbx"
-FBX_WOMAN   = "/tmp/indian_woman/source/avatar/model.fbx"
 
 OUT_BLEND_SUTRA = os.path.join(PROJECT_ROOT, "sutra_ws/src/sutra_sim/assets/submerged_village_flood_world.blend")
 OUT_BLEND_DESK  = os.path.join(DESKTOP_WORLD, "submerged_village_flood_world.blend")
 OUT_RENDER_PNG  = os.path.join(DESKTOP_WORLD, "submerged_village_flood_render.png")
 
-FLOOD_Z = 8.5   # Water level in meters: submerges lower village streets & ground floors!
+# Calibrated elevation for realistic house & road submergence
+FLOOD_Z = 37.8
 
 print("=" * 80)
-print("🌊 BUILDING PURE SUBMERGED VILLAGE & DROWNING SURVIVORS WORLD (BLENDER)")
+print("🌊 BUILDING COMPLETE SUBMERGED VILLAGE & DROWNING SURVIVORS DISASTER WORLD")
 print("=" * 80)
 
 # ------------------------------------------------------------------------------
-# 1. SCENE CLEANUP & SETUP
+# 1. SCENE CLEANUP & ENGINE SETUP
 # ------------------------------------------------------------------------------
-print("🧹 [1/8] Clearing scene & setting up cinematic environment...")
-if bpy.context.object and bpy.context.object.mode != 'OBJECT':
-    bpy.ops.object.mode_set(mode='OBJECT')
-
-bpy.ops.object.select_all(action='SELECT')
-bpy.ops.object.delete(use_global=True)
-
-for m in list(bpy.data.meshes): bpy.data.meshes.remove(m)
-for m in list(bpy.data.materials): bpy.data.materials.remove(m)
-for t in list(bpy.data.textures): bpy.data.textures.remove(t)
-for c in list(bpy.data.cameras): bpy.data.cameras.remove(c)
-for l in list(bpy.data.lights): bpy.data.lights.remove(l)
+print("🧹 [1/7] Initializing clean Blender scene...")
+bpy.ops.wm.read_factory_settings(use_empty=True)
 
 scene = bpy.context.scene
 scene.name = "Submerged_Village_Disaster"
@@ -68,404 +59,307 @@ scene.render.resolution_x = 1920
 scene.render.resolution_y = 1080
 
 scene.render.engine = 'BLENDER_EEVEE'
+scene.render.use_motion_blur = False
 scene.view_settings.view_transform = 'Standard'
 scene.view_settings.look = 'High Contrast'
-scene.view_settings.exposure = 0.95
+scene.view_settings.exposure = 0.30
 scene.view_settings.gamma = 1.0
 
 # Collections
 col_village   = bpy.data.collections.new("01_Submerged_Village")
-col_water     = bpy.data.collections.new("02_Flood_Water_Surge")
-col_drowning  = bpy.data.collections.new("03_Drowning_Victims_In_Water")
-col_clinging  = bpy.data.collections.new("04_Survivors_Clinging_To_Walls")
-col_rooftop   = bpy.data.collections.new("05_Rooftop_Survivors")
-col_wading    = bpy.data.collections.new("06_People_Wading_Through_Alleys")
-col_lighting  = bpy.data.collections.new("07_Atmospheric_Lighting_And_Cams")
-col_templates = bpy.data.collections.new("00_Templates_Hidden")
+col_water     = bpy.data.collections.new("02_Turbulent_Floodwater")
+col_drowning  = bpy.data.collections.new("03_Drowning_Victims")
+col_rooftop   = bpy.data.collections.new("04_Rooftop_Survivors")
+col_cams      = bpy.data.collections.new("05_Cinematic_Cameras")
 
-for c in [col_village, col_water, col_drowning, col_clinging, col_rooftop, col_wading, col_lighting, col_templates]:
-    bpy.context.scene.collection.children.link(c)
-
-col_templates.hide_render = True
-col_templates.hide_viewport = True
+for c in [col_village, col_water, col_drowning, col_rooftop, col_cams]:
+    scene.collection.children.link(c)
 
 # ------------------------------------------------------------------------------
-# 2. DRAMATIC TEMPESTUOUS STORM ATMOSPHERE & LIGHTING
+# 2. STORM LIGHTING & ATMOSPHERE
 # ------------------------------------------------------------------------------
-print("⛈️ [2/8] Creating dramatic storm clouds, monsoon sky dome & wet lighting...")
-world = bpy.data.worlds.new("Monsoon_Storm_World")
-world.use_nodes = True
+print("⛈️ [2/7] Configuring disaster storm lighting & atmosphere...")
+world = bpy.data.worlds.new("Storm_World")
 scene.world = world
-wnodes = world.node_tree.nodes
-wlinks = world.node_tree.links
+world.use_nodes = True
+bg = world.node_tree.nodes['Background']
+bg.inputs['Color'].default_value = (0.24, 0.30, 0.38, 1.0)
+bg.inputs['Strength'].default_value = 1.1
+
+# Sun break light (softened angle to avoid harsh specular washout)
+sun_d = bpy.data.lights.new(name="Sun_Break", type='SUN')
+sun_d.energy = 4.0
+sun_d.color = (1.0, 0.96, 0.90)
+sun_d.angle = math.radians(6.0)
+sun_obj = bpy.data.objects.new(name="Sun_Break", object_data=sun_d)
+col_cams.objects.link(sun_obj)
+sun_obj.location = (25.0, 40.0, 120.0)
+sun_obj.rotation_euler = (math.radians(52.0), math.radians(15.0), math.radians(-45.0))
+
+# Ambient fill
+fill_d = bpy.data.lights.new(name="Storm_Sky_Fill", type='AREA')
+fill_d.energy = 240.0
+fill_d.size = 200.0
+fill_d.color = (0.60, 0.70, 0.82)
+fill_obj = bpy.data.objects.new(name="Storm_Sky_Fill", object_data=fill_d)
+col_cams.objects.link(fill_obj)
+fill_obj.location = (25.0, 30.0, 80.0)
+
+# ------------------------------------------------------------------------------
+# 3. IMPORT VILLAGE & FLIP RIGHT-SIDE UP
+# ------------------------------------------------------------------------------
+print("🏘️ [3/7] Ingesting village_corse.glb with 180° upright orientation...")
+if not os.path.exists(VILLAGE_GLB):
+    raise FileNotFoundError(f"Missing village asset: {VILLAGE_GLB}")
+
+bpy.ops.import_scene.gltf(filepath=VILLAGE_GLB)
+village_root = [o for o in scene.collection.objects if o.parent is None and o.type == 'EMPTY'][0]
+village_root.scale = (0.35, 0.35, 0.35)
+# Photogrammetry scan orientation fix: rotate 180 deg on X
+village_root.rotation_euler.x = math.radians(180.0)
+bpy.context.view_layer.update()
+
+for obj in scene.collection.objects:
+    if obj != sun_obj and obj != fill_obj and obj != village_root:
+        for c in obj.users_collection: c.objects.unlink(obj)
+        col_village.objects.link(obj)
+
+for c in village_root.users_collection: c.objects.unlink(village_root)
+col_village.objects.link(village_root)
+print("✅ Village model oriented upright and scaled!")
+
+# ------------------------------------------------------------------------------
+# 4. TURBULENT SILT FLOODWATER (Z = 37.8m)
+# ------------------------------------------------------------------------------
+print(f"🌊 [4/7] Generating turbulent floodwater plane at Z = {FLOOD_Z}m...")
+w_data = bpy.data.meshes.new('FloodWaterMesh')
+bm = bmesh.new()
+bmesh.ops.create_grid(bm, x_segments=80, y_segments=80, size=350.0)
+bm.to_mesh(w_data)
+bm.free()
+
+water_obj = bpy.data.objects.new('FloodWater_Surface', w_data)
+col_water.objects.link(water_obj)
+water_obj.location = (25.5, 42.0, FLOOD_Z)
+
+# Wave Displacement Modifier for realistic river current
+mod_wave = water_obj.modifiers.new(name="Wave_Current", type='DISPLACE')
+tex_w = bpy.data.textures.new("Flood_Ripples", type='CLOUDS')
+tex_w.noise_scale = 1.4
+mod_wave.texture = tex_w
+mod_wave.strength = 0.12
+
+# Realistic Opaque Silt Floodwater Shader (softened roughness to prevent blowout)
+mat_water = bpy.data.materials.new('Murky_Floodwater')
+mat_water.use_nodes = True
+wnodes = mat_water.node_tree.nodes
+wlinks = mat_water.node_tree.links
 wnodes.clear()
 
-w_out = wnodes.new('ShaderNodeOutputWorld')
-w_bg  = wnodes.new('ShaderNodeBackground')
-w_bg.inputs['Color'].default_value = (0.32, 0.38, 0.45, 1.0) # Dark monsoon overcast
-w_bg.inputs['Strength'].default_value = 1.4
-wlinks.new(w_bg.outputs['Background'], w_out.inputs['Surface'])
+w_out  = wnodes.new('ShaderNodeOutputMaterial')
+w_bsdf = wnodes.new('ShaderNodeBsdfPrincipled')
+w_wave = wnodes.new('ShaderNodeTexWave')
+w_bump = wnodes.new('ShaderNodeBump')
+w_mix  = wnodes.new('ShaderNodeMix')
 
-# Low Angled Sunlight piercing storm clouds from West
-sun_data = bpy.data.lights.new(name="Sun_Storm_Break", type='SUN')
-sun_data.energy = 5.8
-sun_data.color = (0.96, 0.92, 0.82)
-sun_data.angle = math.radians(4.0)
-sun_obj = bpy.data.objects.new(name="Sun_Storm_Break", object_data=sun_data)
-col_lighting.objects.link(sun_obj)
-sun_obj.location = (-120.0, 80.0, 180.0)
-sun_obj.rotation_euler = (math.radians(50.0), math.radians(12.0), math.radians(-70.0))
+w_wave.wave_type = 'BANDS'
+w_wave.inputs['Scale'].default_value = 3.5
+w_wave.inputs['Distortion'].default_value = 6.0
+w_wave.inputs['Detail'].default_value = 3.0
 
-# Sky Ambient Fill
-fill_data = bpy.data.lights.new(name="Sky_Ambient_Fill", type='AREA')
-fill_data.energy = 1800.0
-fill_data.size = 400.0
-fill_data.color = (0.55, 0.65, 0.75)
-fill_obj = bpy.data.objects.new(name="Sky_Ambient_Fill", object_data=fill_data)
-col_lighting.objects.link(fill_obj)
-fill_obj.location = (0.0, 0.0, 220.0)
+w_bump.inputs['Strength'].default_value = 0.30
+wlinks.new(w_wave.outputs['Color'], w_bump.inputs['Height'])
+wlinks.new(w_bump.outputs['Normal'], w_bsdf.inputs['Normal'])
 
-# ------------------------------------------------------------------------------
-# 3. IMPORT & CENTER THE EXACT MASTER VILLAGE ASSET (village_corse.glb)
-# ------------------------------------------------------------------------------
-print("🏘️ [3/8] Importing and perfectly centering the Master Village asset (village_corse.glb)...")
-if not os.path.exists(VILLAGE_GLB):
-    raise FileNotFoundError(f"Missing master village asset: {VILLAGE_GLB}")
+w_mix.data_type = 'RGBA'
+w_mix.inputs[6].default_value = (0.10, 0.14, 0.12, 1.0) # Murky deep storm silt
+w_mix.inputs[7].default_value = (0.50, 0.55, 0.52, 1.0) # Subdued foam crests
+wlinks.new(w_wave.outputs['Fac'], w_mix.inputs['Factor'])
+wlinks.new(w_mix.outputs[2], w_bsdf.inputs['Base Color'])
 
-bpy.ops.object.select_all(action='DESELECT')
-bpy.ops.import_scene.gltf(filepath=VILLAGE_GLB)
-imported_village = list(bpy.context.selected_objects)
-
-# Center the village at (0, 0)
-# From previous analysis: X center = 72.9, Y center = -5.9
-OFFSET_X = -72.9
-OFFSET_Y = 5.9
-
-village_root = bpy.data.objects.new("Master_Village_Root", None)
-col_village.objects.link(village_root)
-village_root.location = (OFFSET_X, OFFSET_Y, 0.0)
-
-for obj in imported_village:
-    # Link to village collection
-    for c in obj.users_collection:
-        c.objects.unlink(obj)
-    col_village.objects.link(obj)
-    if obj.parent is None:
-        obj.parent = village_root
-        obj.matrix_parent_inverse.identity()
-
-print(f"✅ Master Village Asset integrated ({len(imported_village)} objects) centered at (0, 0)!")
-
-# ------------------------------------------------------------------------------
-# 4. CONSTRUCT SUBMERGED FLOOD WATER PLANE (RAGING CURRENT & SILT SHADER)
-# ------------------------------------------------------------------------------
-print(f"🌊 [4/8] Generating turbulent floodwater plane at Z = {FLOOD_Z}m (Submerging Houses)...")
-WATER_SIZE = 550.0
-water_mesh = bpy.data.meshes.new("Flood_Water_Mesh")
-bm_w = bmesh.new()
-hw = WATER_SIZE / 2.0
-
-v0 = bm_w.verts.new((-hw, -hw, FLOOD_Z))
-v1 = bm_w.verts.new(( hw, -hw, FLOOD_Z))
-v2 = bm_w.verts.new(( hw,  hw, FLOOD_Z))
-v3 = bm_w.verts.new((-hw,  hw, FLOOD_Z))
-bm_w.faces.new((v0, v1, v2, v3))
-bmesh.ops.subdivide_edges(bm_w, edges=bm_w.edges, cuts=64)
-bm_w.to_mesh(water_mesh)
-bm_w.free()
-water_mesh.update()
-
-water_obj = bpy.data.objects.new("Submerged_Flood_Water", water_mesh)
-col_water.objects.link(water_obj)
-
-# Wave Displacement
-mod_disp = water_obj.modifiers.new(name="Flood_Current_Displace", type='DISPLACE')
-tex_w = bpy.data.textures.new("Flood_Ripples_Noise", type='CLOUDS')
-tex_w.noise_scale = 2.2
-mod_disp.texture = tex_w
-mod_disp.strength = 0.26
-
-# Realistic Murky Floodwater Shader with Foam Edge Highlights
-mat_water = bpy.data.materials.new("PBR_Murky_Floodwater")
-mat_water.use_nodes = True
-mnodes = mat_water.node_tree.nodes
-mlinks = mat_water.node_tree.links
-mnodes.clear()
-
-m_out  = mnodes.new('ShaderNodeOutputMaterial')
-m_bsdf = mnodes.new('ShaderNodeBsdfPrincipled')
-m_wave = mnodes.new('ShaderNodeTexWave')
-m_bump = mnodes.new('ShaderNodeBump')
-m_mix  = mnodes.new('ShaderNodeMix')
-
-m_wave.wave_type = 'BANDS'
-m_wave.inputs['Scale'].default_value = 6.0
-m_wave.inputs['Distortion'].default_value = 9.0
-m_wave.inputs['Detail'].default_value = 4.5
-
-m_bump.inputs['Strength'].default_value = 0.40
-mlinks.new(m_wave.outputs['Color'], m_bump.inputs['Height'])
-mlinks.new(m_bump.outputs['Normal'], m_bsdf.inputs['Normal'])
-
-m_mix.data_type = 'RGBA'
-m_mix.inputs[6].default_value = (0.22, 0.28, 0.24, 1.0) # Murky silt brown-green water
-m_mix.inputs[7].default_value = (0.80, 0.84, 0.82, 1.0) # Churning foam whitecaps
-mlinks.new(m_wave.outputs['Fac'], m_mix.inputs['Factor'])
-mlinks.new(m_mix.outputs[2], m_bsdf.inputs['Base Color'])
-
-m_bsdf.inputs['Roughness'].default_value = 0.06
-m_bsdf.inputs['IOR'].default_value = 1.333
-if 'Transmission Weight' in m_bsdf.inputs:
-    m_bsdf.inputs['Transmission Weight'].default_value = 0.65
-
-mlinks.new(m_bsdf.outputs['BSDF'], m_out.inputs['Surface'])
+w_bsdf.inputs['Roughness'].default_value = 0.22 # Soft natural water sheen
+w_bsdf.inputs['IOR'].default_value = 1.333
+wlinks.new(w_bsdf.outputs['BSDF'], w_out.inputs['Surface'])
 water_obj.data.materials.append(mat_water)
 
-# Animate water current flow
+# Water flow keyframes
 for f in range(1, 251):
     scene.frame_set(f)
-    water_obj.location.y = (f / 250.0) * 14.0
+    water_obj.location.y = 42.0 + (f / 250.0) * 8.0
     water_obj.keyframe_insert(data_path="location", frame=f)
 
 # ------------------------------------------------------------------------------
-# 5. PREPARE HUMAN CHARACTER TEMPLATES (MEN & WOMEN)
+# 5. PREPARE 1.80m HUMAN MODEL
 # ------------------------------------------------------------------------------
-print("🧍 [5/8] Ingesting Human Character Templates (Men, Women & Diverse Survivors)...")
+print("🧍 [5/7] Preparing 1.80m Human Models...")
+bpy.ops.import_scene.gltf(filepath=MAN_GLB)
+man_meshes = [o for o in scene.collection.objects if o.type == 'MESH' and o.name.startswith('man_')]
 
-def create_template_from_glb(filepath, target_height_m, label):
-    if not os.path.exists(filepath):
-        return None
-    bpy.ops.object.select_all(action='DESELECT')
-    bpy.ops.import_scene.gltf(filepath=filepath)
-    objs = list(bpy.context.selected_objects)
-    if not objs:
-        return None
-    
-    meshes = [o for o in objs if o.type == 'MESH']
-    dims = [max(m.dimensions) for m in meshes if max(m.dimensions) > 0]
-    max_d = max(dims) if dims else 1.0
-    sf = target_height_m / max_d if max_d > 0 else 1.0
-    
-    root = bpy.data.objects.new(f"Template_{label}", None)
-    col_templates.objects.link(root)
-    for o in objs:
-        for c in o.users_collection: c.objects.unlink(o)
-        col_templates.objects.link(o)
-        if o.parent is None:
-            o.parent = root
-            o.matrix_parent_inverse.identity()
-    root.scale = (sf, sf, sf)
-    return root
+bpy.ops.object.select_all(action='DESELECT')
+for m in man_meshes:
+    m.select_set(True)
+bpy.context.view_layer.objects.active = man_meshes[0]
+bpy.ops.object.join()
 
-def create_template_from_fbx(filepath, target_height_m, label):
-    if not os.path.exists(filepath):
-        return None
-    bpy.ops.object.select_all(action='DESELECT')
-    bpy.ops.import_scene.fbx(filepath=filepath)
-    objs = list(bpy.context.selected_objects)
-    if not objs:
-        return None
-    
-    meshes = [o for o in objs if o.type == 'MESH']
-    dims = [max(m.dimensions) for m in meshes if max(m.dimensions) > 0]
-    max_d = max(dims) if dims else 1.0
-    sf = target_height_m / max_d if max_d > 0 else 1.0
-    
-    root = bpy.data.objects.new(f"Template_{label}", None)
-    col_templates.objects.link(root)
-    for o in objs:
-        for c in o.users_collection: c.objects.unlink(o)
-        col_templates.objects.link(o)
-        if o.parent is None:
-            o.parent = root
-            o.matrix_parent_inverse.identity()
-    root.scale = (sf, sf, sf)
-    return root
+man_master = bpy.context.active_object
+man_master.name = 'Human_Master_Template'
+bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
+scale_fac = 1.80 / max(man_master.dimensions)
+man_master.scale = (scale_fac, scale_fac, scale_fac)
+bpy.ops.object.transform_apply(scale=True, location=False, rotation=True)
 
-tmpl_man1 = create_template_from_glb(MAN_GLB, 1.80, "Man_Casual")
-tmpl_man2 = create_template_from_fbx(FBX_MAN, 1.78, "Indian_Man_Tshirt")
-tmpl_wom  = create_template_from_fbx(FBX_WOMAN, 1.68, "Indian_Woman")
+# High-Vis Orange Material
+mat_orange = bpy.data.materials.new('HiVis_Rescue_Orange')
+mat_orange.use_nodes = True
+bsdf_o = mat_orange.node_tree.nodes['Principled BSDF']
+bsdf_o.inputs['Base Color'].default_value = (1.0, 0.28, 0.02, 1.0)
 
-all_templates = [t for t in [tmpl_man1, tmpl_man2, tmpl_wom] if t is not None]
-if not all_templates:
-    raise RuntimeError("No human character models found!")
-
-def spawn_person(location, rotation_euler, scale=1.0, label="Survivor", target_col=col_rooftop, template=None):
-    if template is None:
-        template = random.choice(all_templates)
-    
-    inst = bpy.data.objects.new(f"{label}_Root", None)
-    target_col.objects.link(inst)
-    inst.location = location
-    inst.rotation_euler = rotation_euler
-    
-    bs = template.scale
-    inst.scale = (bs[0] * scale, bs[1] * scale, bs[2] * scale)
-    
-    for child in template.children_recursive:
-        if child.type == 'MESH':
-            new_mesh = child.copy()
-            target_col.objects.link(new_mesh)
-            new_mesh.parent = inst
-            new_mesh.matrix_parent_inverse = child.matrix_parent_inverse.copy()
+def spawn_person(loc, rot, label, col=col_drowning, wear_orange=False):
+    inst = man_master.copy()
+    inst.name = label
+    col.objects.link(inst)
+    inst.location = loc
+    inst.rotation_euler = rot
+    if wear_orange:
+        inst.data = man_master.data.copy()
+        inst.data.materials.clear()
+        inst.data.materials.append(mat_orange)
     return inst
 
 # ------------------------------------------------------------------------------
-# 6. SPAWN DROWNING VICTIMS IN RAGING FLOODWATER
+# 6. POPULATE DROWNING VICTIMS & ROOFTOP SURVIVORS
 # ------------------------------------------------------------------------------
-print("🌊 [6/8] Placing DROWNING VICTIMS struggling in the flood current...")
+print("🌊 [6/7] Populating drowning victims and planted rooftop survivors...")
 
-# People submerged in water with water line at chin/neck/chest (Z = FLOOD_Z - 1.25m to FLOOD_Z - 1.45m)
-# Tilted back, flailing arms up, struggling against the flood current
-drowning_coords = [
-    # (x, y, z_offset_from_water, rot_x, rot_y, rot_z, name)
-    (-25.0, -15.0, -1.35, math.radians(25), math.radians(15), math.radians(45), "Drowning_Victim_Alley_1"),
-    (-18.0, -32.0, -1.40, math.radians(35), math.radians(-20), math.radians(110), "Drowning_Victim_Square_2"),
-    (5.0,   -45.0, -1.42, math.radians(15), math.radians(25), math.radians(-65), "Drowning_Victim_LowerStreet_3"),
-    (28.0,  -22.0, -1.38, math.radians(40), math.radians(-10), math.radians(175), "Drowning_Victim_EastAlley_4"),
-    (-42.0, -5.0,  -1.35, math.radians(30), math.radians(30), math.radians(-30), "Drowning_Victim_WestBreach_5"),
-    (12.0,  -10.0, -1.40, math.radians(20), math.radians(-15), math.radians(85), "Drowning_Victim_Courtyard_6"),
-    (-35.0, -55.0, -1.45, math.radians(45), math.radians(10), math.radians(130), "Drowning_Victim_RushingCurrent_7"),
-    (42.0,  -60.0, -1.40, math.radians(25), math.radians(-25), math.radians(-120), "Drowning_Victim_SouthEdge_8"),
-    (-8.0,  -70.0, -1.42, math.radians(35), math.radians(15), math.radians(15), "Drowning_Victim_Torrent_9"),
-    (18.0,  -38.0, -1.38, math.radians(30), math.radians(-30), math.radians(200), "Drowning_Victim_SubmergedGate_10"),
+# A. DROWNING VICTIMS IN FLOOD WATER
+drowning_list = [
+    # Foreground water (directly in front of hero camera)
+    (14.0, -10.0, -1.25, math.radians(35), 0, math.radians(20), True, "Drowning_Foreground_HiVis_1"),
+    (22.0, -8.0,  -1.35, math.radians(45), math.radians(15), math.radians(-35), False, "Drowning_Foreground_Civilian_2"),
+    (9.0,  -9.0,  -0.25, math.radians(86), 0, math.radians(65), True, "Floating_Victim_Swept_Away_3"),
+    (28.0, -6.0,  -1.30, math.radians(40), math.radians(-10), math.radians(-10), False, "Drowning_Victim_Gasping_4"),
+    
+    # Mid-river flooded current
+    (17.0, -1.0, -1.28, math.radians(30), math.radians(-20), math.radians(100), True, "Drowning_Mid_River_5"),
+    (24.0, 2.0,  -1.32, math.radians(38), math.radians(12), math.radians(40), False, "Drowning_Near_Submerged_Road_6"),
+    (6.0,  -3.0, -0.90, math.radians(20), 0, math.radians(-25), False, "Wading_Survivor_WaistDeep_7"),
+    (31.0, 0.0,  -1.20, math.radians(32), 0, math.radians(50), True, "Drowning_East_Bank_8"),
+
+    # Clinging to submerged house & mansion stone walls
+    (41.5, 7.5, -0.65, math.radians(25), 0, math.radians(175), True, "Clinging_Submerged_House_Roof_9"),
+    (39.0, 4.0, -0.75, math.radians(20), 0, math.radians(160), False, "Clinging_House_Eaves_10"),
+    (18.5, 8.5, -0.55, math.radians(20), 0, math.radians(0), True, "Clinging_White_Mansion_Wall_11"),
+    (2.5,  2.5, -0.60, math.radians(15), 0, math.radians(-45), False, "Clinging_West_House_Step_12"),
 ]
 
-for dx, dy, dz_off, rx, ry, rz, dname in drowning_coords:
-    loc = (dx, dy, FLOOD_Z + dz_off)
-    rot = (rx, ry, rz)
-    p = spawn_person(loc, rot, scale=random.uniform(0.95, 1.05), label=dname, target_col=col_drowning)
-    
-    # Animate drowning struggle / bobbing in flood water
+for dx, dy, dz_off, rx, ry, rz, is_orange, dlabel in drowning_list:
+    p = spawn_person(
+        (dx, dy, FLOOD_Z + dz_off),
+        (rx, ry, rz),
+        dlabel,
+        col=col_drowning,
+        wear_orange=is_orange
+    )
+    # Animate drowning struggle bobbing motion
     freq = random.uniform(0.18, 0.28)
     phase = random.uniform(0, math.pi * 2)
     for f in range(1, 251):
         scene.frame_set(f)
-        p.location.z = loc[2] + 0.08 * math.sin(f * freq + phase)
-        p.rotation_euler.x = rx + math.radians(5.0 * math.sin(f * freq * 1.3))
+        p.location.z = (FLOOD_Z + dz_off) + 0.08 * math.sin(f * freq + phase)
+        p.rotation_euler.x = rx + math.radians(3.5 * math.sin(f * freq * 1.2))
         p.keyframe_insert(data_path="location", frame=f)
         p.keyframe_insert(data_path="rotation_euler", frame=f)
 
-# Floating victims swept away horizontally by current (rotated ~85 degrees)
-floating_coords = [
-    (-12.0, -20.0, FLOOD_Z - 0.25, math.radians(85), math.radians(10), math.radians(15), "Floating_Victim_Swept_1"),
-    (32.0,  -48.0, FLOOD_Z - 0.28, math.radians(80), math.radians(-15), math.radians(-80), "Floating_Victim_Swept_2"),
-    (-50.0, -35.0, FLOOD_Z - 0.22, math.radians(88), math.radians(5), math.radians(160), "Floating_Victim_Swept_3"),
+# B. ROOFTOP SURVIVORS (Firmly planted directly on measured roof tiles)
+rooftop_list = [
+    # (x, y, z_planted, rot_z, orange, name)
+    (20.5, 19.5, 40.31, math.radians(45),  True,  "Rooftop_Survivor_Mansion"),
+    (25.0, 32.0, 42.43, math.radians(-65), False, "Rooftop_Survivor_Mid_Ridge"),
+    (35.0, 25.0, 38.77, math.radians(110), True,  "Rooftop_Survivor_East_Slope"),
+    (15.0, 35.0, 45.96, math.radians(15),  False, "Rooftop_Survivor_Upper_Terrace"),
+    (2.0,  12.0, 38.05, math.radians(-40), True,  "Rooftop_Survivor_West_House"),
 ]
 
-for fx, fy, fz, rx, ry, rz, fname in floating_coords:
-    loc = (fx, fy, fz)
-    rot = (rx, ry, rz)
-    p = spawn_person(loc, rot, scale=random.uniform(0.95, 1.02), label=fname, target_col=col_drowning)
-    
-    # Animate drift with current
-    for f in range(1, 251):
-        scene.frame_set(f)
-        p.location.y = fy + (f / 250.0) * 8.0
-        p.location.z = fz + 0.04 * math.sin(f * 0.15)
-        p.keyframe_insert(data_path="location", frame=f)
+for rx, ry, rz, rrot, is_orange, rlabel in rooftop_list:
+    spawn_person((rx, ry, rz), (0, 0, rrot), rlabel, col=col_rooftop, wear_orange=is_orange)
+
+scene.collection.objects.unlink(man_master)
+
+# Floating wooden debris planks
+mat_wood = bpy.data.materials.new("Driftwood")
+mat_wood.use_nodes = True
+mat_wood.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (0.22, 0.15, 0.08, 1.0)
+
+for idx, (px, py) in enumerate([(14.0, -9.0), (22.0, -6.0), (27.0, -3.0)]):
+    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(px, py, FLOOD_Z + 0.05))
+    plank = bpy.context.active_object
+    plank.name = f"Floating_Debris_Plank_{idx}"
+    plank.scale = (2.0, 0.5, 0.09)
+    plank.rotation_euler.z = math.radians(idx * 45 + 15)
+    plank.data.materials.append(mat_wood)
+    col_water.objects.link(plank)
+    scene.collection.objects.unlink(plank)
 
 # ------------------------------------------------------------------------------
-# 7. SPAWN SURVIVORS CLINGING TO SUBMERGED WALLS & ROOFS
+# 7. CAMERAS & VIEWPORT
 # ------------------------------------------------------------------------------
-print("🧗 [7/8] Placing SURVIVORS CLINGING to submerged walls, eaves & ROOFTOP SURVIVORS...")
+print("🎥 [7/7] Setting up cinematic cameras...")
 
-# A. Clinging to house walls and submerged window sills (body half submerged)
-clinging_coords = [
-    # (x, y, z, rot_x, rot_y, rot_z, name)
-    (-21.0, -11.5, FLOOD_Z - 0.65, math.radians(15), 0, math.radians(90), "Clinging_WindowSill_1"),
-    (-28.0, -25.0, FLOOD_Z - 0.70, math.radians(10), 0, math.radians(0),  "Clinging_StoneWall_2"),
-    (14.0,  -26.0, FLOOD_Z - 0.60, math.radians(20), 0, math.radians(-90), "Clinging_DoorArch_3"),
-    (35.0,  -18.0, FLOOD_Z - 0.65, math.radians(15), 0, math.radians(180), "Clinging_BalconySupport_4"),
-    (-46.0, -12.0, FLOOD_Z - 0.72, math.radians(25), 0, math.radians(45),  "Clinging_SubmergedFence_5"),
-]
-
-for cx, cy, cz, rx, ry, rz, cname in clinging_coords:
-    spawn_person((cx, cy, cz), (rx, ry, rz), scale=1.0, label=cname, target_col=col_clinging)
-
-# B. Rooftop Stranded Survivors (High on the roofs of submerged houses)
-# At Z = 10m to 20m above the flood line!
-rooftop_coords = [
-    # (x, y, z, rot_z, name)
-    (-15.0, -8.0,  11.2, math.radians(45),  "Rooftop_Survivor_Waving_1"),
-    (-17.0, -6.5,  11.4, math.radians(-30), "Rooftop_Survivor_Calling_2"),
-    (8.0,   -18.0, 12.8, math.radians(120), "Rooftop_Survivor_Ridge_3"),
-    (22.0,  -14.0, 13.5, math.radians(200), "Rooftop_Survivor_Terrace_4"),
-    (24.5,  -12.5, 13.6, math.radians(180), "Rooftop_Survivor_Terrace_5"),
-    (-32.0, -18.0, 10.8, math.radians(85),  "Rooftop_Survivor_Chimney_6"),
-    (-5.0,  5.0,   15.2, math.radians(-45), "UpperVillage_Terrace_Survivor_7"),
-    (-3.5,  6.8,   15.3, math.radians(-60), "UpperVillage_Terrace_Survivor_8"),
-    (38.0,  -5.0,  14.6, math.radians(150), "EastRooftop_Survivor_9"),
-    (-48.0, 8.0,   13.9, math.radians(70),  "WestHouse_Rooftop_Survivor_10"),
-]
-
-for rx, ry, rz, rrot, rname in rooftop_coords:
-    spawn_person((rx, ry, rz), (0, 0, rrot), scale=random.uniform(0.97, 1.03), label=rname, target_col=col_rooftop)
-
-# C. People Wading through shallow flooded alleys (Waist-deep at Z = FLOOD_Z - 0.85m)
-wading_coords = [
-    (-8.0,  -2.0, FLOOD_Z - 0.85, math.radians(-20), "Wading_Alley_1"),
-    (-6.5,  1.5,  FLOOD_Z - 0.80, math.radians(-15), "Wading_Alley_2"),
-    (16.0,  2.0,  FLOOD_Z - 0.75, math.radians(60),  "Wading_Stairway_3"),
-    (-26.0, 8.0,  FLOOD_Z - 0.70, math.radians(140), "Wading_Courtyard_4"),
-    (2.0,   8.5,  FLOOD_Z - 0.65, math.radians(0),   "Wading_EscapePath_5"),
-]
-
-for wx, wy, wz, wrot, wname in wading_coords:
-    spawn_person((wx, wy, wz), (0, 0, wrot), scale=1.0, label=wname, target_col=col_wading)
-
-# ------------------------------------------------------------------------------
-# 8. CAMERAS (DRAMATIC CINEMATIC ANGLES OF SUBMERGED VILLAGE & DROWNING PEOPLE)
-# ------------------------------------------------------------------------------
-print("🎥 [8/8] Establishing Dramatic Close-up & Cinematic Camera Angles...")
-
-def add_camera(name, loc, rot, lens=35.0):
-    cam_data = bpy.data.cameras.new(name)
-    cam_data.lens = lens
-    cam_data.clip_start = 0.1
-    cam_data.clip_end = 800.0
-    cam_obj = bpy.data.objects.new(name, cam_data)
-    col_lighting.objects.link(cam_obj)
-    cam_obj.location = loc
-    cam_obj.rotation_euler = rot
+def add_cam(name, loc, target, lens=28.0):
+    cam_d = bpy.data.cameras.new(name)
+    cam_d.lens = lens
+    cam_d.clip_start = 0.1
+    cam_d.clip_end = 800.0
+    cam_obj = bpy.data.objects.new(name, cam_d)
+    col_cams.objects.link(cam_obj)
+    cam_obj.location = mathutils.Vector(loc)
+    direction = mathutils.Vector(target) - mathutils.Vector(loc)
+    cam_obj.rotation_euler = direction.to_track_quat('-Z', 'Y').to_euler()
     return cam_obj
 
-# Camera 1 (Default Active): Eye-level with drowning victims looking past rushing water at submerged village houses
-cam_drowning = add_camera(
-    "Cam_01_Drowning_WaterLevel_POV",
-    (-22.0, -38.0, FLOOD_Z + 0.75),   # Just 75cm above the water surface!
-    (math.radians(82.0), math.radians(0.0), math.radians(28.0)),
-    lens=24.0
+# Camera 1 (Master Hero): Overlooking flooded road & lower village with drowning people
+cam_hero = add_cam(
+    "Cam_01_Master_Submerged_Village_Hero",
+    (18.0, -22.0, FLOOD_Z + 7.5),
+    (23.0, 25.0, FLOOD_Z + 3.0),
+    lens=26.0
 )
-scene.camera = cam_drowning
+scene.camera = cam_hero
 
-# Camera 2: Looking straight down a flooded alley with half-submerged houses & people wading/drowning
-cam_alley = add_camera(
-    "Cam_02_Flooded_Village_Alley",
-    (-14.0, -48.0, FLOOD_Z + 2.8),
-    (math.radians(78.0), math.radians(0.0), math.radians(12.0)),
+# Camera 2: Close Water-Level Drowning POV
+add_cam(
+    "Cam_02_Close_Water_Drowning_POV",
+    (18.0, -13.0, FLOOD_Z + 1.2),
+    (20.0, 10.0, FLOOD_Z + 2.0),
     lens=32.0
 )
 
-# Camera 3: Looking from a high rooftop down at submerged houses & trapped survivors
-cam_rooftop = add_camera(
-    "Cam_03_Rooftop_Survivor_Lookdown",
-    (-12.0, -2.0, 18.5),
-    (math.radians(62.0), math.radians(0.0), math.radians(-145.0)),
-    lens=28.0
+# Camera 3: Submerged House & Wall Clingers
+add_cam(
+    "Cam_03_Submerged_House_Clingers",
+    (35.0, -6.0, FLOOD_Z + 3.5),
+    (41.0, 7.0, FLOOD_Z + 0.5),
+    lens=35.0
 )
 
-# Camera 4: Wide Cinematic Master View of the Submerged Village
-cam_master = add_camera(
-    "Cam_04_Master_Submerged_Village_Wide",
-    (45.0, -85.0, 24.0),
-    (math.radians(70.0), math.radians(0.0), math.radians(35.0)),
+# Camera 4: Rooftop Lookdown at Flood Surge
+add_cam(
+    "Cam_04_Rooftop_Survivor_Lookdown",
+    (20.5, 19.5, 42.0),
+    (18.0, -10.0, FLOOD_Z),
     lens=24.0
 )
 
-# ------------------------------------------------------------------------------
-# SAVE & RENDER
-# ------------------------------------------------------------------------------
+# Configure Viewport to start in Camera View & Material Preview
+for win in bpy.context.window_manager.windows:
+    for area in win.screen.areas:
+        if area.type == 'VIEW_3D':
+            for space in area.spaces:
+                if space.type == 'VIEW_3D':
+                    space.region_3d.view_perspective = 'CAMERA'
+                    space.shading.type = 'MATERIAL'
+
+# Save files
 print(f"💾 Saving to SUTRA Assets: {OUT_BLEND_SUTRA}")
 os.makedirs(os.path.dirname(OUT_BLEND_SUTRA), exist_ok=True)
 bpy.ops.wm.save_as_mainfile(filepath=OUT_BLEND_SUTRA)
@@ -474,14 +368,15 @@ print(f"💾 Saving to Desktop 3D World: {OUT_BLEND_DESK}")
 os.makedirs(os.path.dirname(OUT_BLEND_DESK), exist_ok=True)
 bpy.ops.wm.save_as_mainfile(filepath=OUT_BLEND_DESK)
 
-print("🖼️ Rendering High-Fidelity 1080p Preview Frame from Cam_01_Drowning_WaterLevel_POV...")
+# Render Final 1080p Image
+print("🖼️ Rendering Ultra-HD 1080p Final Disaster Frame...")
 scene.render.filepath = OUT_RENDER_PNG
 try:
     bpy.ops.render.render(write_still=True)
-    print(f"✅ Render Completed -> {OUT_RENDER_PNG}")
+    print(f"✅ Master Disaster Render Saved -> {OUT_RENDER_PNG}")
 except Exception as e:
-    print(f"⚠️ Render note: {e}")
+    print(f"⚠️ Render notice: {e}")
 
 print("=" * 80)
-print("✨ [SUCCESS] PURE SUBMERGED VILLAGE & DROWNING SURVIVORS WORLD COMPLETED!")
+print("✨ [SUCCESS] MASTER SUBMERGED VILLAGE & DROWNING DISASTER WORLD READY!")
 print("=" * 80)
