@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PROJECT SUTRA — The Grand Finale Field Cookbook</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    :root {
+      --bg-warm-canvas: #FAF7F2;
+      --bg-card: #FFFFFF;
+      --bg-card-subtle: #F6F0EA;
+      --bg-accent-soft: #EFE7DE;
+      --border-stone: #E2D7C8;
+      --border-stone-subtle: #EBE1D4;
+      
+      --text-main: #1F2620;
+      --text-muted: #58635A;
+      --text-faint: #828E84;
+      
+      --earth-terracotta: #A64426;
+      --earth-terracotta-dark: #823218;
+      --earth-terracotta-soft: #F9EBE6;
+      
+      --earth-forest: #295436;
+      --earth-forest-dark: #1C3C26;
+      --earth-forest-soft: #EAF3EC;
+      
+      --earth-amber: #B26E10;
+      --earth-amber-soft: #FAF1E3;
+      
+      --earth-slate: #31403A;
+      --earth-sand: #D5C4A1;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      font-size: 9.2pt;
+      line-height: 1.5;
+      color: var(--text-main);
+      background-color: var(--bg-warm-canvas);
+      padding: 26px 36px;
+      max-width: 860px;
+      margin: 0 auto;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    @page {
+      size: A4;
+      margin: 8mm 10mm 10mm 10mm;
+    }
+
+    @media print {
+      body {
+        background-color: #FFFFFF;
+        padding: 0;
+        max-width: 100%;
+      }
+      .recipe-card, .table-wrap, .hero-header {
+        break-inside: avoid-page;
+      }
+      h2.chapter-heading {
+        break-after: avoid;
+      }
+    }
+
+    .recipe-card {
+      break-inside: avoid-page;
+      background: var(--bg-card);
+      border: 1px solid var(--border-stone);
+      border-radius: 8px;
+      padding: 13px 17px;
+      margin-bottom: 11px;
+      box-shadow: 0 1px 3px rgba(43, 33, 24, 0.03);
+    }
+
+    .recipe-card.highlight-forest {
+      border-left: 4.5px solid var(--earth-forest);
+    }
+
+    .recipe-card.highlight-terracotta {
+      border-left: 4.5px solid var(--earth-terracotta);
+    }
+
+    .recipe-card.highlight-amber {
+      border-left: 4.5px solid var(--earth-amber);
+    }
+
+    .hero-header {
+      break-inside: avoid-page;
+      background: linear-gradient(135deg, #222B25 0%, #171F1B 100%);
+      color: #FAF7F2;
+      padding: 18px 22px;
+      border-radius: 9px;
+      margin-bottom: 14px;
+      border: 1px solid #141A17;
+    }
+
+    .hero-header h1 {
+      font-family: 'Fraunces', serif;
+      font-size: 20pt;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+      color: #F7EFE6;
+      margin-bottom: 3px;
+    }
+
+    .hero-header .subtitle {
+      font-size: 9.4pt;
+      color: #C0CDC5;
+      font-weight: 400;
+      margin-bottom: 12px;
+      font-style: italic;
+    }
+
+    .hero-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      padding-top: 9px;
+    }
+
+    .hero-meta-item .label {
+      font-size: 6.6pt;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #93A399;
+      margin-bottom: 2px;
+      font-weight: 600;
+    }
+
+    .hero-meta-item .val {
+      font-size: 8.8pt;
+      font-weight: 600;
+      color: #FAF7F2;
+    }
+
+    h2.chapter-heading {
+      font-family: 'Fraunces', serif;
+      font-size: 12.5pt;
+      color: var(--earth-forest-dark);
+      border-bottom: 1.5px solid var(--border-stone);
+      padding-bottom: 4px;
+      margin-top: 15px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    h3.recipe-title {
+      font-family: 'Fraunces', serif;
+      font-size: 10.4pt;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .badge {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 6.6pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 2px 6.5px;
+      border-radius: 9px;
+      display: inline-block;
+    }
+
+    .badge-forest {
+      background: var(--earth-forest-soft);
+      color: var(--earth-forest);
+      border: 1px solid rgba(43, 87, 56, 0.2);
+    }
+
+    .badge-terracotta {
+      background: var(--earth-terracotta-soft);
+      color: var(--earth-terracotta);
+      border: 1px solid rgba(168, 73, 42, 0.2);
+    }
+
+    .badge-amber {
+      background: var(--earth-amber-soft);
+      color: var(--earth-amber);
+      border: 1px solid rgba(184, 115, 20, 0.2);
+    }
+
+    .badge-slate {
+      background: #EAECEB;
+      color: var(--earth-slate);
+      border: 1px solid rgba(49, 64, 58, 0.2);
+    }
+
+    .recipe-meta-strip {
+      display: flex;
+      gap: 14px;
+      background: var(--bg-card-subtle);
+      border-radius: 5px;
+      padding: 5px 9px;
+      margin-bottom: 8px;
+      font-size: 7.6pt;
+      color: var(--text-muted);
+    }
+
+    .recipe-meta-strip span strong {
+      color: var(--text-main);
+    }
+
+    .ingredients-box {
+      background: var(--bg-warm-canvas);
+      border: 1px dashed var(--border-stone);
+      border-radius: 5px;
+      padding: 7px 11px;
+      margin-bottom: 8px;
+      font-size: 8pt;
+    }
+
+    .ingredients-box .title {
+      font-size: 7pt;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--earth-terracotta-dark);
+      letter-spacing: 0.5px;
+      margin-bottom: 3px;
+    }
+
+    .step-list {
+      list-style: none;
+      counter-reset: step-counter;
+      margin-top: 5px;
+    }
+
+    .step-list li {
+      counter-increment: step-counter;
+      position: relative;
+      padding-left: 24px;
+      margin-bottom: 6px;
+      font-size: 8.5pt;
+    }
+
+    .step-list li::before {
+      content: counter(step-counter);
+      position: absolute;
+      left: 0;
+      top: 1px;
+      width: 17px;
+      height: 17px;
+      background: var(--earth-slate);
+      color: #FAF7F2;
+      border-radius: 50%;
+      font-size: 6.8pt;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7.6pt;
+      background: #EDE6DC;
+      color: #17201B;
+      padding: 1.5px 4.5px;
+      border-radius: 3.5px;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    pre {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7.5pt;
+      line-height: 1.38;
+      background: #202723;
+      color: #E4EEE7;
+      padding: 8px 11px;
+      border-radius: 5px;
+      overflow-x: auto;
+      margin: 5px 0;
+      border: 1px solid #141A17;
+    }
+
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+      border: none;
+      font-size: inherit;
+    }
+
+    .callout {
+      border-radius: 5px;
+      padding: 7px 11px;
+      margin: 7px 0;
+      font-size: 8.1pt;
+      display: flex;
+      gap: 8px;
+    }
+
+    .callout-terracotta {
+      background: var(--earth-terracotta-soft);
+      border-left: 3.5px solid var(--earth-terracotta);
+      color: #65200C;
+    }
+
+    .callout-forest {
+      background: var(--earth-forest-soft);
+      border-left: 3.5px solid var(--earth-forest);
+      color: #143A1E;
+    }
+
+    .callout-amber {
+      background: var(--earth-amber-soft);
+      border-left: 3.5px solid var(--earth-amber);
+      color: #633D08;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8pt;
+      margin: 7px 0;
+      background: #FFFFFF;
+      border-radius: 5px;
+      overflow: hidden;
+      border: 1px solid var(--border-stone);
+    }
+
+    th {
+      background: var(--bg-accent-soft);
+      color: var(--text-main);
+      font-weight: 700;
+      text-align: left;
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--border-stone);
+      font-size: 7.5pt;
+    }
+
+    td {
+      padding: 5.5px 8px;
+      border-bottom: 1px solid var(--border-stone-subtle);
+      color: var(--text-muted);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    td strong {
+      color: var(--text-main);
+    }
+
+    .math-formula {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: var(--earth-forest-dark);
+      background: #F4EDE3;
+      padding: 2px 5px;
+      border-radius: 3.5px;
+      display: inline-block;
+      margin: 1.5px 0;
+      font-size: 7.8pt;
+    }
+
+    .footer-note {
+      text-align: center;
+      font-size: 7.3pt;
+      color: var(--text-faint);
+      margin-top: 14px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-stone);
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HERO COVER -->
+  <div class="hero-header">
+    <h1>PROJECT SUTRA — THE GRAND FINALE COOKBOOK</h1>
+    <div class="subtitle">A First-Principles Operational Recipe Book for 300/300 Marks at Smart Horizon 2026</div>
+    <div class="hero-meta-grid">
+      <div class="hero-meta-item">
+        <div class="label">Event & Venue</div>
+        <div class="val">NHCE Library (DST Track)</div>
+      </div>
+      <div class="hero-meta-item">
+        <div class="label">Team Identity</div>
+        <div class="val">SHIH26-TID-361</div>
+      </div>
+      <div class="hero-meta-item">
+        <div class="label">Problem Statement</div>
+        <div class="val">SH-DST-05 (Swarm SAR)</div>
+      </div>
+      <div class="hero-meta-item">
+        <div class="label">Total Score Pool</div>
+        <div class="val">300 Marks (3 × 100)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAPTER 1 -->
+  <h2 class="chapter-heading">📖 Chapter 1: The Essential Kitchen Laws (Invariants & Rules)</h2>
+
+  <!-- RECIPE 1.1 -->
+  <div class="recipe-card highlight-terracotta">
+    <div class="recipe-title">
+      <span>Recipe 1.1: The "No-Uncommitted-Work" Push Routine</span>
+      <span class="badge badge-terracotta">Cardinal Law</span>
+    </div>
+    <div class="recipe-meta-strip">
+      <span><strong>Difficulty:</strong> Zero Tolerance</span>
+      <span><strong>Prep Time:</strong> 15 seconds</span>
+      <span><strong>Cook Time:</strong> Continuous</span>
+      <span><strong>Auditor:</strong> Git Remote Master</span>
+    </div>
+    <div class="ingredients-box">
+      <div class="title">Active Rule Invariant</div>
+      <em>"No teammate is allowed to work on local and say 'I didn't commit, but I completed the work.' If work is not committed and pushed to GitHub, it officially does not exist."</em>
+    </div>
+    <ol class="step-list">
+      <li><strong>Check Branch:</strong> Verify your active branch before typing: <code>git branch --show-current</code>. Work strictly inside your assigned subsystem role branch.</li>
+      <li><strong>Test Verification:</strong> Run deterministic tests to confirm zero regressions: <code>pytest sutra_ws/src/sutra_*/test/ -q</code>.</li>
+      <li><strong>Stage Atomic Diffs:</strong> Never leave uncommitted diffs: <code>git add &lt;modified_files&gt;</code>.</li>
+      <li><strong>Semantic Commit:</strong> Use standard prefixes: <code>feat:</code>, <code>fix:</code>, <code>test:</code>, <code>docs:</code>.</li>
+      <li><strong>Immediate Push:</strong> Push immediately: <code>git push origin &lt;assigned-branch&gt;</code>. Work is invalid without a live commit hash.</li>
+    </ol>
+  </div>
+
+  <!-- RECIPE 1.2 -->
+  <div class="recipe-card highlight-forest">
+    <div class="recipe-title">
+      <span>Recipe 1.2: The Zero-Mock Empirical Evidence Filter</span>
+      <span class="badge badge-forest">Scientific Moat</span>
+    </div>
+    <div class="recipe-meta-strip">
+      <span><strong>Target:</strong> Absolute Defense</span>
+      <span><strong>Verified Baseline:</strong> 232/232 Tests Passing (15.71s execution)</span>
+    </div>
+    <div class="callout callout-forest">
+      <div><strong>Strict Policy:</strong> Every benchmark in DOCS.md or pitch slides MUST appear verbatim in captured stdout. If an external sensor or drone is offline, write <code>❓ UNTESTED — [Reason]</code>. Never synthesize fake numbers.</div>
+    </div>
+  </div>
+
+  <!-- RECIPE 1.3 -->
+  <div class="recipe-card highlight-amber">
+    <div class="recipe-title">
+      <span>Recipe 1.3: 24/7 Desk Attendance & Active Documentation</span>
+      <span class="badge badge-amber">NHCE Rule 3.4 & 6.1</span>
+    </div>
+    <div class="recipe-meta-strip">
+      <span><strong>Venue:</strong> Library Desk</span>
+      <span><strong>Min Occupancy:</strong> ≥ 2 Teammates</span>
+      <span><strong>Active Document:</strong> <code>JURY_FEEDBACK_TRACKER.md</code></span>
+    </div>
+    <ul class="step-list">
+      <li><strong>Desk Attendance Invariant:</strong> The table in the Library must NEVER be left empty. Rohith Kumar & Harika anchor the desk during all meal shifts.</li>
+      <li><strong>Active Jury Ledger:</strong> During Evaluation 1 & 2, Harika transcribes every question into <code>JURY_FEEDBACK_TRACKER.md</code>. Code resolutions must be committed with tags before the subsequent round (Rule 6.1).</li>
+    </ul>
+  </div>
+
+  <!-- CHAPTER 2 -->
+  <h2 class="chapter-heading">🍲 Chapter 2: Subsystem Recipes (Preparation & Plating)</h2>
+
+  <!-- RECIPE 2.1: GNC -->
+  <div class="recipe-card highlight-forest">
+    <div class="recipe-title">
+      <span>Recipe 2.1: Subsystem A — Baking Quintic Splines & ORCA 3D Avoidance</span>
+      <span class="badge badge-forest">GNC Lead: Nikhil</span>
+    </div>
+    <div class="recipe-meta-strip">
+      <span><strong>Key Files:</strong> <code>orca_avoidance.py</code>, <code>sutra_fsd_autopilot_node.py</code></span>
+      <span><strong>Verified:</strong> 120/120 Tests</span>
+    </div>
+    <div class="ingredients-box">
+      <div class="title">Mathematical Formulation</div>
+      • Minimum-snap quintic polynomial splines: <span class="math-formula">p(t) = ∑ a_k t^k</span> (Jerk &lt; 4.20 m/s³)<br>
+      • 3D Reciprocal Velocity Obstacle half-planes with static push: <span class="math-formula">u = n̂ · v_push - v_rel</span> (Clearance ≥ 2.80m)<br>
+      • Control Barrier Function (CBF) shield: <span class="math-formula">ḣ(x) + γ h(x) ≥ 0</span> enforcing dynamic safety envelope
+    </div>
+    <ol class="step-list">
+      <li><strong>Non-Coplanar Cruising Altitudes:</strong> Assigns staggered cruising layers (3.5m, 3.8m, 4.1m, 4.4m, 4.6m) to eliminate 2D collinear stall singularities.</li>
+      <li><strong>SutraNeuroFlight:</strong> 0.04ms ONNX network injects dynamic feedforward compensation for 18 m/s wind shear at 50Hz.</li>
+    </ol>
+    <pre><code>pytest sutra_ws/src/sutra_gnc/test/ -q  # Target: 120 passed in ~4.0s</code></pre>
+  </div>
+
+  <!-- RECIPE 2.2: COMMS -->
+  <div class="recipe-card highlight-amber">
+    <div class="recipe-title">
+      <span>Recipe 2.2: Subsystem B — Brewing Deep JSCC Under -5 dB Jamming</span>
+      <span class="badge badge-amber">Comms Lead: Nikhil / Rohith</span>
+    </div>
+    <div class="recipe-meta-strip">
+      <span><strong>Key Files:</strong> <code>perceptron_jscc.py</code>, <code>mesh_node.py</code></span>
+      <span><strong>Verified:</strong> 48/48 Tests</span>
+    </div>
+    <div class="ingredients-box">
+      <div class="title">The Technical Moat</div>
+      • Rate-distortion loss: <span class="math-formula">L = ||x - x̂||² + β R</span> (96.9% compression: 512KB → 16KB)<br>
+      • Graceful analog degradation surviving -5 dB RF jamming (PSNR ≥ 41.5 dB) without digital frame freezing.<br>
+      • SwarmRAFT consensus with 150–300ms heartbeats → leader failover &lt; 500ms upon node drop.
+    </div>
+    <ol class="step-list">
+      <li><strong>The Defense Answer:</strong> <em>"Digital H.264 freezes completely under 5% packet loss. Deep JSCC maps pixels directly to complex channel symbols—under heavy jamming, video degrades into soft analog grain rather than crashing."</em></li>
+    </ol>
+    <pre><code>python3 scripts/run_deep_jscc_moat_demonstrator.py</code></pre>
+  </div>
+
+  <!-- RECIPE 2.3: PERCEPTION -->
+  <div class="recipe-card highlight-forest">
+    <div class="recipe-title">
+      <span>Recipe 2.3: Subsystem C — Slicing YOLOv8-Nano & WGS84 Raycasting</span>
+      <span class="badge badge-forest">Perception Lead: Vedanth</span>
+    </div>
+    <div class="recipe-meta-strip">
+      <span><strong>Key Files:</strong> <code>detector_node.py</code>, <code>bytetrack.py</code></span>
+      <span><strong>Verified:</strong> 60/60 Tests</span>
+    </div>
+    <div class="ingredients-box">
+      <div class="title">Raycast Formulation</div>
+      <span class="math-formula">r_world = R_b^w R_c^b K⁻¹ [u, v, 1]ᵀ</span> intersecting terrain DEM plane Z(X,Y) → WGS84 error &lt; 0.32m at 30m AGL
+    </div>
+    <ol class="step-list">
+      <li><strong>ByteTrack Persistence:</strong> 8-state Kalman filters <span class="math-formula">x = [u, v, s, r, u̇, v̇, ṡ]ᵀ</span> retain survivor identity across occlusion (≤ 1 ID switch across 50 frames).</li>
+      <li><strong>Pitch/Roll Correction:</strong> Rotating camera vectors through 6-DOF body attitude matrix R_b^w prevents 2.5m flat-projection errors.</li>
+    </ol>
+    <pre><code>pytest sutra_ws/src/sutra_perception/test/ -q  # Target: 60 passed in ~2.4s</code></pre>
+  </div>
+
+  <!-- RECIPE 2.4: GCS -->
+  <div class="recipe-card highlight-slate">
+    <div class="recipe-title">
+      <span>Recipe 2.4: Subsystem D — Blitting 60 FPS WebGPU Buffers</span>
+      <span class="badge badge-slate">GCS Lead: Siva</span>
+    </div>
+    <div class="recipe-meta-strip">
+      <span><strong>Tech Stack:</strong> React 18 + Mapbox GL JS + WebGPU</span>
+      <span><strong>Bundle:</strong> 226 kB (1.55s build)</span>
+    </div>
+    <p style="font-size: 8.3pt; color: var(--text-muted); margin-bottom: 5px;">
+      React virtual DOM reconciliation cannot handle five 50Hz telemetry streams. SUTRA parses binary WebSocket <code>ArrayBuffers</code> directly into <code>Float32Array</code> ring buffers, blitting straight to WebGPU canvas draw calls to lock exactly 60.0 FPS.
+    </p>
+    <pre><code>cd sutra_ws/src/sutra_gcs && npm run preview -- --port 3000</code></pre>
+  </div>
+
+  <!-- RECIPE 2.5: ECONOMICS -->
+  <div class="recipe-card highlight-forest">
+    <div class="recipe-title">
+      <span>Recipe 2.5: Subsystem E & F — Plating Pitch & Unit Economics</span>
+      <span class="badge badge-forest">Leads: Harika & Rohith</span>
+    </div>
+    <div class="recipe-meta-strip">
+      <span><strong>Cost:</strong> ₹42,850/drone vs ₹15,00,000 commercial</span>
+      <span><strong>Savings:</strong> 97.1% Cost Reduction</span>
+    </div>
+    <table>
+      <tr>
+        <th>Subsystem Component</th>
+        <th>Hardware Specification</th>
+        <th>Unit Cost (INR)</th>
+      </tr>
+      <tr>
+        <td>Frame & Propulsion</td>
+        <td>Carbon Fiber 350mm + EMAX 2212 980KV + 20A ESC</td>
+        <td><strong>₹7,200</strong></td>
+      </tr>
+      <tr>
+        <td>Autopilot & Compute</td>
+        <td>Pixhawk 6C Mini + Companion Edge Board</td>
+        <td><strong>₹18,400</strong></td>
+      </tr>
+      <tr>
+        <td>Dual Vision Sensors</td>
+        <td>Sony IMX477 (Visual) + FLIR Lepton 3.5 (Thermal)</td>
+        <td><strong>₹12,500</strong></td>
+      </tr>
+      <tr>
+        <td>Mesh Transceiver</td>
+        <td>802.11s Dual-Band Mesh Module</td>
+        <td><strong>₹4,750</strong></td>
+      </tr>
+      <tr>
+        <td colspan="2"><strong>TOTAL PER AUTONOMOUS SEARCH & RESCUE UAV</strong></td>
+        <td><strong style="color: var(--earth-forest);">₹42,850</strong></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- CHAPTER 3 -->
+  <h2 class="chapter-heading">⏱️ Chapter 3: The 3 Evaluation Service Courses (300 Marks)</h2>
+
+  <table>
+    <tr>
+      <th style="width: 23%;">Evaluation Stage</th>
+      <th style="width: 20%;">Time Window</th>
+      <th style="width: 33%;">Core Jury Deliverables</th>
+      <th style="width: 24%;">Passing Criteria</th>
+    </tr>
+    <tr>
+      <td><strong>Course 1: Eval 1</strong><br><span class="badge badge-forest">100 Marks</span></td>
+      <td>Day 1 (03-Sep)<br><strong>05:00 PM onwards</strong></td>
+      <td>• System Architecture Diagram<br>• 232/232 PyTest pass live in terminal<br>• Baseline 5-UAV flight demonstration<br>• SH-DST-05 problem statement mapping</td>
+      <td>Clean git tree; live test execution; confident architectural defense.</td>
+    </tr>
+    <tr>
+      <td><strong>Course 2: Eval 2</strong><br><span class="badge badge-amber">100 Marks</span></td>
+      <td>Day 2 (04-Sep)<br><strong>02:00 PM onwards</strong></td>
+      <td>• 100% Closure of Eval 1 Jury feedback<br>• Disturbance rejection (18 m/s wind)<br>• -5 dB RF jamming video test<br>• Single motor failure fallback demo</td>
+      <td><code>JURY_FEEDBACK_TRACKER.md</code> showing tagged commit hashes for all feedback.</td>
+    </tr>
+    <tr>
+      <td><strong>Course 3: Eval 3</strong><br><span class="badge badge-terracotta">100 Marks</span></td>
+      <td>Day 3 (05-Sep)<br><strong>08:30 – 11:00 AM</strong></td>
+      <td>• Live 5-UAV Ring Crossing Demo<br>• Sub-0.32m WGS84 Geolocation Raycast<br>• Unit Economics BOM defense<br>• Final Stage Master Pitch (Harika)</td>
+      <td>Zero collision ring crossing; locked 60 FPS HUD; flawless jury Q&A defense.</td>
+    </tr>
+  </table>
+
+  <!-- CHAPTER 4 -->
+  <h2 class="chapter-heading">🚒 Chapter 4: Emergency Fire Suppression (Worst-Case Fallbacks)</h2>
+
+  <div class="recipe-card highlight-terracotta">
+    <div class="recipe-title">
+      <span>Disaster Scenario 1: Venue Wi-Fi Drops Completely</span>
+      <span class="badge badge-terracotta">High Probability</span>
+    </div>
+    <ul class="step-list">
+      <li><strong>Immediate Action:</strong> Do not waste time debugging campus network.</li>
+      <li><strong>Offline Activation:</strong> Run: <code>python3 -m http.server 8000 --directory /home/nikhil/Desktop/Project\ SUTRA</code>.</li>
+      <li><strong>Open Offline Portal:</strong> Open <code>http://localhost:8000/SUTRA_OFFLINE_PORTAL.html</code> in Chrome. It runs WebGPU simulations, rate-distortion curves, and 5-UAV ring crossing entirely in browser memory without network.</li>
+    </ul>
+  </div>
+
+  <div class="recipe-card highlight-terracotta">
+    <div class="recipe-title">
+      <span>Disaster Scenario 2: Jury Demands: "Kill Drone 3 Right Now"</span>
+      <span class="badge badge-terracotta">Adversarial Test</span>
+    </div>
+    <ul class="step-list">
+      <li><strong>Trigger Failure:</strong> Nikhil executes: <code>ros2 topic pub --once /sutra/uav_3/motor_failure std_msgs/msg/Bool "{data: true}"</code>.</li>
+      <li><strong>Autonomous Recovery:</strong> <code>motor_failure_fallback_node.py</code> detects zero RPM within 80ms, commands UAV 3 into controlled spin-damped descent, while remaining 4 UAVs dynamically recalculate search polygons to close the gap.</li>
+    </ul>
+  </div>
+
+  <!-- CHAPTER 5 -->
+  <h2 class="chapter-heading">⚡ Chapter 5: Master One-Liner Terminal Recipes & Screen Matrix</h2>
+
+  <div class="recipe-card highlight-forest">
+    <div class="recipe-title">
+      <span>The 15-Second Master Verification Gate</span>
+      <span class="badge badge-forest">Pre-Demo Verification</span>
+    </div>
+    <pre><code># 1. Run Complete 232-Test Deterministic Suite:
+pytest sutra_ws/src/sutra_*/test/ -q
+
+# 2. Verify Zero Uncommitted Code (Cardinal Law):
+git status
+
+# 3. Check GCS Production Build:
+cd sutra_ws/src/sutra_gcs && npm run build</code></pre>
+  </div>
+
+  <!-- TEAM SCREEN MATRIX -->
+  <div class="recipe-card highlight-slate">
+    <div class="recipe-title">
+      <span>Library Workstation 4-Screen Hardware Layout</span>
+      <span class="badge badge-slate">Station Setup</span>
+    </div>
+    <table>
+      <tr>
+        <th>Machine</th>
+        <th>Teammate</th>
+        <th>Active Screen Display</th>
+        <th>Defense Ownership</th>
+      </tr>
+      <tr>
+        <td><strong>ASUS TUF A15</strong> (RTX 3050)</td>
+        <td>⚡ Nikhil</td>
+        <td>Gazebo Sim 8 Digital Twin / Live 5-UAV ROS 2 Node Graph</td>
+        <td>GNC Math, ORCA 3D, PX4 Offboard & Deep JSCC</td>
+      </tr>
+      <tr>
+        <td><strong>HP Victus</strong> (RTX 4050)</td>
+        <td>⚙️ Rohith Kumar</td>
+        <td>Deep JSCC Moat Benchmark & TensorRT Inference Monitor</td>
+        <td>GPU Runner & Desk Anchor (Rule 3.4)</td>
+      </tr>
+      <tr>
+        <td><strong>MacBook Pro</strong> (Apple Silicon)</td>
+        <td>📑 Harika</td>
+        <td>14-Slide Master Pitch Deck + <code>JURY_FEEDBACK_TRACKER.md</code></td>
+        <td>Pitch Delivery, Feedback Logging, Unit Economics</td>
+      </tr>
+      <tr>
+        <td><strong>Lenovo Laptop</strong> (Intel i5)</td>
+        <td>🗺️ Siva / 👁️ Vedanth</td>
+        <td>SUTRA 3D GIS GCS HUD (Port 3000) & WGS84 Target Stream</td>
+        <td>GCS Mapbox Interface & YOLOv8-Nano Detections</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ELEVATOR PITCH CALLOUT -->
+  <div class="callout callout-amber">
+    <div><strong>30-Second Winning Pitch Script (Harika/Nikhil):</strong> <em>"Respected Jury, Project SUTRA solves the three fatal failure modes of modern search-and-rescue: single-drone coverage bottlenecks, GPS loss in canyons, and video stream collapse under RF jamming. Powered by ORCA 3D reciprocal collision avoidance with non-coplanar cruising layers, analog Deep Joint Source-Channel Coding, and terrain-corrected WGS84 raycasting, SUTRA provides fully decentralized, collaborative search capability at ₹42,850 per drone—97% cheaper than enterprise hardware. Every single claim is backed by 232 automated tests running in 15 seconds."</em></div>
+  </div>
+
+  <div class="footer-note">
+    Project SUTRA • Smart Horizon 48-Hour International Hackathon Grand Finale • NHCE Bengaluru • Sept 3–5, 2026
+  </div>
+
+</body>
+</html>
