@@ -1299,6 +1299,17 @@ class WebSocketGatewayServer:
                 stations = self.prepositioning_opt.get_charging_stations()
                 return {"success": res.get("success", False), "swap": res, "charging_stations": [s.to_dict() for s in stations]}
 
+            elif cmd_type in ("mission.abort_all", "MISSION_ABORT_ALL"):
+                reason = str(payload.get("reason", "Operator emergency abort command"))
+                res = self.prepositioning_opt.emergency_abort_all(reason=reason)
+                return {"success": True, "abort": res}
+
+            elif cmd_type in ("mission.abort_uav", "MISSION_ABORT_UAV"):
+                d_id = str(payload.get("drone_id", "drone_alpha"))
+                reason = str(payload.get("reason", f"Emergency abort for {d_id}"))
+                res = self.prepositioning_opt.emergency_abort_uav(drone_id=d_id, reason=reason)
+                return {"success": True, "abort": res}
+
             elif cmd_type in ("risk.set_theater", "RISK_SET_THEATER"):
                 lat = float(payload.get("latitude", 12.9345))
                 lon = float(payload.get("longitude", 77.6912))

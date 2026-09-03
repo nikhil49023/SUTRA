@@ -176,6 +176,7 @@ class PredictiveRiskEngine:
                     # Evaluate Risk
                     score, cat, factors, explanation = self.model.evaluate_cell(cell)
                     cell.risk_score = score
+                    cell.uncertainty_margin = round(max(2.5, (1.0 - cell.confidence) * 16.0 + 2.8), 1)
                     cell.category = cat
                     cell.factors = factors
                     cell.primary_explanation = explanation

@@ -79,6 +79,7 @@ class RiskGridCell:
 
     # Composite Risk Output
     risk_score: float = 0.0                         # [0.0 - 100.0]
+    uncertainty_margin: float = 5.0                 # Standard error / uncertainty margin (+/- sigma)
     category: RiskCategory = RiskCategory.LOW
     confidence: float = 0.70                        # [0.0 - 1.0]
     factors: List[FactorScore] = field(default_factory=list)
@@ -110,6 +111,7 @@ class RiskGridCell:
             "confirmed_flooded": self.confirmed_flooded,
             "confirmed_debris": self.confirmed_debris,
             "risk_score": round(self.risk_score, 1),
+            "uncertainty_margin": round(self.uncertainty_margin, 1),
             "category": self.category.value,
             "confidence": round(self.confidence, 2),
             "factors": [f.to_dict() for f in self.factors],
