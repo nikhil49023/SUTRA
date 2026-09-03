@@ -11,6 +11,7 @@ export type MissionStateEnum =
   | 'RTL'
   | 'LANDING'
   | 'COMPLETE'
+  | 'COMPLETED'
   | 'ABORTED'
   | 'EMERGENCY'
   | 'IN_PROGRESS'

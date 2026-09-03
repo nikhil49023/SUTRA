@@ -166,18 +166,22 @@ export class WaypointLayer {
       // Update visual state (class changes only, no innerHTML)
       const isNowSelected = selectedId === wp.id || selectedId === String(wp.index);
       const isNowActive = activeIndex === wp.index;
+      const isNowPassed = wp.index < activeIndex;
 
       if (isNowSelected) {
         entry.dotEl.className =
-          'w-8 h-8 rounded-full flex items-center justify-center font-mono font-bold text-xs border-2 shadow-lg bg-[#5B8FB9] border-[#E7EBEF] text-[#0B0F14] scale-125 ring-4 ring-[#5B8FB9]/40 transition-transform';
+          'w-8 h-8 rounded-full flex items-center justify-center font-mono font-bold text-xs border-2 shadow-lg bg-[#5B8FB9] border-[#E7EBEF] text-[#0B0F14] scale-125 ring-4 ring-[#5B8FB9]/50 transition-transform';
       } else if (isNowActive) {
         entry.dotEl.className =
-          'w-8 h-8 rounded-full flex items-center justify-center font-mono font-bold text-xs border-2 shadow-lg bg-[#4B7FA9] border-[#6FA4CE] text-[#E7EBEF] ring-2 ring-[#6FA4CE]/50 transition-transform';
+          'w-8 h-8 rounded-full flex items-center justify-center font-mono font-bold text-xs border-2 shadow-lg bg-[#10B981] border-[#34D399] text-white scale-110 ring-4 ring-[#10B981]/60 animate-pulse transition-transform';
+      } else if (isNowPassed) {
+        entry.dotEl.className =
+          'w-7 h-7 rounded-full flex items-center justify-center font-mono font-bold text-xs border-2 bg-[#064E3B] border-[#059669] text-[#34D399] opacity-80 transition-transform';
       } else {
         entry.dotEl.className =
           'w-8 h-8 rounded-full flex items-center justify-center font-mono font-bold text-xs border-2 shadow-lg bg-[#11171E]/95 border-[#5B8FB9] text-[#5B8FB9] hover:scale-110 transition-transform';
       }
-      entry.labelEl.textContent = String(wp.index);
+      entry.labelEl.textContent = isNowPassed ? '✓' : String(wp.index);
       entry.subEl.textContent = `${wp.altitude}m | ${wp.speed}m/s`;
     });
   }
