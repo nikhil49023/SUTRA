@@ -62,7 +62,7 @@ class AIManager:
                 pred = battery_predictor.predict(
                     drone_id=d.drone_id,
                     current_battery=d.battery,
-                    remaining_distance_m=state.mission_state.total_distance,
+                    remaining_distance_m=getattr(state.mission_state, "distance_remaining", 500.0),
                     rth_distance_m=500.0,
                     ground_speed_mps=d.speed,
                 )
