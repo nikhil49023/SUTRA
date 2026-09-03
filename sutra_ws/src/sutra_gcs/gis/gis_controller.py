@@ -209,14 +209,13 @@ class GISController:
         from .models import WeatherData
         weather_data = WeatherData(
             temperature_c=21.5,
-            humidity_percent=58.0,
             pressure_hpa=1013.25,
             wind_speed_mps=wind_speed,
             wind_direction_deg=230.0,
             wind_gusts_mps=wind_gusts,
             visibility_km=visibility_km,
             precipitation_mm=precip_mm,
-            cloud_cover_percent=20.0,
+            cloud_cover_pct=20.0,
             available=True,
         )
         rep = weather_analyzer.evaluate_weather(weather_data)
@@ -229,7 +228,6 @@ class GISController:
             "temperature_c": weather_data.temperature_c,
             "wind_speed_mps": weather_data.wind_speed_mps,
             "pressure_hpa": weather_data.pressure_hpa,
-            "humidity_percent": weather_data.humidity_percent,
         }
         self.event_bus.emit("gis.weather_updated", payload=result, source="gis_controller")
         return result

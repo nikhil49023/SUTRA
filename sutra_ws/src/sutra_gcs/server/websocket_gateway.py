@@ -910,9 +910,8 @@ class WebSocketGatewayServer:
             # Geofence
             elif cmd_type in ("geofence.select", "GEOFENCE_SELECT"):
                 gf_id = payload.get("geofence_id")
-                from dataclasses import replace as dc_replace
                 self.state_store.update_state(
-                    lambda s: dc_replace(s, geofence_state=dc_replace(s.geofence_state, selected_geofence_id=gf_id))
+                    lambda s: replace(s, geofence_state=replace(s.geofence_state, selected_geofence_id=gf_id))
                 )
                 return {"selected_geofence_id": gf_id}
 
@@ -965,11 +964,10 @@ class WebSocketGatewayServer:
                 current_gf_state = self.state_store.get_state().geofence_state
                 if current_gf_state.drawing_mode:
                     if parsed:
-                        from dataclasses import replace as dc_replace
                         self.state_store.update_state(
-                            lambda s: dc_replace(
+                            lambda s: replace(
                                 s,
-                                geofence_state=dc_replace(
+                                geofence_state=replace(
                                     s.geofence_state,
                                     drawing_points=parsed,
                                 ),
@@ -1159,7 +1157,6 @@ class WebSocketGatewayServer:
                 return {"injected_count": len(res), "targets": [t.target_id for t in res]}
 
             elif cmd_type in ("ai.clear_targets", "AI_CLEAR_TARGETS"):
-                from dataclasses import replace
                 self.state_store.update_state(
                     lambda s: replace(
                         s,
@@ -1175,7 +1172,6 @@ class WebSocketGatewayServer:
 
             elif cmd_type in ("alert.acknowledge", "ALERT_ACKNOWLEDGE"):
                 alert_id = payload.get("alert_id")
-                from dataclasses import replace
                 self.state_store.update_state(
                     lambda s: replace(s, alert_state=s.alert_state.acknowledge_alert(alert_id))
                 )
@@ -1421,7 +1417,6 @@ class WebSocketGatewayServer:
         )
 
         # 3. Compute Movement & Kinematics for EVERY Drone in the Fleet
-        from dataclasses import replace
         updated_drones: Dict[str, DroneState] = {}
 
         for d_id, drone in fleet.drones.items():
