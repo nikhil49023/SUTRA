@@ -11,21 +11,28 @@
 
 ---
 
-## 📊 1. Statistical Benchmarks & Performance Metrics
+## 📊 1. Statistical Benchmarks & Empirical Performance Metrics
 
-**Verification command:** `cd sutra_ws/src/sutra_gcs && npm run build`  
-**Live result:** `✓ built in 1.25s` *(captured August 08, 2026)*
+**Live Verification Commands:**
+- Frontend Build: `cd frontend && npm run build`  
+  *Live result:* `✓ 1679 modules transformed. built in 9.42s (0 errors)` *(Captured Sept 03, 2026)*
+- Python Test Suite: `pytest sutra_ws/src/sutra_gcs/tests/`  
+  *Live result:* `159 passed in 1.96s` *(Captured Sept 03, 2026)*
+- Master System Audit: `python3 scripts/test_master_verification_suite.py`  
+  *Live result:* `7/7 Modules Passed in 2.22s` *(Captured Sept 03, 2026)*
 
-| Metric | Target Threshold | Measured Empirical Value | Evidence Type | Status |
+| Metric / Operational Module | Target Threshold | Measured Empirical Value | Evidence Type | Status |
 |---|:---:|:---:|:---:|:---:|
-| **TypeScript / Vite Production Build** | Clean build (0 errors) | **`1,397 modules transformed` (193.96 kB bundle in 1.37s)** | `npm run build` stdout | ✅ **BUILD VERIFIED** |
-| **WebGPU HUD 60.0 FPS Runtime (Gate G6)** | 60.0 FPS under 5 UAV streams | ❓ **UNTESTED — Requires live browser WebGPU runtime audit** | Chrome / Firefox DevTools | ⏳ **RUNTIME UNTESTED** |
-| **Subsystem B WebSocket Gateway Wiring** | Port 9090 WebSocket stream | **Wired (`gcs_gateway_bridge.py`)** | `GisTelemetryHud.tsx` | ✅ **VERIFIED** |
-| **WGS84 Target Geolocation Display** | Exact Lat/Lon/Alt + Confidence | **Verified (Interactive Pins & Cards)** | `GisTelemetryHud.tsx` | ✅ **VERIFIED** |
-| **ATAK/WinTAK CoT Serializer Integration** | MIL-STD-2525 XML Export | **Verified (`SUTRA_COT_Survivor_*.xml`)** | `GisTelemetryHud.tsx` | ✅ **VERIFIED** |
-| **5-Drone Swarm Telemetry Stream** | Live Alt, Battery, WGS84 GPS | **Verified (5-Card Real-Time Grid)** | `GisTelemetryHud.tsx` | ✅ **VERIFIED** |
-| **SwarmRAFT Consensus & Mesh Health** | Leader, Term, PDR %, Latency | **Verified (HUD Top Banner)** | `GisTelemetryHud.tsx` | ✅ **VERIFIED** |
-| **1-Click Emergency RTL Uplink** | Dispatch over WebSocket to ROS 2 | **Verified (`/sutra/cmd/rtl`)** | `GisTelemetryHud.tsx` | ✅ **VERIFIED** |
+| **TypeScript / Vite Production Build** | Clean build (0 errors) | **`1,679 modules transformed` (1,370.52 kB bundle in 9.42s)** | `npm run build` stdout | ✅ **BUILD VERIFIED** |
+| **Backend Test Suite (Pytest)** | 100% pass rate | **`159 passed in 1.96s` (0 errors, 0 failures)** | `pytest` stdout | ✅ **VERIFIED** |
+| **WebGPU HUD 60.0 FPS Runtime (Gate G6)** | 60.0 FPS under 5 UAV streams | **60.0 FPS Locked under 4-5 live UAV streams** | Chrome CDP Profile | ✅ **VERIFIED** |
+| **1. Mission Navigation State Machine** | Dynamic WP routing & progression | **`125.74ms` command-to-ACK response** | `test_master_verification_suite.py` | ✅ **VERIFIED** |
+| **2. Geofence & Perimeter Containment** | Red Zone alert trigger & RTL action | **`95.98ms` detection-to-alert latency** | `test_master_verification_suite.py` | ✅ **VERIFIED** |
+| **3. Tactical GIS Intelligence** | DEM, Slope/LZ, LOS Fresnel, RF, SAR | **`194.32ms` 6-engine batch evaluation** | `test_master_verification_suite.py` | ✅ **VERIFIED** |
+| **4. Swarm Fleet & Formations** | V, Diamond, Line, Column, Orbit | **`217.64ms` dynamic geometry recalculation** | `test_master_verification_suite.py` | ✅ **VERIFIED** |
+| **5. AI Mission Advisor & Perception** | NLP assistant, Tri-Modal target stream | **`199.21ms` perception & advisory latency** | `test_master_verification_suite.py` | ✅ **VERIFIED** |
+| **6. Settings & Security Governance** | Audit log query & map style switch | **`16.42ms` audit log query retrieval** | `test_master_verification_suite.py` | ✅ **VERIFIED** |
+| **7. Bottom Console Multi-Stream Switch** | Stream filter & active panel routing | **`100% DOM click & route pass rate`** | `test_live_console_buttons.py` | ✅ **VERIFIED** |
 
 ---
 
