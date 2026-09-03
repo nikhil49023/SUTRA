@@ -2,7 +2,7 @@
 # ==============================================================================
 # SUTRA Shortcut: Launch Headless Physics Simulation (Zero GPU Overhead)
 # ==============================================================================
-set -euo pipefail
+set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"

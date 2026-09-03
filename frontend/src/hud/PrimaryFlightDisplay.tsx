@@ -65,9 +65,9 @@ export const PrimaryFlightDisplay: React.FC = () => {
         message={isCritical ? 'CRITICAL BATTERY WARNING — AUTO RTL IMMINENT' : undefined}
       />
 
-      {/* 1. Left Cluster: Drone Selector, Speed, GPS */}
+      {/* 1. Left Cluster: Drone Selector, Multi-UAV Quick Switcher, Speed, GPS */}
       <div className="flex items-center space-x-2 sm:space-x-3">
-        {/* Drone Selector Pill */}
+        {/* Drone Selector Pill & Quick Swarm Switcher */}
         <div className="flex flex-col space-y-1 bg-[#11171E] p-1.5 rounded-lg border border-[#2B3743]">
           <div className="flex items-center space-x-1.5">
             <span className="w-2 h-2 rounded-full bg-[#4F9A72] animate-pulse" />
@@ -93,8 +93,27 @@ export const PrimaryFlightDisplay: React.FC = () => {
               </button>
             )}
           </div>
-          <div className="text-[9px] font-mono text-[#707C88] px-0.5">
-            PROG: <span className="text-[#5B8FB9] font-bold">{missionState.mission_progress.toFixed(0)}%</span> | WP: <span className="text-[#4F9A72] font-bold">{missionState.active_waypoint_index}</span>
+          {/* Multi-Drone Mini Pill Bar */}
+          <div className="flex items-center space-x-1 pt-0.5">
+            {Object.values(drones).map((d) => {
+              const isCurrent = d.drone_id === activeDroneId;
+              const isLead = d.drone_id === leader_id || d.is_leader;
+              return (
+                <button
+                  key={d.drone_id}
+                  onClick={() => setActiveDroneId(d.drone_id)}
+                  className={`px-1.5 py-0.2 rounded text-[9px] font-mono font-bold transition flex items-center space-x-1 border ${
+                    isCurrent
+                      ? 'bg-[#1B2530] border-[#5B8FB9] text-[#E7EBEF] shadow-[0_0_6px_rgba(91,143,185,0.4)]'
+                      : 'bg-[#151D26] border-[#2B3743] text-[#707C88] hover:text-[#E7EBEF] hover:border-[#3A4856]'
+                  }`}
+                  title={`${d.callsign} (${d.battery.toFixed(0)}% · ${d.altitude.toFixed(0)}m)`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${isLead ? 'bg-[#C49A4A]' : 'bg-[#4F9A72]'}`} />
+                  <span>{d.callsign.split(' ')[0]}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
