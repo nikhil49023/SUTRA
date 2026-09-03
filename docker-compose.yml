@@ -34,7 +34,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: sutra_gcs_frontend
-    working_dir: /sutra_ws/sutra_ws/src/sutra_gcs
+    working_dir: /sutra_ws/src/sutra_gcs
     ports:
       - "5173:5173"
     environment:

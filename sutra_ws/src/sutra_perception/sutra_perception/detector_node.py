@@ -143,8 +143,16 @@ RADAR_CLUSTER_RADIUS_M: float = 1.0   # metres — cluster merge radius
 FUSION_CONFIRM_THRESH:  float = 0.60  # fused score to publish as SURVIVOR
 FUSION_POSSIBLE_THRESH: float = 0.30  # fused score to publish as POSSIBLE
 
-# YOLO COCO class IDs relevant to SAR
-SAR_CLASS_IDS = {0: "person", 26: "backpack", 28: "suitcase"}
+# SAR class mapping — supports both custom fine-tuned weights {0: person, 1: survivor, 2: debris, 3: threat}
+# and standard COCO pre-trained weights {0: person, 26: backpack, 28: suitcase}
+SAR_CLASS_IDS = {
+    0: "person",
+    1: "survivor",
+    2: "debris",
+    3: "threat",
+    26: "backpack",
+    28: "suitcase",
+}
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -768,6 +776,12 @@ class SutraDetectorNode(Node):
 
     def _fusion_tick(self) -> None:
         """Merge visual, thermal, radar detections → ByteTrack → publish."""
+        try:
+            self._do_fusion_tick()
+        except Exception as e:
+            self.get_logger().error(f"[FusionEngine] Exception caught in _fusion_tick: {e}", throttle_duration_sec=2.0)
+
+    def _do_fusion_tick(self) -> None:
         with self._state_lock:
             v_dets = list(self._visual_detections)
             t_blobs = list(self._thermal_blobs)

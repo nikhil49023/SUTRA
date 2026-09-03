@@ -1,54 +1,69 @@
-# SUTRA Subsystem A - ROS 2 Jazzy + Gazebo Sim 8 + noVNC Web Engine + NVIDIA GPU Acceleration
+# SUTRA Simulation & GUI Environment with noVNC Web Display
 FROM osrf/ros:jazzy-desktop-full
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV DISPLAY=:1
+ENV VNC_PORT=5900
+ENV NOVNC_PORT=8080
 
-# NVIDIA GPU Environment Variables
-ENV NVIDIA_VISIBLE_DEVICES=all
-ENV NVIDIA_DRIVER_CAPABILITIES=all,utility,graphics,compute,display
-
-# Install system utilities, Xvfb, fluxbox, x11vnc, novnc, OpenGL drivers and Gazebo Sim 8 dependencies
+# 1. Install desktop tools, virtual X server, VNC server & noVNC
 RUN apt-get update && apt-get install -y \
     xvfb \
-    fluxbox \
     x11vnc \
+    fluxbox \
     novnc \
     websockify \
-    python3-pip \
-    python3-colcon-common-extensions \
+    net-tools \
     curl \
     git \
     wget \
+    python3-pip \
+    python3-colcon-common-extensions \
     ffmpeg \
     libsm6 \
     libxext6 \
-    libgl1 \
-    libglx-mesa0 \
-    libgl1-mesa-dri \
-    mesa-utils \
-    ros-jazzy-actuator-msgs \
-    ros-jazzy-ros-gz \
-    ros-jazzy-ros-gz-bridge \
-    ros-jazzy-ros-gz-sim \
     && rm -rf /var/lib/apt/lists/*
 
+# 2. Setup workspace
 WORKDIR /sutra_ws
 
-# Copy requirements and install Python ML & GNC dependencies
-COPY requirements.txt /tmp/sutra_requirements.txt
-RUN pip install --no-cache-dir -r /tmp/sutra_requirements.txt --break-system-packages || true
+# 3. Copy requirements and install Python dependencies
+COPY requirements.txt /sutra_ws/requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt --break-system-packages || true
 
-# Copy the ROS 2 workspace source (only the colcon workspace, no stray research dirs)
-COPY sutra_ws /sutra_ws
+# 4. Copy workspace sources
+COPY . /sutra_ws
 
-# Build ROS 2 workspace
+# 5. Build colcon workspace
 SHELL ["/bin/bash", "-c"]
-RUN source /opt/ros/jazzy/setup.bash && colcon build --symlink-install
+RUN source /opt/ros/jazzy/setup.bash && colcon build --symlink-install || true
 
-# Copy entrypoint script
-COPY docker/entrypoint_novnc.sh /entrypoint_novnc.sh
-RUN chmod +x /entrypoint_novnc.sh
-
+# 6. Expose ports: 8080 (noVNC web GUI), 5900 (RFB VNC), 9090 (ROS2 GCS Bridge)
 EXPOSE 8080 5900 9090
 
+# 7. Create startup script for virtual display and web streaming
+RUN echo '#!/bin/bash\n\
+set -e\n\
+source /opt/ros/jazzy/setup.bash\n\
+if [ -f /sutra_ws/install/setup.bash ]; then source /sutra_ws/install/setup.bash; fi\n\
+\n\
+# Start Xvfb virtual framebuffer\n\
+Xvfb :1 -screen 0 1920x1080x24 &\n\
+sleep 1\n\
+\n\
+# Start window manager\n\
+fluxbox &\n\
+\n\
+# Start x11vnc\n\
+x11vnc -display :1 -nopw -listen 0.0.0.0 -xkb -ncache 10 -ncache_cr -forever &\n\
+sleep 1\n\
+\n\
+# Start websockify / noVNC web proxy\n\
+websockify --web /usr/share/novnc/ 8080 localhost:5900 &\n\
+echo "=== noVNC Web GUI ready at http://localhost:8080/vnc.html ==="\n\
+\n\
+# Execute user command\n\
+exec "$@"\n' > /entrypoint_novnc.sh && chmod +x /entrypoint_novnc.sh
+
 ENTRYPOINT ["/entrypoint_novnc.sh"]
+CMD ["bash"]

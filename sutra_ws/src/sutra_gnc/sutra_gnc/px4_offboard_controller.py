@@ -27,6 +27,7 @@ from enum import Enum
 from typing import Dict, List, Optional, Tuple, Any
 
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 from geometry_msgs.msg import PoseStamped, TwistStamped

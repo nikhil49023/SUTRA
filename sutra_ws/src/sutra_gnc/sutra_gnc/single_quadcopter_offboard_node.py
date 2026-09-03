@@ -18,6 +18,7 @@ from typing import Tuple
 from enum import Enum
 
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 from geometry_msgs.msg import TwistStamped, PoseStamped, Pose, Twist
