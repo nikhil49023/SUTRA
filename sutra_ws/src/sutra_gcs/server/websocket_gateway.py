@@ -137,8 +137,9 @@ class WebSocketGatewayServer:
         # Subsystem C AI Perception Ingestion Adapter
         self.perception_adapter = perception_adapter
 
-        # Seed initial mission if empty
+        # Seed initial mission and geofences if empty
         self._seed_initial_mission()
+        self._seed_initial_geofences()
 
         # Connect EventBus to broadcast
         self.event_bus.subscribe("*", self._on_event_bus_event)
@@ -156,6 +157,43 @@ class WebSocketGatewayServer:
             self.mission_mgr.add_waypoint(37.7765, -122.4175, 30.0, 8.0)
             self.mission_mgr.add_waypoint(37.7780, -122.4195, 35.0, 7.0)
             self.mission_mgr.add_waypoint(37.7760, -122.4215, 25.0, 5.0)
+
+    def _seed_initial_geofences(self):
+        current_gfs = self.geofence_svc.get_all_geofences()
+        if not current_gfs:
+            # 1. Downtown Heliport NFZ (Red Zone NO_FLY Polygon)
+            self.geofence_svc.create_geofence(
+                name="Downtown Heliport NFZ",
+                zone_type=ZoneType.NO_FLY,
+                geometry_type=GeometryType.POLYGON,
+                coordinates=[
+                    (37.7735, -122.4210),
+                    (37.7735, -122.4170),
+                    (37.7710, -122.4170),
+                    (37.7710, -122.4210),
+                ],
+                altitude_min=0.0,
+                altitude_max=120.0,
+                priority=5,
+                enabled=True,
+                visible=True,
+            )
+            # 2. Harbor Perimeter Warning (Amber Warning Zone)
+            self.geofence_svc.create_geofence(
+                name="Harbor Perimeter Warning",
+                zone_type=ZoneType.WARNING,
+                geometry_type=GeometryType.POLYGON,
+                coordinates=[
+                    (37.7790, -122.4240),
+                    (37.7810, -122.4180),
+                    (37.7780, -122.4150),
+                ],
+                altitude_min=0.0,
+                altitude_max=200.0,
+                priority=3,
+                enabled=True,
+                visible=True,
+            )
 
     def start(self):
         """Starts WebSocket server, perception adapter, and 10Hz kinematics loop."""
