@@ -109,3 +109,10 @@ kaggle/
 *.webm
 sutra_ws/src/sutra_sim/models/*/meshes/
 .firecrawl/
+
+# Private & Confidential Personal Log / Attendance & Performance Tracker (Tech Lead Only)
+PERSONAL_HACKATHON_JOURNEY_LOG.md
+PERSONAL_LOG*.md
+*.personal.md
+.personal/
+docs/private/
