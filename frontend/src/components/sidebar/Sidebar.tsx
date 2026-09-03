@@ -10,6 +10,7 @@ import {
   Brain,
   Activity,
   Settings,
+  ShieldAlert,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -23,6 +24,7 @@ const NAV_ITEMS: { id: NavigationSection; label: string; shortcut: string; icon:
   { id: 'GIS', label: 'GIS INTEL', shortcut: 'I', icon: Mountain },
   { id: 'FLEET', label: 'SWARM FLEET', shortcut: 'F', icon: Users },
   { id: 'AI', label: 'AI ADVISOR', shortcut: 'A', icon: Brain },
+  { id: 'DISASTER_INTEL', label: 'DISASTER INTEL', shortcut: 'D', icon: ShieldAlert },
   { id: 'LIVEOPS', label: 'LIVE OPS', shortcut: 'L', icon: Activity },
   { id: 'SETTINGS', label: 'SETTINGS', shortcut: 'S', icon: Settings },
 ];

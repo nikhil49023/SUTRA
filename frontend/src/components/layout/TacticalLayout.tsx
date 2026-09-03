@@ -33,10 +33,11 @@ import { FleetPanel } from '../../fleet/FleetPanel';
 import { GisPanel } from '../../gis/GisPanel';
 import { AiPanel } from '../../ai/AiPanel';
 import { SettingsPanel } from '../settings/SettingsPanel';
+import { DisasterIntelPanel } from '../../risk/DisasterIntelPanel';
 import { GlobalGeofenceBreachMonitor } from '../../geofence/GlobalGeofenceBreachMonitor';
 import { wsClient } from '../../communication/WebSocketClient';
 import { NavigationSection } from '../../types/app';
-import { Route, Users, Mountain, Brain, Settings, Compass, Shield, X } from 'lucide-react';
+import { Route, Users, Mountain, Brain, Settings, Compass, Shield, ShieldAlert, X } from 'lucide-react';
 
 // ── Memoized panels — mount once, stay mounted, toggled via CSS visibility ─────
 const MissionPlannerPanel = memo(() => <MissionPlanner />);
@@ -44,9 +45,10 @@ const GeofencePanelMemo = memo(() => <GeofencePanel />);
 const FleetPanelMemo = memo(() => <FleetPanel />);
 const GisPanelMemo = memo(() => <GisPanel />);
 const AiPanelMemo = memo(() => <AiPanel />);
+const DisasterIntelPanelMemo = memo(() => <DisasterIntelPanel />);
 const SettingsPanelMemo = memo(() => <SettingsPanel />);
 
-const OVERLAY_SECTIONS: NavigationSection[] = ['MISSION', 'GEOFENCE', 'FLEET', 'GIS', 'AI', 'SETTINGS'];
+const OVERLAY_SECTIONS: NavigationSection[] = ['MISSION', 'GEOFENCE', 'FLEET', 'GIS', 'AI', 'DISASTER_INTEL', 'RISK', 'SETTINGS'];
 
 const SECTION_METADATA: Record<string, { title: string; subtitle: string; icon: any }> = {
   MISSION: {
@@ -73,6 +75,16 @@ const SECTION_METADATA: Record<string, { title: string; subtitle: string; icon: 
     title: 'AI MISSION ADVISOR & PERCEPTION SUBSYSTEM',
     subtitle: 'YOLOv8 SAR Detections, Ground Raycast Geolocation & NLP Commander',
     icon: Brain,
+  },
+  DISASTER_INTEL: {
+    title: 'PREDICTIVE DISASTER RISK & FORECAST INTELLIGENCE',
+    subtitle: 'Multi-Horizon Temporal Risk Projections, Flood Inundation & Resource Pre-Positioning',
+    icon: ShieldAlert,
+  },
+  RISK: {
+    title: 'PREDICTIVE DISASTER RISK & FORECAST INTELLIGENCE',
+    subtitle: 'Multi-Horizon Temporal Risk Projections, Flood Inundation & Resource Pre-Positioning',
+    icon: ShieldAlert,
   },
   SETTINGS: {
     title: 'SYSTEM CONFIGURATION & ENVIRONMENT',
@@ -216,6 +228,11 @@ export const TacticalLayout: React.FC = () => {
               <ErrorBoundary fallbackTitle="AI SUBSYSTEM">
                 <div style={{ display: activeSection === 'AI' ? 'block' : 'none', width: '100%', height: '100%' }}>
                   <AiPanelMemo />
+                </div>
+              </ErrorBoundary>
+              <ErrorBoundary fallbackTitle="DISASTER RISK INTELLIGENCE">
+                <div style={{ display: (activeSection === 'DISASTER_INTEL' || activeSection === 'RISK') ? 'block' : 'none', width: '100%', height: '100%' }}>
+                  <DisasterIntelPanelMemo />
                 </div>
               </ErrorBoundary>
               <ErrorBoundary fallbackTitle="SETTINGS SUBSYSTEM">
