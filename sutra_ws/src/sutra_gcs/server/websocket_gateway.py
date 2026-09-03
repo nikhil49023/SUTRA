@@ -48,7 +48,7 @@ from geofence.models import GeometryType, ZoneType
 from gis.gis_controller import GISController, get_gis_controller
 from ai.ai_manager import AIManager, ai_manager
 from communication.adapters.perception_subsystem_adapter import perception_adapter
-from forecast import get_forecast_service
+from forecast import get_forecast_service, get_disaster_feed_service
 from prepositioning import get_prepositioning_optimizer
 from risk import get_risk_engine, get_dynamic_mapping_bridge, RiskModelWeights
 from server.command_processor import CommandProcessor, CommandResult, get_command_processor
@@ -122,6 +122,7 @@ class WebSocketGatewayServer:
         self.risk_eng = get_risk_engine()
         self.prepositioning_opt = get_prepositioning_optimizer()
         self.dynamic_map_bridge = get_dynamic_mapping_bridge()
+        self.disaster_feed = get_disaster_feed_service()
 
         self.ws_clients: Set[Any] = set()
         self.client_sessions: Dict[Any, str] = {}  # websocket -> session_id
@@ -1227,6 +1228,40 @@ class WebSocketGatewayServer:
                 )
                 t_map = self.risk_eng.get_temporal_map()
                 return {"success": updated, "temporal_map": t_map.to_dict() if t_map else None}
+
+            elif cmd_type in ("risk.get_disaster_zones", "RISK_GET_DISASTER_ZONES", "alerts.get_national_feed", "ALERTS_GET_NATIONAL_FEED"):
+                zones = self.disaster_feed.get_active_disaster_zones()
+                return {"disaster_zones": [z.to_dict() for z in zones]}
+
+            elif cmd_type in ("risk.select_disaster_zone", "RISK_SELECT_DISASTER_ZONE"):
+                alert_id = str(payload.get("alert_id", ""))
+                zone = self.disaster_feed.get_zone_by_id(alert_id)
+                if not zone:
+                    return {"success": False, "error": f"Disaster zone {alert_id} not found."}
+                
+                # Shift risk matrix & forecast coordinates to this active disaster zone
+                self.risk_eng.set_center_coordinates(zone.latitude, zone.longitude)
+                self.forecast_svc.set_default_coordinates(zone.latitude, zone.longitude)
+                self.prepositioning_opt.evaluate_prepositioning()
+                t_map = self.risk_eng.get_temporal_map()
+                horizon = self.forecast_svc.get_forecast_horizon()
+                recs = self.prepositioning_opt.get_recommendations()
+
+                # Emit event to notify all connected clients
+                self.event_bus.emit(
+                    "risk.theater_changed",
+                    payload={"zone": zone.to_dict(), "temporal_map": t_map.to_dict() if t_map else None},
+                    source="websocket_gateway"
+                )
+
+                return {
+                    "success": True,
+                    "selected_zone": zone.to_dict(),
+                    "coordinates": [zone.latitude, zone.longitude],
+                    "temporal_map": t_map.to_dict() if t_map else None,
+                    "forecast": horizon.to_dict() if horizon else None,
+                    "recommendations": [r.to_dict() for r in recs],
+                }
 
             elif cmd_type in ("risk.set_theater", "RISK_SET_THEATER"):
                 lat = float(payload.get("latitude", 12.9345))
