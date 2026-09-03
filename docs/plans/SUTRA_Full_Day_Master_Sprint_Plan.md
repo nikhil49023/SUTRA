@@ -88,18 +88,22 @@
 
 ---
 
-### 4. 📑 HARIKA — Subsystem E Lead & Pitch Co-Lead (Docs, Audits & Presentation)
+### 4. 📑 HARIKA — Subsystem E Lead & Pitch Co-Lead (Docs, Audits, Disaster Standards & Presentation)
+* **Dedicated Agent Guide:** [`docs/agents/HARIKA_AGENT.md`](../agents/HARIKA_AGENT.md)
+* **Master Specification:** [`docs/subsystems/SUBSYSTEM_E_DOCS.md`](../subsystems/SUBSYSTEM_E_DOCS.md)
 * **Workspace:** `docs/`, `scripts/`, `.github/`  
 * **Branch:** `feature/subsystem-e-docs`  
 * **Co-Lead Support:** Tech Lead Nikhil  
-* **Jury Defense Ownership:** 🛡️ **Master Pitch Delivery, Rule 6.1 Compliance & Verification Defense**
+* **Jury Defense Ownership:** 🛡️ **Master Pitch Delivery, Disaster Standards, Rule 6.1 Compliance & Verification Defense**
 
-#### 🎯 Assigned Gap Remediation Tasks:
-1. **Gap 3 (Critical)**: Fix `.github/workflows/ros2-ci.yml` by removing `|| true` masks and adding triggers for all active branches.
-2. **Gap 22 (Medium)**: Update `requirements.txt` to include `websockets>=12.0` and all missing runtime dependencies.
-3. **Gap 30 (Low)**: Maintain active runtime logging in `docs/hackathon/JURY_FEEDBACK_TRACKER.md` during Evaluation 1 and 2.
-4. **Zero-Mock Scorecard**: Ensure all benchmark tables in documentation contain verbatim captured stdout numbers.
-5. **Desk Anchor**: Coordinate with Rohith to ensure the Library desk is never unattended (NHCE Rule 3.4).
+#### 🎯 Assigned Gap Remediation & Strategic Tasks:
+1. **Global NDRF & Disaster Standards Examination (High Priority)**: Audit and operational mapping of NDRF deployment SOPs, NDMA Incident Response System (IRS 2010), UN OCHA INSARAG ASR Levels 1–5, FEMA NIMS/ICS (ICS-100/200/700), NFPA 2400, and NATO STANAG 4586 CoT XML streaming.
+2. **Engineering Honesty Boundaries**: Master and defend SUTRA's operational boundaries ("Cases Solved" vs. "Cases NOT Solved" requiring ground handoffs).
+3. **Gap 3 (Critical)**: Fix `.github/workflows/ros2-ci.yml` by removing `|| true` masks and adding triggers for all active branches.
+4. **Gap 22 (Medium)**: Update `requirements.txt` to include `websockets>=12.0` and all missing runtime dependencies.
+5. **Gap 30 (Low)**: Maintain active runtime logging in `docs/hackathon/JURY_FEEDBACK_TRACKER.md` during Evaluation 1 and 2.
+6. **Zero-Mock Scorecard**: Ensure all benchmark tables in documentation contain verbatim captured stdout numbers.
+7. **Desk Anchor**: Coordinate with Rohith to ensure the Library desk is never unattended (NHCE Rule 3.4).
 
 ---
 
