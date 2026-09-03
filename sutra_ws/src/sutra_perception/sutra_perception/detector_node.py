@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import time
 import threading
 from dataclasses import dataclass, field
@@ -125,11 +126,11 @@ except ImportError:
 TENSORRT_ENGINE_SUFFIX = ".engine"
 
 # ──────────────────────────────────────────────────────────────────────────────
-# WGS-84 Origin — San Francisco Digital Twin (matches Gazebo SITL world)
+# WGS-84 Origin — Configurable via environment (Defaults to NHCE Bengaluru: 12.934444° N, 77.691722° E)
 # ──────────────────────────────────────────────────────────────────────────────
-ORIGIN_LAT: float = 37.774929
-ORIGIN_LON: float = -122.419416
-ORIGIN_ALT: float = 15.0          # metres ASL
+ORIGIN_LAT: float = float(os.getenv("SUTRA_ORIGIN_LAT", "12.934444"))
+ORIGIN_LON: float = float(os.getenv("SUTRA_ORIGIN_LON", "77.691722"))
+ORIGIN_ALT: float = float(os.getenv("SUTRA_ORIGIN_ALT", "920.0"))          # metres ASL (Bengaluru elevation)
 
 # Fusion confidence weights (must sum to 1.0)
 W_VISUAL:  float = 0.50
@@ -477,6 +478,7 @@ class SutraDetectorNode(Node):
         # ── Mesh Comms Feedback State ──────────────────────────────────────────
         self._mesh_snr_db: float = 25.0
         self._low_bandwidth_mode: bool = False
+        self._frame_counter: int = 0
 
         # ── Subscribers ───────────────────────────────────────────────────────
         self.create_subscription(
@@ -597,6 +599,13 @@ class SutraDetectorNode(Node):
         """Process RGB camera frame — run YOLOv8-Nano detection."""
         if self._bridge is None:
             return
+
+        # Adapt to RF mesh jamming/degradation: skip every 2nd frame in low bandwidth mode
+        if self._low_bandwidth_mode:
+            self._frame_counter += 1
+            if self._frame_counter % 2 != 0:
+                return
+
         try:
             frame = self._bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
         except Exception:
@@ -885,11 +894,22 @@ class SutraDetectorNode(Node):
 
         # ── Publish tracked targets ────────────────────────────────────────────
         if tracked:
-            payload = json.dumps({"targets": [t.to_dict() for t in tracked]})
-            tgt_msg = String()
-            tgt_msg.data = payload
-            self._pub_targets.publish(tgt_msg)
-            for t in tracked:
+            # Under low-bandwidth mesh mode (SNR < -85 dBm / RF jamming), filter out uncertain
+            # candidates and only stream confirmed high-confidence survivors (>= 0.70)
+            if self._low_bandwidth_mode:
+                publishable = [t for t in tracked if t.confidence >= 0.70]
+            else:
+                publishable = tracked
+
+            if publishable:
+                payload = json.dumps({
+                    "targets": [t.to_dict() for t in publishable],
+                    "low_bandwidth_mode": self._low_bandwidth_mode,
+                })
+                tgt_msg = String()
+                tgt_msg.data = payload
+                self._pub_targets.publish(tgt_msg)
+            for t in publishable:
                 mode_str = self._using_tensorrt
                 self.get_logger().info(
                     f"🎯 [{t.label}-{t.track_id:03d}] "

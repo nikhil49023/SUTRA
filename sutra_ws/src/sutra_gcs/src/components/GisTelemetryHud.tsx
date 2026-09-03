@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 import { 
   MapPin, 
   Radio, 
@@ -16,6 +18,8 @@ import {
   Filter,
   Video
 } from 'lucide-react';
+import { generateAtakCotXml } from '../utils/atakCotStreamer';
+import { globalTelemetryBuffer } from '../utils/telemetryBuffer';
 
 export interface TargetAlert {
   id: number | string;
@@ -48,13 +52,36 @@ export const GisTelemetryHud: React.FC = () => {
   const [rtlTriggered, setRtlTriggered] = useState<boolean>(false);
   const [liveCameraFrame, setLiveCameraFrame] = useState<any>(null);
 
-  // Default Swarm Telemetry Cache (Indian Flood Disaster Site: 20.5937° N, 78.9629° E)
+  const originLat = 12.934444;
+  const originLon = 77.691722;
+  const [mapMode, setMapMode] = useState<'TACTICAL_RADAR' | 'MAPBOX_3D'>('TACTICAL_RADAR');
+  const [webGpuStatus, setWebGpuStatus] = useState<string>('🛡️ Canvas 2D Ring Buffer (60 FPS)');
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<mapboxgl.Map | null>(null);
+
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && 'gpu' in navigator) {
+      (navigator as any).gpu?.requestAdapter()
+        .then((adapter: any) => {
+          if (adapter) {
+            setWebGpuStatus('⚡ WebGPU HW-Accelerated');
+          } else {
+            setWebGpuStatus('🛡️ Canvas 2D Ring Buffer (60 FPS)');
+          }
+        })
+        .catch(() => {
+          setWebGpuStatus('🛡️ Canvas 2D Ring Buffer (60 FPS)');
+        });
+    }
+  }, []);
+
+  // Default Swarm Telemetry Cache (Bengaluru Hackathon Venue: 12.934444° N, 77.691722° E)
   const [swarmTelemetry, setSwarmTelemetry] = useState<Record<string, SwarmDroneState>>({
-    uav_alpha: { lat: 20.593700, lon: 78.962900, alt: 15.0, battery: 98.5, status: 'MISSION', speed: 2.4 },
-    uav_beta:  { lat: 20.593900, lon: 78.963100, alt: 18.0, battery: 95.0, status: 'MISSION', speed: 2.1 },
-    uav_gamma: { lat: 20.593400, lon: 78.962700, alt: 20.0, battery: 92.0, status: 'MISSION', speed: 2.5 },
-    uav_delta: { lat: 20.594100, lon: 78.963300, alt: 16.5, battery: 97.0, status: 'MISSION', speed: 2.2 },
-    uav_epsilon:{ lat: 20.593100, lon: 78.962500, alt: 22.0, battery: 89.5, status: 'RELAY',   speed: 0.8 }
+    uav_alpha: { lat: originLat, lon: originLon, alt: 15.0, battery: 98.5, status: 'MISSION', speed: 2.4 },
+    uav_beta:  { lat: originLat + 0.000200, lon: originLon + 0.000200, alt: 18.0, battery: 95.0, status: 'MISSION', speed: 2.1 },
+    uav_gamma: { lat: originLat - 0.000300, lon: originLon - 0.000200, alt: 20.0, battery: 92.0, status: 'MISSION', speed: 2.5 },
+    uav_delta: { lat: originLat + 0.000400, lon: originLon + 0.000400, alt: 16.5, battery: 97.0, status: 'MISSION', speed: 2.2 },
+    uav_epsilon:{ lat: originLat - 0.000600, lon: originLon - 0.000400, alt: 22.0, battery: 89.5, status: 'RELAY',   speed: 0.8 }
   });
 
   // Default Survivor & Threat Detection Stream
@@ -62,8 +89,8 @@ export const GisTelemetryHud: React.FC = () => {
     {
       id: 1,
       type: 'SURVIVOR',
-      lat: 20.593650,
-      lon: 78.962850,
+      lat: originLat - 0.000050,
+      lon: originLon + 0.000070,
       alt: 15.0,
       confidence: 0.948,
       drone: 'uav_alpha',
@@ -74,8 +101,8 @@ export const GisTelemetryHud: React.FC = () => {
     {
       id: 2,
       type: 'POSSIBLE_SURVIVOR',
-      lat: 20.593950,
-      lon: 78.963150,
+      lat: originLat + 0.000250,
+      lon: originLon + 0.000370,
       alt: 18.2,
       confidence: 0.785,
       drone: 'uav_beta',
@@ -85,15 +112,15 @@ export const GisTelemetryHud: React.FC = () => {
     },
     {
       id: 3,
-      type: 'SURVIVOR',
-      lat: 20.593420,
-      lon: 78.962680,
-      alt: 19.8,
-      confidence: 0.912,
-      drone: 'uav_gamma',
-      time: '11:47:05',
-      bbox: [180, 210, 260, 310],
-      sensors: ['RGB', 'Thermal']
+      type: 'THREAT',
+      lat: originLat + 0.000550,
+      lon: originLon - 0.000450,
+      alt: 16.0,
+      confidence: 0.882,
+      drone: 'uav_delta',
+      time: '11:48:22',
+      bbox: [410, 210, 520, 380],
+      sensors: ['Radar']
     }
   ]);
 
@@ -173,6 +200,47 @@ export const GisTelemetryHud: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (mapMode === 'MAPBOX_3D' && mapContainerRef.current && !mapInstanceRef.current) {
+      const token = (import.meta as any).env?.VITE_MAPBOX_TOKEN || 'pk.sample_token';
+      mapboxgl.accessToken = token;
+      try {
+        const map = new mapboxgl.Map({
+          container: mapContainerRef.current,
+          style: 'mapbox://styles/mapbox/dark-v11',
+          center: [originLon, originLat],
+          zoom: 16,
+          pitch: 45,
+        });
+
+        // Add markers for each drone in the swarm
+        Object.entries(swarmTelemetry).forEach(([droneId, drone]) => {
+          const el = document.createElement('div');
+          el.className = 'drone-marker';
+          el.style.width = '14px';
+          el.style.height = '14px';
+          el.style.borderRadius = '50%';
+          el.style.backgroundColor = '#38bdf8';
+          el.style.border = '2px solid white';
+          new mapboxgl.Marker(el)
+            .setLngLat([drone.lon, drone.lat])
+            .setPopup(new mapboxgl.Popup({ offset: 20 }).setText(`${droneId} (${drone.alt.toFixed(1)}m)`))
+            .addTo(map);
+        });
+
+        mapInstanceRef.current = map;
+      } catch (err) {
+        console.warn('Mapbox initialization fallback:', err);
+      }
+    }
+    return () => {
+      if (mapMode !== 'MAPBOX_3D' && mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, [mapMode, swarmTelemetry]);
+
   const handleTriggerRTL = () => {
     setRtlTriggered(true);
     if (wsRef && wsRef.readyState === WebSocket.OPEN) {
@@ -182,14 +250,15 @@ export const GisTelemetryHud: React.FC = () => {
 
   const handleExportCotXml = () => {
     const selectedTarget = targetAlerts.find(t => t.id === selectedTargetId) || targetAlerts[0];
-    const cotXml = `<?xml version="1.0" encoding="UTF-8"?>
-<event version="2.0" uid="SUTRA-SAR-${selectedTarget.id}" type="a-f-G-U-C" time="${new Date().toISOString()}" start="${new Date().toISOString()}" stale="${new Date(Date.now() + 3600000).toISOString()}" how="m-g">
-  <point lat="${selectedTarget.lat}" lon="${selectedTarget.lon}" hae="${selectedTarget.alt}" ce="0.8" le="0.5"/>
-  <detail>
-    <contact callsign="SURVIVOR-${selectedTarget.id}"/>
-    <remarks>Detected by SUTRA ${selectedTarget.drone} via Tri-Modal AI Perception (Confidence: ${(selectedTarget.confidence * 100).toFixed(1)}%)</remarks>
-  </detail>
-</event>`;
+    const cotXml = generateAtakCotXml({
+      id: String(selectedTarget.id),
+      type: selectedTarget.type === 'THREAT' ? 'THREAT' : selectedTarget.type === 'SURVIVOR' ? 'SURVIVOR' : 'POSSIBLE_SURVIVOR',
+      lat: selectedTarget.lat,
+      lon: selectedTarget.lon,
+      alt: selectedTarget.alt,
+      confidence: selectedTarget.confidence,
+      detectedBy: selectedTarget.drone,
+    });
     
     const blob = new Blob([cotXml], { type: 'application/xml' });
     const url = URL.createObjectURL(blob);
@@ -298,78 +367,123 @@ export const GisTelemetryHud: React.FC = () => {
                   3D GIS Satellite Mission Grid (WGS84 Datum)
                 </h2>
                 <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
-                  Disaster Origin: Lat 20.593700° N, Lon 78.962900° E | WebGPU Telemetry Stream
+                  Venue Datum: Lat {originLat.toFixed(6)}° N, Lon {originLon.toFixed(6)}° E (Bengaluru Track)
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <span style={{ fontSize: '11px', backgroundColor: '#0f172a', padding: '6px 12px', borderRadius: '6px', border: '1px solid #334155', color: '#cbd5e1', fontWeight: 600 }}>
-                  Active Targets: <strong style={{ color: '#ef4444' }}>{targetAlerts.length}</strong>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', backgroundColor: '#0f172a', borderRadius: '8px', padding: '3px', border: '1px solid #334155' }}>
+                  <button
+                    onClick={() => setMapMode('TACTICAL_RADAR')}
+                    style={{
+                      backgroundColor: mapMode === 'TACTICAL_RADAR' ? '#0284c7' : 'transparent',
+                      color: mapMode === 'TACTICAL_RADAR' ? '#ffffff' : '#94a3b8',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '5px 12px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🎯 Tactical Radar
+                  </button>
+                  <button
+                    onClick={() => setMapMode('MAPBOX_3D')}
+                    style={{
+                      backgroundColor: mapMode === 'MAPBOX_3D' ? '#0284c7' : 'transparent',
+                      color: mapMode === 'MAPBOX_3D' ? '#ffffff' : '#94a3b8',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '5px 12px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🗺️ Mapbox 3D GIS
+                  </button>
+                </div>
+                <span style={{ fontSize: '11px', backgroundColor: '#0f172a', padding: '6px 12px', borderRadius: '6px', border: '1px solid #334155', color: '#38bdf8', fontWeight: 700 }}>
+                  {webGpuStatus}
                 </span>
                 <span style={{ fontSize: '11px', backgroundColor: '#0f172a', padding: '6px 12px', borderRadius: '6px', border: '1px solid #334155', color: '#cbd5e1', fontWeight: 600 }}>
-                  Grid Resolution: <strong>0.10m Voxels</strong>
+                  Active Targets: <strong style={{ color: '#ef4444' }}>{targetAlerts.length}</strong>
                 </span>
               </div>
             </div>
 
-            {/* 3D Tactical Map Canvas Simulation */}
-            <div style={{ position: 'relative', width: '100%', height: '440px', backgroundColor: '#020617', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1e293b', background: 'radial-gradient(circle at 50% 50%, #0f172a 0%, #020617 100%)' }}>
-              
-              {/* Radar Grid Lines Overlay */}
-              <div style={{ position: 'absolute', inset: 0, opacity: 0.15, backgroundImage: 'linear-gradient(#38bdf8 1px, transparent 1px), linear-gradient(90deg, #38bdf8 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
-              
-              {/* Concentric Search Rings */}
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '320px', height: '320px', border: '1px dashed rgba(56, 189, 248, 0.25)', borderRadius: '50%', pointerEvents: 'none' }} />
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '180px', height: '180px', border: '1px solid rgba(56, 189, 248, 0.35)', borderRadius: '50%', pointerEvents: 'none' }} />
+            {/* 3D Map View: Mapbox 3D Satellite or Offline Tactical Radar */}
+            {mapMode === 'MAPBOX_3D' ? (
+              <div 
+                ref={mapContainerRef} 
+                style={{ 
+                  width: '100%', 
+                  height: '440px', 
+                  backgroundColor: '#020617', 
+                  borderRadius: '12px', 
+                  overflow: 'hidden', 
+                  border: '1px solid #1e293b' 
+                }} 
+              />
+            ) : (
+              <div style={{ position: 'relative', width: '100%', height: '440px', backgroundColor: '#020617', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1e293b', background: 'radial-gradient(circle at 50% 50%, #0f172a 0%, #020617 100%)' }}>
+                
+                {/* Radar Grid Lines Overlay */}
+                <div style={{ position: 'absolute', inset: 0, opacity: 0.15, backgroundImage: 'linear-gradient(#38bdf8 1px, transparent 1px), linear-gradient(90deg, #38bdf8 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+                
+                {/* Concentric Search Rings */}
+                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '320px', height: '320px', border: '1px dashed rgba(56, 189, 248, 0.25)', borderRadius: '50%', pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '180px', height: '180px', border: '1px solid rgba(56, 189, 248, 0.35)', borderRadius: '50%', pointerEvents: 'none' }} />
 
-              {/* Drone Swarm Markers */}
-              {Object.entries(swarmTelemetry).map(([droneId, drone], idx) => {
-                const posX = 50 + (drone.lon - 78.962900) * 120000;
-                const posY = 50 - (drone.lat - 20.593700) * 120000;
-                const isLeader = droneId === (raftStatus.leader || 'uav_alpha');
+                {/* Drone Swarm Markers */}
+                {Object.entries(swarmTelemetry).map(([droneId, drone]) => {
+                  const posX = 50 + (drone.lon - originLon) * 120000;
+                  const posY = 50 - (drone.lat - originLat) * 120000;
+                  const isLeader = droneId === (raftStatus.leader || 'uav_alpha');
 
-                return (
-                  <div 
-                    key={droneId}
-                    style={{
-                      position: 'absolute',
-                      left: `${Math.max(10, Math.min(90, posX))}%`,
-                      top: `${Math.max(10, Math.min(90, posY))}%`,
-                      transform: 'translate(-50%, -50%)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      zIndex: 20
-                    }}
-                  >
+                  return (
                     <div 
+                      key={droneId}
                       style={{
-                        width: isLeader ? '24px' : '18px',
-                        height: isLeader ? '24px' : '18px',
-                        borderRadius: '50%',
-                        backgroundColor: isLeader ? '#38bdf8' : '#818cf8',
-                        border: '2px solid #ffffff',
+                        position: 'absolute',
+                        left: `${Math.max(10, Math.min(90, posX))}%`,
+                        top: `${Math.max(10, Math.min(90, posY))}%`,
+                        transform: 'translate(-50%, -50%)',
                         display: 'flex',
+                        flexDirection: 'column',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: isLeader ? '0 0 15px #38bdf8' : '0 0 10px #818cf8',
-                        transition: 'all 0.3s ease'
+                        zIndex: 20
                       }}
                     >
-                      <Crosshair size={isLeader ? 14 : 10} style={{ color: '#0f172a' }} />
+                      <div 
+                        style={{
+                          width: isLeader ? '24px' : '18px',
+                          height: isLeader ? '24px' : '18px',
+                          borderRadius: '50%',
+                          backgroundColor: isLeader ? '#38bdf8' : '#818cf8',
+                          border: '2px solid #ffffff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: isLeader ? '0 0 15px #38bdf8' : '0 0 10px #818cf8',
+                          transition: 'all 0.3s ease'
+                        }}
+                      >
+                        <Crosshair size={isLeader ? 14 : 10} style={{ color: '#0f172a' }} />
+                      </div>
+                      <div style={{ fontSize: '10px', fontWeight: 800, backgroundColor: 'rgba(15, 23, 42, 0.85)', padding: '2px 6px', borderRadius: '4px', border: '1px solid #334155', marginTop: '4px', whiteSpace: 'nowrap' }}>
+                        {droneId} ({drone.alt.toFixed(1)}m)
+                      </div>
                     </div>
-                    <div style={{ fontSize: '10px', fontWeight: 800, backgroundColor: 'rgba(15, 23, 42, 0.85)', padding: '2px 6px', borderRadius: '4px', border: '1px solid #334155', marginTop: '4px', whiteSpace: 'nowrap' }}>
-                      {droneId} ({drone.alt.toFixed(1)}m)
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
 
-              {/* Survivor / Threat Detection Markers */}
-              {targetAlerts.map((target) => {
-                const targetX = 50 + (target.lon - 78.962900) * 120000;
-                const targetY = 50 - (target.lat - 20.593700) * 120000;
-                const isSelected = target.id === selectedTargetId;
+                {/* Survivor / Threat Detection Markers */}
+                {targetAlerts.map((target) => {
+                  const targetX = 50 + (target.lon - originLon) * 120000;
+                  const targetY = 50 - (target.lat - originLat) * 120000;
+                  const isSelected = target.id === selectedTargetId;
 
                 return (
                   <div
@@ -427,6 +541,7 @@ export const GisTelemetryHud: React.FC = () => {
               )}
 
             </div>
+          )}
 
           </div>
 

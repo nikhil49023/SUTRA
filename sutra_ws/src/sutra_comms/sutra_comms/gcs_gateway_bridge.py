@@ -67,18 +67,23 @@ class SutraGcsGatewayBridge(Node):
         self.last_camera_msg_time: Dict[str, float] = {}
         self.drones = ["uav_alpha", "uav_beta", "uav_gamma", "uav_delta", "uav_epsilon"]
 
-        # Swarm State Cache (San Francisco Georeferenced Disaster Site Coordinates: 37.774929 N, -122.419416 W)
+        # Georeferenced Origin (Configurable via ENV, defaulting to NHCE Bengaluru Hackathon Venue: 12.934444° N, 77.691722° E)
+        self.origin_lat = float(os.getenv("SUTRA_ORIGIN_LAT", "12.934444"))
+        self.origin_lon = float(os.getenv("SUTRA_ORIGIN_LON", "77.691722"))
+        self.origin_alt = float(os.getenv("SUTRA_ORIGIN_ALT", "920.0"))
+
+        # Swarm State Cache (Georeferenced Coordinates)
         self.swarm_telemetry: Dict[str, dict] = {
-            "uav_alpha": {"lat": 37.774929, "lon": -122.419416, "alt": 15.0, "battery": 98.5, "status": "MISSION"},
-            "uav_beta":  {"lat": 37.775129, "lon": -122.419216, "alt": 18.0, "battery": 95.0, "status": "MISSION"},
-            "uav_gamma": {"lat": 37.774629, "lon": -122.419616, "alt": 20.0, "battery": 92.0, "status": "MISSION"},
-            "uav_delta": {"lat": 37.775329, "lon": -122.419016, "alt": 16.5, "battery": 97.0, "status": "MISSION"},
-            "uav_epsilon":{"lat": 37.774329, "lon": -122.419816, "alt": 22.0, "battery": 89.5, "status": "RELAY"}
+            "uav_alpha": {"lat": self.origin_lat, "lon": self.origin_lon, "alt": 15.0, "battery": 98.5, "status": "MISSION"},
+            "uav_beta":  {"lat": self.origin_lat + 0.0002, "lon": self.origin_lon + 0.0002, "alt": 18.0, "battery": 95.0, "status": "MISSION"},
+            "uav_gamma": {"lat": self.origin_lat - 0.0003, "lon": self.origin_lon - 0.0002, "alt": 20.0, "battery": 92.0, "status": "MISSION"},
+            "uav_delta": {"lat": self.origin_lat + 0.0004, "lon": self.origin_lon + 0.0004, "alt": 16.5, "battery": 97.0, "status": "MISSION"},
+            "uav_epsilon":{"lat": self.origin_lat - 0.0006, "lon": self.origin_lon - 0.0004, "alt": 22.0, "battery": 89.5, "status": "RELAY"}
         }
 
         self.survivor_alerts = [
-            {"id": 1, "type": "SURVIVOR", "lat": 37.774880, "lon": -122.419350, "alt": 15.0, "confidence": 0.948, "drone": "uav_alpha", "time": "11:00:15", "bbox": [120, 84, 210, 240]},
-            {"id": 2, "type": "POSSIBLE_SURVIVOR", "lat": 37.775180, "lon": -122.419050, "alt": 18.2, "confidence": 0.785, "drone": "uav_beta", "time": "11:02:40", "bbox": [310, 140, 390, 260]}
+            {"id": 1, "type": "SURVIVOR", "lat": self.origin_lat - 0.00005, "lon": self.origin_lon + 0.00007, "alt": 15.0, "confidence": 0.948, "drone": "uav_alpha", "time": "11:00:15", "bbox": [120, 84, 210, 240]},
+            {"id": 2, "type": "POSSIBLE_SURVIVOR", "lat": self.origin_lat + 0.00025, "lon": self.origin_lon + 0.00037, "alt": 18.2, "confidence": 0.785, "drone": "uav_beta", "time": "11:02:40", "bbox": [310, 140, 390, 260]}
         ]
 
         self.raft_consensus_status = {
@@ -174,9 +179,9 @@ class SutraGcsGatewayBridge(Node):
                 pos = hb.get("position", {})
                 # Convert 3D local XY meters to approximate SF WGS84 offset
                 lat_deg_per_m = 1.0 / 111000.0
-                lon_deg_per_m = 1.0 / (111000.0 * math.cos(math.radians(37.774929)))
-                self.swarm_telemetry[drone_id]["lat"] = 37.774929 + pos.get("y", 0.0) * lat_deg_per_m
-                self.swarm_telemetry[drone_id]["lon"] = -122.419416 + pos.get("x", 0.0) * lon_deg_per_m
+                lon_deg_per_m = 1.0 / (111000.0 * math.cos(math.radians(self.origin_lat)))
+                self.swarm_telemetry[drone_id]["lat"] = self.origin_lat + pos.get("y", 0.0) * lat_deg_per_m
+                self.swarm_telemetry[drone_id]["lon"] = self.origin_lon + pos.get("x", 0.0) * lon_deg_per_m
                 self.swarm_telemetry[drone_id]["alt"] = float(pos.get("z", 15.0))
                 self.swarm_telemetry[drone_id]["battery"] = float(hb.get("battery_pct", 95.0))
         except Exception as e:
@@ -222,8 +227,8 @@ class SutraGcsGatewayBridge(Node):
                 # Simulated gentle search orbit around SF origin
                 radius = 0.0003
                 angle = t * 0.2 + idx * (2 * math.pi / 5)
-                state["lat"] = 37.774929 + radius * math.cos(angle)
-                state["lon"] = -122.419416 + radius * math.sin(angle)
+                state["lat"] = self.origin_lat + radius * math.cos(angle)
+                state["lon"] = self.origin_lon + radius * math.sin(angle)
                 state["battery"] = max(10.0, state["battery"] - 0.01)
 
         payload = {

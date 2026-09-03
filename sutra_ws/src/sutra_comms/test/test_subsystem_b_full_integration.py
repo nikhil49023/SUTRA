@@ -61,12 +61,12 @@ def test_gcs_gateway_bridge_parameters_and_topics():
     bridge.destroy_node()
 
 
-def test_gcs_gateway_bridge_sf_coordinates():
-    """Verify state cache default coordinates align with SF georeferenced origin (37.774929, -122.419416)."""
+def test_gcs_gateway_bridge_georeferenced_coordinates():
+    """Verify state cache default coordinates align with georeferenced origin."""
     bridge = SutraGcsGatewayBridge()
     alpha_state = bridge.swarm_telemetry["uav_alpha"]
-    assert pytest.approx(alpha_state["lat"], abs=0.01) == 37.774929
-    assert pytest.approx(alpha_state["lon"], abs=0.01) == -122.419416
+    assert pytest.approx(alpha_state["lat"], abs=0.01) == bridge.origin_lat
+    assert pytest.approx(alpha_state["lon"], abs=0.01) == bridge.origin_lon
     bridge.destroy_node()
 
 

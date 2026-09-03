@@ -124,9 +124,14 @@ class NeuroAdaptiveFlightNode(Node):
         self.imu_buffer[0, :, -1] = step
 
     def _on_baro(self, msg: FluidPressure):
-        # Hydrostatic approximation: delta_p / (rho * g)
+        # Standard ISA Barometric Equation: h = 44330.77 * (1.0 - (p / p0) ** 0.190263)
+        # Based on hydrostatic balance and standard tropospheric lapse rate (L = -0.0065 K/m)
         p0 = 101325.0
-        self.baro_alt = max(0.0, float((p0 - msg.fluid_pressure) / 12.0))
+        p = float(msg.fluid_pressure)
+        if 0.0 < p <= p0:
+            self.baro_alt = max(0.0, float(44330.77 * (1.0 - (p / p0) ** 0.190263)))
+        else:
+            self.baro_alt = 0.0
 
     def _on_navsat(self, msg: NavSatFix):
         # If position covariance is high or status < 0, GPS is degraded

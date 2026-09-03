@@ -220,6 +220,9 @@ class VIOLocalizationNode(Node):
         self.drone_id = self.get_parameter("drone_id").value
 
         self.ekf = VioEKF2Filter()
+        self.origin_lat: Optional[float] = None
+        self.origin_lon: Optional[float] = None
+        self.origin_alt: float = 0.0
 
         # Publishers
         self.pub_vio_odom = self.create_publisher(
@@ -313,13 +316,20 @@ class VIOLocalizationNode(Node):
         self.ekf.update_vio(p.x, p.y, p.z, (q.w, q.x, q.y, q.z), curr_t)
 
     def _gps_cb(self, msg: NavSatFix):
-        # Convert lat/lon offset to approximate local ENU coordinates if valid
+        # Convert lat/lon offset to local ENU coordinates relative to datum origin
         if msg.status.status >= 0:
             curr_t = time.time()
-            # Simple conversion centered at origin (0, 0) for simulation coordinates
-            x_m = (msg.longitude) * 111320.0 * math.cos(math.radians(msg.latitude))
-            y_m = (msg.latitude) * 110540.0
-            z_m = msg.altitude
+            if self.origin_lat is None:
+                self.origin_lat = float(msg.latitude)
+                self.origin_lon = float(msg.longitude)
+                self.origin_alt = float(msg.altitude)
+
+            d_lon = msg.longitude - self.origin_lon
+            d_lat = msg.latitude - self.origin_lat
+            lat_rad = math.radians(self.origin_lat)
+            x_m = d_lon * 111320.0 * math.cos(lat_rad)
+            y_m = d_lat * 110540.0
+            z_m = msg.altitude - self.origin_alt
             self.ekf.update_gps(x_m, y_m, z_m, curr_t)
 
     def _publish_state_50hz(self):
