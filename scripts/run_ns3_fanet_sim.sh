@@ -28,3 +28,8 @@ fi
 
 echo "[*] Launching simulation..."
 "$NS3_DIR/sutra_fanet_sim"
+
+if [[ "${1:-}" == "--gui" ]]; then
+    echo "[*] Automatically launching SUTRA FANET GUI Simulator window..."
+    python3 "$WORKSPACE_ROOT/scripts/sutra_fanet_gui.py" "$NS3_DIR/sutra_swarm_trace.xml"
+fi
