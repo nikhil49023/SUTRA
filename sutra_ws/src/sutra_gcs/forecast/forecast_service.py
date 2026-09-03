@@ -59,6 +59,13 @@ class ForecastService:
         logger.warning(f"[ForecastService] Unknown provider {provider_name}")
         return False
 
+    def set_default_coordinates(self, latitude: float, longitude: float) -> None:
+        """Sets the geographical coordinates of the operational theater and refetches forecast."""
+        self.default_lat = latitude
+        self.default_lon = longitude
+        self.get_forecast_horizon(force_refresh=True)
+        logger.info(f"Updated operational forecast coordinates to [{latitude:.6f}, {longitude:.6f}]")
+
     def get_forecast_horizon(
         self,
         latitude: Optional[float] = None,
