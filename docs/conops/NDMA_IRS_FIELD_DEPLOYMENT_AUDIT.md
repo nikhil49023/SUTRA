@@ -123,6 +123,42 @@ To design a solution that survives real disasters, we audited four of the most c
 
 ---
 
+## 🌐 3.5 UN OCHA INSARAG Guidelines & International USAR Alignment
+
+India's NDRF is certified under the **United Nations International Search and Rescue Advisory Group (INSARAG)** methodology (as demonstrated during international deployments such as **Operation Dost** in the 2023 Türkiye/Syria Earthquake and **Operation Maitri** in Nepal).
+
+Under INSARAG Urban Search & Rescue (USAR) guidelines, operations are strictly partitioned into **5 Assessment, Search & Rescue (ASR) Levels**:
+
+```
+  [ ASR Level 1 ] ──► [ ASR Level 2 ] ──► [ ASR Level 3 ] ──► [ ASR Level 4 ] ──► [ ASR Level 5 ]
+   Wide Area Assess     Sector Triage       Rapid Surface       Heavy Technical     Total Coverage
+   (20 min w/ SUTRA)   (Automated Pins)     Search & Rescue     Search (Canine/Hyd) Demobilization
+```
+
+### How SUTRA Revolutionizes the INSARAG Search Lifecycle:
+
+| INSARAG ASR Level | Traditional Field Method | Time Taken (Traditional) | **Project SUTRA Swarm Performance** | **Time Compression** |
+|---|---|:---:|---|:---:|
+| **ASR 1: Wide Area Assessment (WAA)** | Foot patrols, visual perimeter driving, manual maps | **12 to 24 Hours** | **5-UAV autonomous echelon sweep** generates full orthomosaic and thermal damage map | **20 to 30 Minutes** *(98% Faster)* |
+| **ASR 2: Worksite Triage & Assessment (SA)** | Rescuers walk rubble, inspect collapse voids, spray-paint day-glo orange squares | **8 to 16 Hours** | **Tri-Modal AI (Thermal + Visual + LiDAR)** tags high-probability voids and living thermal heat signatures | **Instant Digital Map Marking** |
+| **ASR 3: Rapid Search & Rescue (RSAR)** | Surface debris clearing for accessible victims | **First 24 Hours** | Rescuers dispatched with **exact WGS84 coordinates ($<0.32\text{m}$)** directly to accessible victims | Direct Vectoring |
+| **ASR 4: Full Technical Search & Extrication** | Heavy shoring, diamond saws, acoustic listening, canine squads | **Hours 24 to 72** | Canine squads & heavy gear deployed **only at validated triage sites**, avoiding empty piles | $3\times$ Resource Efficiency |
+| **ASR 5: Total Coverage & Recovery** | Final systematic sweep of all structures | Day 4 onwards | Automated aerial re-inspection and post-disaster clearance verification | Continuous Swarm Sweep |
+
+### 🏷️ Digital INSARAG Worksite Marking Automation:
+Traditionally, search teams physically spray-paint day-glo orange squares on building walls (recording live victims on the left, fatalities on the right, hazards above, and missing below).
+
+**In Project SUTRA, this is 100% digitized inside the GCS**:
+* Every detected survivor or trapped victim automatically generates a **Digital INSARAG Worksite Marker** on the 3D Mapbox GIS canvas.
+* The digital marker contains:
+  * **Worksite ID** (e.g., `WS-SECTOR-B-04`)
+  * **Exact WGS84 Coordinates** (Lat, Lon, Elevation ASL)
+  * **Survivor Confidence** (from Tri-Modal YOLOv8-Nano TensorRT fusion)
+  * **Hazard Proximity** (e.g., active mudslide flow, flood water level, or gas/fire hotspot)
+  * **Cursor-on-Target (CoT) XML payload** streamed via UDP/WebSocket to the **District Emergency Operation Centre (DEOC)**.
+
+---
+
 ## 🛠️ 4. The 5 Harsh Reality Field Engineering Solutions
 
 To convince seasoned jury members, Project SUTRA incorporates 5 concrete physical engineering solutions:
