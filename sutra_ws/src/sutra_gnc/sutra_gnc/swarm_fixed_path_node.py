@@ -326,8 +326,8 @@ DRONE_COLOURS = {
 class SwarmFixedPathNode(Node):
     """Single-drone fixed-path controller. Launch one instance per drone."""
 
-    def __init__(self):
-        super().__init__("sutra_swarm_fixed_path")
+    def __init__(self, **kwargs):
+        super().__init__("sutra_swarm_fixed_path", **kwargs)
 
         # ── Parameters ────────────────────────────────────────────────────────
         self.declare_parameter("drone_id", "uav_alpha")
@@ -399,6 +399,15 @@ class SwarmFixedPathNode(Node):
             String,
             "/sutra/swarm/command",
             self._on_swarm_command,
+            10
+        )
+
+        # Target Tracking State from Perception & Kaggle GPU
+        self.detected_target = None
+        self.sub_targets = self.create_subscription(
+            String,
+            "/sutra/perception/targets",
+            self._on_perception_targets,
             10
         )
 
@@ -499,7 +508,6 @@ class SwarmFixedPathNode(Node):
                 val = float(data.get("value", self.orca_radius))
                 self.orca_radius = val
                 self.solver.safety_radius = val
-                self.get_logger().info(f"🛡️ [{self.drone_id}] ORCA radius set via command: {self.orca_radius:.2f} m")
         except Exception as e:
             self.get_logger().error(f"Error handling swarm command: {e}")
 
@@ -508,6 +516,33 @@ class SwarmFixedPathNode(Node):
             f"({x:.1f},{y:.1f},{z:.1f})" for x, y, z in self.waypoints
         )
         self.get_logger().info(f"📍 [{self.drone_id}] Route: {wp_str} → (loop)")
+
+    def _on_perception_targets(self, msg: String):
+        try:
+            payload = json.loads(msg.data)
+            targets = payload if isinstance(payload, list) else payload.get("targets", [payload])
+            for tgt in targets:
+                if isinstance(tgt, dict):
+                    loc = tgt.get("local_ned", {})
+                    if loc and "x" in loc and "y" in loc:
+                        x, y, z = float(loc["x"]), float(loc["y"]), float(loc.get("z", 37.0))
+                    elif "x" in tgt and "y" in tgt:
+                        x, y, z = float(tgt["x"]), float(tgt["y"]), float(tgt.get("z", 37.0))
+                    else:
+                        continue
+
+                    self.detected_target = (x, y, z)
+                    if self.flight_mode != "TARGET_TRACK":
+                        self.flight_mode = "TARGET_TRACK"
+                        label = tgt.get("class_name", tgt.get("label", "TARGET"))
+                        conf = float(tgt.get("confidence", 0.95))
+                        self.get_logger().warn(
+                            f"🚨 [{self.drone_id}] PERCEPTION TARGET CONFIRMED: {label} ({conf*100:.1f}%) at "
+                            f"(x={x:.2f}, y={y:.2f}, z={z:.2f})m -> TRANSITIONING TO TACTICAL CONCENTRIC ORBIT!"
+                        )
+                    break
+        except Exception:
+            pass
 
     # ── Callbacks ─────────────────────────────────────────────────────────────
     def _odom_cb(self, msg: Odometry):
@@ -605,6 +640,45 @@ class SwarmFixedPathNode(Node):
                     self._send_twist(0.0, 0.0, -0.6)
                 else:
                     self._send_twist(0.0, 0.0, 0.0)
+            return
+
+        elif self.flight_mode == "TARGET_TRACK" and self.detected_target is not None:
+            # Dynamic Tactical Concentric Orbit around detected ground target / squad
+            tgt_x, tgt_y, tgt_z = self.detected_target
+
+            # Calibrated concentric radii & altitudes per drone tactical role
+            role_configs = {
+                "uav_alpha":   {"radius": 7.0,  "alt_offset": 6.0,  "ang_vel": 0.45, "phase": 0.0},
+                "uav_beta":    {"radius": 14.0, "alt_offset": 14.0, "ang_vel": 0.35, "phase": math.pi * 0.5},
+                "uav_gamma":   {"radius": 1.5,  "alt_offset": 24.0, "ang_vel": 0.10, "phase": 0.0},
+                "uav_delta":   {"radius": 20.0, "alt_offset": 12.0, "ang_vel": 0.28, "phase": math.pi},
+                "uav_epsilon": {"radius": 11.0, "alt_offset": 9.0,  "ang_vel": 0.38, "phase": math.pi * 1.5},
+            }
+            cfg = role_configs.get(self.drone_id, {"radius": 10.0, "alt_offset": 8.0, "ang_vel": 0.3, "phase": 0.0})
+
+            t = self.get_clock().now().nanoseconds * 1e-9
+            theta = cfg["ang_vel"] * t + cfg["phase"]
+
+            tx = tgt_x + cfg["radius"] * math.cos(theta)
+            ty = tgt_y + cfg["radius"] * math.sin(theta)
+            tz = tgt_z + cfg["alt_offset"]
+
+            dx = tx - self.x
+            dy = ty - self.y
+            dz = tz - self.z
+            dist_3d = math.sqrt(dx*dx + dy*dy + dz*dz)
+
+            spd = min(self.cruise_speed, max(1.2, dist_3d * 1.2))
+            if dist_3d > 0.05:
+                vx_des = (dx / dist_3d) * spd
+                vy_des = (dy / dist_3d) * spd
+                vz_des = (dz / dist_3d) * spd
+            else:
+                vx_des, vy_des, vz_des = 0.0, 0.0, 0.0
+
+            # Safe ORCA velocity avoidance during concentric orbit
+            vx_final, vy_final, vz_final = self._orca_velocity(vx_des, vy_des, vz_des)
+            self._apply_wind_compensated_twist(vx_final, vy_final, vz_final)
             return
 
         # Normal MISSION mode

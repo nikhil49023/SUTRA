@@ -57,6 +57,7 @@ echo "🧹 Pre-flight cleanup of old processes..."
 pkill -f "ros_gz_bridge parameter_bridge" 2>/dev/null || true
 pkill -f "swarm_fixed_path_node.py" 2>/dev/null || true
 pkill -f "mavlink_sitl_bridge.py" 2>/dev/null || true
+pkill -f "stream_perception_targets_to_swarm.py" 2>/dev/null || true
 
 # ── Step 1: Check / Launch Gazebo Sim 8 ──────────────────────────────────────
 WORLD_NAME="submerged_village_flood_world"
@@ -156,6 +157,12 @@ for i in "${!DRONES[@]}"; do
     CHILD_PIDS+=($!)
     echo "   ⚡ [$did] Controller launched (PID: ${CHILD_PIDS[-1]} | Alt: ${alt}m | Speed: ${spd}m/s)"
 done
+
+# ── Step 4b: Launch Kaggle GPU Target Perception Streamer ──────────────────
+echo "👁️  [4b/5] Starting Kaggle GPU Perception Streamer (/sutra/perception/targets)..."
+python3 "$PROJECT_ROOT/scripts/stream_perception_targets_to_swarm.py" > /tmp/sutra_target_streamer.log 2>&1 &
+CHILD_PIDS+=($!)
+echo "   ✅ Kaggle GPU Perception Streamer active (PID: ${CHILD_PIDS[-1]})."
 
 # ── Step 5: Check / Launch Mission Planner ──────────────────────────────────
 MP_EXE="/home/nikhil/MissionPlanner/MissionPlanner.exe"

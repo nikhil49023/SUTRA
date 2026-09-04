@@ -1,0 +1,130 @@
+{
+  "system": "Project SUTRA \u2014 Swarm Unified Tactical Reconnaissance Architecture",
+  "track": "SH-DST-05 (Autonomous Drone Swarm System)",
+  "subsystem": "Subsystem C: Edge AI Perception & Target Geolocation",
+  "compute_device": "cpu",
+  "gpu_hardware": "Tesla P100-PCIE-16GB",
+  "inference_latency_ms": 5623.59,
+  "effective_fps": 0.2,
+  "total_targets_detected": 5,
+  "survivors_detected": 4,
+  "threats_detected": 1,
+  "mean_raycast_error_cm": 28.0,
+  "targets": [
+    {
+      "id": 1,
+      "target_code": "TGT-01",
+      "class_name": "Survivor",
+      "subsystem_type": "person",
+      "confidence": 0.962,
+      "wgs84": {
+        "latitude": 11.5248708,
+        "longitude": 76.1284564,
+        "altitude_m": 877.8
+      },
+      "local_ned": {
+        "x": 6.15,
+        "y": 7.88,
+        "z": 37.8
+      },
+      "raycast_error_m": 0.28,
+      "modalities": [
+        "visual_yolov8_gpu",
+        "wgs84_raycast"
+      ],
+      "timestamp": 1788552041.703
+    },
+    {
+      "id": 2,
+      "target_code": "TGT-02",
+      "class_name": "Survivor",
+      "subsystem_type": "person",
+      "confidence": 0.941,
+      "wgs84": {
+        "latitude": 11.5248583,
+        "longitude": 76.1284609,
+        "altitude_m": 877.4
+      },
+      "local_ned": {
+        "x": 6.64,
+        "y": 6.49,
+        "z": 37.4
+      },
+      "raycast_error_m": 0.28,
+      "modalities": [
+        "visual_yolov8_gpu",
+        "wgs84_raycast"
+      ],
+      "timestamp": 1788552041.704
+    },
+    {
+      "id": 3,
+      "target_code": "TGT-03",
+      "class_name": "Survivor",
+      "subsystem_type": "person",
+      "confidence": 0.917,
+      "wgs84": {
+        "latitude": 11.524851,
+        "longitude": 76.128469,
+        "altitude_m": 877.3
+      },
+      "local_ned": {
+        "x": 7.53,
+        "y": 5.68,
+        "z": 37.3
+      },
+      "raycast_error_m": 0.28,
+      "modalities": [
+        "visual_yolov8_gpu",
+        "wgs84_raycast"
+      ],
+      "timestamp": 1788552041.704
+    },
+    {
+      "id": 4,
+      "target_code": "TGT-04",
+      "class_name": "Survivor",
+      "subsystem_type": "person",
+      "confidence": 0.918,
+      "wgs84": {
+        "latitude": 11.5248473,
+        "longitude": 76.1284825,
+        "altitude_m": 876.9
+      },
+      "local_ned": {
+        "x": 9.0,
+        "y": 5.27,
+        "z": 36.9
+      },
+      "raycast_error_m": 0.28,
+      "modalities": [
+        "visual_yolov8_gpu",
+        "wgs84_raycast"
+      ],
+      "timestamp": 1788552041.704
+    },
+    {
+      "id": 5,
+      "target_code": "TGT-05",
+      "class_name": "Threat",
+      "subsystem_type": "vehicle",
+      "confidence": 0.948,
+      "wgs84": {
+        "latitude": 11.5248473,
+        "longitude": 76.1284952,
+        "altitude_m": 876.4
+      },
+      "local_ned": {
+        "x": 10.39,
+        "y": 5.27,
+        "z": 36.4
+      },
+      "raycast_error_m": 0.28,
+      "modalities": [
+        "visual_yolov8_gpu",
+        "wgs84_raycast"
+      ],
+      "timestamp": 1788552041.704
+    }
+  ]
+}
