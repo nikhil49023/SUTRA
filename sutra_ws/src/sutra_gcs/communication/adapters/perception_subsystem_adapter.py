@@ -188,7 +188,7 @@ class PerceptionSubsystemAdapter:
         self.event_bus = event_bus or get_event_bus()
         self.alert_cooldown_sec = alert_cooldown_sec
         self.target_timeout_sec = target_timeout_sec
-        self.notifications_enabled = True
+        self.notifications_enabled = False
 
         # Telemetry & Status Metrics
         self.connected = False

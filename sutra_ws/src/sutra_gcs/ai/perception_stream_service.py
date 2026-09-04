@@ -126,10 +126,10 @@ class PerceptionStreamService:
 
         # Subsystem C ByteTrack Multi-Object Tracker
         self._tracker = SutraByteTracker(
-            high_conf_thresh=0.20,
-            low_conf_thresh=0.10,
+            high_conf_thresh=0.25,
+            low_conf_thresh=0.15,
             iou_thresh=0.30,
-            max_age=30,
+            max_age=10,
             min_hits=1,
         )
 
@@ -154,7 +154,7 @@ class PerceptionStreamService:
                 try:
                     self._model = YOLO(path)
                     self._model_loaded = True
-                    logger.info(f'✅ Authoritative Subsystem C Perception Model loaded: {path}')
+                    logger.info(f'✅ Authoritative Subsystem C Perception Model loaded: {path} (classes: {getattr(self._model, "names", {})})')
                     break
                 except Exception as err:
                     logger.warning(f'Failed to load model {path}: {err}')
@@ -188,7 +188,7 @@ class PerceptionStreamService:
                 with self._lock:
                     self._latest_frames[key] = img
                 if world_id.upper() == self.active_world_id and normalize_drone_id(drone_id) == self.active_drone_id:
-                    self._process_single_frame(img, self.active_world_id, self.active_drone_id, self.active_modality)
+                    self._process_single_frame(img, self.active_world_id, self.active_drone_id, self.active_modality, is_synthetic=False)
         except Exception as err:
             logger.debug(f'Frame ingest error: {err}')
 
@@ -241,9 +241,9 @@ class PerceptionStreamService:
                     modality = self.active_modality
                     base_url = self.world_base_urls.get(world_id, 'http://10.152.0.191:8080')
 
-                frame = self._fetch_or_generate_frame(world_id, drone_id, modality, base_url)
+                frame, is_synthetic = self._fetch_or_generate_frame(world_id, drone_id, modality, base_url)
                 if frame is not None:
-                    self._process_single_frame(frame, world_id, drone_id, modality)
+                    self._process_single_frame(frame, world_id, drone_id, modality, is_synthetic=is_synthetic)
             except Exception as err:
                 logger.error(f'Error in perception stream loop: {err}', exc_info=False)
             time.sleep(0.10)  # ~10 Hz stream inference rate
@@ -254,13 +254,13 @@ class PerceptionStreamService:
         drone_id: str,
         modality: str,
         base_url: str,
-    ) -> Optional[np.ndarray]:
+    ) -> Tuple[Optional[np.ndarray], bool]:
         """Attempts to grab live frame from MJPEG stream, cached frame, or synthetic scene."""
         key = f"{world_id}_{drone_id}_{modality}"
         with self._lock:
             cached = self._latest_frames.get(key)
         if cached is not None:
-            return cached
+            return cached, False
 
         # 1. Attempt to grab live frame directly from Gazebo MJPEG stream URL
         slug = UAV_SLUG_MAP.get(drone_id, drone_id)
@@ -273,7 +273,7 @@ class PerceptionStreamService:
                 if ret and frame is not None and frame.size > 0:
                     with self._lock:
                         self._latest_frames[key] = frame
-                    return frame
+                    return frame, False
                 else:
                     with self._lock:
                         if stream_url in self._active_caps:
@@ -286,7 +286,7 @@ class PerceptionStreamService:
                 pass
 
         # 2. Fallback to realistic disaster SAR scene
-        return self._generate_synthetic_sar_scene(drone_id, modality)
+        return self._generate_synthetic_sar_scene(drone_id, modality), True
 
     def _generate_synthetic_sar_scene(self, drone_id: str, modality: str) -> np.ndarray:
         """Generates realistic disaster SAR scene with human victims and flood reflections."""
@@ -386,6 +386,7 @@ class PerceptionStreamService:
         world_id: str,
         drone_id: str,
         modality: str,
+        is_synthetic: bool = False,
     ) -> List[Dict[str, Any]]:
         """Executes Subsystem C SAHI Slicing, VisDrone YOLO inference, Raycasting, and ByteTrack."""
         t_start = time.time()
@@ -400,49 +401,83 @@ class PerceptionStreamService:
                 slice_results: List[Tuple[List[VisualDetection], int, int]] = []
 
                 for crop, x_off, y_off in slices:
-                    res = self._model(crop, conf=0.18, verbose=False)[0]
+                    res = self._model(crop, conf=0.25, verbose=False)[0]
                     c_dets: List[VisualDetection] = []
                     if res.boxes is not None:
                         for b in res.boxes:
                             cls_id = int(b.cls[0])
-                            name = self._model.names.get(cls_id, '')
-                            if name in ('person', 'pedestrian', 'people') or cls_id in (0, 1):
-                                c_dets.append(VisualDetection(
-                                    bbox=BBox(float(b.xyxy[0][0]), float(b.xyxy[0][1]), float(b.xyxy[0][2]), float(b.xyxy[0][3])),
-                                    confidence=float(b.conf[0]),
-                                    class_id=cls_id,
-                                    label='SURVIVOR',
-                                ))
-                            elif name in ('threat', 'hazard') or cls_id == 3:
-                                c_dets.append(VisualDetection(
-                                    bbox=BBox(float(b.xyxy[0][0]), float(b.xyxy[0][1]), float(b.xyxy[0][2]), float(b.xyxy[0][3])),
-                                    confidence=float(b.conf[0]),
-                                    class_id=cls_id,
-                                    label='THREAT',
-                                ))
+                            name = str(self._model.names.get(cls_id, '')).lower().strip()
+                            conf = float(b.conf[0])
+
+                            # STRICT FILTER: ONLY person / pedestrian / human / survivor / victim
+                            # Discard bicycles (1), cars (2), vans (3), trucks (4), tricycles (5), buses (6), motors (7), threats, debris, etc.
+                            is_person = (
+                                name in ('person', 'pedestrian', 'people', 'human', 'survivor', 'victim')
+                                or (cls_id == 0 and name not in ('bicycle', 'car', 'van', 'truck', 'tricycle', 'bus', 'motor', 'vehicle', 'debris', 'threat', 'backpack', 'suitcase'))
+                            )
+                            if not is_person:
+                                continue
+
+                            bx1, by1, bx2, by2 = float(b.xyxy[0][0]), float(b.xyxy[0][1]), float(b.xyxy[0][2]), float(b.xyxy[0][3])
+                            bw = bx2 - bx1
+                            bh = by2 - by1
+
+                            # Human geometry checks
+                            if bw < 6 or bh < 12:
+                                continue
+                            aspect_ratio = bh / max(1.0, bw)
+                            if aspect_ratio < 0.60:
+                                continue
+
+                            c_dets.append(VisualDetection(
+                                bbox=BBox(bx1, by1, bx2, by2),
+                                confidence=conf,
+                                class_id=0,
+                                label='SURVIVOR',
+                            ))
                     slice_results.append((c_dets, x_off, y_off))
 
                 # Merge SAHI detections with Non-Maximum Merging (NMM)
                 visual_detections = merge_sahi_detections(slice_results, iou_threshold=0.35)
 
                 # 2. Full-frame inference for medium/large scale targets
-                full_res = self._model(frame, conf=0.22, verbose=False)[0]
+                full_res = self._model(frame, conf=0.28, verbose=False)[0]
                 if full_res.boxes is not None:
                     for b in full_res.boxes:
                         cls_id = int(b.cls[0])
-                        name = self._model.names.get(cls_id, '')
-                        if name in ('person', 'pedestrian', 'people') or cls_id in (0, 1):
-                            visual_detections.append(VisualDetection(
-                                bbox=BBox(float(b.xyxy[0][0]), float(b.xyxy[0][1]), float(b.xyxy[0][2]), float(b.xyxy[0][3])),
-                                confidence=float(b.conf[0]),
-                                class_id=cls_id,
-                                label='SURVIVOR',
-                            ))
+                        name = str(self._model.names.get(cls_id, '')).lower().strip()
+                        conf = float(b.conf[0])
+                        is_person = (
+                            name in ('person', 'pedestrian', 'people', 'human', 'survivor', 'victim')
+                            or (cls_id == 0 and name not in ('bicycle', 'car', 'van', 'truck', 'tricycle', 'bus', 'motor', 'vehicle', 'debris', 'threat', 'backpack', 'suitcase'))
+                        )
+                        if not is_person:
+                            continue
+
+                        bx1, by1, bx2, by2 = float(b.xyxy[0][0]), float(b.xyxy[0][1]), float(b.xyxy[0][2]), float(b.xyxy[0][3])
+                        bw = bx2 - bx1
+                        bh = by2 - by1
+
+                        # Human geometric sanity checks
+                        if bw < 8 or bh < 15 or bw > (w * 0.40) or bh > (h * 0.60):
+                            continue
+                        aspect_ratio = bh / max(1.0, bw)
+                        if aspect_ratio < 0.60:
+                            continue
+                        if (bw * bh) > (w * h * 0.20):
+                            continue
+
+                        visual_detections.append(VisualDetection(
+                            bbox=BBox(bx1, by1, bx2, by2),
+                            confidence=conf,
+                            class_id=0,
+                            label='SURVIVOR',
+                        ))
             except Exception as err:
                 logger.debug(f'Subsystem C inference error: {err}')
 
-        # Fallback for synthetic benchmark tests if model did not find any targets
-        if len(visual_detections) == 0:
+        # Fallback ONLY for synthetic benchmark tests if is_synthetic is True and model did not find any targets
+        if is_synthetic and len(visual_detections) == 0:
             sar_dets = self._detect_highvis_sar_targets(frame, modality)
             for sd in sar_dets:
                 bx = sd['bbox']
@@ -495,6 +530,10 @@ class PerceptionStreamService:
         tracked_dicts: List[Dict[str, Any]] = []
 
         for t in tracked_objs:
+            # Strictly only keep targets updated in the CURRENT frame (no ghost/stale phantom boxes)
+            if t.time_since_update > 0:
+                continue
+
             nb = [
                 round(t.bbox[0] / max(1.0, float(w)), 4),
                 round(t.bbox[1] / max(1.0, float(h)), 4),
@@ -504,7 +543,7 @@ class PerceptionStreamService:
             tracked_dicts.append({
                 'id': str(t.track_id),
                 'target_id': str(t.track_id),
-                'label': t.label,
+                'label': 'SURVIVOR',
                 'confidence': round(float(t.confidence), 3),
                 'lat': t.gps[0],
                 'lon': t.gps[1],

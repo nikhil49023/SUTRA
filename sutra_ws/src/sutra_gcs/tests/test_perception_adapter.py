@@ -184,6 +184,7 @@ def test_duplicate_target_and_tracking_update(test_setup):
 def test_survivor_alert_and_cooldown(test_setup):
     """Verifies high-confidence survivor detection triggers alert with cooldown."""
     state_store, event_bus, adapter = test_setup
+    adapter.notifications_enabled = True
 
     alerts_created = []
     event_bus.subscribe("alert.created", lambda e: alerts_created.append(e))

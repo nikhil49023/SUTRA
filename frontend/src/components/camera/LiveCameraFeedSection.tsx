@@ -158,27 +158,42 @@ export const LiveCameraFeedSection: React.FC = () => {
     }
   };
 
-  // Filter survivor and victim detections for the active feed
-  const isSurvivorOrVictim = (label?: string) => {
-    if (!label) return true;
+  // Filter strictly for human persons and survivors for the active feed
+  const isPersonOrSurvivor = (label?: string) => {
+    if (!label) return false;
     const l = label.toUpperCase();
     return (
       l.includes('SURVIVOR') ||
       l.includes('PERSON') ||
       l.includes('VICTIM') ||
-      l.includes('HUMAN') ||
-      l.includes('POSSIBLE') ||
-      l.includes('THREAT') ||
-      l.includes('TARGET')
+      l.includes('HUMAN')
     );
   };
 
-  const activeSurvivors = trackedTargets.filter(
-    (t) =>
-      t.tracking_status !== 'LOST' &&
-      isSurvivorOrVictim(t.label) &&
-      (!t.world_id || t.world_id === activeWorld)
-  );
+  const activeSurvivors = trackedTargets.filter((t) => {
+    if (t.tracking_status === 'LOST') return false;
+    if (!isPersonOrSurvivor(t.label)) return false;
+    if (t.world_id && t.world_id !== activeWorld) return false;
+
+    // Filter strictly to the currently selected drone
+    if (t.drone_id) {
+      const normTargetDrone = t.drone_id.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const normActiveDrone = activeUav.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const uavNumMap: Record<string, string> = {
+        alpha: 'uav1', bravo: 'uav2', charlie: 'uav3', delta: 'uav4',
+        epsilon: 'uav5', foxtrot: 'uav6', golf: 'uav7', hotel: 'uav8',
+        uav1: 'uav1', uav2: 'uav2', uav3: 'uav3', uav4: 'uav4',
+        uav5: 'uav5', uav6: 'uav6', uav7: 'uav7', uav8: 'uav8',
+      };
+      const mappedTarget = uavNumMap[normTargetDrone] || normTargetDrone;
+      const mappedActive = uavNumMap[normActiveDrone] || normActiveDrone;
+      if (mappedTarget !== mappedActive) return false;
+    }
+
+    const hasNormBbox = Array.isArray(t.norm_bbox) && t.norm_bbox.length >= 4 && (t.norm_bbox[2] > t.norm_bbox[0]) && (t.norm_bbox[3] > t.norm_bbox[1]);
+    const hasBbox = Array.isArray(t.bbox) && t.bbox.length >= 4 && (t.bbox[2] > t.bbox[0]) && (t.bbox[3] > t.bbox[1]);
+    return hasNormBbox || hasBbox;
+  });
 
   // Status badge styling helper
   const renderStatusBadge = (status: 'CONNECTED' | 'CONNECTING' | 'OFFLINE', size: 'sm' | 'md' = 'sm') => {
@@ -567,43 +582,35 @@ export const LiveCameraFeedSection: React.FC = () => {
           {/* Subsystem C Real-Time AI Survivor & Victim Bounding Boxes Overlay */}
           {activeSurvivors.length > 0 && (
             <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden">
-              {activeSurvivors.map((target, idx) => {
-                // Calculate normalized bounding box (0..100%)
-                let left = 30 + (idx % 3) * 20;
-                let top = 30 + Math.floor(idx / 3) * 15;
-                let width = 16;
-                let height = 24;
+              {activeSurvivors.map((target) => {
+                let left = 0;
+                let top = 0;
+                let width = 0;
+                let height = 0;
 
                 if (target.norm_bbox && target.norm_bbox.length >= 4) {
                   const [nx1, ny1, nx2, ny2] = target.norm_bbox;
-                  left = Math.max(2, Math.min(95, nx1 * 100));
-                  top = Math.max(2, Math.min(95, ny1 * 100));
-                  width = Math.max(4, Math.min(90, (nx2 - nx1) * 100));
-                  height = Math.max(4, Math.min(90, (ny2 - ny1) * 100));
+                  left = Math.max(0, Math.min(95, nx1 * 100));
+                  top = Math.max(0, Math.min(95, ny1 * 100));
+                  width = Math.max(2, Math.min(90, (nx2 - nx1) * 100));
+                  height = Math.max(2, Math.min(90, (ny2 - ny1) * 100));
                 } else if (target.bbox && target.bbox.length >= 4) {
                   const [x1, y1, x2, y2] = target.bbox;
-                  left = Math.max(2, Math.min(95, (x1 / 640) * 100));
-                  top = Math.max(2, Math.min(95, (y1 / 480) * 100));
-                  width = Math.max(4, Math.min(90, ((x2 - x1) / 640) * 100));
-                  height = Math.max(4, Math.min(90, ((y2 - y1) / 480) * 100));
+                  left = Math.max(0, Math.min(95, (x1 / 640) * 100));
+                  top = Math.max(0, Math.min(95, (y1 / 480) * 100));
+                  width = Math.max(2, Math.min(90, ((x2 - x1) / 640) * 100));
+                  height = Math.max(2, Math.min(90, ((y2 - y1) / 480) * 100));
+                } else {
+                  return null;
                 }
 
+                if (width <= 0 || height <= 0) return null;
+
                 const conf = target.confidence ?? 0.85;
-                const isHighConfidence = conf >= 0.70;
-                const isThreat = target.label?.toUpperCase().includes('THREAT');
-                const borderColor = isThreat
-                  ? 'border-[#EF4444]'
-                  : isHighConfidence
-                  ? 'border-[#10B981]'
-                  : 'border-[#F59E0B]';
-                const badgeBg = isThreat
-                  ? 'bg-[#EF4444]'
-                  : isHighConfidence
-                  ? 'bg-[#10B981]'
-                  : 'bg-[#F59E0B]';
-                const glowClass = isThreat
-                  ? 'shadow-[0_0_15px_rgba(239,68,68,0.6)]'
-                  : isHighConfidence
+                const isHighConfidence = conf >= 0.60;
+                const borderColor = isHighConfidence ? 'border-[#10B981]' : 'border-[#F59E0B]';
+                const badgeBg = isHighConfidence ? 'bg-[#10B981]' : 'bg-[#F59E0B]';
+                const glowClass = isHighConfidence
                   ? 'shadow-[0_0_15px_rgba(16,185,129,0.6)]'
                   : 'shadow-[0_0_15px_rgba(245,158,11,0.6)]';
 
@@ -636,7 +643,7 @@ export const LiveCameraFeedSection: React.FC = () => {
                     >
                       <Target className="w-2.5 h-2.5" />
                       <span>
-                        {target.label?.toUpperCase() || 'VICTIM'} #{target.target_id} ({Math.round(conf * 100)}%)
+                        PERSON #{target.target_id} ({Math.round(conf * 100)}%)
                       </span>
                     </div>
 

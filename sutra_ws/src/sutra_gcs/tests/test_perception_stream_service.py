@@ -90,7 +90,7 @@ def test_sar_scene_generation_and_victim_detection(stream_service):
 def test_single_frame_end_to_end_processing(stream_service):
     """Verifies end-to-end processing creates tracked targets with bboxes in StateStore."""
     frame = stream_service._generate_synthetic_sar_scene("alpha", "RGB")
-    results = stream_service._process_single_frame(frame, "WORLD_1", "alpha", "RGB")
+    results = stream_service._process_single_frame(frame, "WORLD_1", "alpha", "RGB", is_synthetic=True)
 
     assert len(results) >= 1
     first_target = results[0]
@@ -114,13 +114,13 @@ def test_single_frame_end_to_end_processing(stream_service):
 def test_target_tracking_across_sequential_frames(stream_service):
     """Verifies tracker preserves track IDs across frames without generating spurious duplicate IDs."""
     frame1 = stream_service._generate_synthetic_sar_scene("alpha", "RGB")
-    res1 = stream_service._process_single_frame(frame1, "WORLD_1", "alpha", "RGB")
+    res1 = stream_service._process_single_frame(frame1, "WORLD_1", "alpha", "RGB", is_synthetic=True)
     ids1 = {t["target_id"] for t in res1}
 
     # Second frame shortly after
     time.sleep(0.05)
     frame2 = stream_service._generate_synthetic_sar_scene("alpha", "RGB")
-    res2 = stream_service._process_single_frame(frame2, "WORLD_1", "alpha", "RGB")
+    res2 = stream_service._process_single_frame(frame2, "WORLD_1", "alpha", "RGB", is_synthetic=True)
     ids2 = {t["target_id"] for t in res2}
 
     # At least one track ID should persist across consecutive frames
