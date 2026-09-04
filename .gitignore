@@ -128,3 +128,7 @@ sutra_ws/src/sutra_sim/ns3/lib/
 .kaggle_staging/
 kaggle_output/
 SUTRA/
+*.mbtiles
+*.db-wal
+*.db-shm
+

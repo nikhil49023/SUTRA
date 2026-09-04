@@ -12,7 +12,7 @@ export type NavigationSection =
   | 'LIVEOPS'
   | 'SETTINGS';
 
-export type MapStyleType = 'tactical-dark' | 'satellite' | 'terrain' | 'streets';
+export type MapStyleType = 'tactical-dark' | 'satellite' | 'terrain' | 'streets' | 'swarm-live-ortho';
 
 export interface Alert {
   alert_id: string;
