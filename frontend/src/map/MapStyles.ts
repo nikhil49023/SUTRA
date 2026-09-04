@@ -124,28 +124,25 @@ export function getMapStyleSpec(styleKey: MapStyleType): maplibregl.StyleSpecifi
     default:
       return {
         version: 8,
-        name: 'Smart Horizon Dark Tactical Basemap',
+        name: 'SUTRA Dynamic Tactical Space',
         sources: {
           'carto-dark-tiles': {
             type: 'raster',
             tiles: [
               'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-              'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-              'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-              'https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
             ],
             tileSize: 256,
             maxzoom: 20,
-            attribution: '&copy; CARTO &copy; OpenStreetMap contributors',
+            attribution: '&copy; SUTRA Dynamic Tactical Vector Space',
           },
         },
         layers: [
           {
-            id: 'carto-dark-layer',
-            type: 'raster',
-            source: 'carto-dark-tiles',
-            minzoom: 0,
-            maxzoom: 20,
+            id: 'tactical-background',
+            type: 'background',
+            paint: {
+              'background-color': '#070A0F',
+            },
           },
         ],
       };

@@ -168,8 +168,7 @@ export const MapView: React.FC = () => {
     return unsub;
   }, []);
 
-  // ── Fleet + Formation layer (telemetry driven) ────────────────────────────────
-  // Uses zustand subscribe with selector to only trigger when drones object ref changes
+  // ── Fleet + Formation + Dynamic Drone Mapping layer (telemetry driven) ──
   useEffect(() => {
     const unsub = useFleetStore.subscribe((fs) => {
       const sel = useSelectionStore.getState();
@@ -178,6 +177,7 @@ export const MapView: React.FC = () => {
         sel.selected_type === 'DRONE' ? sel.selected_id : null
       );
       mapController.formationLayer.updateFormation(fs);
+      mapController.dynamicGridLayer.updateFleetResources(fs);
     });
     return unsub;
   }, []);
@@ -364,7 +364,7 @@ const MapStatusBar = React.memo(
     const home = useMissionStore.getState();
     return (
       <div className="absolute bottom-2 left-2 z-10 px-2.5 py-1 rounded bg-[#11171E]/90 border border-[#2B3743] backdrop-blur text-[11px] font-mono text-[#707C88] flex items-center space-x-3">
-        <span>MAPLIBRE GL PERSISTENT</span>
+        <span className="text-[#10B981] font-bold">● DYNAMIC DRONE RESOURCE MAPPING</span>
         <span>•</span>
         <span className="text-[#5B8FB9] font-bold uppercase">
           {MAP_STYLE_LABELS[mapStyle]?.badge || mapStyle}
@@ -397,6 +397,7 @@ function syncAll(ms: any, fs: any, gs: any, gis: any, ai: any, sel: any) {
     sel.selected_type === 'DRONE' ? sel.selected_id : null
   );
   mapController.formationLayer.updateFormation(fs);
+  mapController.dynamicGridLayer.updateFleetResources(fs);
   mapController.gisLayer.updateGis(gis);
   mapController.aiTargetLayer.updateTargets(
     ai?.tracked_targets || [],
