@@ -37,8 +37,9 @@ import { DisasterIntelPanel } from '../../risk/DisasterIntelPanel';
 import { GlobalGeofenceBreachMonitor } from '../../geofence/GlobalGeofenceBreachMonitor';
 import { wsClient } from '../../communication/WebSocketClient';
 import { NavigationSection } from '../../types/app';
-import { Route, Users, Mountain, Brain, Settings, Compass, Shield, ShieldAlert, X, Video } from 'lucide-react';
+import { Route, Users, Mountain, Brain, Settings, Compass, Shield, ShieldAlert, X, Video, Grid } from 'lucide-react';
 import { LiveCameraFeedSection } from '../camera/LiveCameraFeedSection';
+import { Autonomous2DMappingPanel } from '../../mapping/Autonomous2DMappingPanel';
 
 // SUTRA 7 Defensive Upgrades Modals
 import { FailureLabModal } from '../failure/FailureLabModal';
@@ -54,6 +55,7 @@ import { MissionSafetyGateModal } from '../mission/MissionSafetyGateModal';
 // ── Memoized panels — mount once, stay mounted, toggled via CSS visibility ─────
 const MissionPlannerPanel = memo(() => <MissionPlanner />);
 const LiveCameraFeedPanelMemo = memo(() => <LiveCameraFeedSection />);
+const Autonomous2DMappingPanelMemo = memo(() => <Autonomous2DMappingPanel />);
 const GeofencePanelMemo = memo(() => <GeofencePanel />);
 const FleetPanelMemo = memo(() => <FleetPanel />);
 const GisPanelMemo = memo(() => <GisPanel />);
@@ -61,9 +63,14 @@ const AiPanelMemo = memo(() => <AiPanel />);
 const DisasterIntelPanelMemo = memo(() => <DisasterIntelPanel />);
 const SettingsPanelMemo = memo(() => <SettingsPanel />);
 
-const OVERLAY_SECTIONS: NavigationSection[] = ['MISSION', 'CAMERA', 'GEOFENCE', 'FLEET', 'GIS', 'AI', 'DISASTER_INTEL', 'RISK', 'SETTINGS'];
+const OVERLAY_SECTIONS: NavigationSection[] = ['MAPPING', 'MISSION', 'CAMERA', 'GEOFENCE', 'FLEET', 'GIS', 'AI', 'DISASTER_INTEL', 'RISK', 'SETTINGS'];
 
 const SECTION_METADATA: Record<string, { title: string; subtitle: string; icon: any }> = {
+  MAPPING: {
+    title: '2D AUTONOMOUS SPATIAL MAPPING ENGINE',
+    subtitle: 'Real-Time Multi-Drone Bayesian Occupancy Grid & Semantic SLAM',
+    icon: Grid,
+  },
   MISSION: {
     title: 'TACTICAL MISSION PLANNER',
     subtitle: 'Autonomous Waypoint Corridor & Pre-Flight Validation Engine',
@@ -132,6 +139,7 @@ export const TacticalLayout: React.FC = () => {
       if (['INPUT', 'SELECT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
 
       switch (e.key.toUpperCase()) {
+        case '2': setActiveSection('MAPPING'); break;
         case 'M': setActiveSection('MISSION'); break;
         case 'C': setActiveSection('CAMERA'); break;
         case 'G': setActiveSection('GEOFENCE'); break;
@@ -222,6 +230,11 @@ export const TacticalLayout: React.FC = () => {
 
               {/* Panel Content Body */}
               <div className="flex-1 w-full overflow-hidden">
+                <ErrorBoundary fallbackTitle="2D AUTONOMOUS MAPPING">
+                  <div style={{ display: activeSection === 'MAPPING' ? 'block' : 'none', width: '100%', height: '100%' }}>
+                    <Autonomous2DMappingPanelMemo />
+                  </div>
+                </ErrorBoundary>
                 <ErrorBoundary fallbackTitle="MISSION SUBSYSTEM">
                   <div style={{ display: activeSection === 'MISSION' ? 'block' : 'none', width: '100%', height: '100%' }}>
                     <MissionPlannerPanel />

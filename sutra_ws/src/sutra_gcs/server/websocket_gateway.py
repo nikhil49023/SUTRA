@@ -48,6 +48,7 @@ from geofence.models import GeometryType, ZoneType
 from gis.gis_controller import GISController, get_gis_controller
 from ai.ai_manager import AIManager, ai_manager
 from communication.adapters.perception_subsystem_adapter import perception_adapter
+from mapping.autonomous_2d_mapping_engine import get_mapping_engine, SemanticCellType
 from forecast import get_forecast_service, get_disaster_feed_service
 from prepositioning import get_prepositioning_optimizer
 from risk import get_risk_engine, get_dynamic_mapping_bridge, RiskModelWeights
@@ -132,6 +133,7 @@ class WebSocketGatewayServer:
         self.prepositioning_opt = get_prepositioning_optimizer()
         self.dynamic_map_bridge = get_dynamic_mapping_bridge()
         self.disaster_feed = get_disaster_feed_service()
+        self.mapping_engine = get_mapping_engine()
 
         self.ws_clients: Set[Any] = set()
         self.client_sessions: Dict[Any, str] = {}  # websocket -> session_id
@@ -1188,6 +1190,16 @@ class WebSocketGatewayServer:
 
             elif cmd_type in ("ai.inject_target", "AI_INJECT_TARGET"):
                 res = self.perception_adapter.inject_fused_target(payload.get("target") or payload)
+                if res:
+                    for t in res:
+                        self.mapping_engine.ingest_semantic_observation(
+                            drone_id=getattr(t, "drone_id", "alpha") or "alpha",
+                            latitude=getattr(t, "latitude", 0.0),
+                            longitude=getattr(t, "longitude", 0.0),
+                            semantic_type_str=getattr(t, "class_name", "SURVIVOR") or "SURVIVOR",
+                            confidence=getattr(t, "confidence", 0.90),
+                            metadata=t.to_dict() if hasattr(t, "to_dict") else None,
+                        )
                 return {"injected_count": len(res), "targets": [t.target_id for t in res]}
 
             elif cmd_type in ("ai.clear_targets", "AI_CLEAR_TARGETS"):
@@ -1203,6 +1215,39 @@ class WebSocketGatewayServer:
                 )
                 self.event_bus.emit("ai.state_updated", payload={"tracked_targets": []}, correlation_id=corr_id, state_version=self.state_store.state_version)
                 return {"cleared": True}
+
+            # --- 2D Real-Time Autonomous Mapping Engine Handlers ---
+            elif cmd_type in ("mapping.get_snapshot", "MAPPING_GET_SNAPSHOT"):
+                return {
+                    "snapshot": self.mapping_engine.get_geojson_snapshot(),
+                    "metrics": self.mapping_engine.get_metrics(),
+                }
+
+            elif cmd_type in ("mapping.get_metrics", "MAPPING_GET_METRICS"):
+                return {
+                    "metrics": self.mapping_engine.get_metrics(),
+                }
+
+            elif cmd_type in ("mapping.reset", "MAPPING_RESET"):
+                self.mapping_engine.reset_map()
+                self.event_bus.emit(
+                    "mapping.reset",
+                    payload={"metrics": self.mapping_engine.get_metrics()},
+                    source="mapping_engine",
+                    state_version=self.state_store.state_version,
+                )
+                return {"success": True, "metrics": self.mapping_engine.get_metrics()}
+
+            elif cmd_type in ("mapping.inject_observation", "MAPPING_INJECT_OBSERVATION"):
+                cell = self.mapping_engine.ingest_semantic_observation(
+                    drone_id=str(payload.get("drone_id", "manual")),
+                    latitude=float(payload.get("latitude", 0.0)),
+                    longitude=float(payload.get("longitude", 0.0)),
+                    semantic_type_str=str(payload.get("semantic_type", "OCCUPIED")),
+                    confidence=float(payload.get("confidence", 0.9)),
+                    metadata=payload.get("metadata"),
+                )
+                return {"success": cell is not None, "cell": cell.to_dict() if cell else None}
 
             elif cmd_type in ("alert.acknowledge", "ALERT_ACKNOWLEDGE"):
                 alert_id = payload.get("alert_id")
@@ -1907,6 +1952,33 @@ class WebSocketGatewayServer:
                 source="gateway_sim",
                 state_version=self.state_store.state_version,
             )
+
+            # C. Ingest Pose into Real-Time 2D Autonomous Mapping Engine
+            self.mapping_engine.ingest_drone_pose(
+                drone_id=drone.drone_id,
+                lat=drone.latitude,
+                lon=drone.longitude,
+                altitude_m=drone.altitude,
+                heading_deg=drone.heading,
+                pitch_deg=drone.pitch,
+                roll_deg=drone.roll,
+                speed_mps=drone.speed,
+            )
+
+        # 6. Periodic 2Hz 2D World Model Incremental Delta Broadcast
+        if getattr(self, "_sim_tick_count", 0) % 5 == 0:
+            delta = self.mapping_engine.get_incremental_delta()
+            if delta.get("delta_count", 0) > 0:
+                metrics = self.mapping_engine.get_metrics()
+                self.event_bus.emit(
+                    "mapping.grid_delta",
+                    payload={
+                        "delta": delta,
+                        "metrics": metrics,
+                    },
+                    source="mapping_engine",
+                    state_version=self.state_store.state_version,
+                )
 
     def _run_simulation_loop(self):
         """10Hz background loop for multi-drone kinematics."""

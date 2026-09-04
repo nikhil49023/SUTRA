@@ -20,6 +20,7 @@ import { useAIStore } from '../stores/aiStore';
 import { useSelectionStore } from '../stores/selectionStore';
 import { useMapStore } from '../stores/mapStore';
 import { useAppStore } from '../stores/appStore';
+import { useMappingStore } from '../stores/mappingStore';
 import { MapInteractionToolbox } from './MapInteractionToolbox';
 import { GeofenceToolbar } from '../geofence/GeofenceToolbar';
 import { GeofenceDebugPanel } from '../geofence/GeofenceDebugPanel';
@@ -53,7 +54,8 @@ export const MapView: React.FC = () => {
     const gis = useGISStore.getState();
     const ai = useAIStore.getState();
     const sel = useSelectionStore.getState();
-    return { ms, fs, gs, gis, ai, sel };
+    const mapping = useMappingStore.getState();
+    return { ms, fs, gs, gis, ai, sel, mapping };
   }, []);
 
 
@@ -80,14 +82,14 @@ export const MapView: React.FC = () => {
     mapController.attachMap(mapInstance);
 
     if (mapInstance.isStyleLoaded()) {
-      const { ms, fs, gs, gis, ai, sel } = getLayerState();
-      syncAll(ms, fs, gs, gis, ai, sel);
+      const { ms, fs, gs, gis, ai, sel, mapping } = getLayerState();
+      syncAll(ms, fs, gs, gis, ai, sel, mapping);
     }
 
     // Fired after map style switch — re-add all layers
     const unsubStyle = mapPersistence.onStyleLoaded(() => {
-      const { ms, fs, gs, gis, ai, sel } = getLayerState();
-      syncAll(ms, fs, gs, gis, ai, sel);
+      const { ms, fs, gs, gis, ai, sel, mapping } = getLayerState();
+      syncAll(ms, fs, gs, gis, ai, sel, mapping);
     });
 
 
@@ -199,6 +201,21 @@ export const MapView: React.FC = () => {
         sel.selected_type === 'TARGET' ? sel.selected_id : null
       );
     });
+    return unsub;
+  }, []);
+
+  // ── 2D Autonomous Mapping Layer (Incremental SLAM & Semantic Fusion) ────────
+  useEffect(() => {
+    const unsub = useMappingStore.subscribe((state) => {
+      if (state.isMappingActive) {
+        mapController.autonomous2DMappingLayer.updateGrid(state.gridGeoJson, state.visibleSemantics);
+        mapController.autonomous2DMappingLayer.updateSurvivors(state.survivorPins);
+      } else {
+        mapController.autonomous2DMappingLayer.clear();
+      }
+    });
+    // Request initial snapshot on mount
+    useMappingStore.getState().fetchSnapshot();
     return unsub;
   }, []);
 
@@ -381,7 +398,7 @@ const MapStatusBar = React.memo(
 );
 
 // ── Helper used by onStyleLoaded ────────────────────────────────────────────────
-function syncAll(ms: any, fs: any, gs: any, gis: any, ai: any, sel: any) {
+function syncAll(ms: any, fs: any, gs: any, gis: any, ai: any, sel: any, mapping?: any) {
   mapController.routeLayer.updateRoute(ms.waypoints, ms.home_latitude, ms.home_longitude);
   mapController.waypointLayer.renderWaypoints(
     ms.waypoints,
@@ -403,5 +420,9 @@ function syncAll(ms: any, fs: any, gs: any, gis: any, ai: any, sel: any) {
     ai?.tracked_targets || [],
     sel.selected_type === 'TARGET' ? sel.selected_id : null
   );
+  if (mapping && mapping.isMappingActive && mapping.gridGeoJson) {
+    mapController.autonomous2DMappingLayer.updateGrid(mapping.gridGeoJson, mapping.visibleSemantics);
+    mapController.autonomous2DMappingLayer.updateSurvivors(mapping.survivorPins || []);
+  }
 }
 
