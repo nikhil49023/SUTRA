@@ -6,9 +6,49 @@ Subsystem: Geofence Subsystem (Phase 4)
 import math
 from typing import List, Optional, Tuple, Union
 
-import pyproj
+try:
+    import pyproj
+    _HAVE_PYPROJ = True
+except ImportError:
+    pyproj = None
+    _HAVE_PYPROJ = False
+
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon
 from shapely.validation import make_valid
+
+
+class _GeodFallback:
+    """WGS84 ellipsoidal/geodesic approximations when pyproj is unavailable."""
+
+    def fwd(self, lon: float, lat: float, azimuth: float, dist_m: float) -> Tuple[float, float, float]:
+        R = 6378137.0
+        lat_rad = math.radians(lat)
+        lon_rad = math.radians(lon)
+        az_rad = math.radians(azimuth)
+        d_div_r = dist_m / R
+
+        lat2 = math.asin(
+            math.sin(lat_rad) * math.cos(d_div_r)
+            + math.cos(lat_rad) * math.sin(d_div_r) * math.cos(az_rad)
+        )
+        lon2 = lon_rad + math.atan2(
+            math.sin(az_rad) * math.sin(d_div_r) * math.cos(lat_rad),
+            math.cos(d_div_r) - math.sin(lat_rad) * math.sin(lat2)
+        )
+        return math.degrees(lon2), math.degrees(lat2), 0.0
+
+    def polygon_area_perimeter(self, lons: List[float], lats: List[float]) -> Tuple[float, float]:
+        R = 6378137.0
+        if not lats or not lons:
+            return 0.0, 0.0
+        lat0 = sum(lats) / len(lats)
+        cos_lat0 = math.cos(math.radians(lat0))
+        xs = [math.radians(lon) * R * cos_lat0 for lon in lons]
+        ys = [math.radians(lat) * R for lat in lats]
+        n = len(xs)
+        area = 0.5 * abs(sum(xs[i] * ys[(i + 1) % n] - xs[(i + 1) % n] * ys[i] for i in range(n)))
+        perim = sum(math.hypot(xs[(i + 1) % n] - xs[i], ys[(i + 1) % n] - ys[i]) for i in range(n))
+        return area, perim
 
 
 class GeofenceGeometry:
@@ -19,7 +59,7 @@ class GeofenceGeometry:
     """
 
     # WGS84 Geodesic reference
-    GEOD = pyproj.Geod(ellps="WGS84")
+    GEOD = pyproj.Geod(ellps="WGS84") if _HAVE_PYPROJ else _GeodFallback()
 
     @classmethod
     def latlon_to_shapely(cls, coords: List[Tuple[float, float]]) -> List[Tuple[float, float]]:

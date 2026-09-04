@@ -11,8 +11,8 @@ import subprocess
 import os
 
 print("=" * 65)
-print("   🚁 SUTRA 8-UAV SWARM AUTONOMOUS FLIGHT CONTROLLER")
-print("   Disaster Zone: Submerged Village Flood Arena (Horizontal Datum)")
+print("   🚁 SUTRA 8-HEXACOPTER SWARM AUTONOMOUS FLIGHT CONTROLLER (HEXA-X)")
+print("   Disaster Zone: Submerged Village Flood Arena (Fault-Tolerant SAR)")
 print("=================================================================")
 
 uav_list = [f"uav_{i}" for i in range(1, 9)]

@@ -33,7 +33,7 @@ STAGING_DIR = PROJECT_ROOT / ".kaggle_staging"
 
 # Default Kernel Slugs
 DEFAULT_USERNAME = "sainikhilkilani"
-VISDRONE_SLUG = "sutra-visdrone-yolov8-finetune"
+VISDRONE_SLUG = "sutra-yolov8-visdrone-sar-drone-fine-tuning"
 BLENDER_SLUG = "sutra-blender-flood-render"
 
 

@@ -59,7 +59,7 @@
           <geometry><box><size>0.5 0.5 0.15</size></box></geometry>
         </collision>
         <visual name="body">
-          <geometry><mesh><scale>1.6 1.6 1.6</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry>
+          <geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/firefly.dae</uri></mesh></geometry>
           <material>
             <ambient>0.00 0.72 0.80 1</ambient>
             <diffuse>0.00 0.90 1.00 1</diffuse>
@@ -98,7 +98,7 @@
           <geometry><box><size>0.5 0.5 0.15</size></box></geometry>
         </collision>
         <visual name="body">
-          <geometry><mesh><scale>1.6 1.6 1.6</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry>
+          <geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/firefly.dae</uri></mesh></geometry>
           <material>
             <ambient>0.80 0.32 0.00 1</ambient>
             <diffuse>1.00 0.40 0.00 1</diffuse>
@@ -137,7 +137,7 @@
           <geometry><box><size>0.5 0.5 0.15</size></box></geometry>
         </collision>
         <visual name="body">
-          <geometry><mesh><scale>1.6 1.6 1.6</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry>
+          <geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/firefly.dae</uri></mesh></geometry>
           <material>
             <ambient>0.08 0.32 0.80 1</ambient>
             <diffuse>0.10 0.40 1.00 1</diffuse>
@@ -176,7 +176,7 @@
           <geometry><box><size>0.5 0.5 0.15</size></box></geometry>
         </collision>
         <visual name="body">
-          <geometry><mesh><scale>1.6 1.6 1.6</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry>
+          <geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/firefly.dae</uri></mesh></geometry>
           <material>
             <ambient>0.00 0.80 0.32 1</ambient>
             <diffuse>0.00 1.00 0.40 1</diffuse>
@@ -215,7 +215,7 @@
           <geometry><box><size>0.5 0.5 0.15</size></box></geometry>
         </collision>
         <visual name="body">
-          <geometry><mesh><scale>1.6 1.6 1.6</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry>
+          <geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/firefly.dae</uri></mesh></geometry>
           <material>
             <ambient>0.80 0.72 0.00 1</ambient>
             <diffuse>1.00 0.90 0.00 1</diffuse>
@@ -254,7 +254,7 @@
           <geometry><box><size>0.5 0.5 0.15</size></box></geometry>
         </collision>
         <visual name="body">
-          <geometry><mesh><scale>1.6 1.6 1.6</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry>
+          <geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/firefly.dae</uri></mesh></geometry>
           <material>
             <ambient>0.80 0.08 0.64 1</ambient>
             <diffuse>1.00 0.10 0.80 1</diffuse>
@@ -293,7 +293,7 @@
           <geometry><box><size>0.5 0.5 0.15</size></box></geometry>
         </collision>
         <visual name="body">
-          <geometry><mesh><scale>1.6 1.6 1.6</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry>
+          <geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/firefly.dae</uri></mesh></geometry>
           <material>
             <ambient>0.00 0.64 0.64 1</ambient>
             <diffuse>0.00 0.80 0.80 1</diffuse>
@@ -332,7 +332,7 @@
           <geometry><box><size>0.5 0.5 0.15</size></box></geometry>
         </collision>
         <visual name="body">
-          <geometry><mesh><scale>1.6 1.6 1.6</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry>
+          <geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/firefly.dae</uri></mesh></geometry>
           <material>
             <ambient>0.72 0.72 0.80 1</ambient>
             <diffuse>0.90 0.90 1.00 1</diffuse>

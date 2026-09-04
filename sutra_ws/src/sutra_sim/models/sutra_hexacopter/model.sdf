@@ -1,0 +1,294 @@
+<?xml version="1.0" ?>
+<!--
+  PROJECT SUTRA — Fault-Tolerant Tactical Hexacopter (Hexa-X, 6 Motors)
+  =====================================================================
+  Author: Tech Lead Nikhil (Subsystem A + B Lead)
+  Location: sutra_ws/src/sutra_sim/models/sutra_hexacopter/model.sdf
+
+  Equipped with:
+    - 6-Rotor Hexa-X Configuration with Single-Motor Failure Redundancy
+    - 9-DOF Avionics Suite (Dual IMU @ 250Hz, Barometer @ 50Hz, Magnetometer @ 50Hz, NavSat RTK GNSS @ 10Hz)
+    - 360° 3D GPU LiDAR @ 10Hz (32 Channels, OctoMap mapping)
+    - Downward Laser Altimeter @ 50Hz (WaveLander Precision Rangefinder 0.05m-40m)
+    - Forward Optical RGB Camera @ 30Hz (Sony IMX477 1280x720)
+    - Forward/Downward FLIR LWIR Thermal Camera @ 30Hz (FLIR Boson 640x480)
+    - mmWave Radar @ 20Hz (Obstacle penetration in heavy fog/smoke)
+-->
+<sdf version="1.8">
+  <model name="sutra_hexacopter">
+    <pose>0 0 0.15 0 0 0</pose>
+    <static>false</static>
+    <self_collide>false</self_collide>
+
+    <!-- ── Main Hexacopter Airframe Link ──────────────────────────────── -->
+    <link name="base_link">
+      <pose>0 0 0 0 0 0</pose>
+      <inertial>
+        <mass>2.20</mass>
+        <inertia>
+          <ixx>0.0450</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.0450</iyy>
+          <iyz>0</iyz>
+          <izz>0.0820</izz>
+        </inertia>
+      </inertial>
+
+      <collision name="base_collision">
+        <geometry>
+          <box><size>0.60 0.60 0.16</size></box>
+        </geometry>
+      </collision>
+
+      <!-- 3D Firefly Hexacopter Frame Mesh -->
+      <visual name="hexacopter_chassis">
+        <geometry>
+          <mesh>
+            <scale>1.5 1.5 1.5</scale>
+            <uri>model://x3_uav/meshes/firefly.dae</uri>
+          </mesh>
+        </geometry>
+      </visual>
+
+      <!-- Sensor Visual Pods -->
+      <!-- 1. Top 360° LiDAR Puck -->
+      <visual name="lidar_puck">
+        <pose>0 0 0.08 0 0 0</pose>
+        <geometry><cylinder><radius>0.04</radius><length>0.03</length></cylinder></geometry>
+        <material><ambient>0.0 0.8 1.0 1</ambient><diffuse>0.1 0.9 1.0 1</diffuse><emissive>0.0 0.5 0.9 1</emissive></material>
+      </visual>
+
+      <!-- 2. Dual Camera Gimbal (RGB + FLIR) -->
+      <visual name="gimbal_pod">
+        <pose>0.16 0 -0.04 0 0.20 0</pose>
+        <geometry><box><size>0.04 0.07 0.035</size></box></geometry>
+        <material><ambient>0.15 0.15 0.15 1</ambient><diffuse>0.25 0.25 0.25 1</diffuse></material>
+      </visual>
+
+      <!-- 3. LiPo High-Capacity 6S Battery -->
+      <visual name="battery_pack">
+        <pose>0 0 -0.035 0 0 0</pose>
+        <geometry><box><size>0.14 0.06 0.045</size></box></geometry>
+        <material><ambient>0.9 0.7 0.0 1</ambient><diffuse>1.0 0.8 0.0 1</diffuse></material>
+      </visual>
+
+      <!-- 4. NavSat RTK Antenna Mast -->
+      <visual name="gps_mast">
+        <pose>-0.12 -0.08 0.08 0 0 0</pose>
+        <geometry><cylinder><radius>0.004</radius><length>0.10</length></cylinder></geometry>
+        <material><ambient>0.1 0.1 0.1 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material>
+      </visual>
+      <visual name="gps_puck">
+        <pose>-0.12 -0.08 0.13 0 0 0</pose>
+        <geometry><cylinder><radius>0.022</radius><length>0.01</length></cylinder></geometry>
+        <material><ambient>0.9 0.9 0.9 1</ambient><diffuse>1.0 1.0 1.0 1</diffuse></material>
+      </visual>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- 📡 9-DOF AVIONICS SENSOR SUITE                                  -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+
+      <!-- 1. IMU (250Hz Accelerometer + Gyroscope) -->
+      <sensor name="imu_sensor" type="imu">
+        <always_on>1</always_on>
+        <update_rate>250.0</update_rate>
+        <topic>imu</topic>
+        <imu>
+          <angular_velocity>
+            <x><noise type="gaussian"><stddev>0.00015</stddev><bias_mean>0.00001</bias_mean></noise></x>
+            <y><noise type="gaussian"><stddev>0.00015</stddev><bias_mean>0.00001</bias_mean></noise></y>
+            <z><noise type="gaussian"><stddev>0.00015</stddev><bias_mean>0.00001</bias_mean></noise></z>
+          </angular_velocity>
+          <linear_acceleration>
+            <x><noise type="gaussian"><stddev>0.008</stddev><bias_mean>0.001</bias_mean></noise></x>
+            <y><noise type="gaussian"><stddev>0.008</stddev><bias_mean>0.001</bias_mean></noise></y>
+            <z><noise type="gaussian"><stddev>0.008</stddev><bias_mean>0.001</bias_mean></noise></z>
+          </linear_acceleration>
+        </imu>
+      </sensor>
+
+      <!-- 2. Barometer (50Hz Absolute Pressure for EKF2 Altitude Fusion) -->
+      <sensor name="air_pressure_sensor" type="air_pressure">
+        <always_on>1</always_on>
+        <update_rate>50.0</update_rate>
+        <topic>air_pressure</topic>
+        <air_pressure>
+          <reference_altitude>0.0</reference_altitude>
+          <pressure><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></pressure>
+        </air_pressure>
+      </sensor>
+
+      <!-- 3. 3-Axis Magnetometer (50Hz Earth Magnetic Field) -->
+      <sensor name="magnetometer_sensor" type="magnetometer">
+        <always_on>1</always_on>
+        <update_rate>50.0</update_rate>
+        <topic>magnetic_field</topic>
+        <magnetometer>
+          <x><noise type="gaussian"><mean>0.0</mean><stddev>0.0001</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0.0</mean><stddev>0.0001</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0.0</mean><stddev>0.0001</stddev></noise></z>
+        </magnetometer>
+      </sensor>
+
+      <!-- 4. NavSat RTK GNSS (10Hz Precision Geolocation) -->
+      <sensor name="navsat_sensor" type="navsat">
+        <always_on>1</always_on>
+        <update_rate>10.0</update_rate>
+        <topic>navsat</topic>
+      </sensor>
+
+      <!-- 5. 360° 3D GPU LiDAR (10Hz 32-Channel OctoMap Sensor) -->
+      <sensor name="gpu_lidar" type="gpu_lidar">
+        <pose>0 0 0.08 0 0 0</pose>
+        <always_on>1</always_on>
+        <update_rate>10.0</update_rate>
+        <topic>scan/points</topic>
+        <lidar>
+          <scan>
+            <horizontal><samples>720</samples><resolution>1</resolution><min_angle>-3.14159265</min_angle><max_angle>3.14159265</max_angle></horizontal>
+            <vertical><samples>32</samples><resolution>1</resolution><min_angle>-0.436332</min_angle><max_angle>0.261799</max_angle></vertical>
+          </scan>
+          <range><min>0.15</min><max>60.0</max><resolution>0.01</resolution></range>
+          <noise><type>gaussian</type><mean>0.0</mean><stddev>0.01</stddev></noise>
+        </lidar>
+      </sensor>
+
+      <!-- 6. Downward Laser Altimeter (50Hz Precision Rangefinder) -->
+      <sensor name="altimeter_rangefinder" type="ray">
+        <pose>0 0 -0.04 0 1.5707963 0</pose>
+        <always_on>1</always_on>
+        <update_rate>50.0</update_rate>
+        <topic>rangefinder/distance</topic>
+        <ray>
+          <scan><horizontal><samples>1</samples><resolution>1</resolution><min_angle>0.0</min_angle><max_angle>0.0</max_angle></horizontal></scan>
+          <range><min>0.05</min><max>50.0</max><resolution>0.005</resolution></range>
+          <noise><type>gaussian</type><mean>0.0</mean><stddev>0.003</stddev></noise>
+        </ray>
+      </sensor>
+
+      <!-- 7. Forward Optical RGB Camera (30Hz 1280x720 HD) -->
+      <sensor name="camera_rgb" type="camera">
+        <pose>0.16 -0.015 -0.03 0 0.20 0</pose>
+        <always_on>1</always_on>
+        <update_rate>30.0</update_rate>
+        <topic>camera/image_raw</topic>
+        <camera>
+          <horizontal_fov>1.4</horizontal_fov>
+          <image><width>1280</width><height>720</height><format>R8G8B8</format></image>
+          <clip><near>0.1</near><far>200.0</far></clip>
+        </camera>
+      </sensor>
+
+      <!-- 8. Forward/Downward FLIR LWIR Thermal Camera (30Hz 640x480) -->
+      <sensor name="camera_thermal" type="thermal">
+        <pose>0.16 0.015 -0.03 0 0.20 0</pose>
+        <always_on>1</always_on>
+        <update_rate>30.0</update_rate>
+        <topic>thermal_camera/image_raw</topic>
+        <camera>
+          <horizontal_fov>1.05</horizontal_fov>
+          <image><width>640</width><height>480</height><format>L8</format></image>
+          <clip><near>0.1</near><far>150.0</far></clip>
+        </camera>
+      </sensor>
+
+      <!-- 9. mmWave Radar (20Hz Penetration Radar) -->
+      <sensor name="radar_sensor" type="ray">
+        <pose>0 0 -0.05 0 1.5707963 0</pose>
+        <always_on>1</always_on>
+        <update_rate>20.0</update_rate>
+        <topic>radar/scan</topic>
+        <ray>
+          <scan><horizontal><samples>64</samples><resolution>1</resolution><min_angle>-0.5236</min_angle><max_angle>0.5236</max_angle></horizontal></scan>
+          <range><min>0.2</min><max>45.0</max></range>
+        </ray>
+      </sensor>
+    </link>
+
+    <!-- ── 6x Rotor Links & Joints (Hexa-X Geometry, 60° Spacing, R=0.45m) ── -->
+
+    <!-- Rotor 0: 0° (Front-Right, CCW) -->
+    <link name="rotor_0">
+      <pose>0.45 0.0 0.04 0 0 0</pose>
+      <inertial><mass>0.008</mass><inertia><ixx>1e-06</ixx><iyy>5e-05</iyy><izz>5e-05</izz></inertia></inertial>
+      <collision name="col"><geometry><cylinder><radius>0.12</radius><length>0.006</length></cylinder></geometry></collision>
+      <visual name="vis"><geometry><mesh><scale>0.12 0.12 0.12</scale><uri>model://x3_uav/meshes/propeller_ccw.dae</uri></mesh></geometry><material><ambient>0.0 0.5 1.0 1</ambient><diffuse>0.1 0.6 1.0 1</diffuse></material></visual>
+    </link>
+    <joint name="rotor_0_joint" type="revolute"><child>rotor_0</child><parent>base_link</parent><axis><xyz>0 0 1</xyz><limit><lower>-1e16</lower><upper>1e16</upper></limit></axis></joint>
+
+    <!-- Rotor 1: 60° (Front-Left, CW) -->
+    <link name="rotor_1">
+      <pose>0.225 0.3897 0.04 0 0 0</pose>
+      <inertial><mass>0.008</mass><inertia><ixx>1e-06</ixx><iyy>5e-05</iyy><izz>5e-05</izz></inertia></inertial>
+      <collision name="col"><geometry><cylinder><radius>0.12</radius><length>0.006</length></cylinder></geometry></collision>
+      <visual name="vis"><geometry><mesh><scale>0.12 0.12 0.12</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry><material><ambient>1.0 0.2 0.0 1</ambient><diffuse>1.0 0.3 0.0 1</diffuse></material></visual>
+    </link>
+    <joint name="rotor_1_joint" type="revolute"><child>rotor_1</child><parent>base_link</parent><axis><xyz>0 0 1</xyz><limit><lower>-1e16</lower><upper>1e16</upper></limit></axis></joint>
+
+    <!-- Rotor 2: 120° (Mid-Left, CCW) -->
+    <link name="rotor_2">
+      <pose>-0.225 0.3897 0.04 0 0 0</pose>
+      <inertial><mass>0.008</mass><inertia><ixx>1e-06</ixx><iyy>5e-05</iyy><izz>5e-05</izz></inertia></inertial>
+      <collision name="col"><geometry><cylinder><radius>0.12</radius><length>0.006</length></cylinder></geometry></collision>
+      <visual name="vis"><geometry><mesh><scale>0.12 0.12 0.12</scale><uri>model://x3_uav/meshes/propeller_ccw.dae</uri></mesh></geometry><material><ambient>0.0 0.5 1.0 1</ambient><diffuse>0.1 0.6 1.0 1</diffuse></material></visual>
+    </link>
+    <joint name="rotor_2_joint" type="revolute"><child>rotor_2</child><parent>base_link</parent><axis><xyz>0 0 1</xyz><limit><lower>-1e16</lower><upper>1e16</upper></limit></axis></joint>
+
+    <!-- Rotor 3: 180° (Rear, CW) -->
+    <link name="rotor_3">
+      <pose>-0.45 0.0 0.04 0 0 0</pose>
+      <inertial><mass>0.008</mass><inertia><ixx>1e-06</ixx><iyy>5e-05</iyy><izz>5e-05</izz></inertia></inertial>
+      <collision name="col"><geometry><cylinder><radius>0.12</radius><length>0.006</length></cylinder></geometry></collision>
+      <visual name="vis"><geometry><mesh><scale>0.12 0.12 0.12</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry><material><ambient>1.0 0.2 0.0 1</ambient><diffuse>1.0 0.3 0.0 1</diffuse></material></visual>
+    </link>
+    <joint name="rotor_3_joint" type="revolute"><child>rotor_3</child><parent>base_link</parent><axis><xyz>0 0 1</xyz><limit><lower>-1e16</lower><upper>1e16</upper></limit></axis></joint>
+
+    <!-- Rotor 4: 240° (Rear-Right, CCW) -->
+    <link name="rotor_4">
+      <pose>-0.225 -0.3897 0.04 0 0 0</pose>
+      <inertial><mass>0.008</mass><inertia><ixx>1e-06</ixx><iyy>5e-05</iyy><izz>5e-05</izz></inertia></inertial>
+      <collision name="col"><geometry><cylinder><radius>0.12</radius><length>0.006</length></cylinder></geometry></collision>
+      <visual name="vis"><geometry><mesh><scale>0.12 0.12 0.12</scale><uri>model://x3_uav/meshes/propeller_ccw.dae</uri></mesh></geometry><material><ambient>0.0 0.5 1.0 1</ambient><diffuse>0.1 0.6 1.0 1</diffuse></material></visual>
+    </link>
+    <joint name="rotor_4_joint" type="revolute"><child>rotor_4</child><parent>base_link</parent><axis><xyz>0 0 1</xyz><limit><lower>-1e16</lower><upper>1e16</upper></limit></axis></joint>
+
+    <!-- Rotor 5: 300° (Front-Right, CW) -->
+    <link name="rotor_5">
+      <pose>0.225 -0.3897 0.04 0 0 0</pose>
+      <inertial><mass>0.008</mass><inertia><ixx>1e-06</ixx><iyy>5e-05</iyy><izz>5e-05</izz></inertia></inertial>
+      <collision name="col"><geometry><cylinder><radius>0.12</radius><length>0.006</length></cylinder></geometry></collision>
+      <visual name="vis"><geometry><mesh><scale>0.12 0.12 0.12</scale><uri>model://x3_uav/meshes/propeller_cw.dae</uri></mesh></geometry><material><ambient>1.0 0.2 0.0 1</ambient><diffuse>1.0 0.3 0.0 1</diffuse></material></visual>
+    </link>
+    <joint name="rotor_5_joint" type="revolute"><child>rotor_5</child><parent>base_link</parent><axis><xyz>0 0 1</xyz><limit><lower>-1e16</lower><upper>1e16</upper></limit></axis></joint>
+
+    <!-- ── Actuator & Flight Control Plugins ───────────────────────────── -->
+    <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
+      <joint_name>rotor_0_joint</joint_name>
+      <joint_name>rotor_1_joint</joint_name>
+      <joint_name>rotor_2_joint</joint_name>
+      <joint_name>rotor_3_joint</joint_name>
+      <joint_name>rotor_4_joint</joint_name>
+      <joint_name>rotor_5_joint</joint_name>
+    </plugin>
+
+    <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+      <link_name>base_link</link_name>
+      <topic>gazebo/command/twist</topic>
+    </plugin>
+
+    <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+      <dimensions>3</dimensions>
+    </plugin>
+
+    <plugin filename="gz-sim-battery-system" name="gz::sim::systems::Battery">
+      <battery_name>lipo6s_5000mah</battery_name>
+      <voltage>22.2</voltage>
+      <capacity>5.0</capacity>
+      <resistance>0.002</resistance>
+      <smooth_current_tau>0.98</smooth_current_tau>
+      <start_on_motion>true</start_on_motion>
+    </plugin>
+
+  </model>
+</sdf>

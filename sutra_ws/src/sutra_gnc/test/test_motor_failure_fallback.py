@@ -125,3 +125,56 @@ def test_motor_failure_fallback_node_init():
     assert node.pub_cmd_vel is not None
     assert node.pub_status is not None
     node.destroy_node()
+
+
+def test_hexacopter_single_motor_failure_tolerance():
+    """
+    Tests Hexacopter (6-rotor) fault-tolerance: single motor loss retains controlled flight.
+    """
+    controller = MotorFailureFallbackController(
+        drone_id="uav_1",
+        num_rotors=6,
+        nominal_rpm=1000.0,
+        failure_threshold_rpm=300.0
+    )
+
+    # 1 motor failure out of 6
+    controller.update_motor_rpms([1000.0, 1000.0, 50.0, 1000.0, 1000.0, 1000.0])
+    assert controller.failure_detected
+    assert controller.single_motor_failure
+    assert not controller.dual_motor_failure
+    assert controller.fault_tolerant_active
+    assert controller.spin_stabilized
+    assert pytest.approx(controller.rotor_power_level, 1e-4) == 5050.0 / 6000.0  # 84.17% power remaining
+
+    status = controller.get_status_summary()
+    assert status["drone_type"] == "hexacopter"
+    assert status["num_rotors"] == 6
+    assert status["state"] == "FAULT_TOLERANT_DEGRADED"
+
+
+def test_octacopter_dual_motor_failure_tolerance():
+    """
+    Tests Octacopter (8-rotor) fault-tolerance: dual motor loss retains flight authority.
+    """
+    controller = MotorFailureFallbackController(
+        drone_id="uav_alpha",
+        num_rotors=8,
+        nominal_rpm=1000.0,
+        failure_threshold_rpm=300.0
+    )
+
+    # 2 motors fail out of 8 (e.g. motors 1 and 4)
+    controller.update_motor_rpms([1000.0, 50.0, 1000.0, 1000.0, 80.0, 1000.0, 1000.0, 1000.0])
+    assert controller.failure_detected
+    assert not controller.single_motor_failure
+    assert controller.dual_motor_failure
+    assert controller.fault_tolerant_active
+    assert controller.spin_stabilized
+    assert pytest.approx(controller.rotor_power_level, 1e-4) == 6130.0 / 8000.0  # 76.62% power remaining
+
+    status = controller.get_status_summary()
+    assert status["drone_type"] == "octacopter"
+    assert status["num_rotors"] == 8
+    assert status["fault_tolerant_active"]
+

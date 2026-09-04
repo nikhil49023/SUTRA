@@ -37,6 +37,7 @@ class MotorFailureFallbackController:
     def __init__(
         self,
         drone_id: str = "uav_alpha",
+        num_rotors: int = 6,
         descent_rate: float = 1.2,
         safety_altitude_threshold: float = 2.0,
         home_position: Tuple[float, float, float] = (0.0, 0.0, 0.0),
@@ -49,6 +50,7 @@ class MotorFailureFallbackController:
         touchdown_descent_rate: float = 0.35
     ):
         self.drone_id = drone_id
+        self.num_rotors = int(num_rotors)
         self.descent_rate = max(0.1, float(descent_rate))  # Controlled 1.2 m/s emergency descent
         self.safety_altitude_threshold = float(safety_altitude_threshold)
         self.home_position = home_position
@@ -64,7 +66,7 @@ class MotorFailureFallbackController:
         self.current_pose: Tuple[float, float, float] = (0.0, 0.0, 5.0)
         self.current_vel: Tuple[float, float, float] = (0.0, 0.0, 0.0)
         self.angular_vel: Tuple[float, float, float] = (0.0, 0.0, 0.0)  # wx, wy, wz
-        self.motor_rpms: List[float] = [nominal_rpm] * 4
+        self.motor_rpms: List[float] = [nominal_rpm] * self.num_rotors
 
         # Failure & Safety Flags
         self.single_motor_failure: bool = False
@@ -75,6 +77,7 @@ class MotorFailureFallbackController:
         self.rtl_triggered: bool = False
         self.geofence_breached: bool = False
         self.home_arrived: bool = False
+        self.fault_tolerant_active: bool = False
 
         self.rotor_power_level: float = 1.0  # 1.0 = 100% nominal power
 
@@ -94,26 +97,44 @@ class MotorFailureFallbackController:
     def update_motor_rpms(self, rpms: List[float]):
         """
         Updates motor RPM array and detects single/dual rotor failures.
+        Supports Quadcopter (4), Hexacopter (6), or Octacopter (8) airframes.
         """
         if not rpms or len(rpms) < 4:
             return
 
-        self.motor_rpms = [float(r) for r in rpms[:4]]
+        n = len(rpms)
+        self.num_rotors = n
+        self.motor_rpms = [float(r) for r in rpms]
         failed_count = sum(1 for r in self.motor_rpms if r < self.failure_threshold_rpm)
 
         total_rpm = sum(self.motor_rpms)
-        self.rotor_power_level = total_rpm / (4.0 * self.nominal_rpm)
+        self.rotor_power_level = total_rpm / (float(n) * self.nominal_rpm)
 
         if failed_count == 1:
             self.single_motor_failure = True
             self.dual_motor_failure = False
             self.failure_detected = True
+            if n >= 6:
+                # Hexacopter & Octacopter have physical rotor redundancy (retains controlled flight)
+                self.fault_tolerant_active = True
+                self.spin_stabilized = True
         elif failed_count >= 2:
             self.single_motor_failure = False
             self.dual_motor_failure = True
             self.failure_detected = True
+            if n >= 8 and failed_count == 2:
+                # Octacopter can tolerate dual motor failure with controlled authority
+                self.fault_tolerant_active = True
+                self.spin_stabilized = True
+            else:
+                self.fault_tolerant_active = False
         elif self.rotor_power_level < 0.75:
             self.failure_detected = True
+        else:
+            self.single_motor_failure = False
+            self.dual_motor_failure = False
+            self.failure_detected = False
+            self.fault_tolerant_active = False
 
     def update_odometry(self, x: float, y: float, z: float, vx: float = 0.0, vy: float = 0.0, vz: float = 0.0):
         """
@@ -190,23 +211,32 @@ class MotorFailureFallbackController:
 
     def get_status_summary(self) -> dict:
         """
-        Returns JSON-serializable status dictionary.
+        Returns JSON-serializable status dictionary with multi-rotor fault-tolerance telemetry.
         """
         if self.home_arrived:
             state = "RTL_ARRIVED"
+        elif self.rtl_triggered and self.fault_tolerant_active:
+            state = "FAULT_TOLERANT_RTL"
         elif self.rtl_triggered:
             state = "RTL_DISPATCH"
         elif self.failure_detected and not self.spin_stabilized:
             state = "ACTIVE_SPIN_STABILIZATION"
+        elif self.failure_detected and self.fault_tolerant_active:
+            state = "FAULT_TOLERANT_DEGRADED"
         elif self.failure_detected:
             state = "EMERGENCY_DESCENT"
         else:
             state = "NOMINAL"
 
+        drone_type = "hexacopter" if self.num_rotors == 6 else ("octacopter" if self.num_rotors >= 8 else "quadcopter")
+
         return {
             "drone_id": self.drone_id,
+            "drone_type": drone_type,
+            "num_rotors": self.num_rotors,
             "state": state,
             "failure_detected": self.failure_detected,
+            "fault_tolerant_active": self.fault_tolerant_active,
             "single_motor_failure": self.single_motor_failure,
             "dual_motor_failure": self.dual_motor_failure,
             "spin_stabilized": self.spin_stabilized,
@@ -220,13 +250,15 @@ class MotorFailureFallbackController:
 
 class MotorFailureFallbackNode(Node):
     """
-    ROS 2 Node for quadcopter motor failure detection, spin stabilization, and emergency descent.
+    ROS 2 Node for multi-rotor (hexacopter/octacopter/quadcopter) motor failure detection,
+    spin stabilization, and emergency descent.
     """
 
     def __init__(self):
         super().__init__("motor_failure_fallback_node")
 
         self.declare_parameter("drone_id", "uav_alpha")
+        self.declare_parameter("num_rotors", 6)
         self.declare_parameter("descent_rate", 1.2)
         self.declare_parameter("safety_altitude_threshold", 2.0)
         self.declare_parameter("home_x", 0.0)
@@ -234,6 +266,7 @@ class MotorFailureFallbackNode(Node):
         self.declare_parameter("home_z", 0.0)
 
         drone_id = self.get_parameter("drone_id").value
+        num_rotors = int(self.get_parameter("num_rotors").value)
         descent_rate = float(self.get_parameter("descent_rate").value)
         safety_alt = float(self.get_parameter("safety_altitude_threshold").value)
         hx = float(self.get_parameter("home_x").value)
@@ -242,6 +275,7 @@ class MotorFailureFallbackNode(Node):
 
         self.controller = MotorFailureFallbackController(
             drone_id=drone_id,
+            num_rotors=num_rotors,
             descent_rate=descent_rate,
             safety_altitude_threshold=safety_alt,
             home_position=(hx, hy, hz)
