@@ -14,9 +14,9 @@ import sys
 import time
 import subprocess
 
-PROJECT_ROOT = "/home/nikhil/Desktop/Project SUTRA"
-BLEND_FILE   = f"{PROJECT_ROOT}/sutra_ws/src/sutra_sim/assets/submerged_village_flood_world.blend"
-BLENDER_BIN  = "/home/nikhil/.local/bin/blender"
+PROJECT_ROOT = "/home/siva/Documents/DRONE_CONTROL"
+BLEND_FILE   = "/home/siva/Documents/Village_Flood/submerged_village_flood_world_enhanced.blend"
+BLENDER_BIN  = "/home/siva/.local/bin/blender"
 
 MODEL_DIR    = f"{PROJECT_ROOT}/sutra_ws/src/sutra_sim/models/submerged_village_flood"
 MESH_DIR     = f"{MODEL_DIR}/meshes"
