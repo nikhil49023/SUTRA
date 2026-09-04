@@ -59,14 +59,29 @@ pkill -f "sutra_sim_exporter.py" 2>/dev/null || true
 
 # Step 1: Launch Gazebo Sim 8
 WORLD_FILE="$PROJECT_ROOT/sutra_ws/src/sutra_sim/worlds/forest_canopy_sar_world.sdf"
-echo "🌍 [1/5] Launching Gazebo Sim 8 Forest Canopy World..."
+echo "🌍 [1/6] Launching Gazebo Sim 8 Forest Canopy World..."
 gz sim -r "$WORLD_FILE" > /tmp/sutra_gazebo.log 2>&1 &
 CHILD_PIDS+=($!)
 sleep 4.0
 echo "   ✅ Gazebo Sim 8 active (PID: ${CHILD_PIDS[-1]})."
 
+# Automatic camera viewpoint alignment (snaps GUI camera to calibrated overhead hero view)
+(
+    for i in {1..8}; do
+        sleep 1.0
+        if gz service -s /gui/move_to/pose \
+            --reqtype gz.msgs.GUICamera \
+            --reptype gz.msgs.Boolean \
+            --timeout 1500 \
+            --req 'pose: { position: { x: 16.0, y: -16.0, z: 62.0 }, orientation: { x: -0.2809, y: 0.1590, z: 0.8236, w: 0.4663 } }' \
+            >/dev/null 2>&1; then
+            break
+        fi
+    done
+) &
+
 # Step 2: Launch ROS 2 <-> Gazebo Bridge
-echo "🔗 [2/5] Starting ROS 2 <-> Gazebo Bridge for 5 UAVs..."
+echo "🔗 [2/6] Starting ROS 2 <-> Gazebo Bridge for 5 UAVs..."
 ros2 run ros_gz_bridge parameter_bridge \
   /clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock \
   /model/uav_alpha/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry \
@@ -85,7 +100,7 @@ sleep 1.5
 echo "   ✅ ROS-GZ Bridge active (PID: ${CHILD_PIDS[-1]})."
 
 # Step 3: Launch MAVLink SITL Bridge
-echo "📡 [3/5] Starting MAVLink SITL Bridge (UDP 14550)..."
+echo "📡 [3/6] Starting MAVLink SITL Bridge (UDP 14550)..."
 python3 "$PROJECT_ROOT/sutra_ws/src/sutra_gnc/sutra_gnc/mavlink_sitl_bridge.py" \
   --ip 0.0.0.0 --port 14550 --autopilot ardupilot > /tmp/sutra_mavlink_bridge.log 2>&1 &
 CHILD_PIDS+=($!)
@@ -93,7 +108,7 @@ sleep 1.0
 echo "   ✅ MAVLink SITL Bridge active."
 
 # Step 4: Launch 5x GNC Controllers
-echo "🚀 [4/5] Launching 5x Autonomous Flight Controllers (ORCA 3D Avoidance)..."
+echo "🚀 [4/6] Launching 5x Autonomous Flight Controllers (ORCA 3D Avoidance)..."
 DRONES=("uav_alpha" "uav_beta" "uav_gamma" "uav_delta" "uav_epsilon")
 ALTS=("46.0" "54.0" "64.0" "52.0" "49.0")
 SPEEDS=("3.2" "3.8" "2.5" "3.5" "3.0")
