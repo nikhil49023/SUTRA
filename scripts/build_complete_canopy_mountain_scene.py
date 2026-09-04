@@ -147,14 +147,51 @@ if bsdf:
     bsdf.inputs["Roughness"].default_value = 0.35
 tarp_obj.data.materials.append(tarp_mat)
 
-print("🚁 [11/11] Importing SUTRA Hexacopter Airborne (hexa_copter_ar-e800_drone.glb)...")
+print("🚁 [11/15] Importing Tactical Medevac Transport Helo (mil_mi-8amtsh.glb)...")
+import_glb(
+    DOWNLOADS / "mil_mi-8amtsh.glb", 
+    "MedevacHelo", 
+    loc=(-28.0, 15.0, 0.5), 
+    rot=(0.0, 0.0, math.radians(60)), 
+    scale=(1.0, 1.0, 1.0)
+)
+
+print("🏚️ [12/15] Importing Burned Disaster Structure (burned_down_house_-_hull_uk__drone_3d_scan.glb)...")
+import_glb(
+    DOWNLOADS / "burned_down_house_-_hull_uk__drone_3d_scan.glb", 
+    "BurnedDisasterRuin", 
+    loc=(-15.0, 32.0, 0.4), 
+    rot=(0.0, 0.0, math.radians(-15)), 
+    scale=(0.9, 0.9, 0.9)
+)
+
+print("🐑 [13/15] Importing Livestock Distractor for False Positive Testing (realistic_woolly_sheep_-_thick_curled_fleece.glb)...")
+import_glb(
+    DOWNLOADS / "realistic_woolly_sheep_-_thick_curled_fleece.glb", 
+    "LivestockDistractor", 
+    loc=(3.0, 18.0, 0.3), 
+    rot=(0.0, 0.0, math.radians(45)), 
+    scale=(1.1, 1.1, 1.1)
+)
+
+print("🚁 [14/15] Importing SUTRA Hexacopter UAV-1 Airborne (hexa_copter_ar-e800_drone.glb)...")
 import_glb(
     DOWNLOADS / "hexa_copter_ar-e800_drone.glb", 
-    "SutraHexacopter", 
+    "SutraHexacopter_UAV1", 
     loc=(-8.0, -10.0, 8.5), 
     rot=(math.radians(-10), math.radians(5), math.radians(45)), 
     scale=(0.75, 0.75, 0.75)
 )
+
+print("🚁 [15/15] Importing SUTRA Hexacopter UAV-2 Surveying Ruin (hexa_copter_ar-e800_drone.glb)...")
+import_glb(
+    DOWNLOADS / "hexa_copter_ar-e800_drone.glb", 
+    "SutraHexacopter_UAV2", 
+    loc=(14.0, 16.0, 11.5), 
+    rot=(math.radians(-5), math.radians(8), math.radians(-30)), 
+    scale=(0.75, 0.75, 0.75)
+)
+
 
 # Atmospheric Lighting & Sun Setup
 print("☀️ Setting up mountain sun and atmospheric lighting...")
