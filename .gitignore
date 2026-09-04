@@ -108,6 +108,8 @@ kaggle/
 *.mp4
 *.avi
 *.webm
+*.exr
+docs/media/textures/
 sutra_ws/src/sutra_sim/models/*/meshes/
 .firecrawl/
 

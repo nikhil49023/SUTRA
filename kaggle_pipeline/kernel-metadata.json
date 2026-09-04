@@ -1,0 +1,13 @@
+{
+  "id": "sainikhilkilani/sutra-sam-neural-3d-asset-reconstruction",
+  "title": "SUTRA SAM Neural 3D Asset Reconstruction",
+  "code_file": "sutra_sam_3d_pipeline.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": "true",
+  "enable_gpu": "true",
+  "enable_internet": "true",
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": []
+}

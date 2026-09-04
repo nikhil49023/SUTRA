@@ -1,0 +1,15 @@
+{
+  "world_name": "SUTRA_Photoreal_Himalayan_Disaster_World",
+  "description": "1.5M vertex photogrammetric Himalayan hillside village with physical Nishita atmospheric lighting, opaque silt floodwater, and clean airspace.",
+  "samples_per_pixel": 128,
+  "denoiser": "OPENIMAGEDENOISE",
+  "total_objects": 50,
+  "total_vertices": 1526269,
+  "total_faces": 2577152,
+  "render_times_seconds": {
+    "CAM_HERO_OVERVIEW": 16.78,
+    "CAM_RESCUE_FOCUS": 17.14,
+    "CAM_NDRF_GROUND": 16.97,
+    "CAM_GIS_ORTHO": 18.76
+  }
+}
