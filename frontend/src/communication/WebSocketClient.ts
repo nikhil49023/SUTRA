@@ -14,16 +14,53 @@ const generateUUID = (): string => {
   return 'env_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now().toString(36);
 };
 
+const getInitialWsUrl = (): string => {
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    const remote = params.get('remote') || params.get('ws') || params.get('host');
+    if (remote) {
+      const formatted = remote.startsWith('ws://') || remote.startsWith('wss://') 
+        ? remote 
+        : `ws://${remote}:8765`;
+      localStorage.setItem('sutra_gcs_ws_url', formatted);
+      return formatted;
+    }
+    const saved = localStorage.getItem('sutra_gcs_ws_url');
+    if (saved) return saved;
+  }
+  return (
+    (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_WS_URL) ||
+    'ws://127.0.0.1:8765'
+  );
+};
+
 class WebSocketClient {
   private ws: WebSocket | null = null;
-  private url: string =
-    (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_WS_URL) ||
-    'ws://127.0.0.1:8765';
+  private url: string = getInitialWsUrl();
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 50;
   private reconnectIntervalMs = 2000;
   private isExplicitlyClosed = false;
   private pingInterval: any = null;
+
+  public getUrl(): string {
+    return this.url;
+  }
+
+  public setEndpoint(newEndpoint: string): void {
+    let clean = newEndpoint.trim();
+    if (!clean) return;
+    if (!clean.startsWith('ws://') && !clean.startsWith('wss://')) {
+      clean = `ws://${clean}${clean.includes(':') ? '' : ':8765'}`;
+    }
+    this.url = clean;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sutra_gcs_ws_url', clean);
+    }
+    this.disconnect();
+    this.reconnectAttempts = 0;
+    this.connect(clean);
+  }
 
   public connect(url?: string): void {
     if (url) this.url = url;

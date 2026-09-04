@@ -12,7 +12,7 @@ import { FormationPanel } from '../fleet/FormationPanel';
 describe('VAAYU SWARM GCS — UI Components & HUD Renderers', () => {
   it('renders TopBar with brand title, mission badge and emergency RTL button', () => {
     render(<TopBar />);
-    expect(screen.getByText('VAAYU SWARM')).toBeInTheDocument();
+    expect(screen.getByText('SUTRA')).toBeInTheDocument();
     expect(screen.getByText('EMERGENCY RTL')).toBeInTheDocument();
   });
 
