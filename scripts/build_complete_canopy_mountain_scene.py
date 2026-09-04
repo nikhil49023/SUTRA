@@ -2,9 +2,11 @@
 """
 Project SUTRA — Master Mountain & Forest Canopy Scene Composer
 =============================================================
-Assembles the clean, photorealistic forest canopy environment from:
-- `update_dirt_road_through_forest.glb` (Ultra-HD forest canopy, birch/oak trees, dirt road, rocks, cliffs, grass)
-- `hexa_copter_ar-e800_drone.glb` (SUTRA Hexacopter surveying from above the canopy)
+Assembles the clean, photorealistic forest canopy environment:
+- `update_dirt_road_through_forest.glb` (Master forest canopy, birch & oak trees, dirt road, cliffs, grass)
+- `russian_soldier.glb` (Tactical military soldier / intruder, scaled to exact 1.80m / ~6ft human scale w.r.t trees)
+- `private_military_contractor.glb` (Tactical operative taking cover near tree trunk)
+- `hexa_copter_ar-e800_drone.glb` (SUTRA Hexacopter surveying overhead)
 
 Saves master scene to:
 `sutra_ws/src/sutra_sim/models/forest_canopy/sutra_forest_canopy_sar.blend`
@@ -32,13 +34,25 @@ def import_glb(path, collection_name=None, loc=(0,0,0), rot=(0,0,0), scale=(1,1,
     bpy.ops.import_scene.gltf(filepath=str(path))
     new_objs = list(set(bpy.data.objects) - before)
     roots = [o for o in new_objs if o.parent is None]
+
+    # Clean any stray lights/cameras or icospheres from gltf imports
+    for o in list(new_objs):
+        if "Icosphere" in o.name or o.type in ["LIGHT", "CAMERA"]:
+            bpy.data.objects.remove(o, do_unlink=True)
+            if o in new_objs:
+                new_objs.remove(o)
+            if o in roots:
+                roots.remove(o)
+
     if collection_name:
         col = bpy.data.collections.new(collection_name)
         scene.collection.children.link(col)
         for o in new_objs:
-            for c in o.users_collection:
-                c.objects.unlink(o)
-            col.objects.link(o)
+            if o.name in bpy.data.objects:
+                for c in o.users_collection:
+                    c.objects.unlink(o)
+                col.objects.link(o)
+
     for r in roots:
         r.location = loc
         if rot != (0,0,0):
@@ -48,7 +62,7 @@ def import_glb(path, collection_name=None, loc=(0,0,0), rot=(0,0,0), scale=(1,1,
     print(f"✅ Imported {path.name}: {len(new_objs)} objects at {loc}")
     return new_objs
 
-print("🌲 [1/3] Importing Master Forest Canopy (update_dirt_road_through_forest.glb)...")
+print("🌲 [1/4] Importing Master Forest Canopy (update_dirt_road_through_forest.glb)...")
 forest_objs = import_glb(
     DOWNLOADS / "update_dirt_road_through_forest.glb", 
     "ForestCanopy", 
@@ -56,41 +70,64 @@ forest_objs = import_glb(
     scale=(0.25, 0.25, 0.25)
 )
 
-# Calculate forest canopy bounds in world space
+# 2. Military Soldier / Intruder on the Dirt Road
+# Native model height = 1.80m (~5.92 ft), 1:1 real human scale w.r.t 16m-26m birch/oak trees
+print("🪖 [2/4] Positioning Military Soldier / Intruder (russian_soldier.glb)...")
+import_glb(
+    DOWNLOADS / "russian_soldier.glb",
+    "MilitaryIntruder",
+    loc=(4.43, 3.73, 36.63),
+    rot=(0.0, 0.0, math.radians(-35)),
+    scale=(1.0, 1.0, 1.0)
+)
+
+# 3. Tactical Contractor Operative near tree cover
+print("🪖 [3/4] Positioning Tactical Operative in Tree Cover (private_military_contractor.glb)...")
+import_glb(
+    DOWNLOADS / "private_military_contractor.glb",
+    "TacticalOperative",
+    loc=(9.47, 7.88, 37.34),
+    rot=(0.0, 0.0, math.radians(110)),
+    scale=(1.0, 1.0, 1.0)
+)
+
+# 4. SUTRA Hexacopter Airborne Reconnaissance
 mesh_objs = [o for o in forest_objs if o.type == "MESH"]
 min_x = min(min(v.co.x for v in o.data.vertices) for o in mesh_objs) * 0.25
 max_x = max(max(v.co.x for v in o.data.vertices) for o in mesh_objs) * 0.25
 min_y = min(min(v.co.y for v in o.data.vertices) for o in mesh_objs) * 0.25
 max_y = max(max(v.co.y for v in o.data.vertices) for o in mesh_objs) * 0.25
-min_z = min(min(v.co.z for v in o.data.vertices) for o in mesh_objs) * 0.25
 max_z = max(max(v.co.z for v in o.data.vertices) for o in mesh_objs) * 0.25
 
-print(f"Canopy Z: {min_z:.1f} to {max_z:.1f}, Center: ({(min_x+max_x)/2:.1f}, {(min_y+max_y)/2:.1f})")
+drone_x = 5.5
+drone_y = 5.0
+drone_z = max_z + 8.0  # Surveying ~8m above canopy overlooking soldier on the road
 
-# Hexacopter placed ~8m above the top of canopy
-drone_z = max_z + 8.0
-drone_x = (min_x + max_x) / 2
-drone_y = (min_y + max_y) / 2
-
-print(f"🚁 [2/3] Positioning SUTRA Hexacopter at ({drone_x:.1f}, {drone_y:.1f}, {drone_z:.1f})...")
+print(f"🚁 [4/4] Positioning SUTRA Hexacopter surveying over intruder at ({drone_x:.1f}, {drone_y:.1f}, {drone_z:.1f})...")
 import_glb(
-    DOWNLOADS / "hexa_copter_ar-e800_drone.glb", 
-    "SutraHexacopter", 
-    loc=(drone_x, drone_y, drone_z), 
-    rot=(math.radians(-10), math.radians(5), math.radians(45)),
+    DOWNLOADS / "hexa_copter_ar-e800_drone.glb",
+    "SutraHexacopter",
+    loc=(drone_x, drone_y, drone_z),
+    rot=(math.radians(-12), math.radians(6), math.radians(45)),
     scale=(0.75, 0.75, 0.75)
 )
 
-# Sun lighting
-print("☀️ [3/3] Setting up atmospheric sunlight...")
+# Atmospheric Lighting & Sun Setup
+print("☀️ Setting up mountain sun and atmospheric lighting...")
 bpy.ops.object.light_add(type="SUN", location=(drone_x + 30, drone_y + 30, drone_z + 40))
 sun = bpy.context.active_object
-sun.name = "CanopySun"
+sun.name = "MountainSun"
 sun.data.energy = 4.5
 sun.rotation_euler = (math.radians(50), math.radians(25), math.radians(65))
 
+# Camera Setup - Focused on military intruder on the dirt road
+bpy.ops.object.camera_add(location=(12.0, -8.0, 42.0), rotation=(math.radians(65), 0, math.radians(45)))
+cam = bpy.context.active_object
+cam.name = "SAR_Survey_Camera"
+scene.camera = cam
+
 # Pack all external textures so the .blend is 100% self-contained
-print("📦 Packing textures into self-contained .blend...")
+print("📦 Packing all textures into self-contained .blend...")
 bpy.ops.file.pack_all()
 
 # Save master .blend file
