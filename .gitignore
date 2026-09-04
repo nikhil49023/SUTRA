@@ -52,6 +52,8 @@ dist/
 *.log
 .gazebo/
 *.sdf.bak
+development_audit_logs/
+
 
 # IDE & OS specific files
 .DS_Store
