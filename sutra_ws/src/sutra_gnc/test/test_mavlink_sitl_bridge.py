@@ -51,7 +51,7 @@ def test_mavlink_step_and_packet_reception():
             received_types.add(msg_type)
             if msg_type == "HEARTBEAT":
                 assert msg.type == mavutil.mavlink.MAV_TYPE_QUADROTOR
-                assert msg.autopilot == mavutil.mavlink.MAV_AUTOPILOT_PX4
+                assert msg.autopilot in (mavutil.mavlink.MAV_AUTOPILOT_PX4, mavutil.mavlink.MAV_AUTOPILOT_ARDUPILOTMEGA)
                 assert msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED
             elif msg_type == "ATTITUDE":
                 assert abs(msg.roll) <= math.radians(45.0)

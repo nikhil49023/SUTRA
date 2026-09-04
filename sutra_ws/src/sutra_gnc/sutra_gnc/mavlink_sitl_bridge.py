@@ -167,7 +167,8 @@ class SutraMavlinkSITLBridge:
         lat_origin: float = 30.7352,   # Kedarnath / Disaster Datum
         lon_origin: float = 79.0669,
         alt_origin_msl: float = 3584.0,
-        enable_swarm_broadcast: bool = True
+        enable_swarm_broadcast: bool = True,
+        autopilot_type: str = "ardupilot"
     ):
         self.target_ip = target_ip
         self.target_port = target_port
@@ -177,6 +178,7 @@ class SutraMavlinkSITLBridge:
         self.lon_origin = lon_origin
         self.alt_origin_msl = alt_origin_msl
         self.enable_swarm_broadcast = enable_swarm_broadcast
+        self.autopilot_type = autopilot_type
 
         self.time_start = time.time()
         self.last_status_time = 0.0
@@ -312,28 +314,65 @@ class SutraMavlinkSITLBridge:
 
     def handle_incoming_messages(self):
         """Processes incoming requests from Mission Planner (Parameters, Heartbeats)."""
-        msg = self.mav.recv_msg()
-        if msg is None:
-            return
+        while True:
+            msg = self.mav.recv_msg()
+            if msg is None:
+                break
 
-        msg_type = msg.get_type()
-        if msg_type == "PARAM_REQUEST_LIST":
-            target_sys = getattr(msg, "target_system", self.drone_id)
-            orig_src = self.mav.mav.srcSystem
-            self.mav.mav.srcSystem = target_sys if target_sys in self.SWARM_CONFIG.values() else self.drone_id
-            total_params = len(DEFAULT_PARAMETERS)
-            for idx, (p_id, p_val, p_type) in enumerate(DEFAULT_PARAMETERS):
-                param_id_bytes = p_id.encode("utf-8").ljust(16, b"\x00")
-                self.mav.mav.param_value_send(
-                    param_id_bytes,
-                    float(p_val),
-                    p_type,
-                    total_params,
-                    idx
-                )
-            self.mav.mav.srcSystem = orig_src
-        elif msg_type == "COMMAND_LONG":
-            self.mav.mav.command_ack_send(msg.command, mavutil.mavlink.MAV_RESULT_ACCEPTED)
+            msg_type = msg.get_type()
+            if msg_type == "PARAM_REQUEST_LIST":
+                target_sys = getattr(msg, "target_system", self.drone_id)
+                # If target_sys is 0 or not in SWARM_CONFIG, answer for all or requested sys
+                target_sys_ids = [target_sys] if target_sys in self.SWARM_CONFIG.values() else list(self.SWARM_CONFIG.values())
+                orig_src = self.mav.mav.srcSystem
+
+                for sid in target_sys_ids:
+                    self.mav.mav.srcSystem = sid
+                    total_params = len(DEFAULT_PARAMETERS)
+                    for idx, (p_id, p_val, p_type) in enumerate(DEFAULT_PARAMETERS):
+                        param_id_bytes = p_id.encode("utf-8").ljust(16, b"\x00")
+                        val = float(sid) if p_id == "SYSID_THISMAV" else float(p_val)
+                        self.mav.mav.param_value_send(
+                            param_id_bytes,
+                            val,
+                            p_type,
+                            total_params,
+                            idx
+                        )
+                self.mav.mav.srcSystem = orig_src
+
+            elif msg_type == "PARAM_REQUEST_READ":
+                target_sys = getattr(msg, "target_system", self.drone_id)
+                orig_src = self.mav.mav.srcSystem
+                self.mav.mav.srcSystem = target_sys if target_sys in self.SWARM_CONFIG.values() else self.drone_id
+
+                param_index = getattr(msg, "param_index", -1)
+                param_id = getattr(msg, "param_id", "")
+                if isinstance(param_id, bytes):
+                    param_id = param_id.decode("utf-8", errors="ignore").rstrip("\x00")
+
+                found = None
+                found_idx = 0
+                for idx, (p_id, p_val, p_type) in enumerate(DEFAULT_PARAMETERS):
+                    if idx == param_index or p_id == param_id:
+                        found = (p_id, p_val, p_type)
+                        found_idx = idx
+                        break
+
+                if found:
+                    p_id, p_val, p_type = found
+                    val = float(self.mav.mav.srcSystem) if p_id == "SYSID_THISMAV" else float(p_val)
+                    self.mav.mav.param_value_send(
+                        p_id.encode("utf-8").ljust(16, b"\x00"),
+                        val,
+                        p_type,
+                        len(DEFAULT_PARAMETERS),
+                        found_idx
+                    )
+                self.mav.mav.srcSystem = orig_src
+
+            elif msg_type == "COMMAND_LONG":
+                self.mav.mav.command_ack_send(msg.command, mavutil.mavlink.MAV_RESULT_ACCEPTED)
 
     def _send_drone_telemetry(self, drone: DroneTelemetry, send_slow_telemetry: bool):
         """Sends MAVLink packets for a specific drone."""
@@ -344,11 +383,17 @@ class SutraMavlinkSITLBridge:
         if drone.armed:
             base_mode |= mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED
         base_mode |= mavutil.mavlink.MAV_MODE_FLAG_AUTO_ENABLED
-        custom_mode = 6  # OFFBOARD
+
+        if getattr(self, "autopilot_type", "px4") == "ardupilot":
+            autopilot = mavutil.mavlink.MAV_AUTOPILOT_ARDUPILOTMEGA
+            custom_mode = 4  # GUIDED in ArduCopter
+        else:
+            autopilot = mavutil.mavlink.MAV_AUTOPILOT_PX4
+            custom_mode = 6  # OFFBOARD in PX4
 
         self.mav.mav.heartbeat_send(
             mavutil.mavlink.MAV_TYPE_QUADROTOR,
-            mavutil.mavlink.MAV_AUTOPILOT_PX4,
+            autopilot,
             base_mode,
             custom_mode,
             mavutil.mavlink.MAV_STATE_ACTIVE
@@ -507,6 +552,7 @@ if __name__ == "__main__":
     parser.add_argument("--drone-id", type=int, default=1, help="Primary System ID (default: 1)")
     parser.add_argument("--drone-name", default="uav_alpha", help="Primary drone name (default: uav_alpha)")
     parser.add_argument("--single-drone", action="store_true", help="Broadcast only primary drone")
+    parser.add_argument("--autopilot", default="ardupilot", choices=["ardupilot", "px4"], help="Autopilot dialect (default: ardupilot)")
     args = parser.parse_args()
 
     bridge = SutraMavlinkSITLBridge(
@@ -514,7 +560,8 @@ if __name__ == "__main__":
         target_port=args.port,
         drone_id=args.drone_id,
         drone_name=args.drone_name,
-        enable_swarm_broadcast=not args.single_drone
+        enable_swarm_broadcast=not args.single_drone,
+        autopilot_type=args.autopilot
     )
     start_ros2_listener(bridge)
     bridge.run_loop()
