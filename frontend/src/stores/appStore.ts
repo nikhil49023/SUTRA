@@ -94,9 +94,9 @@ export const useAppStore = create<AppStoreState>((set) => ({
 
   activeSection: 'COMMAND',
   isSidebarCollapsed: false,
-  isInspectorOpen: true,
-  isHudOpen: true,
-  isConsoleOpen: true,
+  isInspectorOpen: false,
+  isHudOpen: false,
+  isConsoleOpen: false,
   activeConsoleTab: 'TELEMETRY',
   theme: 'dark-tactical',
   units: 'metric',

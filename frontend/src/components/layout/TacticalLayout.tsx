@@ -22,6 +22,7 @@ import { EmergencyModal } from '../common/EmergencyModal';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { DebugPanel } from '../debug/DebugPanel';
 import { MapView } from '../../map/MapView';
+import { SwarmQuickDock } from '../dock/SwarmQuickDock';
 import { PrimaryFlightDisplay } from '../../hud/PrimaryFlightDisplay';
 import { useSelectionStore } from '../../stores/selectionStore';
 import { mapController } from '../../map/MapController';
@@ -107,6 +108,7 @@ const SECTION_METADATA: Record<string, { title: string; subtitle: string; icon: 
 export const TacticalLayout: React.FC = () => {
   const activeSection = useAppStore((s) => s.activeSection);
   const isHudOpen = useAppStore((s) => s.isHudOpen);
+  const isConsoleOpen = useAppStore((s) => s.isConsoleOpen);
   const setActiveSection = useAppStore((s) => s.setActiveSection);
   const setEmergencyModalOpen = useAppStore((s) => s.setEmergencyModalOpen);
 
@@ -180,9 +182,9 @@ export const TacticalLayout: React.FC = () => {
             </ErrorBoundary>
           </div>
 
-          {/* Contextual Overlay Container with Tactical Header Ribbon */}
+          {/* Floating Tactical Card (3D Map remains live & visible in the background) */}
           <div
-            className="absolute inset-0 z-20 overflow-hidden flex flex-col bg-[#0B0F14]/95 backdrop-blur-[2px]"
+            className="absolute left-3 top-3 bottom-3 w-[560px] max-w-[calc(100vw-5rem)] z-20 overflow-hidden flex flex-col bg-[#0B0F14]/94 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.85)] transition-all duration-300 animate-in fade-in slide-in-from-left-4"
             style={{ display: showOverlay ? 'flex' : 'none' }}
           >
             {/* Overlay Header Ribbon */}
@@ -203,8 +205,8 @@ export const TacticalLayout: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => setActiveSection('COMMAND')}
-                    className="px-2.5 py-1 rounded bg-[#151D26] hover:bg-[#1B2530] border border-[#2B3743] hover:border-[#5B8FB9] text-[#A9B3BD] hover:text-[#E7EBEF] text-[11px] font-bold flex items-center space-x-1.5 transition"
-                    title="Close overlay and return to map (Esc)"
+                    className="px-2.5 py-1 rounded-lg bg-[#151D26] hover:bg-[#1B2530] border border-[#2B3743] hover:border-[#5B8FB9] text-[#A9B3BD] hover:text-[#E7EBEF] text-[11px] font-bold flex items-center space-x-1.5 transition cursor-pointer"
+                    title="Close card and return to full map (Esc)"
                   >
                     <span>CLOSE</span>
                     <kbd className="px-1 py-0.2 rounded bg-[#0B0F14] border border-[#2B3743] text-[9px] text-[#707C88]">ESC</kbd>
@@ -258,12 +260,15 @@ export const TacticalLayout: React.FC = () => {
           <ErrorBoundary fallbackTitle="DIAGNOSTIC HUD">
             <MultiDroneDebugPanel />
           </ErrorBoundary>
-        </div>
 
-        {/* Right Inspector */}
-        <ErrorBoundary fallbackTitle="INSPECTOR">
-          <RightInspector />
-        </ErrorBoundary>
+          {/* Floating Swarm Quick Action Dock (Visible when console is collapsed) */}
+          {!isConsoleOpen && <SwarmQuickDock />}
+
+          {/* Floating Tactical Contextual Inspector */}
+          <ErrorBoundary fallbackTitle="INSPECTOR">
+            <RightInspector />
+          </ErrorBoundary>
+        </div>
       </div>
 
       {/* 3. PRIMARY FLIGHT DISPLAY (HUD) */}
@@ -274,9 +279,11 @@ export const TacticalLayout: React.FC = () => {
       )}
 
       {/* 4. BOTTOM CONSOLE */}
-      <ErrorBoundary fallbackTitle="STREAM CONSOLE">
-        <BottomConsole />
-      </ErrorBoundary>
+      {isConsoleOpen && (
+        <ErrorBoundary fallbackTitle="STREAM CONSOLE">
+          <BottomConsole />
+        </ErrorBoundary>
+      )}
 
       {/* Global Alerts, Emergency Modal & Debug Panel */}
       <AlertManager />

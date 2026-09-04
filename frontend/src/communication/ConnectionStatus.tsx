@@ -83,23 +83,14 @@ export const ConnectionStatus: React.FC = () => {
         <span>{latency_ms > 0 ? `${latency_ms}ms` : '--'}</span>
       </div>
 
-      {/* MAVLink State Badge */}
-      <div className="hidden sm:flex items-center space-x-1 px-2 py-0.5 rounded border border-[#2B3743] bg-[#11171E] text-[#A9B3BD]">
-        <span className="text-[#707C88]">MAV:</span>
-        <span className={mavlink_state === 'ACTIVE' || mavlink_state === 'CONNECTED' ? 'text-[#4F9A72]' : 'text-[#707C88]'}>
-          {mavlink_state}
-        </span>
-      </div>
+      {/* MAVLink State Badge (Shown when connected/active) */}
+      {(mavlink_state === 'ACTIVE' || mavlink_state === 'CONNECTED') && (
+        <div className="flex items-center space-x-1 px-2 py-0.5 rounded border border-[#2B3743] bg-[#11171E] text-[#A9B3BD]">
+          <span className="text-[#707C88]">MAV:</span>
+          <span className="text-[#4F9A72]">{mavlink_state}</span>
+        </div>
+      )}
 
-      {/* Quick Connect / Remote Target Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="px-2 py-0.5 rounded bg-[#11171E] border border-[#2B3743] text-[#A9B3BD] hover:text-[#E7EBEF] hover:border-[#5B8FB9] text-[11px] transition flex items-center space-x-1 cursor-pointer"
-        title="Connect to Remote Gazebo Sim / Companion Drone"
-      >
-        <Server className="w-3 h-3 text-[#5B8FB9]" />
-        <span className="hidden md:inline">REMOTE</span>
-      </button>
 
       {/* Reconnect button when disconnected */}
       {websocket_state !== 'READY' && websocket_state !== 'CONNECTED' && (
