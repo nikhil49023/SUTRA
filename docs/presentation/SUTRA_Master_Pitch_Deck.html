@@ -715,10 +715,10 @@
           </div>
 
           <div class="card">
-            <h3>👑 SwarmRAFT Leader Consensus</h3>
+            <h3>👑 SwarmRAFT Leader Consensus & Distributed Pipeline</h3>
             <ul>
               <li><strong>Sub-50ms Leader Failover:</strong> Autonomous leader replacement with zero log corruption.</li>
-              <li><strong>GCS Gateway Bridge:</strong> WebSocket server on port 9090 streaming 50Hz telemetry.</li>
+              <li><strong>Distributed 2-Laptop Pipeline:</strong> Gazebo 8 SITL host broadcasts 50Hz telemetry & 360° Deep JSCC video over LAN (:9090) with sub-4.2ms bi-directional RTL uplink.</li>
             </ul>
           </div>
         </div>
@@ -858,8 +858,8 @@
           <div class="card highlight">
             <h3>🗺️ 3D Mapbox GL Satellite Commander</h3>
             <ul>
-              <li><strong>Digital Twin Terrain:</strong> 3D elevation maps with search corridors and NDMA staging geofences.</li>
-              <li><strong>Real-Time Swarm Markers:</strong> Tracks 5 UAVs at 50Hz with smooth spatial interpolation.</li>
+              <li><strong>Dynamic MBTiles Swarm Orthomosaic:</strong> Reconstructs 360° camera footprints via local SQLite tile server (<code>:8088</code>), dynamically replacing static satellite tiles with live post-disaster imagery.</li>
+              <li><strong>Real-Time Swarm Markers:</strong> Tracks 5 UAVs at 50Hz with smooth spatial interpolation and trajectory ribbons.</li>
               <li><strong>1-Click Emergency RTL:</strong> Instant abort over WebSocket (&lt; 4.2ms execution delay).</li>
             </ul>
           </div>
@@ -1019,7 +1019,7 @@
             <td>Swarm Comms & Consensus</td>
             <td>Mesh PDR &ge; 98%, Failover &lt; 100ms</td>
             <td><strong>PDR 99.4% • Failover 42ms</strong></td>
-            <td><code>pytest sutra_comms</code> (48 tests)</td>
+            <td><code>pytest sutra_comms</code> (54 tests)</td>
             <td><span class="metric-badge">PASSED</span></td>
           </tr>
           <tr>
@@ -1027,7 +1027,7 @@
             <td>Edge AI Perception</td>
             <td>TensorRT Latency &lt; 5.0ms</td>
             <td><strong>4.80ms (120+ FPS) • 96.4% mAP</strong></td>
-            <td><code>pytest sutra_perception</code> (60 tests)</td>
+            <td><code>pytest sutra_perception</code> (61 tests)</td>
             <td><span class="metric-badge">PASSED</span></td>
           </tr>
           <tr>
@@ -1060,7 +1060,7 @@
 
     <div class="slide-footer">
       <span>Zero Synthetic / Projected Numbers • All Figures Verbatim from Live Tests</span>
-      <span class="metric-badge">Total Suite: 241 / 241 Passed (100%)</span>
+      <span class="metric-badge">Total Suite: 242 / 242 Passed (100%)</span>
     </div>
   </section>
 

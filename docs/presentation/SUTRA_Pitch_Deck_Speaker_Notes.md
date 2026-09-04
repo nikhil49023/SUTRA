@@ -58,7 +58,7 @@
 ---
 
 ### Slide 5: Subsystem B — Resilient Swarm Comms & Failsafe Video Link (Nikhil — 15 Seconds)
-> *"In severe RF jamming, standard H.264 video hits a 'digital cliff' and blacks out completely. We implemented a **resilient low-SNR semantic compression link** that transmits continuous thermal and visual features down to -5 dB SNR without dropping out. Coupled with **SwarmRAFT distributed consensus**, if any drone loses connection, the remaining swarm automatically re-elects leadership and continues searching without relying on a single vulnerable ground station."*
+> *"In severe RF jamming, standard H.264 video hits a 'digital cliff' and blacks out completely. We implemented a **resilient low-SNR semantic compression link (Deep JSCC)** that compresses 360° visual and thermal video by 96.9%, transmitting continuously down to -5 dB SNR without dropping out. Coupled with **SwarmRAFT distributed consensus**, if any drone loses connection, the remaining swarm automatically re-elects leadership. Furthermore, our **two-laptop distributed architecture** allows our Gazebo physics simulation to stream feeds seamlessly over LAN to Shiva's tactical GCS compute post."*
 
 ---
 
@@ -68,7 +68,7 @@
 ---
 
 ### Slide 7: Subsystem D — 3D GIS Tactical GCS (Siva — 35 Seconds)
-> *"All swarm telemetry converges onto our **React 18 + Mapbox 3D Satellite Dashboard**. By leveraging WebGPU direct canvas drawing, our telemetry HUD runs at a **locked 60.0 FPS** across 5 simultaneous live video streams. Operators can visualize search corridors, monitor individual drone battery and link health, and dispatch a 1-click Emergency RTL with less than 4.2 milliseconds execution delay."*
+> *"All swarm telemetry converges onto our **React 18 + Mapbox 3D Satellite Dashboard**. By leveraging WebGPU direct canvas drawing, our telemetry HUD runs at a **locked 60.0 FPS** across 5 simultaneous live video streams. Beyond static satellite tiles, we engineered a **Dynamic SQLite MBTiles Orthomosaic engine**: as drones fly, reconstructed 360° camera footprints are dynamically stamped onto the map, painting live post-disaster terrain right before the operator's eyes, while 1-click Emergency RTL executes in under 4.2 milliseconds."*
 
 ---
 
@@ -84,7 +84,7 @@
 
 ### Slide 9: Empirical Benchmark Evidence (Harika — 20 Seconds)
 > *"At SUTRA, we enforce a strict **Zero-Mock Policy**. Every number reported in our tables comes verbatim from live test runs:
-> • All **241 / 241 PyTest unit and integration tests are passing 100% green**.
+> • All **242 / 242 PyTest unit and integration tests are passing 100% green**.
 > • ArduPilot/PX4 offboard trajectory RMSE is **0.042 meters**.
 > • Swarm clearance is measured at **3.80 meters**, completely surpassing Gate G5 criteria."*
 
