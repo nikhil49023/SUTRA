@@ -78,6 +78,7 @@ Thumbs.db
 
 # Temporary evaluation & cache directories
 runs/
+quarantine/
 .wwebjs_cache/
 .system_generated/
 
