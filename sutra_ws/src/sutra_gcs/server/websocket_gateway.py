@@ -48,6 +48,7 @@ from geofence.models import GeometryType, ZoneType
 from gis.gis_controller import GISController, get_gis_controller
 from ai.ai_manager import AIManager, ai_manager
 from communication.adapters.perception_subsystem_adapter import perception_adapter
+from ai.perception_stream_service import get_perception_stream_service
 from mapping.autonomous_2d_mapping_engine import get_mapping_engine, SemanticCellType
 from forecast import get_forecast_service, get_disaster_feed_service
 from prepositioning import get_prepositioning_optimizer
@@ -156,8 +157,9 @@ class WebSocketGatewayServer:
         self._geofence_alert_dedup: Dict[str, float] = {}
         self._geofence_alert_lock = threading.Lock()
 
-        # Subsystem C AI Perception Ingestion Adapter
+        # Subsystem C AI Perception Ingestion Adapter & Real-Time Stream Processor
         self.perception_adapter = perception_adapter
+        self.perception_stream_service = get_perception_stream_service()
 
         # Seed initial mission and geofences if empty
         self._seed_initial_mission()
@@ -241,8 +243,10 @@ class WebSocketGatewayServer:
         self.server_thread = threading.Thread(target=self._run_async_server, daemon=True)
         self.server_thread.start()
 
-        # Start Subsystem C perception adapter
+        # Start Subsystem C perception adapter and stream processor
         self.perception_adapter.start(try_ros=True)
+        if self.perception_stream_service:
+            self.perception_stream_service.start()
 
         # Start background 10Hz multi-drone simulation loop
         self.sim_thread = threading.Thread(target=self._run_simulation_loop, daemon=True)
@@ -254,6 +258,8 @@ class WebSocketGatewayServer:
         self.is_running = False
         if self.perception_adapter:
             self.perception_adapter.stop()
+        if self.perception_stream_service:
+            self.perception_stream_service.stop()
 
     def _run_async_server(self):
         self.loop = asyncio.new_event_loop()
@@ -375,25 +381,56 @@ class WebSocketGatewayServer:
         # ==========================================================
         # 0. LIVE CAMERA STREAM & SELECTOR (Pass-Through Broadcast)
         # ==========================================================
-        if cmd_type in ("CAMERA_FRAME", "camera.frame"):
+        if cmd_type in ("CAMERA_FRAME", "camera.frame", "camera.ingest_frame"):
+            frame_payload = payload if payload else data.get("payload", data)
+            world_id = str(frame_payload.get("world_id", "WORLD_1")).strip().upper()
+            drone_id = str(frame_payload.get("drone_id", "uav_1")).strip()
+            modality = str(frame_payload.get("modality", "RGB")).strip().upper()
+            image_b64 = frame_payload.get("image_b64") or frame_payload.get("data")
+            if image_b64 and hasattr(self, "perception_stream_service") and self.perception_stream_service:
+                self.perception_stream_service.ingest_frame_b64(world_id, drone_id, modality, image_b64)
             await self._async_broadcast(json.dumps(data))
             return
 
-        if cmd_type in ("SELECT_STREAM", "camera.select_stream"):
+        if cmd_type in ("SELECT_STREAM", "camera.select_stream", "camera.select_feed"):
             stream_payload = payload if payload else data.get("payload", data)
             world_id = str(stream_payload.get("world_id", "WORLD_1")).strip().upper()
             drone_id = str(stream_payload.get("drone_id", "uav_1")).strip()
+            modality = str(stream_payload.get("modality", "RGB")).strip().upper()
             if self.perception_adapter:
                 self.perception_adapter.set_active_feed(world_id, drone_id)
+            if hasattr(self, "perception_stream_service") and self.perception_stream_service:
+                self.perception_stream_service.set_active_feed(world_id, drone_id, modality)
             await self._async_broadcast(json.dumps({
                 "type": "STREAM_SELECTED",
                 "world_id": world_id,
                 "drone_id": drone_id,
-                "modality": stream_payload.get("modality", "RGB"),
+                "modality": modality,
                 "timestamp": time.time(),
                 "payload": stream_payload,
             }))
             await self._async_broadcast(json.dumps(data))
+            return
+
+        if cmd_type in ("ai.trigger_perception_scan", "PERCEPTION_SCAN", "TRIGGER_SCAN"):
+            scan_payload = payload if payload else data.get("payload", data)
+            world_id = str(scan_payload.get("world_id", "WORLD_1")).strip().upper()
+            drone_id = str(scan_payload.get("drone_id", "uav_1")).strip()
+            modality = str(scan_payload.get("modality", "RGB")).strip().upper()
+            if hasattr(self, "perception_stream_service") and self.perception_stream_service:
+                self.perception_stream_service.set_active_feed(world_id, drone_id, modality)
+                frame = self.perception_stream_service._fetch_or_generate_frame(world_id, drone_id, modality, "http://10.152.0.191:8080")
+                if frame is not None:
+                    dets = self.perception_stream_service._process_single_frame(frame, world_id, drone_id, modality)
+                    await websocket.send(json.dumps({
+                        "type": "PERCEPTION_SCAN_COMPLETED",
+                        "status": "SUCCESS",
+                        "world_id": world_id,
+                        "drone_id": drone_id,
+                        "targets_detected": len(dets),
+                        "targets": dets,
+                        "timestamp": time.time(),
+                    }))
             return
 
         # ==========================================================

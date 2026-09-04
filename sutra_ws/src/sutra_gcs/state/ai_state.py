@@ -131,6 +131,8 @@ class TrackedTarget:
     history: List[Dict[str, Any]] = field(default_factory=list)
     first_seen: float = field(default_factory=time.time)
     last_seen: float = field(default_factory=time.time)
+    bbox: Optional[List[float]] = None
+    norm_bbox: Optional[List[float]] = None
 
 
 

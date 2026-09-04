@@ -101,6 +101,8 @@ export interface TrackedTarget {
   history?: { lat: number; lon: number; alt: number; ts: number }[];
   first_seen?: number;
   last_seen: number;
+  bbox?: [number, number, number, number];
+  norm_bbox?: [number, number, number, number];
 }
 
 export interface PerceptionStatus {

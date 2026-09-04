@@ -464,10 +464,11 @@ class TestMeshBandwidthAdaptation:
     """Validate perception adaptation under degraded/jammed RF mesh conditions."""
 
     def test_low_bandwidth_mode_toggle_and_filtering(self):
+        rclpy = pytest.importorskip("rclpy")
+        pytest.importorskip("std_msgs")
         from sutra_perception.detector_node import SutraDetectorNode
         import json
         from std_msgs.msg import String
-        import rclpy
 
         if not rclpy.ok():
             rclpy.init()

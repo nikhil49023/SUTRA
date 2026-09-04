@@ -11,7 +11,7 @@ import time
 import numpy as np
 import pytest
 
-import rclpy
+rclpy = pytest.importorskip("rclpy")
 from sensor_msgs.msg import Image, CameraInfo
 from std_msgs.msg import String
 

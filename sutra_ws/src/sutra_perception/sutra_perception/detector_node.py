@@ -33,12 +33,24 @@ from typing import Any, List, Optional, Tuple
 
 import cv2
 import numpy as np
-import rclpy
-from rclpy.node import Node
-from rclpy.qos import QoSProfile, ReliabilityPolicy
-from sensor_msgs.msg import Image, LaserScan
-from std_msgs.msg import String
-from geometry_msgs.msg import PoseStamped
+try:
+    import rclpy
+    from rclpy.node import Node
+    from rclpy.qos import QoSProfile, ReliabilityPolicy
+    from sensor_msgs.msg import Image, LaserScan
+    from std_msgs.msg import String
+    from geometry_msgs.msg import PoseStamped
+    RCLPY_AVAILABLE = True
+except ImportError:
+    rclpy = None
+    Node = object
+    QoSProfile = None
+    ReliabilityPolicy = None
+    Image = None
+    LaserScan = None
+    String = None
+    PoseStamped = None
+    RCLPY_AVAILABLE = False
 
 # ByteTrack multi-object tracker (pure Python, no extra deps)
 from sutra_perception.bytetrack import SutraByteTracker, TrackedTarget, TrackState

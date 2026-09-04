@@ -442,6 +442,32 @@ class PerceptionSubsystemAdapter:
         history: List[Dict[str, Any]] = []
         first_seen = ts
 
+        # Resolve Bounding Box (pixel and normalized 0..1 coordinates)
+        raw_bbox = raw.get("bbox")
+        raw_norm_bbox = raw.get("norm_bbox")
+        img_w = float(raw.get("img_w", 640.0))
+        img_h = float(raw.get("img_h", 480.0))
+
+        bbox: Optional[List[float]] = None
+        norm_bbox: Optional[List[float]] = None
+
+        if raw_bbox and isinstance(raw_bbox, (list, tuple)) and len(raw_bbox) >= 4:
+            bbox = [round(float(c), 1) for c in raw_bbox[:4]]
+            norm_bbox = [
+                round(bbox[0] / max(1.0, img_w), 4),
+                round(bbox[1] / max(1.0, img_h), 4),
+                round(bbox[2] / max(1.0, img_w), 4),
+                round(bbox[3] / max(1.0, img_h), 4),
+            ]
+        elif raw_norm_bbox and isinstance(raw_norm_bbox, (list, tuple)) and len(raw_norm_bbox) >= 4:
+            norm_bbox = [round(float(c), 4) for c in raw_norm_bbox[:4]]
+            bbox = [
+                round(norm_bbox[0] * img_w, 1),
+                round(norm_bbox[1] * img_h, 1),
+                round(norm_bbox[2] * img_w, 1),
+                round(norm_bbox[3] * img_h, 1),
+            ]
+
         if existing:
             first_seen = existing.first_seen
             history = list(existing.history)
@@ -466,6 +492,9 @@ class PerceptionSubsystemAdapter:
             else:
                 heading_deg = existing.heading_deg
 
+            final_bbox = bbox or existing.bbox
+            final_norm_bbox = norm_bbox or existing.norm_bbox
+
             updated_target = replace(
                 existing,
                 label=label,
@@ -482,6 +511,8 @@ class PerceptionSubsystemAdapter:
                 tracking_status="TRACKED",
                 history=history,
                 last_seen=ts,
+                bbox=final_bbox,
+                norm_bbox=final_norm_bbox,
             )
             event_type = "ai.target_updated"
         else:
@@ -503,6 +534,8 @@ class PerceptionSubsystemAdapter:
                 history=history,
                 first_seen=first_seen,
                 last_seen=ts,
+                bbox=bbox,
+                norm_bbox=norm_bbox,
             )
             event_type = "ai.target_detected"
 
