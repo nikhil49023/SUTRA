@@ -14,7 +14,7 @@ import base64
 import urllib.request
 import websockets
 
-SCREENSHOT_DIR = "/home/siva/Documents/DRONE_CONTROL/docs_screenshots"
+SCREENSHOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "docs_screenshots")
 os.makedirs(SCREENSHOT_DIR, exist_ok=True)
 
 class MasterVerificationSuite:

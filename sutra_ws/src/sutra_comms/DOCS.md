@@ -1,6 +1,6 @@
 # 📡 Subsystem B — Comms & Digital Twin Simulation Master Specification
 
-[![PyTest Verification](https://img.shields.io/badge/PyTest-232%2F232%20PASSED-brightgreen.svg)]()
+[![PyTest Verification](https://img.shields.io/badge/PyTest-54%2F54%20PASSED-brightgreen.svg)]()
 [![Hero Feature](https://img.shields.io/badge/Hero_Feature-Deep_JSCC_Neural_Transceiver-cyan.svg)]()
 [![Gate G2 Compliance](https://img.shields.io/badge/Gate_G2-VERIFIED-brightgreen.svg)]()
 [![Dual Launch Ready](https://img.shields.io/badge/Dual_Launch-READY-brightgreen.svg)]()

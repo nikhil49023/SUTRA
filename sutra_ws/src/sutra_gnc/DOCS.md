@@ -1,7 +1,7 @@
 # 🚁 Subsystem A — GNC & Flight Control Master Specification
 
-[![PyTest Verification](https://img.shields.io/badge/PyTest-126%2F126%20PASSED-brightgreen.svg)]()
-[![Full Workspace PyTest](https://img.shields.io/badge/Full_Workspace-234%2F234%20PASSED-brightgreen.svg)]()
+[![PyTest Verification](https://img.shields.io/badge/PyTest-127%2F127%20PASSED-brightgreen.svg)]()
+[![Full Workspace PyTest](https://img.shields.io/badge/Full_Workspace-242%2F242%20PASSED-brightgreen.svg)]()
 [![Gate G5 Compliance](https://img.shields.io/badge/Gate_G5-VERIFIED-brightgreen.svg)]()
 [![Gate G1 Compliance](https://img.shields.io/badge/Gate_G1-VERIFIED-brightgreen.svg)]()
 [![PX4 MicroXRCE-DDS](https://img.shields.io/badge/PX4_MicroXRCE--DDS-VERIFIED-brightgreen.svg)]()
@@ -20,7 +20,7 @@
 ## 📊 1. Measured Empirical Benchmarks & Performance Metrics (Simulation & Production Readiness)
 
 **Verification command:** `pytest sutra_ws/src/sutra_gnc/test/`  
-**Live result:** `126 passed, 1 warning in 11.90s` *(captured September 4, 2026)*  
+**Live result:** `127 passed, 1 warning in 5.66s` *(captured September 5, 2026)*  
 **Perception Suite:** `pytest sutra_ws/src/sutra_perception/test/` $\to$ **`61 passed, 1 warning in 4.05s`**  
 **Local Hardware Telemetry:** `RAM: 8.77 GiB / 15.43 GiB (5.65 GiB free) | VRAM: 0.57 GB / 4.00 GB (14% util)`
 

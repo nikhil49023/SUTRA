@@ -14,7 +14,7 @@ import urllib.request
 from pathlib import Path
 
 # Add sutra_gcs to path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "SUTRA" / "sutra_ws" / "src" / "sutra_gcs"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "sutra_ws" / "src" / "sutra_gcs"))
 
 import websockets
 from forecast.forecast_service import get_forecast_service

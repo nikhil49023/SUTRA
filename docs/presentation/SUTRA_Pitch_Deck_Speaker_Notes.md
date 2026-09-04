@@ -63,7 +63,7 @@
 ---
 
 ### Slide 6: Subsystem C — Tri-Modal Perception & Geolocation (Vedanth — 40 Seconds)
-> *"For perception, Subsystem C deploys **YOLOv8-Nano on NVIDIA TensorRT**, achieving **120+ FPS (4.8ms latency)** with **96.4% mAP**. We fuse 1080p Optical RGB with 30Hz FLIR Thermal and mmWave Radar to detect human heat signatures through thick canopy. Using our terrain-corrected **DEM WGS84 Raycaster** with full 3D body rotation compensation, we geolocate victims with **less than 0.32-meter GPS accuracy** at 30 meters altitude."*
+> *"For perception, Subsystem C deploys **YOLOv8-Nano on NVIDIA TensorRT**, achieving **120+ FPS (4.8ms latency)**. On aerial VisDrone benchmark: **22.80% mAP@0.5** (baseline, with +14.6% recall boost via SAHI tiling). For thermal human heat-signature detection via Tri-Modal fusion: **96.2% confidence**. We fuse 1080p Optical RGB with 30Hz FLIR Thermal and mmWave Radar to detect human heat signatures through thick canopy. Using our terrain-corrected **DEM WGS84 Raycaster** with full 3D body rotation compensation, we geolocate victims with **less than 0.32-meter GPS accuracy** at 30 meters altitude."*
 
 ---
 

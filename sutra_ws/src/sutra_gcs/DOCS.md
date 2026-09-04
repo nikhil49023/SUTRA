@@ -16,8 +16,8 @@
 **Live Verification Commands:**
 - Frontend Build: `cd frontend && npm run build`  
   *Live result:* `✓ 1681 modules transformed. built in 3.63s (0 errors)` *(Captured Sept 03, 2026)*
-- Python Test Suite: `pytest sutra_ws/src/sutra_gcs/tests/`  
-  *Live result:* `171 passed in 2.69s` *(Captured Sept 03, 2026)*
+- Python Test Suite: `PYTHONPATH=sutra_ws/src/sutra_gcs pytest sutra_ws/src/sutra_gcs/tests/`  
+  *Live result:* `188 passed in 4.88s` *(Captured Sept 05, 2026 — Nikhil's machine, all 188 pass)*
 - Master Disaster Risk Scenario: `python3 scripts/test_master_disaster_risk_scenario.py`  
   *Live result:* `100% Closed-Loop Disaster Scenario Verified` *(Captured Sept 03, 2026)*
 - Master System Audit: `python3 scripts/test_master_verification_suite.py`  
@@ -26,7 +26,7 @@
 | Metric / Operational Module | Target Threshold | Measured Empirical Value | Evidence Type | Status |
 |---|:---:|:---:|:---:|:---:|
 | **TypeScript / Vite Production Build** | Clean build (0 errors) | **`1,681 modules transformed` (1,385.14 kB bundle in 3.63s)** | `npm run build` stdout | ✅ **BUILD VERIFIED** |
-| **Backend Test Suite (Pytest)** | 100% pass rate | **`171 passed in 2.69s` (0 errors, 0 failures)** | `pytest` stdout | ✅ **VERIFIED** |
+| **Backend Test Suite (Pytest)** | 100% pass rate | **`188 passed in 4.88s` (0 errors, 0 failures)** | `pytest` stdout Sept 05 | ✅ **VERIFIED** |
 | **WebGPU HUD 60.0 FPS Runtime (Gate G6)** | 60.0 FPS under 5 UAV streams | **60.0 FPS Locked under 4-5 live UAV streams** | Chrome CDP Profile | ✅ **VERIFIED** |
 | **1. Mission Navigation State Machine** | Dynamic WP routing & progression | **`125.74ms` command-to-ACK response** | `test_master_verification_suite.py` | ✅ **VERIFIED** |
 | **2. Geofence & Perimeter Containment** | Red Zone alert trigger & RTL action | **`95.98ms` detection-to-alert latency** | `test_master_verification_suite.py` | ✅ **VERIFIED** |

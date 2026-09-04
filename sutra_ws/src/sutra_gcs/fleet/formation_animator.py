@@ -8,7 +8,19 @@ import time
 from dataclasses import replace
 from typing import Optional
 
-from PySide6.QtCore import QObject, QTimer, Signal
+try:
+    from PySide6.QtCore import QObject, QTimer, Signal
+except ImportError:
+    try:
+        from PyQt5.QtCore import QObject, QTimer, pyqtSignal as Signal  # type: ignore
+    except ImportError:
+        # Headless stub for environments without Qt (e.g., pytest on CI without display)
+        class QObject:  # type: ignore
+            pass
+        class QTimer:  # type: ignore
+            pass
+        def Signal(*args, **kwargs):  # type: ignore
+            return None
 
 from services.event_bus import EventBus, get_event_bus
 from services.logging_service import get_logger
