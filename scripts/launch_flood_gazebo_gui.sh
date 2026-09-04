@@ -13,6 +13,7 @@ export GZ_PARTITION="sutra_sim"
 export DISPLAY=":0"
 export WAYLAND_DISPLAY="wayland-0"
 export QT_QPA_PLATFORM="xcb"
+xhost +local: >/dev/null 2>&1 || true
 
 WORLD_FILE="$SUTRA_SIM_DIR/worlds/submerged_village_flood_world.sdf"
 
