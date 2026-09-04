@@ -5,7 +5,6 @@ import { useFleetStore } from '../../stores/fleetStore';
 import { useTelemetryStore } from '../../stores/telemetryStore';
 import { useAuthStore } from '../../security/authStore';
 import { useDefensiveUpgradesStore } from '../../stores/defensiveUpgradesStore';
-import { useAIStore } from '../../stores/aiStore';
 import { ConnectionStatus } from '../../communication/ConnectionStatus';
 import { SessionStatus } from '../../security/SessionStatus';
 import { AuditViewModal } from '../../security/AuditViewModal';
@@ -29,8 +28,6 @@ import {
   Play,
   Pause,
   Compass,
-  Eye,
-  Target,
 } from 'lucide-react';
 
 export const TopBar: React.FC = memo(() => {
@@ -39,25 +36,6 @@ export const TopBar: React.FC = memo(() => {
   const missionState = useMissionStore((s) => s.state);
   const drones = useFleetStore((s) => s.drones);
   const getTelemetry = useTelemetryStore((s) => s.getTelemetry);
-
-  // Subsystem C AI Perception State & Canonical Survivor Count
-  const trackedTargets = useAIStore((s) => s.tracked_targets);
-  const perceptionStatus = useAIStore((s) => s.perception_status);
-
-  const activeSurvivors = React.useMemo(() => {
-    return trackedTargets.filter(
-      (t) =>
-        t.tracking_status !== 'LOST' &&
-        (t.label
-          ? t.label.toUpperCase().includes('SURVIVOR') ||
-            t.label.toUpperCase().includes('PERSON') ||
-            t.label.toUpperCase().includes('VICTIM') ||
-            t.label.toUpperCase().includes('HUMAN')
-          : true)
-    );
-  }, [trackedTargets]);
-  const activeSurvivorsCount = activeSurvivors.length;
-  const totalDetectionsCount = trackedTargets.length;
 
   // Operations vs Engineering Mode
   const viewMode = useAppStore((s) => s.viewMode);
@@ -158,7 +136,7 @@ export const TopBar: React.FC = memo(() => {
       <div className="hidden xl:flex items-center justify-center flex-shrink">
         <div className="flex items-center bg-[#11171E] border border-[#2B3743] rounded-lg px-2.5 py-1 text-[10.5px] space-x-2.5 shadow-inner">
           {viewMode === 'OPERATIONS' ? (
-            /* 👨‍🚒 Operations: Risk → Swarm → Survivors Detected → Perception → Hazards → Battery → Comms */
+            /* 👨‍🚒 Operations: Risk → Swarm → Hazards → Battery → Comms */
             <>
               <div className="flex items-center space-x-1">
                 <span className="text-[#707C88]">RISK:</span>
@@ -170,43 +148,6 @@ export const TopBar: React.FC = memo(() => {
               <div className="flex items-center space-x-1">
                 <span className="text-[#707C88]">SWARM:</span>
                 <span className="font-bold text-[#E7EBEF]">{droneList.length}</span>
-              </div>
-
-              <div className="w-px h-3.5 bg-[#2B3743]" />
-
-              {/* Authoritative Subsystem C Survivor Detection Metric */}
-              <button
-                onClick={() => setRescueHandoffOpen(true)}
-                className="flex items-center space-x-1.5 text-[#10B981] hover:underline cursor-pointer font-bold px-1.5 py-0.5 rounded bg-[#10B981]/10 border border-[#10B981]/30 transition hover:bg-[#10B981]/20"
-                title={`Active Tracked Survivors: ${activeSurvivorsCount} | Total Detections: ${totalDetectionsCount}`}
-              >
-                <LifeBuoy className="w-3.5 h-3.5 text-[#10B981] animate-pulse" />
-                <span>SURVIVORS DETECTED: {activeSurvivorsCount}</span>
-                {totalDetectionsCount > activeSurvivorsCount && (
-                  <span className="text-[9px] text-[#707C88] font-normal">({totalDetectionsCount} hist)</span>
-                )}
-              </button>
-
-              <div className="w-px h-3.5 bg-[#2B3743]" />
-
-              {/* Subsystem C Perception Status */}
-              <div className="flex items-center space-x-1">
-                <Eye className={`w-3 h-3 ${perceptionStatus?.status === 'CONNECTED' ? 'text-[#10B981]' : perceptionStatus?.status === 'DEGRADED' ? 'text-[#F59E0B]' : 'text-[#707C88]'}`} />
-                <span className="text-[#707C88]">AI:</span>
-                <span
-                  className={`font-bold text-[9.5px] px-1.5 py-0.2 rounded border ${
-                    perceptionStatus?.status === 'CONNECTED'
-                      ? 'bg-[#10B981]/15 text-[#10B981] border-[#10B981]/40'
-                      : perceptionStatus?.status === 'DEGRADED'
-                      ? 'bg-[#F59E0B]/15 text-[#F59E0B] border-[#F59E0B]/40'
-                      : 'bg-[#151D26] text-[#707C88] border-[#2B3743]'
-                  }`}
-                  title={`Subsystem C AI Edge Perception: ${perceptionStatus?.status || 'OFFLINE'} (${perceptionStatus?.inference_fps ? `${perceptionStatus.inference_fps.toFixed(1)} FPS` : '0 FPS'})`}
-                >
-                  {perceptionStatus?.status === 'CONNECTED'
-                    ? `ONLINE (${(perceptionStatus.inference_fps || 10).toFixed(0)} FPS)`
-                    : perceptionStatus?.status || 'OFFLINE'}
-                </span>
               </div>
 
               <div className="w-px h-3.5 bg-[#2B3743]" />
@@ -234,7 +175,7 @@ export const TopBar: React.FC = memo(() => {
               </div>
             </>
           ) : (
-            /* 🧪 Engineering: ORCA → Covariance → SNR → Setpoint Freq → HAL → Survivors → AI Status */
+            /* 🧪 Engineering: ORCA → Covariance → SNR → Setpoint Freq → HAL → Solver */
             <>
               <div className="flex items-center space-x-1">
                 <span className="text-[#707C88]">ORCA:</span>
@@ -258,17 +199,8 @@ export const TopBar: React.FC = memo(() => {
               <div className="w-px h-3.5 bg-[#2B3743]" />
 
               <div className="flex items-center space-x-1">
-                <span className="text-[#707C88]">SURVIVORS:</span>
-                <span className="font-bold text-[#10B981]">{activeSurvivorsCount}</span>
-              </div>
-
-              <div className="w-px h-3.5 bg-[#2B3743]" />
-
-              <div className="flex items-center space-x-1">
-                <span className="text-[#707C88]">AI PERCEPTION:</span>
-                <span className={`font-bold ${perceptionStatus?.status === 'CONNECTED' ? 'text-[#10B981]' : 'text-[#707C88]'}`}>
-                  {perceptionStatus?.status === 'CONNECTED' ? `${perceptionStatus.inference_fps?.toFixed(0) || 10}FPS` : 'OFFLINE'}
-                </span>
+                <span className="text-[#707C88]">FREQ:</span>
+                <span className="font-bold text-[#5B8FB9]">50.0Hz</span>
               </div>
 
               <div className="w-px h-3.5 bg-[#2B3743]" />
@@ -276,6 +208,13 @@ export const TopBar: React.FC = memo(() => {
               <div className="flex items-center space-x-1">
                 <span className="text-[#707C88]">HAL:</span>
                 <span className="font-extrabold text-[#EAB308]">{halPlatform}</span>
+              </div>
+
+              <div className="w-px h-3.5 bg-[#2B3743]" />
+
+              <div className="flex items-center space-x-1">
+                <span className="text-[#707C88]">SOLVER:</span>
+                <span className="font-bold text-[#10B981]">VO-3D</span>
               </div>
             </>
           )}
