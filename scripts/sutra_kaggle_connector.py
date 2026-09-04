@@ -39,6 +39,7 @@ ACCOUNT_USERNAMES = {
 VISDRONE_SLUG = "sutra-yolov8-visdrone-sar-drone-fine-tuning"
 BLENDER_SLUG = "sutra-blender-flood-render"
 CANOPY_SLUG = "sutra-forest-canopy-3d-digital-twin-generator"
+SIM_WEB_SLUG = "sutra-3d-canopy-swarm-sar-simulator-webgl-viewer"
 
 
 def get_username(account="1"):
@@ -320,6 +321,57 @@ def cmd_pull_canopy(args):
     print(f"✅ Canopy world package downloaded to {dest_dir}!")
 
 
+def cmd_sim_web(args):
+    """Launch the 3D Swarm SAR Simulator on Kaggle GPU and open in browser."""
+    kaggle_bin = ensure_kaggle_cli()
+    account = getattr(args, "account", "1")
+    username = get_username(account)
+    kernel_dir = STAGING_DIR / SIM_WEB_SLUG
+    kernel_dir.mkdir(parents=True, exist_ok=True)
+
+    # Generate fresh notebook
+    subprocess.run([sys.executable, str(PROJECT_ROOT / "kaggle_pipeline/create_kaggle_web_simulation_notebook.py")], check=True)
+    shutil.copyfile(
+        PROJECT_ROOT / "kaggle_pipeline/sutra_canopy_simulation_web.ipynb",
+        kernel_dir / "sutra_canopy_simulation_web.ipynb"
+    )
+
+    metadata = {
+        "id": f"{username}/{SIM_WEB_SLUG}",
+        "title": "SUTRA 3D Canopy Swarm SAR Simulator & WebGL Viewer",
+        "code_file": "sutra_canopy_simulation_web.ipynb",
+        "language": "python",
+        "kernel_type": "notebook",
+        "is_private": "false",
+        "enable_gpu": "true",
+        "enable_tpu": "false",
+        "enable_internet": "true",
+        "dataset_sources": [],
+        "competition_sources": [],
+        "kernel_sources": [],
+        "model_sources": []
+    }
+    with open(kernel_dir / "kernel-metadata.json", "w") as f:
+        json.dump(metadata, f, indent=2)
+
+    print(f"📦 Staged Web Simulator notebook at {kernel_dir}")
+    print(f"🚀 Dispatching to Kaggle Cloud GPU (NvidiaTeslaT4)...")
+    cmd = [
+        kaggle_bin, "kernels", "push",
+        "-p", str(kernel_dir),
+        "--accelerator", "NvidiaTeslaT4"
+    ]
+    res = run_cmd(cmd, account=account)
+    print(res.stdout)
+
+    url = f"https://www.kaggle.com/code/{username}/{SIM_WEB_SLUG}"
+    print(f"\n🌐 Opening Kaggle Cloud Simulation in Browser: {url}")
+    if shutil.which("google-chrome"):
+        subprocess.Popen(["google-chrome", url])
+    elif shutil.which("xdg-open"):
+        subprocess.Popen(["xdg-open", url])
+
+
 def poll_kernel(username, slug, auto_pull=False):
     """Monitor kernel until complete."""
     kaggle_bin = ensure_kaggle_cli()
@@ -418,6 +470,11 @@ def main():
     p_pull_canopy = subparsers.add_parser("pull-canopy", help="Pull built canopy package from Kaggle")
     p_pull_canopy.add_argument("--account", choices=["1", "2"], default="1", help="Target Kaggle account to pull from")
     p_pull_canopy.set_defaults(func=cmd_pull_canopy)
+
+    # sim-web
+    p_sim_web = subparsers.add_parser("sim-web", help="Launch interactive 3D WebGL Swarm Simulator on Kaggle & open browser")
+    p_sim_web.add_argument("--account", choices=["1", "2"], default="1", help="Target Kaggle account to use")
+    p_sim_web.set_defaults(func=cmd_sim_web)
 
     args = parser.parse_args()
     args.func(args)
