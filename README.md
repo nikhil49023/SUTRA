@@ -191,15 +191,18 @@ To guarantee maximum building velocity, zero single points of failure, and 100% 
   * `Waypoint & Fleet Inspector`: Interactive waypoint editor, formation mode selector, and drone status inspector.
 * **Empirical Test Baseline**: **Production Vite build passing** (1,403 modules transformed, 226.38 kB bundle, built in 6.70s).
 
-#### 📑 Subsystem E: System Verification, Pitch Delivery & Documentation
+#### 📑 Subsystem E: System Verification, Global Disaster Standards, Pitch Delivery & Documentation
 * **Lead Specialist**: Harika
 * **Co-Lead Support**: Tech Lead Nikhil ⚡
+* **Dedicated Agent Guide**: [`docs/agents/HARIKA_AGENT.md`](docs/agents/HARIKA_AGENT.md) | **Master Spec**: [`docs/subsystems/SUBSYSTEM_E_DOCS.md`](docs/subsystems/SUBSYSTEM_E_DOCS.md)
 * **Branch**: `feature/subsystem-e-docs` | **Repository Path**: `docs/` & `scripts/`
 * **Core Technical Deliverables & Modules**:
+  * `Global NDRF & Disaster Standards Alignment`: Comprehensive audit and synthesis of NDRF field SOPs, NDMA Incident Response System (IRS 2010), UN OCHA INSARAG USAR Guidelines (ASR Levels 1–5), FEMA NIMS/ICS (ICS-100/200/700), NFPA 2400, and DGCA Drone Rules 2021 (Rule 50 statutory disaster relief exemption).
+  * `Engineering Honesty & Operational Boundaries`: Formal defense matrix distinguishing solved capabilities (Golden 24h triage, NLOS 802.11s mesh, Deep JSCC $-5\text{dB}$, sub-0.32m raycast) from physical limits requiring ground handoffs (deep buried rubble $>1\text{m} \to$ K9/seismic geophones, winds $>18\text{m/s}$).
   * `SUTRA_Master_Pitch_Deck.html`: Interactive, offline-capable master presentation deck formatted with high-contrast tactical styling for the Grand Finals jury pitch.
-  * `SUTRA_Hackathon_Grand_Finale_Cookbook.pdf`: Complete printable field deployment and architecture cookbook generated via Playwright.
+  * `SUTRA_Pitch_Deck_Speaker_Notes.md` & `SUTRA_Jury_Defense_Stress_Test_QA.md`: Authoritative spoken scripts and rapid-fire answers for 25 technical and operational jury trap questions.
   * `JURY_FEEDBACK_TRACKER.md`: Active runtime document logging jury queries, assigned owners, and verified fix commit hashes across Evaluation Rounds 1, 2, and 3 (NHCE Rule 6.1).
-  * `Monorepo Test Harness`: Master verification suites ensuring **234 / 234 tests pass deterministically** in $< 11\text{s}$.
+  * `Monorepo Test Harness`: Master verification suites ensuring **234 / 234 tests pass deterministically** across Gate Audits G1–G6.
   * `Zero-Mock Benchmark Scorecard`: Verbatim terminal output audits ensuring zero synthetic or projected numbers in documentation.
 * **Empirical Test Baseline**: Complete documentation suite and **234 / 234 passing test harness**.
 

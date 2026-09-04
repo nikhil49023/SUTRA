@@ -8,9 +8,11 @@
 
 > **Directed By:** Tech Lead Nikhil ⚡ (Tech Architect & Subsystem A+B Lead)  
 > **Mandatory Reference Files:**
-> 1. [`docs/conops/NDMA_IRS_FIELD_DEPLOYMENT_AUDIT.md`](../conops/NDMA_IRS_FIELD_DEPLOYMENT_AUDIT.md)
-> 2. [`docs/conops/GLOBAL_DISASTER_STANDARDS_AND_OPERATIONAL_BOUNDARIES_REPORT.md`](../conops/GLOBAL_DISASTER_STANDARDS_AND_OPERATIONAL_BOUNDARIES_REPORT.md)
-> 3. [`docs/hackathon/JURY_FEEDBACK_TRACKER.md`](../hackathon/JURY_FEEDBACK_TRACKER.md)
+> 1. [`docs/agents/HARIKA_AGENT.md`](../agents/HARIKA_AGENT.md)
+> 2. [`docs/subsystems/SUBSYSTEM_E_DOCS.md`](../subsystems/SUBSYSTEM_E_DOCS.md)
+> 3. [`docs/conops/NDMA_IRS_FIELD_DEPLOYMENT_AUDIT.md`](../conops/NDMA_IRS_FIELD_DEPLOYMENT_AUDIT.md)
+> 4. [`docs/conops/GLOBAL_DISASTER_STANDARDS_AND_OPERATIONAL_BOUNDARIES_REPORT.md`](../conops/GLOBAL_DISASTER_STANDARDS_AND_OPERATIONAL_BOUNDARIES_REPORT.md)
+> 5. [`docs/hackathon/JURY_FEEDBACK_TRACKER.md`](../hackathon/JURY_FEEDBACK_TRACKER.md)
 
 ---
 

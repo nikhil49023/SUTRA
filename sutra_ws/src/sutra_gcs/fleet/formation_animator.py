@@ -11,21 +11,26 @@ from typing import Optional
 try:
     from PySide6.QtCore import QObject, QTimer, Signal
 except ImportError:
-    class QObject:
-        def __init__(self, *args, **kwargs):
-            pass
-    class Signal:
-        def emit(self, *args, **kwargs):
-            pass
-    class QTimer:
-        def __init__(self, *args, **kwargs):
-            self.timeout = self
-        def connect(self, *args, **kwargs):
-            pass
-        def start(self, *args, **kwargs):
-            pass
-        def stop(self, *args, **kwargs):
-            pass
+    try:
+        from PyQt5.QtCore import QObject, QTimer, pyqtSignal as Signal  # type: ignore
+    except ImportError:
+        class QObject:  # type: ignore
+            def __init__(self, *args, **kwargs):
+                pass
+        class Signal:  # type: ignore
+            def __init__(self, *args, **kwargs):
+                pass
+            def emit(self, *args, **kwargs):
+                pass
+        class QTimer:  # type: ignore
+            def __init__(self, *args, **kwargs):
+                self.timeout = self
+            def connect(self, *args, **kwargs):
+                pass
+            def start(self, *args, **kwargs):
+                pass
+            def stop(self, *args, **kwargs):
+                pass
 
 from services.event_bus import EventBus, get_event_bus
 from services.logging_service import get_logger

@@ -135,7 +135,7 @@ To maintain 100% academic and engineering integrity, the following scenarios are
 * **The Hand-off**: Ground rescue teams must bring in **Seismic Acoustic Life Detectors** (geophones that listen for scratching/tapping), **Canine Scent Squads (K9)**, or **Ground Penetrating Radar (GPR)**.
 
 #### ❌ Boundary 2: Severe Cyclonic Gale Winds ($> 18\text{ m/s}$ / $> 65\text{ km/h}$)
-* **The Physics Reality**: SUTRA quadcopters weigh $1.35\,\text{kg}$ with 9-inch propellers. SUTRA's ONNX-distilled feedforward neuro-adaptive flight controller can reject turbulent crosswinds up to $18\text{ m/s}$ ($64.8\text{ km/h}$). Beyond $18\text{ m/s}$, the motor ESCs reach $100\%$ duty cycle (torque saturation); the drone cannot generate additional counter-torque to maintain attitude.
+* **The Physics Reality**: SUTRA multi-rotor airframes (hexacopters) weigh $1.65\,\text{kg}$ with 9-inch propellers. SUTRA's ONNX-distilled feedforward neuro-adaptive flight controller can reject turbulent crosswinds up to $18\text{ m/s}$ ($64.8\text{ km/h}$). Beyond $18\text{ m/s}$, the motor ESCs reach $100\%$ duty cycle (torque saturation); the drone cannot generate additional counter-torque to maintain attitude.
 * **What SUTRA Does**: Built-in anemometer telemetry automatically aborts flights and commands an emergency low-altitude land-in-place before control loss occurs.
 * **The Hand-off**: Flight operations pause during the active peak of a Category 4/5 cyclone eyewall, resuming the instant winds subside to $< 18\text{ m/s}$.
 

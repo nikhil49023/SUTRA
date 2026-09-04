@@ -32,10 +32,44 @@ export const MAP_STYLE_LABELS: Record<MapStyleType, { label: string; description
     description: 'Carto Voyager Clean Street Navigation',
     badge: 'STR',
   },
+  'swarm-live-ortho': {
+    label: 'Swarm Live JSCC Ortho',
+    description: 'Deep JSCC Reconstructed Post-Disaster Drone Map (MBTiles)',
+    badge: 'LIVE ORTHO',
+  },
 };
 
 export function getMapStyleSpec(styleKey: MapStyleType): maplibregl.StyleSpecification {
   switch (styleKey) {
+    case 'swarm-live-ortho':
+      return {
+        version: 8,
+        name: 'SUTRA Reconstructed Swarm Orthomosaic',
+        sources: {
+          'swarm-live-tiles': {
+            type: 'raster',
+            tiles: [
+              'http://localhost:8088/tiles/{z}/{x}/{y}.png',
+            ],
+            tileSize: 256,
+            maxzoom: 22,
+            attribution: '&copy; Project SUTRA Deep JSCC Dynamic Reconstructed Map',
+          },
+        },
+        layers: [
+          {
+            id: 'swarm-live-tiles-layer',
+            type: 'raster',
+            source: 'swarm-live-tiles',
+            minzoom: 0,
+            maxzoom: 22,
+            paint: {
+              'raster-opacity': 1.0,
+            },
+          },
+        ],
+      };
+
     case 'satellite':
       return {
         version: 8,

@@ -362,6 +362,7 @@ export const MapView: React.FC = () => {
                   [
                     { key: 'tactical-dark', label: 'Dark Tactical', badge: 'DARK' },
                     { key: 'satellite', label: 'Satellite', badge: 'SAT' },
+                    { key: 'swarm-live-ortho', label: 'Live JSCC Ortho', badge: 'ORTHO' },
                     { key: 'terrain', label: 'Terrain', badge: 'TOPO' },
                     { key: 'streets', label: 'Streets', badge: 'STR' },
                   ] as { key: MapStyleType; label: string; badge: string }[]

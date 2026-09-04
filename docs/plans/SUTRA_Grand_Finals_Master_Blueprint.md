@@ -96,7 +96,8 @@ Project SUTRA/
     │   │   └── utils/webAudioSynth.ts         # Acoustic Emergency Alerts
     │   └── package.json                       # Vite + React 18 + Mapbox GL JS
     └── sutra_sim/                     # Simulation Physics Digital Twin
-        ├── models/sutra_uav_standard/         # 9-DOF Sensorized Quadcopter SDF
+        ├── models/sutra_hexacopter/           # 9-DOF Sensorized Hexacopter SDF (Active Motor Fallback)
+        ├── models/sutra_uav_standard/         # 9-DOF Multi-Rotor Airframe SDF
         ├── worlds/ring_crossing_arena.sdf     # Dedicated 5-UAV Ring Crossing World
         └── launch/ring_crossing_gazebo.launch.py # ROS 2 Launch File with Bridge
 ```

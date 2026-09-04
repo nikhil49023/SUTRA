@@ -1,0 +1,28 @@
+<?xml version="1.0" ?>
+<sdf version="1.8">
+  <model name="himalayan_disaster_valley">
+    <static>true</static>
+    <link name="link">
+      <pose>0 0 0 0 0 0</pose>
+      <collision name="collision">
+        <geometry>
+          <mesh>
+            <uri>model://himalayan_disaster_valley/meshes/himalayan_disaster_valley.obj</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <mesh>
+            <uri>model://himalayan_disaster_valley/meshes/himalayan_disaster_valley.obj</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.6 0.6 0.6 1.0</ambient>
+          <diffuse>0.8 0.8 0.8 1.0</diffuse>
+          <specular>0.15 0.15 0.15 1.0</specular>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>

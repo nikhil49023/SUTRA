@@ -27,7 +27,7 @@ ros2 launch sutra_sim sutra_master_swarm_integration.launch.py sim_mode:=false
 
 | Budget Option | Physical Hardware | Cost (INR) | Cost (USD) | Primary Showcase Output |
 |---|---|:---:|:---:|---|
-| **Option A (Hybrid SITL)** | 1x F450 Quadcopter (Pixhawk 2.4.8 + RPi 4/5 + LoRa) | **₹22,450** | **$269** | Real hardware video/flight + 10-UAV Gazebo SITL Swarm Digital Twin on 3D Map |
+| **Option A (Hybrid SITL)** | 1x F450 Multi-Rotor Prototype (Pixhawk 2.4.8 + RPi 4/5 + LoRa) | **₹22,450** | **$269** | Real hardware video/flight + 10-UAV Gazebo SITL Swarm Digital Twin on 3D Map |
 | **Option B (Micro Swarm)** | 3x ESP32-S3 CAM Micro Drones + LoRa modules | **₹12,000** | **$145** | 3 Real physical micro drones performing live battery-pull SwarmRAFT failover on stage |
 
 ---

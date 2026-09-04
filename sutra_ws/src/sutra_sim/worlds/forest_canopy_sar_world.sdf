@@ -1,0 +1,166 @@
+<?xml version="1.0" ?>
+<sdf version="1.8">
+  <world name="forest_canopy_sar_world">
+    <!-- DART 500Hz Solver Profile (Gate G1 Compliant) -->
+    <physics name="500hz_physics" type="dart">
+      <max_step_size>0.002</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>500</real_time_update_rate>
+    </physics>
+
+    <gui fullscreen="0">
+      <camera name="user_camera">
+        <!-- Elevated perspective looking directly along the forest dirt road -->
+        <pose>15.0 -10.0 55.0 0 0.40 2.20</pose>
+        <view_controller>orbit</view_controller>
+      </camera>
+    </gui>
+
+    <!-- ── Gazebo Sim 8 Core Plugins ────────────────────────────────────────── -->
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu" />
+    <plugin filename="gz-sim-navsat-system" name="gz::sim::systems::NavSat" />
+
+    <!-- WGS84 Georeferenced Coordinates: Western Ghats Forest Reserve -->
+    <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <latitude_deg>11.5248</latitude_deg>
+      <longitude_deg>76.1284</longitude_deg>
+      <elevation>840.0</elevation>
+      <heading_deg>0.0</heading_deg>
+    </spherical_coordinates>
+
+    <!-- Atmospheric & Sun Lighting with Forest Shadowing -->
+    <scene>
+      <ambient>0.65 0.70 0.75 1.0</ambient>
+      <background>0.55 0.70 0.88 1.0</background>
+      <shadows>true</shadows>
+      <grid>false</grid>
+    </scene>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>20 40 100 0 0 0</pose>
+      <diffuse>1.0 0.96 0.90 1</diffuse>
+      <specular>0.3 0.3 0.3 1</specular>
+      <direction>-0.25 -0.45 -0.85</direction>
+    </light>
+
+    <!-- Forest Canopy Environment Model (Native Blender Geometry with Baked Materials) -->
+    <include>
+      <uri>model://forest_canopy</uri>
+      <pose>0 0 0 0 0 0</pose>
+    </include>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         5x AUTONOMOUS PEGASUS UAVs (uav_alpha .. uav_epsilon)
+         Calibrated Canopy Resilience Flight Altitudes (AGL: 9.5m to 27.5m):
+           Alpha   : ( 6.50,   5.50, 46.00) — Cyan Lead Scout (Canopy Gap Penetration)
+           Beta    : (12.00,  -8.00, 54.00) — Orange Ridge Recon (Tree Crown Skimming)
+           Gamma   : ( 0.00,   0.00, 64.00) — Green SwarmRAFT Leader (High RF Relay)
+           Delta   : (-10.00, -8.00, 52.00) — Magenta Flank Recon
+           Epsilon : (-5.00,   9.50, 49.00) — Yellow Insertion Vehicle Overwatch
+         50Hz Odometry + Velocity Control + Emissive Beacons
+    ════════════════════════════════════════════════════════════════════════ -->
+
+    <!-- 🚁 UAV_ALPHA — Cyan Lead Scout (Canopy Penetration at 46.0m / 9.5m AGL) -->
+    <model name="uav_alpha">
+      <pose>6.50 5.50 46.00 0 0 -0.66</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><ixy>0</ixy><ixz>0</ixz><iyy>0.07000</iyy><iyz>0</iyz><izz>0.09770</izz></inertia></inertial>
+        <collision name="col"><geometry><box><size>0.47 0.47 0.11</size></box></geometry></collision>
+        <visual name="body"><geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry></visual>
+        <visual name="beacon"><pose>0 0 0.12 0 0 0</pose><geometry><sphere><radius>0.08</radius></sphere></geometry>
+          <material><ambient>0.0 0.8 1.0 1</ambient><diffuse>0.0 0.8 1.0 1</diffuse><emissive>0.0 0.8 1.0 1</emissive></material>
+        </visual>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name><topic>/uav_alpha/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+    </model>
+
+    <!-- 🚁 UAV_BETA — Orange Ridge Recon (54.0m / 17.5m AGL) -->
+    <model name="uav_beta">
+      <pose>12.00 -8.00 54.00 0 0 1.57</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><ixy>0</ixy><ixz>0</ixz><iyy>0.07000</iyy><iyz>0</iyz><izz>0.09770</izz></inertia></inertial>
+        <collision name="col"><geometry><box><size>0.47 0.47 0.11</size></box></geometry></collision>
+        <visual name="body"><geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry></visual>
+        <visual name="beacon"><pose>0 0 0.12 0 0 0</pose><geometry><sphere><radius>0.08</radius></sphere></geometry>
+          <material><ambient>1.0 0.4 0.0 1</ambient><diffuse>1.0 0.4 0.0 1</diffuse><emissive>1.0 0.4 0.0 1</emissive></material>
+        </visual>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name><topic>/uav_beta/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+    </model>
+
+    <!-- 🚁 UAV_GAMMA — Green Central Relay & Tactical Sentry (64.0m / 27.5m AGL) -->
+    <model name="uav_gamma">
+      <pose>0.00 0.00 64.00 0 0 1.57</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><ixy>0</ixy><ixz>0</ixz><iyy>0.07000</iyy><iyz>0</iyz><izz>0.09770</izz></inertia></inertial>
+        <collision name="col"><geometry><box><size>0.47 0.47 0.11</size></box></geometry></collision>
+        <visual name="body"><geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry></visual>
+        <visual name="beacon"><pose>0 0 0.12 0 0 0</pose><geometry><sphere><radius>0.08</radius></sphere></geometry>
+          <material><ambient>0.2 1.0 0.2 1</ambient><diffuse>0.2 1.0 0.2 1</diffuse><emissive>0.2 1.0 0.2 1</emissive></material>
+        </visual>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name><topic>/uav_gamma/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+    </model>
+
+    <!-- 🚁 UAV_DELTA — Magenta Flank Survey (52.0m / 15.5m AGL) -->
+    <model name="uav_delta">
+      <pose>-10.00 -8.00 52.00 0 0 1.57</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><ixy>0</ixy><ixz>0</ixz><iyy>0.07000</iyy><iyz>0</iyz><izz>0.09770</izz></inertia></inertial>
+        <collision name="col"><geometry><box><size>0.47 0.47 0.11</size></box></geometry></collision>
+        <visual name="body"><geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry></visual>
+        <visual name="beacon"><pose>0 0 0.12 0 0 0</pose><geometry><sphere><radius>0.08</radius></sphere></geometry>
+          <material><ambient>1.0 0.2 0.8 1</ambient><diffuse>1.0 0.2 0.8 1</diffuse><emissive>1.0 0.2 0.8 1</emissive></material>
+        </visual>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name><topic>/uav_delta/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+    </model>
+
+    <!-- 🚁 UAV_EPSILON — Yellow Vehicle & Perimeter Escort (49.0m / 12.5m AGL) -->
+    <model name="uav_epsilon">
+      <pose>-5.00 9.50 49.00 0 0 0.70</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><ixy>0</ixy><ixz>0</ixz><iyy>0.07000</iyy><iyz>0</iyz><izz>0.09770</izz></inertia></inertial>
+        <collision name="col"><geometry><box><size>0.47 0.47 0.11</size></box></geometry></collision>
+        <visual name="body"><geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry></visual>
+        <visual name="beacon"><pose>0 0 0.12 0 0 0</pose><geometry><sphere><radius>0.08</radius></sphere></geometry>
+          <material><ambient>1.0 1.0 0.0 1</ambient><diffuse>1.0 1.0 0.0 1</diffuse><emissive>1.0 1.0 0.0 1</emissive></material>
+        </visual>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name><topic>/uav_epsilon/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+    </model>
+  </world>
+</sdf>

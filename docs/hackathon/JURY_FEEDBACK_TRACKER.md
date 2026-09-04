@@ -38,30 +38,40 @@
 
 ---
 
-## 🟡 EVALUATION 2 (Hours 24–30 / Day 2 Midday) — Max Score: 100 Marks
+## 🟡 EVALUATION 2 (Hours 24–30 / Day 2 Midday & Evening) — Max Score: 100 Marks
 
-**Date & Time**: `2026-09-04T...`  
-**Jury Members**:  
-1. Judge 1: `[Name / Affiliation]`  
-2. Judge 2: `[Name / Affiliation]`  
+**Date & Time**: `2026-09-04T18:00:00+05:30` (Completed officially at 6:00 PM)  
+**Track**: Defence & SpaceTech (SH-DST-05)  
+**Status**: ✅ **EVALUATION 2 OFFICIALLY CLEARED WITH POSITIVE JURY FEEDBACK**
 
-### Marks Awarded (Self-Estimate / Actual):
-| Criteria | Max Marks | Awarded | Notes / Observations |
+### Marks Awarded (Conservative Self-Estimate / Jury Atmosphere):
+| Criteria | Max Marks | Grounded Estimate | Evaluation Observations & Critical Judge Feedback |
 |:---|:---:|:---:|:---|
-| Eval 1 Feedback Incorporation (Rule 6.1) | 25 | | |
-| Cross-Subsystem Integration | 30 | | |
-| Robustness Under Failure & Disturbances | 25 | | |
-| Deterministic Verification (232 Tests) | 20 | | |
-| **TOTAL EVAL 2** | **100** | | |
+| Eval 1 Feedback Incorporation (Rule 6.1) | 25 | 19–21 | Strong reception on practical field deployment answers & NDMA mapping |
+| Cross-Subsystem Integration | 30 | 22–25 | Positive feedback on **ArduPilot integration** & **3D simulation world** |
+| Robustness Under Failure & Disturbances | 25 | 18–20 | Liked flight control handling, but judge pressed on real-world constraints |
+| Deterministic Verification (241 Tests) | 20 | 16–18 | 241/241 pytest test cases passing deterministically |
+| **CONSERVATIVE TOTAL EVAL 2** | **100** | **~75–84** | **Keep grounded — do not assume 100. Push hard for the finale.** |
 
-### Eval 1 Feedback Closure Demonstration:
-- [ ] Demonstrated Item 1: `[Proof / Test / Code diff]`
-- [ ] Demonstrated Item 2: `[Proof / Test / Code diff]`
+### Critical Behavioral Feedback from Eval 2 Judge:
+1. **Strong Interest in Flight Control & Real-Life Deployment**:
+   - The judge was intensely focused on **flight control mechanics, ArduPilot SITL integration, aerodynamic handling, and physical real-life field execution**.
+   - Questions centered on how this works in real rain/wind, battery swapping, pilot fatigue, and rescue logistics.
+2. **Apathy / Neglect Toward Subsystem B (Comms / Deep JSCC)**:
+   - Despite multiple attempts to explain Deep JSCC neural compression and 802.11s mesh routing, the judge showed zero excitement for theoretical/academic comms.
+   - **Crucial Strategic Takeaway for Grand Finale Pitch**:
+     - **DO NOT dwell on Deep JSCC math or neural compression in the 5-minute pitch.** Cut comms down to a sharp 15-second operational capability statement (*"Resilient failsafe link that prevents video blackout in noisy RF zones"*).
+     - **Double down on Flight Control (Subsystem A: ArduPilot, offboard GNC, wind rejection, collision avoidance)** and **Real-World Field Operations (Subsystem F: NDMA/IRS CONOPS, 180s setup, 4+1 battery rotation, jawan-proof touch UI)**.
 
-### Mid-Evaluation Feedback & Final Tuning Requests:
-- [ ] **Feedback Item 1**:  
-  - *Assigned To*:  
-  - *Resolution for Grand Finale*:  
+### Action Plan for Grand Finale (Evaluation 3 — Tomorrow 7:00 AM – 8:00 AM):
+1. **Rebalance Pitch Deck Timing**:
+   - Slash Subsystem B (Comms) from 45s down to 15–20s.
+   - Expand Flight Control (ArduPilot/PX4, wind, collision avoidance) to 55s.
+   - Expand Real-Life Deployment & NDMA Field CONOPS to 45s.
+2. **Master Pitch Deck Polish**: Align `docs/presentation/SUTRA_Master_Pitch_Deck.html` and `docs/presentation/SUTRA_Pitch_Deck_Speaker_Notes.md` with this practical emphasis.
+3. **Live Demo 1-Click Launch & Fallback Readiness**: Rehearse live 3D swarm launch (`scripts/launch_jury_live_demonstration.sh`) and have offline 4K high-FPS videos (`sutra_real_world_flood_swarm.mp4`, `deep_jscc_moat_benchmark.mp4`) queued as instant zero-fail fallbacks.
+4. **Jury Trap Q&A Defense**: Drill tough operational questions (battery cycle, weather limits, ArduPilot failsafe, field deployment SOPs).
+
 
 ---
 

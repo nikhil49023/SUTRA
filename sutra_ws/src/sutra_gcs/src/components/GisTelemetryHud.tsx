@@ -41,6 +41,10 @@ export interface SwarmDroneState {
   battery: number;
   status: string;
   speed?: number;
+  vio_mode?: 'GPS_PRIMARY' | 'VIO_FALLBACK_ACTIVE' | 'DEAD_RECKONING_IMU_ONLY';
+  vio_local_x?: number;
+  vio_local_y?: number;
+  vio_local_z?: number;
 }
 
 export const GisTelemetryHud: React.FC = () => {
@@ -164,6 +168,32 @@ export const GisTelemetryHud: React.FC = () => {
               }
             } else if (payload.topic === 'CAMERA_FRAME') {
               setLiveCameraFrame(payload);
+            } else if (payload.topic === 'VIO_POSE') {
+              // EKF2 VIO state from vio_localization.py via sutra_sim_exporter.py
+              // Architecture: Merat et al. RA-L 2024 (digital twin VIO) + Xu et al. T-RO 2022 (Omni-swarm)
+              if (payload.poses) {
+                setSwarmTelemetry((prev) => {
+                  const updated = { ...prev };
+                  Object.entries(payload.poses as Record<string, any>).forEach(([did, pose]: [string, any]) => {
+                    if (updated[did]) {
+                      updated[did] = {
+                        ...updated[did],
+                        // Override lat/lon/alt ONLY when GPS is unavailable (VIO is authoritative)
+                        ...(pose.mode !== 'GPS_PRIMARY' ? {
+                          lat: typeof pose.lat === 'number' ? pose.lat : updated[did].lat,
+                          lon: typeof pose.lon === 'number' ? pose.lon : updated[did].lon,
+                          alt: typeof pose.alt === 'number' ? pose.alt : updated[did].alt,
+                        } : {}),
+                        vio_mode: pose.mode as SwarmDroneState['vio_mode'],
+                        vio_local_x: pose.local_x,
+                        vio_local_y: pose.local_y,
+                        vio_local_z: pose.local_z,
+                      };
+                    }
+                  });
+                  return updated;
+                });
+              }
             } else if (payload.topic === 'SURVIVOR_ALERT') {
               setTargetAlerts((prev) => [payload.data, ...prev]);
             } else if (payload.topic === 'RAFT_STATUS') {
@@ -276,6 +306,16 @@ export const GisTelemetryHud: React.FC = () => {
   });
 
   const selectedTarget = targetAlerts.find((t) => t.id === selectedTargetId) || targetAlerts[0];
+
+  // VIO Mode badge: shows real-time EKF2 localization state per drone
+  // 🟢 GPS_PRIMARY = GPS authoritative | 🟡 VIO_FALLBACK_ACTIVE = GPS denied, VIO active | 🔴 DEAD_RECKONING = IMU only
+  const vioModeBadge = (mode?: string) => {
+    if (!mode || mode === 'GPS_PRIMARY')
+      return <span style={{ fontSize: '9px', color: '#34d399', fontWeight: 700, letterSpacing: '0.02em' }}>🟢 GPS</span>;
+    if (mode === 'VIO_FALLBACK_ACTIVE')
+      return <span style={{ fontSize: '9px', color: '#fbbf24', fontWeight: 700, letterSpacing: '0.02em' }}>🟡 VIO</span>;
+    return <span style={{ fontSize: '9px', color: '#ef4444', fontWeight: 700, letterSpacing: '0.02em' }}>🔴 DR</span>;
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', color: '#f8fafc' }}>
@@ -579,6 +619,14 @@ export const GisTelemetryHud: React.FC = () => {
                   </div>
                   <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '4px' }}>
                     {drone.lat.toFixed(5)}°, {drone.lon.toFixed(5)}°
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px', paddingTop: '5px', borderTop: '1px solid #1e293b' }}>
+                    {vioModeBadge(drone.vio_mode)}
+                    {drone.vio_local_x !== undefined && (
+                      <span style={{ fontSize: '8px', color: '#64748b', fontWeight: 600 }}>
+                        ({drone.vio_local_x.toFixed(1)},{drone.vio_local_y?.toFixed(1)},{drone.vio_local_z?.toFixed(1)}m)
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}

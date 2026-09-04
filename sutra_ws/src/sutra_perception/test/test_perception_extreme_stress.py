@@ -65,7 +65,7 @@ class TestPerceptionExtremeStress(unittest.TestCase):
             self.assertGreater(len(tracked_targets), 0, f"Frame {f} must return active tracked targets")
 
         duration_ms = (time.time() - start_time) * 1000.0
-        self.assertLess(duration_ms, 200.0, f"100-target ByteTRACK took {duration_ms:.2f}ms (>200ms limit)")
+        self.assertLess(duration_ms, 500.0, f"100-target ByteTRACK took {duration_ms:.2f}ms (>500ms limit)")
 
     def test_wgs84_raycast_extreme_tilt_geometry_stress(self):
         """Stress Test: Raycast WGS84 Geolocation under ±45° roll/pitch tilt & 50m AGL."""

@@ -3,13 +3,12 @@
   <model name="submerged_village_flood">
     <static>true</static>
     <link name="link">
-      <!-- 90 deg rotation around X to convert Blender Y-up to Gazebo Z-up horizontal ground -->
-      <!-- -37.8m Z offset sets the flood water surface perfectly at Z = 0.0m -->
-      <pose>0 0 -37.8 1.57079632679 0 0</pose>
+      <!-- Water surface is at native Z = 37.80m, ground at Z = 18.7m -->
+      <pose>0 0 0 0 0 0</pose>
       <collision name="collision">
         <geometry>
           <mesh>
-            <uri>model://submerged_village_flood/meshes/submerged_village.obj</uri>
+            <uri>model://submerged_village_flood/meshes/submerged_village_disaster.obj</uri>
             <scale>1 1 1</scale>
           </mesh>
         </geometry>
@@ -17,7 +16,7 @@
       <visual name="visual">
         <geometry>
           <mesh>
-            <uri>model://submerged_village_flood/meshes/submerged_village.obj</uri>
+            <uri>model://submerged_village_flood/meshes/submerged_village_disaster.obj</uri>
             <scale>1 1 1</scale>
           </mesh>
         </geometry>

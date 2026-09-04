@@ -262,3 +262,57 @@ def test_gate_g5_clearance_during_coordinated_search_and_orbit():
     assert min_distance_observed >= 2.80, (
         f"Gate G5 Clearance Violation in Coordinated Search! Min distance reached {min_distance_observed:.3f}m < 2.80m"
     )
+
+
+def test_swarm_fixed_path_perception_target_tracking():
+    """
+    Verifies that SwarmFixedPathNode ingests perception detections (e.g., from Kaggle GPU),
+    switches to TARGET_TRACK mode, and calculates dynamic concentric orbiting velocities.
+    """
+    from sutra_gnc.swarm_fixed_path_node import SwarmFixedPathNode
+    from rclpy.parameter import Parameter
+
+    node = SwarmFixedPathNode(
+        parameter_overrides=[
+            Parameter("drone_id", Parameter.Type.STRING, "uav_alpha"),
+            Parameter("route_mode", Parameter.Type.STRING, "canopy_forest"),
+        ]
+    )
+
+    try:
+        assert node.flight_mode == "MISSION"
+        assert node.detected_target is None
+
+        # Simulate incoming Kaggle GPU detection message
+        sample_detection = {
+            "status": "CONFIRMED",
+            "source": "kaggle_gpu_perception",
+            "targets": [
+                {
+                    "target_code": "TGT-01",
+                    "class_name": "Survivor",
+                    "confidence": 0.962,
+                    "local_ned": {"x": 6.15, "y": 7.88, "z": 37.80},
+                    "wgs84": {"latitude": 11.524871, "longitude": 76.128456, "altitude": 782.5},
+                }
+            ],
+        }
+
+        msg = String()
+        msg.data = json.dumps(sample_detection)
+        node._on_perception_targets(msg)
+
+        # Assert target parsed and mode transitioned
+        assert node.detected_target == (6.15, 7.88, 37.80)
+        assert node.flight_mode == "TARGET_TRACK"
+
+        # Test control loop behavior in TARGET_TRACK mode
+        node.has_pose = True
+        node.is_airborne = True
+        node.x, node.y, node.z = 6.15, 7.88, 43.80  # near target
+
+        # Run one iteration of control loop without throwing exception
+        node._control_loop()
+    finally:
+        node.destroy_node()
+

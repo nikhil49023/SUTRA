@@ -80,7 +80,7 @@ Manual search and rescue operations in disaster-hit, forested, or conflict-prone
 2. **Subsystem B (Comms & Simulation)**: 802.11s Wi-Fi mesh routing, SwarmRAFT distributed consensus engine (< 500ms leader failover), Deep JSCC neural thermal/visual image compression under low SNR, and Gazebo Sim 8 SITL disaster digital twin. *(Led by Tech Lead Nikhil)*
 3. **Subsystem C (AI Edge Perception)**: YOLOv8-Nano TensorRT edge detector, Tri-Modal sensor fusion (Visual, Thermal, mmWave Radar), survivor/threat identification, and WGS84 GPS raycast target geolocation. *(Led by Vedanth Sai Ram)*
 4. **Subsystem D (3D GIS GCS)**: React 18 + Mapbox GL JS 3D Satellite view, WebGPU real-time telemetry HUD, survivor alert stream, and 1-click Emergency Return-to-Launch (RTL). *(Led by Siva Kesava)*
-5. **Subsystem E (Docs, Verification Audits & Presentation Design)**: Automated unit and integration test suites, system whitepapers, flight logs, master pitch deck formatting, and visual media design. *(Led by Harika)*
+5. **Subsystem E (Docs, Verification Audits, Global Disaster Standards & Presentation Delivery)**: Automated unit and integration test suites, system whitepapers, flight logs, master pitch deck formatting, visual media design, and deep examination/synthesis of global NDRF/NDMA frameworks & international disaster management standards (UN OCHA INSARAG ASR 1–5, FEMA NIMS/ICS, NFPA 2400, NATO STANAG 4586). *(Led by Harika)*
 6. **Subsystem F (Tactical Operations & Field Deployment)**: NDMA rescue CONOPS (Concept of Operations), disaster scenario profiles (Kedarnath flood / landslide search), field deployment SOPs, pre-flight safety checklists, and operational rescue storytelling. *(Led by Rohith Kumar)*
 
 ---
@@ -146,7 +146,7 @@ To guarantee maximum building speed, 24/7 sprint endurance, and zero-risk jury d
 | **⚡ Nikhil** | **ASUS TUF A15** (RTX 3050 GPU, AMD CPU) | **Tech Architect & Subsystem A + B Lead** | Autonomous GNC, 50Hz offboard setpoints, ORCA 3D, Deep JSCC codec, Gazebo Sim 8 digital twin, full-stack integration | 🛡️ **Architecture & Moat Defense** |
 | **👁️ Vedanth Sai Ram** | **Lenovo Yoga** (Ultrabook CPU) | **Subsystem C Lead** (AI Perception) | YOLOv8-Nano TensorRT detector, Tri-Modal fusion, SAHI slicing, WGS84 DEM raycasting *(Offloads heavy GPU training/TRT builds to Rohith)* | 🛡️ **Edge AI & Geolocation Defense** |
 | **🗺️ Siva Kesava** | **Lenovo Laptop** (Intel i5 CPU) | **Subsystem D Lead** (3D GIS GCS) | React 18 + Mapbox 3D satellite view, WebGPU HUD widgets, WebSocket state machine, MAVLink router *(Offloads multi-stream load tests to Rohith)* | 🛡️ **GCS & Operator HUD Defense** |
-| **📑 Harika** | **MacBook Pro** (Apple Silicon) | **Subsystem E Lead & Field CONOPS Co-Lead** | Automated test verification suites, Master Pitch Deck delivery, Zero-Mock scorecard, NDMA disaster search profiles & unit economics | 🛡️ **Presentation Delivery & Verification Defense** |
+| **📑 Harika** | **MacBook Pro** (Apple Silicon) | **Subsystem E Lead & Field CONOPS Co-Lead** | Automated test verification suites, Master Pitch Deck delivery, Zero-Mock scorecard, Global NDRF & International Disaster Standards examination (NDMA/INSARAG/FEMA/NFPA/NATO), disaster search profiles & unit economics | 🛡️ **Presentation Delivery, Verification & Disaster Standards Defense** |
 | **⚙️ Rohith Kumar** | **HP Victus** (Intel i7, NVIDIA RTX 4050 6GB VRAM) | **Compute & Execution Assistant** (C & D, A auxiliary) | Dedicated GPU compute runner for TensorRT builds & GCS stress tests; secondary screen GCS flight telemetry monitor | 🔒 **Zero Independent Q&A Risk** (Backline Support) |
 
 ---
@@ -178,10 +178,24 @@ When a user introduces themselves by name, automatically activate their exact ro
 - **Pair Assistant**: Rohith Kumar (provides multi-stream client testing & HUD rendering verification).
 - **Tasks**: Mapbox GL JS 3D satellite view & drone markers (`src/App.tsx`), WebGPU real-time telemetry HUD widgets, ATAK/WinTAK Cursor-on-Target XML streamer, survivor alert stream, and 1-click Emergency RTL button.
 
-### 5. 📑 HARIKA — Subsystem E Lead & Field CONOPS Co-Lead (Docs, Audits & Pitch Delivery)
+### 5. 📑 HARIKA — Subsystem E Lead & Field CONOPS Co-Lead (Docs, Audits, Disaster Standards & Pitch Delivery)
+- **Dedicated Agent Guide**: [`docs/agents/HARIKA_AGENT.md`](docs/agents/HARIKA_AGENT.md)
+- **Subsystem Specification**: [`docs/subsystems/SUBSYSTEM_E_DOCS.md`](docs/subsystems/SUBSYSTEM_E_DOCS.md)
 - **Folder**: `docs/` & `scripts/` | **Branch**: `feature/subsystem-e-docs`
 - **Co-Lead Support**: Tech Lead Nikhil.
-- **Tasks**: Gate Audits G1–G6 verification, Master Pitch Deck delivery & formatting, Zero-Mock benchmark scorecards, NDMA Kedarnath/Wayanad operational profiles, and presentation leadership.
+- **Tasks**:
+  - **Global NDRF & Disaster Management Standards Examination (CORE NEW TASK)**:
+    - **NDRF & NDMA Institutional Alignment**: Rigorous analysis of National Disaster Response Force (NDRF) operational deployment SOPs, NDMA Incident Response System (IRS 2010), NDMA Drone Guidelines 2019 (Section 4.3), and statutory grounding under the Disaster Management Act 2005 (Sections 34 & 38) and DGCA Drone Rules 2021 (Rule 50 BVLOS/disaster relief exemption). Position SUTRA as an **Autonomous Aerial Reconnaissance Unit (AARU)** reporting directly to the **Operations Section Chief (OSC)** and feeding live Cursor-on-Target (CoT) XML to the District Emergency Operations Centre (EOC).
+    - **UN OCHA INSARAG USAR Guidelines**: Master the Assessment, Search & Rescue (ASR) Levels 1–5 lifecycle:
+      - *ASR Level 1 (Wide Area Assessment - WAA)*: Time compression proof—reducing conventional 18–24 hour manual foot triage to a **25-minute autonomous 5-drone sweep** (98% time compression).
+      - *ASR Level 2 (Sector Assessment & Worksite Triage)*: Automated building collapse classification & digital INSARAG triage marking.
+      - *ASR Level 3–5*: Rapid handoff protocols for live surface extrication vs. deep technical breaching.
+    - **FEMA NIMS & US&R Protocols**: Incident Command System (ICS-100/200/700) interoperability, Common Operating Picture (COP) GIS layers, and standardized 2x2 ft FEMA X-Codes digital conversion.
+    - **NFPA 2400 sUAS Standard**: Public safety multi-drone airspace segregation, altitude deconfliction, and loss-of-link automated failsafes.
+    - **NATO STANAG 4586 & MIL-STD-2525D**: Interoperability with tactical networks (ATAK/WinTAK) via Cursor-on-Target (CoT) UDP/IP XML streams.
+  - **Engineering Honesty & Strict Operational Boundaries**: Defend the "Cases Solved" (Golden 24h triage, NLOS 802.11s mesh, Deep JSCC $-5\text{dB}$ resilience, sub-0.32m WGS84 raycast) vs. "Cases NOT Solved" (deep rubble $>1.0\text{m}$ handoff to K9/seismic geophones, Category 5 gale winds $>18\text{m/s}$, underwater SAR, heavy breaching).
+  - **Master Pitch Deck & Speaker Notes Synthesis**: Maintain and deliver [`docs/presentation/SUTRA_Master_Pitch_Deck.html`](docs/presentation/SUTRA_Master_Pitch_Deck.html), refine [`docs/presentation/SUTRA_Pitch_Deck_Speaker_Notes.md`](docs/presentation/SUTRA_Pitch_Deck_Speaker_Notes.md), and master the 5 non-technical field deployment trap questions in [`docs/presentation/SUTRA_Jury_Defense_Stress_Test_QA.md`](docs/presentation/SUTRA_Jury_Defense_Stress_Test_QA.md).
+  - **Verification & Audit Integrity**: Gate Audits G1–G6 verification, 234/234 passing test harness execution, Zero-Mock benchmark scorecards, and live jury feedback logging in [`docs/hackathon/JURY_FEEDBACK_TRACKER.md`](docs/hackathon/JURY_FEEDBACK_TRACKER.md) (NHCE Rule 6.1).
 
 ---
 
@@ -266,8 +280,16 @@ To maximize performance, accuracy, and code quality, ALL agents MUST actively ut
    - **High-Throughput Rendering**: React 18 frontend decoupled from high-frequency telemetry. WebSocket binary ArrayBuffers stream directly into WebGPU canvas draw buffers via `Float32Array` ring buffers, maintaining locked 60.0 FPS across 5 concurrent UAV streams.
    - **Emergency Control**: RTL dispatch message sent over low-latency binary WebSocket with $<10.0\text{ms}$ latency to execution.
 
-5. **Subsystem E & F (`sutra_docs` & `sutra_ops`)**:
-   - **Zero-Mock Verification**: 232/232 deterministic unit and integration tests with zero hardcoded/mock metrics.
+5. **Subsystem E (`sutra_docs` / Documentation, Audits & Disaster Standards)**:
+   - **Global NDRF & Disaster Standards Rigor**: Must articulate the formal institutional hierarchy under the NDMA Incident Response System (IRS 2010), positioning SUTRA as an Autonomous Aerial Reconnaissance Unit (AARU) under the Operations Section Chief (OSC), streaming georeferenced Cursor-on-Target (CoT / MIL-STD-2525D) XML to the District EOC.
+   - **INSARAG USAR Protocols**: Formulate the mathematical time compression proof of UN OCHA INSARAG ASR Level 1 Wide Area Assessment: $T_{\text{manual}} = 18\text{--}24\text{ hours} \implies T_{\text{SUTRA}} = 25\text{ minutes}$ across $2.5\text{ km}^2$ via 5-drone collaborative echelon cruising with digital triage classification.
+   - **Regulatory & Statutory Airspace Interoperability**: Ground operations in DGCA Drone Rules 2021 (Rule 50 BVLOS/disaster relief exemption) and Sections 34/38 of the Disaster Management Act 2005. Formulate compliance with NFPA 2400 (sUAS Public Safety) for multi-aircraft deconfliction and failsafe return.
+   - **Zero-Mock Verification & Gate Audits**: Maintain 234/234 passing deterministic tests with zero mock or synthetic metrics across Gate Audits G1–G6.
+   - **Honest Engineering Boundaries**: Enforce strict demarcation between solved disaster operational envelopes (Golden 24h triage, NLOS 802.11s mesh, Deep JSCC $-5\text{dB}$ resilience, sub-0.32m raycast) and unsolved boundaries requiring human/sensor handoffs (deep buried $>1\text{m} \to$ K9/seismic geophones, winds $>18\text{m/s} \to$ shelter standby).
+
+6. **Subsystem F (`sutra_ops` / Tactical Operations & Field Deployment)**:
    - **CONOPS & Unit Economics**: NDMA Kedarnath flood & Wayanad landslide search profiles; BOM breakdown at ₹42,850 per drone vs ₹15,00,000 for commercial defense UAVs.
+   - **Field Deployment SOP**: 180-second rapid staging protocol, two Pelican 1650 flight cases ($18.5\text{ kg}$ each), 4+1 continuous leapfrog rotation for 24-hour persistent surveillance.
+
 
 

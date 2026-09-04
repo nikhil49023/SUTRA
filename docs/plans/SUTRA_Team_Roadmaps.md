@@ -90,13 +90,17 @@
 ## 📑 4. HARIKA — Subsystem E Lead & Pitch Co-Lead (Docs, Audits & Presentation)
 
 * **Role:** Lead Engineer, Subsystem E (Documentation, Automated Gate Audits, Pitch Deck Formatting & Delivery)
+* **Dedicated Agent Guide:** [`docs/agents/HARIKA_AGENT.md`](../agents/HARIKA_AGENT.md)
+* **Master Specification:** [`docs/subsystems/SUBSYSTEM_E_DOCS.md`](../subsystems/SUBSYSTEM_E_DOCS.md)
 * **Folder:** [`docs/`](docs/), [`scripts/`](scripts/), [`.github/`](.github/)
 * **Branch:** `feature/subsystem-e-docs`
 * **Co-Lead Support:** Tech Lead Nikhil
 * **Verification Suite:** Automated monorepo test suites & pitch deck rehearsal
-* **Jury Defense Ownership:** 🛡️ **Master Pitch Presentation Delivery, Rule 6.1 Compliance & Verification Defense**
+* **Jury Defense Ownership:** 🛡️ **Master Pitch Presentation Delivery, Disaster Standards, Rule 6.1 Compliance & Verification Defense**
 
-### Assigned Gap Remediation Items:
+### Assigned Gap Remediation & Strategic Items:
+* **Global NDRF & Disaster Standards Examination (Priority 1)**: Thorough audit and operational alignment with National Disaster Response Force (NDRF) field SOPs, NDMA Incident Response System (IRS 2010), UN OCHA INSARAG USAR Guidelines (ASR Levels 1–5), FEMA NIMS/ICS (ICS-100/200/700), NFPA 2400, and NATO STANAG 4586 CoT XML streaming.
+* **Engineering Honesty & Boundaries Defense**: Defend the strict demarcation between solved capabilities (Golden 24h triage, NLOS mesh, Deep JSCC $-5\text{dB}$, sub-0.32m raycasting) vs. physical boundaries (deep buried $>1\text{m} \to$ K9/geophones, cyclonic winds $>18\text{m/s}$).
 * **Gap 3 (Critical)**: Fix `.github/workflows/ros2-ci.yml` by removing `|| true` masks and ensuring all active branches trigger CI.
 * **Gap 22 (Medium)**: Update root `requirements.txt` with `websockets>=12.0` and system library references.
 * **Gap 30 (Low)**: Maintain active runtime logging in `docs/hackathon/JURY_FEEDBACK_TRACKER.md` across Evaluation 1 & 2.

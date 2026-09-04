@@ -1,15 +1,40 @@
 <?xml version="1.0" ?>
+<!--
+================================================================================
+PROJECT SUTRA — MASTER SUBMERGED VILLAGE FLOOD SIMULATION WORLD (SH-DST-05)
+================================================================================
+Authentic 3D Submerged Indian Village disaster world converted directly from Blender.
+Features:
+  - 30 Submerged village houses, ruins, and stone embankments (Z = 18.7m - 52.8m)
+  - Turbulent Floodwater surface at native Z = 37.80m
+  - 12 Stranded/drowning survivor models struggling in floodwater (Z = 36.5m - 38.3m)
+  - 5 Rooftop survivors on higher elevation houses (Z = 40.4m - 47.8m)
+  - 5x Autonomous SUTRA Pegasus UAVs (uav_alpha..uav_epsilon) spawned at exact Blender
+    starting coordinates (Z = 50.0m - 66.0m) with 50Hz velocity control & odometry
+  - Gazebo GUI camera positioned at Blender Camera_Cinematic_Hero (18, -25, 48.5)
+  - Dynamic Wind Effects plugin for turbulent 14 m/s wind shear testing
+================================================================================
+-->
 <sdf version="1.8">
   <world name="submerged_village_flood_world">
-    
-    <!-- ── Physics Engine Settings ─────────────────────────────────────────── -->
+
+    <!-- ── Physics Engine Settings (500Hz Solver, RTF 1.00) ────────────────── -->
     <physics name="500hz_physics" type="ignored">
       <max_step_size>0.002</max_step_size>
       <real_time_factor>1.0</real_time_factor>
       <real_time_update_rate>500</real_time_update_rate>
     </physics>
 
-    <!-- Essential Gazebo Sim System Plugins -->
+    <!-- ── Gazebo GUI Viewport (Exact Blender Cinematic Hero Camera) ────────── -->
+    <gui fullscreen="0">
+      <camera name="user_camera">
+        <!-- Exact Blender Camera_Cinematic_Hero: (18, -25, 48.5) looking down river corridor -->
+        <pose>18.0 -25.0 48.5 0 0.29 1.51</pose>
+        <view_controller>orbit</view_controller>
+      </camera>
+    </gui>
+
+    <!-- ── Gazebo Sim 8 Core Plugins ────────────────────────────────────────── -->
     <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics" />
     <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster" />
     <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands" />
@@ -18,674 +43,255 @@
     </plugin>
     <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu" />
     <plugin filename="gz-sim-navsat-system" name="gz::sim::systems::NavSat" />
+    <plugin filename="gz-sim-wind-effects-system" name="gz::sim::systems::WindEffects">
+      <force_approximation_scaling_factor>0.05</force_approximation_scaling_factor>
+      <horizontal>
+        <magnitude>
+          <time_for_rise>1.0</time_for_rise>
+          <sin>
+            <amplitude_percent>0.15</amplitude_percent>
+            <period>8.0</period>
+          </sin>
+        </magnitude>
+        <direction>
+          <time_for_rise>1.0</time_for_rise>
+          <sin>
+            <amplitude>0.20</amplitude>
+            <period>12.0</period>
+          </sin>
+        </direction>
+      </horizontal>
+    </plugin>
 
-    <!-- ── Atmosphere & Balanced Disaster Lighting ─────────────────────────── -->
+    <!-- ── Atmospheric Lighting & Sky ──────────────────────────────────────── -->
     <atmosphere type="adiabatic"/>
     <scene>
-      <ambient>0.35 0.38 0.42 1.0</ambient>
-      <background>0.45 0.55 0.65 1.0</background>
+      <ambient>0.60 0.65 0.70 1.0</ambient>
+      <background>0.50 0.65 0.85 1.0</background>
       <shadows>true</shadows>
       <grid>false</grid>
     </scene>
 
-    <!-- Primary Sun Light -->
-    <light type="directional" name="sun">
+    <!-- Primary Daylight Sun (120,000 Lux) -->
+    <light type="directional" name="sun_daylight">
       <cast_shadows>true</cast_shadows>
-      <pose>0 0 200 0 0 0</pose>
-      <diffuse>0.85 0.85 0.82 1</diffuse>
-      <specular>0.3 0.3 0.3 1</specular>
+      <pose>0 0 250 0 0 0</pose>
+      <diffuse>1.0 0.98 0.92 1</diffuse>
+      <specular>0.4 0.4 0.4 1</specular>
       <direction>-0.3 0.2 -1.0</direction>
     </light>
 
-    <!-- Fill Light -->
-    <light type="directional" name="fill_light">
+    <!-- Secondary Ambient Fill Light -->
+    <light type="directional" name="ambient_fill">
       <cast_shadows>false</cast_shadows>
-      <pose>0 0 150 0 0 0</pose>
-      <diffuse>0.4 0.45 0.5 1</diffuse>
+      <pose>0 0 200 0 0 0</pose>
+      <diffuse>0.55 0.62 0.75 1</diffuse>
       <specular>0.1 0.1 0.1 1</specular>
       <direction>0.3 -0.2 -1.0</direction>
     </light>
 
-    <!-- ── Submerged Village Flood World Model (Horizontally Aligned) ───────── -->
+    <!-- ── Submerged Village Flood World 3D Disaster Mesh Model ────────────── -->
     <include>
       <name>submerged_village_disaster</name>
       <uri>model://submerged_village_flood</uri>
       <pose>0 0 0 0 0 0</pose>
     </include>
 
-    <!-- ── 8-UAV Swarm, Rescue Boat, 17 Survivors, & No-Fly Zones ──────────── -->
-
-    <!-- 🚁 UAV_1 — Lead Alpha (Cyan) -->
-    <model name="uav_1">
-      <pose>18.0 5.0 15.0 0 0 0</pose>
-      <static>false</static>
-      <link name="base_link">
-        <gravity>false</gravity>
-        <inertial>
-          <mass>1.5</mass>
-          <inertia><ixx>0.035</ixx><iyy>0.070</iyy><izz>0.098</izz></inertia>
-        </inertial>
-        <collision name="col">
-          <geometry><box><size>0.5 0.5 0.15</size></box></geometry>
-        </collision>
-        <visual name="body">
-          <geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/firefly.dae</uri></mesh></geometry>
-          <material>
-            <ambient>0.00 0.72 0.80 1</ambient>
-            <diffuse>0.00 0.90 1.00 1</diffuse>
-          </material>
-        </visual>
-        <visual name="beacon">
-          <pose>0 0 0.1 0 0 0</pose>
-          <geometry><sphere><radius>0.08</radius></sphere></geometry>
-          <material>
-            <ambient>0.0 0.9 1.0 1</ambient>
-            <diffuse>0.0 0.9 1.0 1</diffuse>
-            <emissive>0.00 0.90 1.00 1</emissive>
-          </material>
-        </visual>
-        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>200</update_rate><topic>/uav_1/imu</topic></sensor>
-        <sensor name="navsat" type="navsat"><always_on>1</always_on><update_rate>10</update_rate><topic>/uav_1/navsat</topic></sensor>
-        <sensor name="camera_rgb" type="camera"><pose>0.15 0 -0.05 0 0.4 0</pose><update_rate>30</update_rate><topic>/uav_1/camera/image_raw</topic><camera><horizontal_fov>1.4</horizontal_fov><image><width>640</width><height>480</height><format>R8G8B8</format></image><clip><near>0.1</near><far>150</far></clip></camera><always_on>1</always_on></sensor>
-      </link>
-      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>base_link</link_name><topic>/uav_1/gazebo/command/twist</topic>
-      </plugin>
-      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
-    </model>
-
-    <!-- 🚁 UAV_2 — West Recon (Orange) -->
-    <model name="uav_2">
-      <pose>5.0 -10.0 11.0 0 0 0</pose>
-      <static>false</static>
-      <link name="base_link">
-        <gravity>false</gravity>
-        <inertial>
-          <mass>1.5</mass>
-          <inertia><ixx>0.035</ixx><iyy>0.070</iyy><izz>0.098</izz></inertia>
-        </inertial>
-        <collision name="col">
-          <geometry><box><size>0.5 0.5 0.15</size></box></geometry>
-        </collision>
-        <visual name="body">
-          <geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/firefly.dae</uri></mesh></geometry>
-          <material>
-            <ambient>0.80 0.32 0.00 1</ambient>
-            <diffuse>1.00 0.40 0.00 1</diffuse>
-          </material>
-        </visual>
-        <visual name="beacon">
-          <pose>0 0 0.1 0 0 0</pose>
-          <geometry><sphere><radius>0.08</radius></sphere></geometry>
-          <material>
-            <ambient>1.0 0.4 0.0 1</ambient>
-            <diffuse>1.0 0.4 0.0 1</diffuse>
-            <emissive>1.00 0.40 0.00 1</emissive>
-          </material>
-        </visual>
-        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>200</update_rate><topic>/uav_2/imu</topic></sensor>
-        <sensor name="navsat" type="navsat"><always_on>1</always_on><update_rate>10</update_rate><topic>/uav_2/navsat</topic></sensor>
-        <sensor name="camera_rgb" type="camera"><pose>0.15 0 -0.05 0 0.4 0</pose><update_rate>30</update_rate><topic>/uav_2/camera/image_raw</topic><camera><horizontal_fov>1.4</horizontal_fov><image><width>640</width><height>480</height><format>R8G8B8</format></image><clip><near>0.1</near><far>150</far></clip></camera><always_on>1</always_on></sensor>
-      </link>
-      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>base_link</link_name><topic>/uav_2/gazebo/command/twist</topic>
-      </plugin>
-      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
-    </model>
-
-    <!-- 🚁 UAV_3 — East Recon (Blue) -->
-    <model name="uav_3">
-      <pose>35.0 15.0 11.0 0 0 0</pose>
-      <static>false</static>
-      <link name="base_link">
-        <gravity>false</gravity>
-        <inertial>
-          <mass>1.5</mass>
-          <inertia><ixx>0.035</ixx><iyy>0.070</iyy><izz>0.098</izz></inertia>
-        </inertial>
-        <collision name="col">
-          <geometry><box><size>0.5 0.5 0.15</size></box></geometry>
-        </collision>
-        <visual name="body">
-          <geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/firefly.dae</uri></mesh></geometry>
-          <material>
-            <ambient>0.08 0.32 0.80 1</ambient>
-            <diffuse>0.10 0.40 1.00 1</diffuse>
-          </material>
-        </visual>
-        <visual name="beacon">
-          <pose>0 0 0.1 0 0 0</pose>
-          <geometry><sphere><radius>0.08</radius></sphere></geometry>
-          <material>
-            <ambient>0.1 0.4 1.0 1</ambient>
-            <diffuse>0.1 0.4 1.0 1</diffuse>
-            <emissive>0.10 0.40 1.00 1</emissive>
-          </material>
-        </visual>
-        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>200</update_rate><topic>/uav_3/imu</topic></sensor>
-        <sensor name="navsat" type="navsat"><always_on>1</always_on><update_rate>10</update_rate><topic>/uav_3/navsat</topic></sensor>
-        <sensor name="camera_rgb" type="camera"><pose>0.15 0 -0.05 0 0.4 0</pose><update_rate>30</update_rate><topic>/uav_3/camera/image_raw</topic><camera><horizontal_fov>1.4</horizontal_fov><image><width>640</width><height>480</height><format>R8G8B8</format></image><clip><near>0.1</near><far>150</far></clip></camera><always_on>1</always_on></sensor>
-      </link>
-      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>base_link</link_name><topic>/uav_3/gazebo/command/twist</topic>
-      </plugin>
-      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
-    </model>
-
-    <!-- 🚁 UAV_4 — River Sweep (Green) -->
-    <model name="uav_4">
-      <pose>20.0 -5.0 9.0 0 0 0</pose>
-      <static>false</static>
-      <link name="base_link">
-        <gravity>false</gravity>
-        <inertial>
-          <mass>1.5</mass>
-          <inertia><ixx>0.035</ixx><iyy>0.070</iyy><izz>0.098</izz></inertia>
-        </inertial>
-        <collision name="col">
-          <geometry><box><size>0.5 0.5 0.15</size></box></geometry>
-        </collision>
-        <visual name="body">
-          <geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/firefly.dae</uri></mesh></geometry>
-          <material>
-            <ambient>0.00 0.80 0.32 1</ambient>
-            <diffuse>0.00 1.00 0.40 1</diffuse>
-          </material>
-        </visual>
-        <visual name="beacon">
-          <pose>0 0 0.1 0 0 0</pose>
-          <geometry><sphere><radius>0.08</radius></sphere></geometry>
-          <material>
-            <ambient>0.0 1.0 0.4 1</ambient>
-            <diffuse>0.0 1.0 0.4 1</diffuse>
-            <emissive>0.00 1.00 0.40 1</emissive>
-          </material>
-        </visual>
-        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>200</update_rate><topic>/uav_4/imu</topic></sensor>
-        <sensor name="navsat" type="navsat"><always_on>1</always_on><update_rate>10</update_rate><topic>/uav_4/navsat</topic></sensor>
-        <sensor name="camera_rgb" type="camera"><pose>0.15 0 -0.05 0 0.4 0</pose><update_rate>30</update_rate><topic>/uav_4/camera/image_raw</topic><camera><horizontal_fov>1.4</horizontal_fov><image><width>640</width><height>480</height><format>R8G8B8</format></image><clip><near>0.1</near><far>150</far></clip></camera><always_on>1</always_on></sensor>
-      </link>
-      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>base_link</link_name><topic>/uav_4/gazebo/command/twist</topic>
-      </plugin>
-      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
-    </model>
-
-    <!-- 🚁 UAV_5 — Mansion Recon (Yellow) -->
-    <model name="uav_5">
-      <pose>20.0 20.0 10.0 0 0 0</pose>
-      <static>false</static>
-      <link name="base_link">
-        <gravity>false</gravity>
-        <inertial>
-          <mass>1.5</mass>
-          <inertia><ixx>0.035</ixx><iyy>0.070</iyy><izz>0.098</izz></inertia>
-        </inertial>
-        <collision name="col">
-          <geometry><box><size>0.5 0.5 0.15</size></box></geometry>
-        </collision>
-        <visual name="body">
-          <geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/firefly.dae</uri></mesh></geometry>
-          <material>
-            <ambient>0.80 0.72 0.00 1</ambient>
-            <diffuse>1.00 0.90 0.00 1</diffuse>
-          </material>
-        </visual>
-        <visual name="beacon">
-          <pose>0 0 0.1 0 0 0</pose>
-          <geometry><sphere><radius>0.08</radius></sphere></geometry>
-          <material>
-            <ambient>1.0 0.9 0.0 1</ambient>
-            <diffuse>1.0 0.9 0.0 1</diffuse>
-            <emissive>1.00 0.90 0.00 1</emissive>
-          </material>
-        </visual>
-        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>200</update_rate><topic>/uav_5/imu</topic></sensor>
-        <sensor name="navsat" type="navsat"><always_on>1</always_on><update_rate>10</update_rate><topic>/uav_5/navsat</topic></sensor>
-        <sensor name="camera_rgb" type="camera"><pose>0.15 0 -0.05 0 0.4 0</pose><update_rate>30</update_rate><topic>/uav_5/camera/image_raw</topic><camera><horizontal_fov>1.4</horizontal_fov><image><width>640</width><height>480</height><format>R8G8B8</format></image><clip><near>0.1</near><far>150</far></clip></camera><always_on>1</always_on></sensor>
-      </link>
-      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>base_link</link_name><topic>/uav_5/gazebo/command/twist</topic>
-      </plugin>
-      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
-    </model>
-
-    <!-- 🚁 UAV_6 — North Ridge (Magenta) -->
-    <model name="uav_6">
-      <pose>25.0 32.0 12.0 0 0 0</pose>
-      <static>false</static>
-      <link name="base_link">
-        <gravity>false</gravity>
-        <inertial>
-          <mass>1.5</mass>
-          <inertia><ixx>0.035</ixx><iyy>0.070</iyy><izz>0.098</izz></inertia>
-        </inertial>
-        <collision name="col">
-          <geometry><box><size>0.5 0.5 0.15</size></box></geometry>
-        </collision>
-        <visual name="body">
-          <geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/firefly.dae</uri></mesh></geometry>
-          <material>
-            <ambient>0.80 0.08 0.64 1</ambient>
-            <diffuse>1.00 0.10 0.80 1</diffuse>
-          </material>
-        </visual>
-        <visual name="beacon">
-          <pose>0 0 0.1 0 0 0</pose>
-          <geometry><sphere><radius>0.08</radius></sphere></geometry>
-          <material>
-            <ambient>1.0 0.1 0.8 1</ambient>
-            <diffuse>1.0 0.1 0.8 1</diffuse>
-            <emissive>1.00 0.10 0.80 1</emissive>
-          </material>
-        </visual>
-        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>200</update_rate><topic>/uav_6/imu</topic></sensor>
-        <sensor name="navsat" type="navsat"><always_on>1</always_on><update_rate>10</update_rate><topic>/uav_6/navsat</topic></sensor>
-        <sensor name="camera_rgb" type="camera"><pose>0.15 0 -0.05 0 0.4 0</pose><update_rate>30</update_rate><topic>/uav_6/camera/image_raw</topic><camera><horizontal_fov>1.4</horizontal_fov><image><width>640</width><height>480</height><format>R8G8B8</format></image><clip><near>0.1</near><far>150</far></clip></camera><always_on>1</always_on></sensor>
-      </link>
-      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>base_link</link_name><topic>/uav_6/gazebo/command/twist</topic>
-      </plugin>
-      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
-    </model>
-
-    <!-- 🚁 UAV_7 — West Terrace (Teal) -->
-    <model name="uav_7">
-      <pose>2.0 12.0 10.0 0 0 0</pose>
-      <static>false</static>
-      <link name="base_link">
-        <gravity>false</gravity>
-        <inertial>
-          <mass>1.5</mass>
-          <inertia><ixx>0.035</ixx><iyy>0.070</iyy><izz>0.098</izz></inertia>
-        </inertial>
-        <collision name="col">
-          <geometry><box><size>0.5 0.5 0.15</size></box></geometry>
-        </collision>
-        <visual name="body">
-          <geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/firefly.dae</uri></mesh></geometry>
-          <material>
-            <ambient>0.00 0.64 0.64 1</ambient>
-            <diffuse>0.00 0.80 0.80 1</diffuse>
-          </material>
-        </visual>
-        <visual name="beacon">
-          <pose>0 0 0.1 0 0 0</pose>
-          <geometry><sphere><radius>0.08</radius></sphere></geometry>
-          <material>
-            <ambient>0.0 0.8 0.8 1</ambient>
-            <diffuse>0.0 0.8 0.8 1</diffuse>
-            <emissive>0.00 0.80 0.80 1</emissive>
-          </material>
-        </visual>
-        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>200</update_rate><topic>/uav_7/imu</topic></sensor>
-        <sensor name="navsat" type="navsat"><always_on>1</always_on><update_rate>10</update_rate><topic>/uav_7/navsat</topic></sensor>
-        <sensor name="camera_rgb" type="camera"><pose>0.15 0 -0.05 0 0.4 0</pose><update_rate>30</update_rate><topic>/uav_7/camera/image_raw</topic><camera><horizontal_fov>1.4</horizontal_fov><image><width>640</width><height>480</height><format>R8G8B8</format></image><clip><near>0.1</near><far>150</far></clip></camera><always_on>1</always_on></sensor>
-      </link>
-      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>base_link</link_name><topic>/uav_7/gazebo/command/twist</topic>
-      </plugin>
-      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
-    </model>
-
-    <!-- 🚁 UAV_8 — Comms Relay High (White) -->
-    <model name="uav_8">
-      <pose>15.0 15.0 22.0 0 0 0</pose>
-      <static>false</static>
-      <link name="base_link">
-        <gravity>false</gravity>
-        <inertial>
-          <mass>1.5</mass>
-          <inertia><ixx>0.035</ixx><iyy>0.070</iyy><izz>0.098</izz></inertia>
-        </inertial>
-        <collision name="col">
-          <geometry><box><size>0.5 0.5 0.15</size></box></geometry>
-        </collision>
-        <visual name="body">
-          <geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/firefly.dae</uri></mesh></geometry>
-          <material>
-            <ambient>0.72 0.72 0.80 1</ambient>
-            <diffuse>0.90 0.90 1.00 1</diffuse>
-          </material>
-        </visual>
-        <visual name="beacon">
-          <pose>0 0 0.1 0 0 0</pose>
-          <geometry><sphere><radius>0.08</radius></sphere></geometry>
-          <material>
-            <ambient>0.9 0.9 1.0 1</ambient>
-            <diffuse>0.9 0.9 1.0 1</diffuse>
-            <emissive>0.90 0.90 1.00 1</emissive>
-          </material>
-        </visual>
-        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>200</update_rate><topic>/uav_8/imu</topic></sensor>
-        <sensor name="navsat" type="navsat"><always_on>1</always_on><update_rate>10</update_rate><topic>/uav_8/navsat</topic></sensor>
-        <sensor name="camera_rgb" type="camera"><pose>0.15 0 -0.05 0 0.4 0</pose><update_rate>30</update_rate><topic>/uav_8/camera/image_raw</topic><camera><horizontal_fov>1.4</horizontal_fov><image><width>640</width><height>480</height><format>R8G8B8</format></image><clip><near>0.1</near><far>150</far></clip></camera><always_on>1</always_on></sensor>
-      </link>
-      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>base_link</link_name><topic>/uav_8/gazebo/command/twist</topic>
-      </plugin>
-      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
-    </model>
-
-    <!-- 🚤 RESCUE BOAT ALPHA (Navigating Flooded Street) -->
-    <model name="rescue_boat_alpha">
-      <pose>14.0 -12.0 1.65 0 0 0.15</pose>
-      <static>false</static>
-      <link name="hull">
-        <gravity>false</gravity>
-        <inertial><mass>200.0</mass><inertia><ixx>10.0</ixx><iyy>25.0</iyy><izz>30.0</izz></inertia></inertial>
-        <visual name="hull_vis">
-          <geometry><box><size>1.8 4.2 0.8</size></box></geometry>
-          <material>
-            <ambient>1.0 0.25 0.0 1</ambient>
-            <diffuse>1.0 0.25 0.0 1</diffuse>
-            <emissive>0.30 0.08 0.00 1</emissive>
-          </material>
-        </visual>
-        <visual name="bow_light">
-          <pose>0 1.9 0.4 0 0 0</pose>
-          <geometry><sphere><radius>0.12</radius></sphere></geometry>
-          <material><ambient>1 1 0.9 1</ambient><diffuse>1 1 0.9 1</diffuse><emissive>1.00 1.00 0.90 1</emissive></material>
-        </visual>
-      </link>
-      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>hull</link_name>
-        <topic>/rescue_boat_alpha/gazebo/command/twist</topic>
-      </plugin>
-    </model>
-
-
-    <!-- ================================================================ -->
-    <!-- 👥 SUTRA DISASTER SURVIVORS & VICTIMS (STANDING MAN & SWIMMING GIRL) -->
-    <!-- ================================================================ -->
-
-    <!-- 👤 1. STANDING MAN - Mansion Rooftop Command Sector (Pacing / Waving) -->
-    <model name="standing_man_mansion">
-      <pose>20.5 19.5 4.50 0 0 0</pose>
-      <static>false</static>
-      <link name="link">
-        <gravity>false</gravity>
-        <inertial><mass>75.0</mass><inertia><ixx>1.5</ixx><iyy>1.5</iyy><izz>1.5</izz></inertia></inertial>
-        <collision name="c"><pose>0 0 0.85 0 0 0</pose><geometry><cylinder><radius>0.3</radius><length>1.7</length></cylinder></geometry></collision>
-        <visual name="mesh">
-          <geometry><mesh><uri>model://standing_man/meshes/standing_man.glb</uri><scale>1.0 1.0 1.0</scale></mesh></geometry>
-        </visual>
-        <visual name="beacon">
-          <pose>0 0 2.2 0 0 0</pose>
-          <geometry><sphere><radius>0.15</radius></sphere></geometry>
-          <material><ambient>1.0 0.5 0.0 1</ambient><diffuse>1.0 0.5 0.0 1</diffuse><emissive>1.00 0.60 0.00 1</emissive></material>
-        </visual>
-      </link>
-      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>link</link_name>
-        <topic>/standing_man_mansion/gazebo/command/twist</topic>
-      </plugin>
-    </model>
-
-    <!-- 👤 2. STANDING MAN - Mountain Upper Terrace (Guiding Evacuees) -->
-    <model name="standing_man_terrace">
-      <pose>15.0 35.0 8.20 0 0 0.5</pose>
-      <static>false</static>
-      <link name="link">
-        <gravity>false</gravity>
-        <inertial><mass>75.0</mass><inertia><ixx>1.5</ixx><iyy>1.5</iyy><izz>1.5</izz></inertia></inertial>
-        <collision name="c"><pose>0 0 0.85 0 0 0</pose><geometry><cylinder><radius>0.3</radius><length>1.7</length></cylinder></geometry></collision>
-        <visual name="mesh">
-          <geometry><mesh><uri>model://standing_man/meshes/standing_man.glb</uri><scale>1.0 1.0 1.0</scale></mesh></geometry>
-        </visual>
-        <visual name="beacon">
-          <pose>0 0 2.2 0 0 0</pose>
-          <geometry><sphere><radius>0.15</radius></sphere></geometry>
-          <material><ambient>0.2 0.8 1.0 1</ambient><diffuse>0.2 0.8 1.0 1</diffuse><emissive>0.20 0.80 1.00 1</emissive></material>
-        </visual>
-      </link>
-      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>link</link_name>
-        <topic>/standing_man_terrace/gazebo/command/twist</topic>
-      </plugin>
-    </model>
-
-    <!-- 👤 3. STANDING MAN - East Mid Ridge High Ground -->
-    <model name="standing_man_ridge">
-      <pose>26.0 32.0 4.65 0 0 -0.3</pose>
-      <static>false</static>
-      <link name="link">
-        <gravity>false</gravity>
-        <inertial><mass>75.0</mass><inertia><ixx>1.5</ixx><iyy>1.5</iyy><izz>1.5</izz></inertia></inertial>
-        <collision name="c"><pose>0 0 0.85 0 0 0</pose><geometry><cylinder><radius>0.3</radius><length>1.7</length></cylinder></geometry></collision>
-        <visual name="mesh">
-          <geometry><mesh><uri>model://standing_man/meshes/standing_man.glb</uri><scale>1.0 1.0 1.0</scale></mesh></geometry>
-        </visual>
-        <visual name="beacon">
-          <pose>0 0 2.2 0 0 0</pose>
-          <geometry><sphere><radius>0.15</radius></sphere></geometry>
-          <material><ambient>1.0 0.8 0.0 1</ambient><diffuse>1.0 0.8 0.0 1</diffuse><emissive>1.00 0.80 0.00 1</emissive></material>
-        </visual>
-      </link>
-      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>link</link_name>
-        <topic>/standing_man_ridge/gazebo/command/twist</topic>
-      </plugin>
-    </model>
-
-    <!-- 👤 4. STANDING MAN - Villa Balcony Calling to Rescue Boat -->
-    <model name="standing_man_balcony">
-      <pose>17.5 8.0 3.70 0 0 0.1</pose>
-      <static>false</static>
-      <link name="link">
-        <gravity>false</gravity>
-        <inertial><mass>75.0</mass><inertia><ixx>1.5</ixx><iyy>1.5</iyy><izz>1.5</izz></inertia></inertial>
-        <collision name="c"><pose>0 0 0.85 0 0 0</pose><geometry><cylinder><radius>0.3</radius><length>1.7</length></cylinder></geometry></collision>
-        <visual name="mesh">
-          <geometry><mesh><uri>model://standing_man/meshes/standing_man.glb</uri><scale>1.0 1.0 1.0</scale></mesh></geometry>
-        </visual>
-        <visual name="beacon">
-          <pose>0 0 2.2 0 0 0</pose>
-          <geometry><sphere><radius>0.15</radius></sphere></geometry>
-          <material><ambient>1.0 0.2 0.1 1</ambient><diffuse>1.0 0.2 0.1 1</diffuse><emissive>1.00 0.20 0.10 1</emissive></material>
-        </visual>
-      </link>
-      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>link</link_name>
-        <topic>/standing_man_balcony/gazebo/command/twist</topic>
-      </plugin>
-    </model>
-
-    <!-- 👤 5. STANDING MAN - West House Rooftop Waving -->
-    <model name="standing_man_west">
-      <pose>2.0 12.0 4.70 0 0 -0.8</pose>
+    <!-- ── Exact Blender Camera Viewpoints (Multi-Angle Survivor Monitoring) ── -->
+    <!-- Cam 01: Master Submerged Village Hero Overview -->
+    <model name="blender_cam_01_hero">
       <static>true</static>
+      <pose>18.0 -22.0 45.3 0 0.20 1.51</pose>
       <link name="link">
-        <collision name="c"><pose>0 0 0.85 0 0 0</pose><geometry><cylinder><radius>0.3</radius><length>1.7</length></cylinder></geometry></collision>
-        <visual name="mesh">
-          <geometry><mesh><uri>model://standing_man/meshes/standing_man.glb</uri><scale>1.0 1.0 1.0</scale></mesh></geometry>
-        </visual>
-        <visual name="beacon">
-          <pose>0 0 2.2 0 0 0</pose>
-          <geometry><sphere><radius>0.15</radius></sphere></geometry>
-          <material><ambient>1.0 0.4 0.0 1</ambient><diffuse>1.0 0.4 0.0 1</diffuse><emissive>1.00 0.40 0.00 1</emissive></material>
-        </visual>
+        <sensor name="camera_hero" type="camera">
+          <camera>
+            <horizontal_fov>1.15</horizontal_fov>
+            <image><width>1280</width><height>720</height></image>
+            <clip><near>0.1</near><far>1000</far></clip>
+          </camera>
+          <always_on>1</always_on><update_rate>30</update_rate><topic>/camera/hero_view</topic>
+        </sensor>
       </link>
     </model>
 
-    <!-- 🏊‍♀️ 6. SWIMMING GIRL 1 - River Channel Downstream Drift (Drowning Survivor) -->
-    <model name="swimming_girl_1">
-      <pose>15.0 -10.0 1.60 0 0 0.2</pose>
-      <static>false</static>
-      <link name="link">
-        <gravity>false</gravity>
-        <inertial><mass>60.0</mass><inertia><ixx>1.2</ixx><iyy>1.2</iyy><izz>1.2</izz></inertia></inertial>
-        <visual name="mesh">
-          <geometry><mesh><uri>model://swimming_girl/meshes/swimming_girl.glb</uri><scale>1.0 1.0 1.0</scale></mesh></geometry>
-        </visual>
-        <visual name="beacon">
-          <pose>0 0 0.55 0 0 0</pose>
-          <geometry><sphere><radius>0.12</radius></sphere></geometry>
-          <material><ambient>1.0 0.1 0.1 1</ambient><diffuse>1.0 0.1 0.1 1</diffuse><emissive>1.00 0.10 0.10 1</emissive></material>
-        </visual>
-      </link>
-      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>link</link_name>
-        <topic>/swimming_girl_1/gazebo/command/twist</topic>
-      </plugin>
-    </model>
-
-    <!-- 🏊‍♀️ 7. SWIMMING GIRL 2 - Flooded Intersection Crossing (Treading Water) -->
-    <model name="swimming_girl_2">
-      <pose>22.0 -8.0 1.60 0 0 -0.4</pose>
-      <static>false</static>
-      <link name="link">
-        <gravity>false</gravity>
-        <inertial><mass>60.0</mass><inertia><ixx>1.2</ixx><iyy>1.2</iyy><izz>1.2</izz></inertia></inertial>
-        <visual name="mesh">
-          <geometry><mesh><uri>model://swimming_girl/meshes/swimming_girl.glb</uri><scale>1.0 1.0 1.0</scale></mesh></geometry>
-        </visual>
-        <visual name="beacon">
-          <pose>0 0 0.55 0 0 0</pose>
-          <geometry><sphere><radius>0.12</radius></sphere></geometry>
-          <material><ambient>1.0 0.1 0.1 1</ambient><diffuse>1.0 0.1 0.1 1</diffuse><emissive>1.00 0.10 0.10 1</emissive></material>
-        </visual>
-      </link>
-      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>link</link_name>
-        <topic>/swimming_girl_2/gazebo/command/twist</topic>
-      </plugin>
-    </model>
-
-    <!-- 🏊‍♀️ 8. SWIMMING GIRL 3 - Floating Debris Corridor (Clinging & Swimming) -->
-    <model name="swimming_girl_3">
-      <pose>10.0 -4.0 1.60 0 0 0.8</pose>
-      <static>false</static>
-      <link name="link">
-        <gravity>false</gravity>
-        <inertial><mass>60.0</mass><inertia><ixx>1.2</ixx><iyy>1.2</iyy><izz>1.2</izz></inertia></inertial>
-        <visual name="mesh">
-          <geometry><mesh><uri>model://swimming_girl/meshes/swimming_girl.glb</uri><scale>1.0 1.0 1.0</scale></mesh></geometry>
-        </visual>
-        <visual name="beacon">
-          <pose>0 0 0.55 0 0 0</pose>
-          <geometry><sphere><radius>0.12</radius></sphere></geometry>
-          <material><ambient>1.0 0.1 0.1 1</ambient><diffuse>1.0 0.1 0.1 1</diffuse><emissive>1.00 0.10 0.10 1</emissive></material>
-        </visual>
-      </link>
-      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>link</link_name>
-        <topic>/swimming_girl_3/gazebo/command/twist</topic>
-      </plugin>
-    </model>
-
-    <!-- 🏊‍♀️ 9. SWIMMING GIRL 4 - Eddy Current / Whirlpool Zone -->
-    <model name="swimming_girl_4">
-      <pose>27.0 -12.0 1.60 0 0 1.57</pose>
-      <static>false</static>
-      <link name="link">
-        <gravity>false</gravity>
-        <inertial><mass>60.0</mass><inertia><ixx>1.2</ixx><iyy>1.2</iyy><izz>1.2</izz></inertia></inertial>
-        <visual name="mesh">
-          <geometry><mesh><uri>model://swimming_girl/meshes/swimming_girl.glb</uri><scale>1.0 1.0 1.0</scale></mesh></geometry>
-        </visual>
-        <visual name="beacon">
-          <pose>0 0 0.55 0 0 0</pose>
-          <geometry><sphere><radius>0.12</radius></sphere></geometry>
-          <material><ambient>1.0 0.1 0.1 1</ambient><diffuse>1.0 0.1 0.1 1</diffuse><emissive>1.00 0.10 0.10 1</emissive></material>
-        </visual>
-      </link>
-      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>link</link_name>
-        <topic>/swimming_girl_4/gazebo/command/twist</topic>
-      </plugin>
-    </model>
-
-    <!-- 🏊‍♀️ 10. SWIMMING GIRL 5 - Submerged Bridge Approach -->
-    <model name="swimming_girl_5">
-      <pose>18.0 4.0 1.60 0 0 -1.2</pose>
-      <static>false</static>
-      <link name="link">
-        <gravity>false</gravity>
-        <inertial><mass>60.0</mass><inertia><ixx>1.2</ixx><iyy>1.2</iyy><izz>1.2</izz></inertia></inertial>
-        <visual name="mesh">
-          <geometry><mesh><uri>model://swimming_girl/meshes/swimming_girl.glb</uri><scale>1.0 1.0 1.0</scale></mesh></geometry>
-        </visual>
-        <visual name="beacon">
-          <pose>0 0 0.55 0 0 0</pose>
-          <geometry><sphere><radius>0.12</radius></sphere></geometry>
-          <material><ambient>1.0 0.1 0.1 1</ambient><diffuse>1.0 0.1 0.1 1</diffuse><emissive>1.00 0.10 0.10 1</emissive></material>
-        </visual>
-      </link>
-      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>link</link_name>
-        <topic>/swimming_girl_5/gazebo/command/twist</topic>
-      </plugin>
-    </model>
-
-    <!-- ⚠️ NFZ West (Tilted Power Pole) -->
-    <model name="nfz_powerline_west">
-      <pose>-20.0 10.0 2.0 0 0 0</pose>
+    <!-- Cam 02: Close Water Drowning Victims POV -->
+    <model name="blender_cam_02_drowning_pov">
       <static>true</static>
-      <link name="nfz_link">
-        <visual name="hazard_cylinder">
-          <geometry><cylinder><radius>5.0</radius><length>4.0</length></cylinder></geometry>
-          <material>
-            <ambient>0.95 0.75 0.0 0.35</ambient>
-            <diffuse>0.95 0.75 0.0 0.35</diffuse>
-            <emissive>0.7 0.5 0.0 0.35</emissive>
-          </material>
-        </visual>
+      <pose>18.0 -13.0 39.0 0 0.05 1.51</pose>
+      <link name="link">
+        <sensor name="camera_drowning" type="camera">
+          <camera>
+            <horizontal_fov>0.98</horizontal_fov>
+            <image><width>1280</width><height>720</height></image>
+            <clip><near>0.1</near><far>500</far></clip>
+          </camera>
+          <always_on>1</always_on><update_rate>30</update_rate><topic>/camera/drowning_pov</topic>
+        </sensor>
       </link>
     </model>
 
-    <!-- ⚠️ NFZ East (High Voltage Line) -->
-    <model name="nfz_powerline_east">
-      <pose>50.0 15.0 2.5 0 0 0</pose>
+    <!-- Cam 03: Submerged House Clingers POV -->
+    <model name="blender_cam_03_house_clingers">
       <static>true</static>
-      <link name="nfz_link">
-        <visual name="hazard_cylinder">
-          <geometry><cylinder><radius>5.0</radius><length>4.0</length></cylinder></geometry>
-          <material>
-            <ambient>0.95 0.75 0.0 0.35</ambient>
-            <diffuse>0.95 0.75 0.0 0.35</diffuse>
-            <emissive>0.7 0.5 0.0 0.35</emissive>
-          </material>
-        </visual>
+      <pose>35.0 -6.0 41.3 0 0.18 1.95</pose>
+      <link name="link">
+        <sensor name="camera_clingers" type="camera">
+          <camera>
+            <horizontal_fov>0.92</horizontal_fov>
+            <image><width>1280</width><height>720</height></image>
+            <clip><near>0.1</near><far>500</far></clip>
+          </camera>
+          <always_on>1</always_on><update_rate>30</update_rate><topic>/camera/house_clingers</topic>
+        </sensor>
       </link>
     </model>
 
-    <!-- ⚠️ NFZ South (Flooded Substation) -->
-    <model name="nfz_powerline_south">
-      <pose>10.0 -20.0 1.5 0 0 0</pose>
+    <!-- Cam 04: Rooftop Survivor Lookdown POV -->
+    <model name="blender_cam_04_rooftop_lookdown">
       <static>true</static>
-      <link name="nfz_link">
-        <visual name="hazard_cylinder">
-          <geometry><cylinder><radius>4.5</radius><length>4.0</length></cylinder></geometry>
-          <material>
-            <ambient>0.95 0.75 0.0 0.35</ambient>
-            <diffuse>0.95 0.75 0.0 0.35</diffuse>
-            <emissive>0.7 0.5 0.0 0.35</emissive>
-          </material>
-        </visual>
+      <pose>20.5 19.5 42.0 0 0.45 -1.57</pose>
+      <link name="link">
+        <sensor name="camera_rooftop" type="camera">
+          <camera>
+            <horizontal_fov>1.20</horizontal_fov>
+            <image><width>1280</width><height>720</height></image>
+            <clip><near>0.1</near><far>500</far></clip>
+          </camera>
+          <always_on>1</always_on><update_rate>30</update_rate><topic>/camera/rooftop_lookdown</topic>
+        </sensor>
       </link>
     </model>
 
-  
-    <!-- 🌊 Floodwater Surface (Original Datum Baseline: 1.55m) -->
-    <model name="floodwater_surface">
+    <!-- Cam 05: GIS Tactical Nadir Ortho (130m) -->
+    <model name="blender_cam_gis_ortho">
       <static>true</static>
-      <pose>25.0 50.0 1.55 0 0 0</pose>
-      <link name="water_link">
-        <visual name="water_visual">
-          <geometry>
-            <plane>
-              <normal>0 0 1</normal>
-              <size>650 650</size>
-            </plane>
-          </geometry>
-          <material>
-            <ambient>0.12 0.22 0.28 0.85</ambient>
-            <diffuse>0.15 0.28 0.35 0.85</diffuse>
-            <specular>0.7 0.7 0.7 1.0</specular>
-          </material>
-        </visual>
+      <pose>20.0 16.0 130.0 0 1.5708 0</pose>
+      <link name="link">
+        <sensor name="camera_gis" type="camera">
+          <camera>
+            <horizontal_fov>1.40</horizontal_fov>
+            <image><width>1920</width><height>1080</height></image>
+            <clip><near>1.0</near><far>2000</far></clip>
+          </camera>
+          <always_on>1</always_on><update_rate>10</update_rate><topic>/camera/gis_ortho</topic>
+        </sensor>
       </link>
+    </model>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         5x AUTONOMOUS PEGASUS UAVs (uav_alpha .. uav_epsilon)
+         Exact Blender Starting Poses:
+           Alpha   : (16.02, -15.02, 54.02)
+           Beta    : (24.98,  15.01, 57.02)
+           Gamma   : (17.98,   5.01, 66.02)
+           Delta   : (32.01,  11.98, 54.02)
+           Epsilon : ( 5.02,  -4.99, 52.02)
+         50Hz Odometry + Velocity Control + NavSat + IMU + Emissive Beacons
+    ════════════════════════════════════════════════════════════════════════ -->
+
+    <!-- 🚁 UAV_ALPHA — Cyan Lead Drone (Southern River Corridor) -->
+    <model name="uav_alpha">
+      <pose>16.02 -15.02 54.02 0 0 1.57</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><ixy>0</ixy><ixz>0</ixz><iyy>0.07000</iyy><iyz>0</iyz><izz>0.09770</izz></inertia></inertial>
+        <collision name="col"><geometry><box><size>0.47 0.47 0.11</size></box></geometry></collision>
+        <visual name="body"><geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry></visual>
+        <visual name="beacon"><pose>0 0 0.12 0 0 0</pose><geometry><sphere><radius>0.08</radius></sphere></geometry>
+          <material><ambient>0.0 0.8 1.0 1</ambient><diffuse>0.0 0.8 1.0 1</diffuse><emissive>0.0 0.8 1.0 1</emissive></material>
+        </visual>
+        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>200</update_rate></sensor>
+        <sensor name="navsat" type="navsat"><always_on>1</always_on><update_rate>10</update_rate></sensor>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name><topic>/uav_alpha/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+    </model>
+
+    <!-- 🚁 UAV_BETA — Orange Recon Drone (Eastern Hillside Sector) -->
+    <model name="uav_beta">
+      <pose>24.98 15.01 57.02 0 0 1.57</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><ixy>0</ixy><ixz>0</ixz><iyy>0.07000</iyy><iyz>0</iyz><izz>0.09770</izz></inertia></inertial>
+        <collision name="col"><geometry><box><size>0.47 0.47 0.11</size></box></geometry></collision>
+        <visual name="body"><geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry></visual>
+        <visual name="beacon"><pose>0 0 0.12 0 0 0</pose><geometry><sphere><radius>0.08</radius></sphere></geometry>
+          <material><ambient>1.0 0.4 0.0 1</ambient><diffuse>1.0 0.4 0.0 1</diffuse><emissive>1.0 0.4 0.0 1</emissive></material>
+        </visual>
+        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>200</update_rate></sensor>
+        <sensor name="navsat" type="navsat"><always_on>1</always_on><update_rate>10</update_rate></sensor>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name><topic>/uav_beta/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+    </model>
+
+    <!-- 🚁 UAV_GAMMA — Green Flank / High Relay Drone (66m Center Overlook) -->
+    <model name="uav_gamma">
+      <pose>17.98 5.01 66.02 0 0 1.57</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><ixy>0</ixy><ixz>0</ixz><iyy>0.07000</iyy><iyz>0</iyz><izz>0.09770</izz></inertia></inertial>
+        <collision name="col"><geometry><box><size>0.47 0.47 0.11</size></box></geometry></collision>
+        <visual name="body"><geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry></visual>
+        <visual name="beacon"><pose>0 0 0.12 0 0 0</pose><geometry><sphere><radius>0.08</radius></sphere></geometry>
+          <material><ambient>0.2 1.0 0.2 1</ambient><diffuse>0.2 1.0 0.2 1</diffuse><emissive>0.2 1.0 0.2 1</emissive></material>
+        </visual>
+        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>200</update_rate></sensor>
+        <sensor name="navsat" type="navsat"><always_on>1</always_on><update_rate>10</update_rate></sensor>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name><topic>/uav_gamma/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+    </model>
+
+    <!-- 🚁 UAV_DELTA — Magenta Sweep Drone (Far East Boundary) -->
+    <model name="uav_delta">
+      <pose>32.01 11.98 54.02 0 0 1.57</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><ixy>0</ixy><ixz>0</ixz><iyy>0.07000</iyy><iyz>0</iyz><izz>0.09770</izz></inertia></inertial>
+        <collision name="col"><geometry><box><size>0.47 0.47 0.11</size></box></geometry></collision>
+        <visual name="body"><geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry></visual>
+        <visual name="beacon"><pose>0 0 0.12 0 0 0</pose><geometry><sphere><radius>0.08</radius></sphere></geometry>
+          <material><ambient>1.0 0.2 0.8 1</ambient><diffuse>1.0 0.2 0.8 1</diffuse><emissive>1.0 0.2 0.8 1</emissive></material>
+        </visual>
+        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>200</update_rate></sensor>
+        <sensor name="navsat" type="navsat"><always_on>1</always_on><update_rate>10</update_rate></sensor>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name><topic>/uav_delta/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+    </model>
+
+    <!-- 🚁 UAV_EPSILON — Yellow Central Pivot Drone (Western River Bank) -->
+    <model name="uav_epsilon">
+      <pose>5.02 -4.99 52.02 0 0 1.57</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial><mass>1.5</mass><inertia><ixx>0.03475</ixx><ixy>0</ixy><ixz>0</ixz><iyy>0.07000</iyy><iyz>0</iyz><izz>0.09770</izz></inertia></inertial>
+        <collision name="col"><geometry><box><size>0.47 0.47 0.11</size></box></geometry></collision>
+        <visual name="body"><geometry><mesh><scale>1.5 1.5 1.5</scale><uri>model://x3_uav/meshes/x3.dae</uri></mesh></geometry></visual>
+        <visual name="beacon"><pose>0 0 0.12 0 0 0</pose><geometry><sphere><radius>0.08</radius></sphere></geometry>
+          <material><ambient>1.0 1.0 0.0 1</ambient><diffuse>1.0 1.0 0.0 1</diffuse><emissive>1.0 1.0 0.0 1</emissive></material>
+        </visual>
+        <sensor name="imu" type="imu"><always_on>1</always_on><update_rate>200</update_rate></sensor>
+        <sensor name="navsat" type="navsat"><always_on>1</always_on><update_rate>10</update_rate></sensor>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>base_link</link_name><topic>/uav_epsilon/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
     </model>
 
   </world>

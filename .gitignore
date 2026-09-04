@@ -127,4 +127,9 @@ sutra_ws/src/sutra_comms/ns3/lib/
 sutra_ws/src/sutra_sim/ns3/sutra_fanet_sim
 sutra_ws/src/sutra_sim/ns3/lib/
 .kaggle_staging/
+kaggle_output/
 SUTRA/
+*.mbtiles
+*.db-wal
+*.db-shm
+

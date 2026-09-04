@@ -37,7 +37,7 @@ During catastrophic natural disasters in high-altitude, mountainous, and foreste
 * **Sub-50ms Swarm Consensus (SwarmRAFT)**: True decentralized multi-agent coordination with majority quorum protection ($Q = \lfloor N/2 \rfloor + 1$) preventing split-brain states if the lead drone crashes.
 * **Tri-Modal Cross-Attention Perception & 3.59cm Geolocation**: Fuses Visual RGB, FLIR LWIR thermal morphology, and mmWave radar point clouds with a terrain-corrected DEM raycaster achieving **$0.0359\text{m}$** WGS84 GPS positioning error from 30m altitude.
 * **Pegasus-Grade 3D WebGPU GCS**: React 18 + Mapbox GL JS 3D tactical COP streaming live MIL-STD-2525 Cursor-on-Target (CoT) XML for direct integration with military/NDMA ATAK tablets at a locked **60.0 FPS**.
-* **Radical Unit Economics**: Deploys on a **$145 ESP32-S3 Micro Swarm** or **$269 F450 Quadcopter** budget, achieving 100x cost scalability over enterprise systems.
+* **Radical Unit Economics**: Deploys on a **$515 / ₹42,850 Autonomous Hexacopter** budget (or ₹22,450 frugal prototype), achieving 100x cost scalability over enterprise defense systems.
 
 ---
 
@@ -244,15 +244,15 @@ Converts survivor detections into military-standard **MIL-STD-2525 XML events**:
 ### 7.2 Radical Frugal Engineering: Dual-Tier Hardware BOM
 ```
 ┌───────────────────────────────────────────────────┬───────────────────────────────────────────────────┐
-│ OPTION A: Advanced Research Platform ($269 / ₹22k)│ OPTION B: Ultra-Frugal Micro Swarm ($145 / ₹12k)  │
+│ OPTION A: Fault-Tolerant Hexacopter ($515 / ₹42.8k)│ OPTION B: Ultra-Frugal Micro Swarm ($145 / ₹12k)  │
 ├───────────────────────────────────────────────────┼───────────────────────────────────────────────────┤
-│ • 1× F450 Quadcopter Airframe + 2212 Motors ($45) │ • 3× ESP32-S3 Dual-Core AI Micro Drones ($45)    │
-│ • 1× Pixhawk 6C Flight Controller ($85)           │ • 3× OV2640 / Thermal Array Sensor Modules ($36)  │
-│ • 1× Raspberry Pi 5 Companion SBC ($60)           │ • 3× Sub-GHz 915MHz LoRa Ra-02 Transceivers ($18) │
+│ • 1× F550 Hexacopter Frame + 6x 2212 Motors ($65) │ • 3× ESP32-S3 Dual-Core AI Micro Drones ($45)    │
+│ • 1× Pixhawk 6C / 2.4.8 Flight Controller ($85)   │ • 3× OV2640 / Thermal Array Sensor Modules ($36)  │
+│ • 1× Raspberry Pi 4/5 Companion SBC ($60)         │ • 3× Sub-GHz 915MHz LoRa Ra-02 Transceivers ($18) │
 │ • 1× ArduCam Stereo Optical + FLIR Lepton ($65)   │ • 3× 1S LiPo High-Discharge Battery Packs ($16)   │
-│ • 1× 915MHz LoRa Telemetry Radio ($14)            │ • 3× Micro Carbon Fiber 85mm Airframes ($30)      │
+│ • 1× 915MHz LoRa Telemetry Radio + Flow/LiDAR ($50)│ • 3× Micro Carbon Fiber 85mm Airframes ($30)      │
 │ ───────────────────────────────────────────────── │ ───────────────────────────────────────────────── │
-│ TOTAL PER UAV: $269 (Scalable to 10-UAV Swarm)    │ TOTAL SWARM: $145 (3-Drone Autonomous Mesh)       │
+│ TOTAL PER UAV: $515 (₹42,850 — 5-Swarm: ₹2,14,250)│ TOTAL SWARM: $145 (3-Drone Autonomous Mesh)       │
 └───────────────────────────────────────────────────┴───────────────────────────────────────────────────┘
 ```
 

@@ -117,7 +117,7 @@ ros2 topic echo /sutra/swarm/raft_consensus
 | Evaluated System Metric | Industry Requirement | Measured Verbatim Value | Source Command | Verification |
 |---|:---:|:---:|:---:|:---:|
 | **Gazebo Physics RTF** | $\ge 0.98$ | **`0.9976`** ($500\,\text{Hz}$ solver) | `gz topic -e -t /stats` | ✅ **VERIFIED** |
-| **Active UAV Models** | 5 Quadcopters | **`5 / 5 airborne`** (`alpha`..`epsilon`) | `gz model --list` | ✅ **VERIFIED** |
+| **Active UAV Models** | 5 Hexacopters | **`5 / 5 airborne`** (`alpha`..`epsilon`) | `gz model --list` | ✅ **VERIFIED** |
 | **802.11s Mesh Links** | 10 Links | **`10 / 10 active`** (`Gate G2: ✓ PASS`) | `sutra_mesh_node` | ✅ **VERIFIED** |
 | **Mesh Packet Delivery (PDR)**| $\ge 98.0\%$ | **`100.00%`** ($400 / 400$ pkts) | `bash scripts/sim_comms_ns3.sh` | ✅ **VERIFIED** |
 | **Mean End-to-End Latency** | $< 8.0\,\text{ms}$ | **`0.883 ms`** | NS-3 FlowMonitor | ✅ **VERIFIED** |

@@ -122,7 +122,7 @@
 ## 🧭 Pillar 1: Autonomous GNC, Flight Controls & Physics (Nikhil)
 
 ### Q1: *"Why did you use Quintic Polynomial Splines and Voxel Occupancy instead of simple A* or RRT*?"*
-* **Answer**: *"Grid-based A* and sampling-based RRT* generate piecewise-linear paths with sharp corner waypoints. Following these paths violates quadcopter actuator dynamics, causing abrupt acceleration changes, motor saturation, high tracking RMSE ($> 0.8\text{m}$), and dangerous downwash turbulence. SUTRA-FSD evaluates candidate quintic polynomial ribbons $p(t) = a_0 + a_1 t + a_2 t^2 + a_3 t^3 + a_4 t^4 + a_5 t^5$ having closed-form $\mathcal{C}^2$ continuity. This guarantees strictly bounded jerk ($< 4.20\text{ m/s}^3$) and smooth 50Hz setpoint streaming over a $32 \times 32 \times 16$ spatio-temporal voxel grid with temporal decay memory."*
+* **Answer**: *"Grid-based A* and sampling-based RRT* generate piecewise-linear paths with sharp corner waypoints. Following these paths violates multi-rotor actuator dynamics, causing abrupt acceleration changes, motor saturation, high tracking RMSE ($> 0.8\text{m}$), and dangerous downwash turbulence. SUTRA-FSD evaluates candidate quintic polynomial ribbons $p(t) = a_0 + a_1 t + a_2 t^2 + a_3 t^3 + a_4 t^4 + a_5 t^5$ having closed-form $\mathcal{C}^2$ continuity. This guarantees strictly bounded jerk ($< 4.20\text{ m/s}^3$) and smooth 50Hz setpoint streaming over a $32 \times 32 \times 16$ spatio-temporal voxel grid with temporal decay memory."*
 
 ### Q2: *"How do you mathematically guarantee that drones in the swarm will never collide?"*
 * **Answer**: *"We deploy a 2-tier defense:
@@ -133,10 +133,10 @@
 * **Answer**: *"Standard PX4 PID attitude loops react only after tracking errors accumulate, which takes 80–120ms. SutraNeuroFlight is a lightweight neural network (128x64x3) running in $0.040\text{ms}$ on CUDA. It observes high-rate IMU angular acceleration ($\dot{\boldsymbol{\omega}}$), estimated aerodynamic drag forces, and motor RPM feedback to predict wind disturbance torques $\boldsymbol{\tau}_{\text{dist}}$, injecting feedforward counter-torques directly into PX4 mixer matrices before trajectory deviation occurs."*
 
 ### Q4: *"What happens if one drone suffers a motor failure or runs out of battery mid-mission?"*
-* **Answer**: *"We implement automatic failure detection and dynamic task rebalancing:
-  1. If a motor fails, PX4 triggers emergency controlled descent / parachute deployment, and publishes an emergency status message over 802.11s mesh.
-  2. SwarmRAFT consensus logs the node removal within $50\text{ms}$.
-  3. The coordinated search planner dynamically expands the search corridors of the remaining 4 drones, repartitioning the lost drone's bounding box with zero operator intervention."*
+* **Answer**: *"We implement fault-tolerant multi-rotor airframes (hexacopter $N=6$, octacopter $N=8$) with active motor failure fallback (`motor_failure_fallback_node.py`):
+  1. **Active Mixer Reconfiguration**: Unlike quadcopters that violently tumble upon losing a motor, our hexacopters instantly isolate the failed rotor and reconfigure control allocation across the remaining 5 motors (sacrificing yaw rigidity to preserve roll, pitch, and hover thrust), initiating a stable return-to-launch or controlled soft landing.
+  2. **Mesh Notification & Consensus**: An emergency status broadcast triggers SwarmRAFT consensus logging the node departure within $< 50\text{ms}$.
+  3. **Autonomous Dynamic Partitioning**: The Voronoi search planner automatically rescales the grid partitions across the surviving 4 drones, closing the search gap with zero operator intervention."*
 
 ### Q5: *"Why 50Hz setpoints? Why not 10Hz or 100Hz?"*
 * **Answer**: *"10Hz is too slow for agile collision avoidance under 4 m/s cruise speed (a drone travels 40cm between updates). 100Hz exceeds the MicroXRCE-DDS serial bridge bandwidth over companion computer UART links and causes CPU throttling on embedded SBCs. 50Hz provides optimal closed-loop tracking (20ms cycle time, 6cm spatial resolution at 3 m/s) perfectly matched to PX4 offboard trajectory mode."*
@@ -235,7 +235,7 @@ To execute a flawless 2-minute live demo during Q&A:
 ┌──────────────────────────────────────┬──────────────────────────────────────┐
 │ SCREEN 1: Gazebo Sim 8 Digital Twin  │ SCREEN 2: 3D GIS WebGPU GCS Dashboard│
 │ Flooded Kedarnath 220x220m World     │ React 18 Mapbox + Live 60 FPS HUD    │
-│ 5 Quadcopters in Echelon Search      │ Survivor Geolocation Alerts & PFD    │
+│ 5 Hexacopters in Echelon Search      │ Survivor Geolocation Alerts & PFD    │
 ├──────────────────────────────────────┼──────────────────────────────────────┤
 │ SCREEN 3: Deep JSCC SDR Workbench    │ SCREEN 4: Terminal / PyTest Monitor  │
 │ Live Video Feed vs Jammed Feed       │ 228 / 228 Passing Verification Suite │

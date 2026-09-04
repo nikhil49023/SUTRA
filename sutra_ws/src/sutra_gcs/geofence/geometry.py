@@ -13,8 +13,14 @@ except ImportError:
     pyproj = None
     _HAVE_PYPROJ = False
 
-from shapely.geometry import LineString, MultiPolygon, Point, Polygon
-from shapely.validation import make_valid
+try:
+    from shapely.geometry import LineString, MultiPolygon, Point, Polygon
+    from shapely.validation import make_valid
+    _HAVE_SHAPELY = True
+except ImportError:
+    LineString = MultiPolygon = Point = Polygon = None
+    make_valid = lambda x: x
+    _HAVE_SHAPELY = False
 
 
 class _GeodFallback:

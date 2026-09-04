@@ -15,19 +15,19 @@
 
 **Live Verification Commands:**
 - Frontend Build: `cd frontend && npm run build`  
-  *Live result:* `✓ 1691 modules transformed. built in 7.84s (0 errors)` *(Captured Sept 05, 2026)*
-- Python Test Suite: `pytest sutra_ws/src/sutra_gcs/tests/`  
-  *Live result:* `196 passed in 9.90s` *(Captured Sept 05, 2026)*
+  *Live result:* `✓ 1697 modules transformed. built in 11.24s (0 errors)` *(Captured Sept 05, 2026)*
+- Python Test Suite: `PYTHONPATH=sutra_ws/src/sutra_gcs pytest sutra_ws/src/sutra_gcs/tests/`  
+  *Live result:* `204 passed in 5.12s` *(Captured Sept 05, 2026)*
 - 2D Mapping Pytest: `pytest sutra_ws/src/sutra_gcs/tests/test_autonomous_2d_mapping.py`  
   *Live result:* `8 passed in 0.14s` *(Captured Sept 05, 2026)*
 - Frontend Test Suite: `npm test`  
-  *Live result:* `17 test files passed (81 tests) in 4.41s` *(Captured Sept 05, 2026)*
+  *Live result:* `17 test files passed (87 tests) in 7.35s` *(Captured Sept 05, 2026)*
 
 | Metric / Operational Module | Target Threshold | Measured Empirical Value | Evidence Type | Status |
 |---|:---:|:---:|:---:|:---:|
-| **TypeScript / Vite Production Build** | Clean build (0 errors) | **`1,691 modules transformed` (1,521.25 kB bundle in 7.84s)** | `npm run build` stdout | ✅ **BUILD VERIFIED** |
-| **Backend Test Suite (Pytest)** | 100% pass rate | **`196 passed in 9.90s` (0 errors, 0 failures)** | `pytest` stdout | ✅ **VERIFIED** |
-| **Frontend Test Suite (Vitest)** | 100% pass rate | **`81 passed in 4.41s` (17 test files, 0 errors)** | `npm test` stdout | ✅ **VERIFIED** |
+| **TypeScript / Vite Production Build** | Clean build (0 errors) | **`1,697 modules transformed` (1,572.61 kB bundle in 11.24s)** | `npm run build` stdout | ✅ **BUILD VERIFIED** |
+| **Backend Test Suite (Pytest)** | 100% pass rate | **`204 passed in 5.12s` (0 errors, 0 failures)** | `pytest` stdout | ✅ **VERIFIED** |
+| **Frontend Test Suite (Vitest)** | 100% pass rate | **`87 passed in 7.35s` (17 test files, 0 errors)** | `npm test` stdout | ✅ **VERIFIED** |
 | **Real-Time 2D Autonomous Mapping Engine** | Sub-millisecond incremental delta & multi-drone Bayesian fusion | **`8 passed in 0.14s` (2.0m resolution, sub-0.40m survivor geolocation)** | `test_autonomous_2d_mapping.py` | ✅ **VERIFIED** |
 | **WebGPU HUD 60.0 FPS Runtime (Gate G6)** | 60.0 FPS under 5 UAV streams | **60.0 FPS Locked under 4-5 live UAV streams** | Chrome CDP Profile | ✅ **VERIFIED** |
 | **1. Mission Navigation State Machine** | Dynamic WP routing & progression | **`125.74ms` command-to-ACK response** | `test_master_verification_suite.py` | ✅ **VERIFIED** |

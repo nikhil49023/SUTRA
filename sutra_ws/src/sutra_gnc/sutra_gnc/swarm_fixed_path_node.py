@@ -20,14 +20,26 @@ Control rate: 50 Hz
 """
 
 import math
+import json
 import rclpy
 from rclpy.node import Node
+from rcl_interfaces.msg import SetParametersResult
 from geometry_msgs.msg import TwistStamped, PoseStamped
 from nav_msgs.msg import Odometry
 from visualization_msgs.msg import Marker, MarkerArray
-from std_msgs.msg import ColorRGBA
+from std_msgs.msg import ColorRGBA, String
 from geometry_msgs.msg import Point
 from sutra_gnc.orca_avoidance import Orca3DSolver
+
+
+# ── Home Pad Coordinates for Safe RTL ─────────────────────────────────────────
+DRONE_HOME_COORDS = {
+    "uav_alpha":   ( 15.0,   0.0, 4.0),
+    "uav_beta":    (  0.0,  15.0, 4.0),
+    "uav_gamma":   (-15.0,   0.0, 4.0),
+    "uav_delta":   (  0.0, -15.0, 4.0),
+    "uav_epsilon": ( 10.0,  10.0, 4.0),
+}
 
 
 # ── Pre-Defined Waypoint Routes ──────────────────────────────────────────────
@@ -106,46 +118,198 @@ RING_CROSSING_ROUTES = {
     "uav_epsilon": [(0.0, 0.0, 3.8), (-3.708, 11.413, 3.8), (0.0, 0.0, 3.8), (3.708, -11.413, 3.8)],
 }
 
-# 3D Submerged Disaster Flood World Search Routes (Altitude 48m-56m over 220x220m Terrain)
+# Home coordinates for Forest Canopy SAR World (Calibrated Canopy Resilience Flight Altitudes)
+CANOPY_FOREST_HOME_COORDS = {
+    "uav_alpha":   ( 6.50,   5.50, 46.00),
+    "uav_beta":    (12.00,  -8.00, 54.00),
+    "uav_gamma":   ( 0.00,   0.00, 64.00),
+    "uav_delta":   (-10.00, -8.00, 52.00),
+    "uav_epsilon": (-5.00,   9.50, 49.00),
+}
+
+# 3D Forest Canopy Search Routes (Canopy Penetration, Tree Crown Skimming & High-Altitude RF Relay)
+CANOPY_FOREST_ROUTES = {
+    # Alpha: Lead Penetration Scout tracking the winding dirt trail / soldier squad at 46m (9.5m AGL)
+    "uav_alpha": [
+        ( 6.50,  5.50, 46.00),
+        ( 4.00,  3.50, 45.50),
+        ( 1.00,  3.50, 45.00),
+        (-2.00,  6.00, 45.50),
+        (-5.00,  9.50, 46.00),
+        (-2.00,  6.00, 46.50),
+        ( 1.00,  3.50, 46.50),
+        ( 4.00,  3.50, 46.00),
+    ],
+    # Beta: North-East Ridge & Clearing Reconnaissance at 54m (17.5m AGL)
+    "uav_beta": [
+        (12.00, -8.00, 54.00),
+        (18.00,  0.00, 53.50),
+        (14.00, 10.00, 54.00),
+        ( 8.00, 12.00, 54.50),
+        ( 4.00,  6.00, 54.00),
+        ( 8.00, -2.00, 53.50),
+    ],
+    # Gamma: Central High-Altitude RF Mesh Relay & Tactical Sentry at 64m (27.5m AGL)
+    "uav_gamma": [
+        ( 0.00,  0.00, 64.00),
+        ( 8.00,  8.00, 63.50),
+        ( 0.00,  0.00, 64.00),
+        (-8.00, -8.00, 64.50),
+        ( 0.00,  0.00, 64.00),
+        (-8.00,  8.00, 63.50),
+        ( 0.00,  0.00, 64.00),
+        ( 8.00, -8.00, 64.50),
+    ],
+    # Delta: East Flank & Ravine Search Loop at 52m (15.5m AGL)
+    "uav_delta": [
+        (-10.00, -8.00, 52.00),
+        (-14.00,  0.00, 51.50),
+        (-12.00,  8.00, 52.00),
+        ( -6.00,  6.00, 52.50),
+        ( -4.00, -2.00, 52.00),
+        ( -8.00, -6.00, 51.50),
+    ],
+    # Epsilon: West Trail Insertion Overwatch & Vehicle Perimeter at 49m (12.5m AGL)
+    "uav_epsilon": [
+        (-5.00,  9.50, 49.00),
+        (-8.00, 12.00, 48.50),
+        (-10.00,  8.00, 49.00),
+        (-8.00,  4.00, 49.50),
+        (-3.00,  5.00, 49.00),
+        (-2.00,  8.00, 48.50),
+    ],
+}
+
+# Home coordinates for disaster flood world (exact Blender starting positions)
+DISASTER_FLOOD_HOME_COORDS = {
+    "uav_alpha":   (16.02, -15.02, 54.02),
+    "uav_beta":    (24.98,  15.01, 57.02),
+    "uav_gamma":   (17.98,   5.01, 66.02),
+    "uav_delta":   (32.01,  11.98, 54.02),
+    "uav_epsilon": ( 5.02,  -4.99, 52.02),
+}
+
+# 3D Submerged Disaster Flood World Search Routes (Exact Blender UAV Keyframe Flight Curves)
 DISASTER_FLOOD_ROUTES = {
     "uav_alpha": [
-        ( 30.0,   0.0, 50.0),
-        ( 20.0,  25.0, 50.0),
-        (-15.0,  20.0, 50.0),
-        (-35.0,   0.0, 50.0),
-        (-15.0, -25.0, 50.0),
-        ( 20.0, -20.0, 50.0),
+        (16.02, -15.02, 54.02),
+        (16.78, -14.78, 53.58),
+        (17.69, -13.68, 53.12),
+        (18.62, -11.06, 52.62),
+        (19.55,  -7.10, 52.07),
+        (20.51,  -1.92, 51.48),
+        (21.29,   3.77, 50.96),
+        (21.84,   9.52, 50.58),
+        (22.19,  14.52, 50.34),
+        (22.13,  18.43, 50.24),
+        (21.79,  20.81, 50.36),
+        (21.21,  21.88, 50.67),
+        (21.79,  20.81, 50.36),
+        (22.13,  18.43, 50.24),
+        (22.19,  14.52, 50.34),
+        (21.84,   9.52, 50.58),
+        (21.29,   3.77, 50.96),
+        (20.51,  -1.92, 51.48),
+        (19.55,  -7.10, 52.07),
+        (18.62, -11.06, 52.62),
+        (17.69, -13.68, 53.12),
+        (16.78, -14.78, 53.58),
     ],
     "uav_beta": [
-        (  0.0,  35.0, 48.0),
-        ( 20.0,  15.0, 48.0),
-        ( 25.0, -20.0, 48.0),
-        (  0.0, -35.0, 48.0),
-        (-25.0, -15.0, 48.0),
-        (-20.0,  20.0, 48.0),
+        (24.98, 15.01, 57.02),
+        (25.79, 15.10, 56.59),
+        (26.64, 15.78, 56.16),
+        (27.43, 17.21, 55.73),
+        (28.26, 19.51, 55.28),
+        (28.98, 22.39, 54.83),
+        (29.50, 25.68, 54.47),
+        (29.88, 28.88, 54.24),
+        (29.98, 31.79, 54.13),
+        (29.76, 33.94, 54.15),
+        (29.37, 35.36, 54.33),
+        (28.70, 35.90, 54.66),
+        (29.37, 35.36, 54.33),
+        (29.76, 33.94, 54.15),
+        (29.98, 31.79, 54.13),
+        (29.88, 28.88, 54.24),
+        (29.50, 25.68, 54.47),
+        (28.98, 22.39, 54.83),
+        (28.26, 19.51, 55.28),
+        (27.43, 17.21, 55.73),
+        (26.64, 15.78, 56.16),
+        (25.79, 15.10, 56.59),
     ],
     "uav_gamma": [
-        ( 35.0,  35.0, 52.0),
-        ( 10.0,  10.0, 52.0),
-        (-10.0, -10.0, 52.0),
-        (-35.0, -35.0, 52.0),
-        (-10.0, -10.0, 52.0),
-        ( 10.0,  10.0, 52.0),
+        (17.98,  5.01, 66.02),
+        (18.82,  5.02, 65.60),
+        (19.58,  5.27, 65.23),
+        (20.33,  5.73, 64.94),
+        (21.06,  6.51, 64.71),
+        (21.60,  7.46, 64.54),
+        (22.01,  8.56, 64.48),
+        (22.23,  9.63, 64.56),
+        (22.15, 10.59, 64.73),
+        (21.89, 11.32, 64.95),
+        (21.40, 11.78, 65.26),
+        (20.67, 11.98, 65.65),
+        (21.40, 11.78, 65.26),
+        (21.89, 11.32, 64.95),
+        (22.15, 10.59, 64.73),
+        (22.23,  9.63, 64.56),
+        (22.01,  8.56, 64.48),
+        (21.60,  7.46, 64.54),
+        (21.06,  6.51, 64.71),
+        (20.33,  5.73, 64.94),
+        (19.58,  5.27, 65.23),
+        (18.82,  5.02, 65.60),
     ],
     "uav_delta": [
-        (-35.0,  35.0, 54.0),
-        (-10.0,  10.0, 54.0),
-        ( 10.0, -10.0, 54.0),
-        ( 35.0, -35.0, 54.0),
-        ( 10.0, -10.0, 54.0),
-        (-10.0,  10.0, 54.0),
+        (32.01, 11.98, 54.02),
+        (32.81, 12.11, 53.60),
+        (33.63, 12.56, 53.19),
+        (34.58, 13.72, 52.83),
+        (35.47, 15.40, 52.50),
+        (36.30, 17.67, 52.19),
+        (37.06, 20.10, 51.98),
+        (37.52, 22.62, 51.90),
+        (37.75, 24.75, 51.93),
+        (37.72, 26.47, 52.05),
+        (37.30, 27.48, 52.29),
+        (36.69, 27.96, 52.66),
+        (37.30, 27.48, 52.29),
+        (37.72, 26.47, 52.05),
+        (37.75, 24.75, 51.93),
+        (37.52, 22.62, 51.90),
+        (37.06, 20.10, 51.98),
+        (36.30, 17.67, 52.19),
+        (35.47, 15.40, 52.50),
+        (34.58, 13.72, 52.83),
+        (33.63, 12.56, 53.19),
+        (32.81, 12.11, 53.60),
     ],
     "uav_epsilon": [
-        ( 45.0,   0.0, 56.0),
-        ( 15.0,  40.0, 56.0),
-        (-35.0,  30.0, 56.0),
-        (-40.0, -30.0, 56.0),
-        ( 15.0, -40.0, 56.0),
+        ( 5.02, -4.99, 52.02),
+        ( 5.74, -4.91, 51.59),
+        ( 6.41, -4.30, 51.16),
+        ( 6.83, -3.01, 50.73),
+        ( 6.94, -0.92, 50.28),
+        ( 6.86,  1.69, 49.83),
+        ( 6.48,  4.67, 49.47),
+        ( 5.88,  7.56, 49.24),
+        ( 5.20, 10.19, 49.13),
+        ( 4.37, 12.13, 49.15),
+        ( 3.52, 13.42, 49.33),
+        ( 2.74, 13.90, 49.66),
+        ( 3.52, 13.42, 49.33),
+        ( 4.37, 12.13, 49.15),
+        ( 5.20, 10.19, 49.13),
+        ( 5.88,  7.56, 49.24),
+        ( 6.48,  4.67, 49.47),
+        ( 6.86,  1.69, 49.83),
+        ( 6.94, -0.92, 50.28),
+        ( 6.83, -3.01, 50.73),
+        ( 6.41, -4.30, 51.16),
+        ( 5.74, -4.91, 51.59),
     ],
 }
 
@@ -162,8 +326,8 @@ DRONE_COLOURS = {
 class SwarmFixedPathNode(Node):
     """Single-drone fixed-path controller. Launch one instance per drone."""
 
-    def __init__(self):
-        super().__init__("sutra_swarm_fixed_path")
+    def __init__(self, **kwargs):
+        super().__init__("sutra_swarm_fixed_path", **kwargs)
 
         # ── Parameters ────────────────────────────────────────────────────────
         self.declare_parameter("drone_id", "uav_alpha")
@@ -190,7 +354,9 @@ class SwarmFixedPathNode(Node):
         )
 
         # Route for this drone
-        if self.route_mode == "ring_crossing":
+        if self.route_mode in ["canopy_forest", "forest"]:
+            self.waypoints = CANOPY_FOREST_ROUTES.get(self.drone_id, CANOPY_FOREST_ROUTES["uav_alpha"])
+        elif self.route_mode == "ring_crossing":
             self.waypoints = RING_CROSSING_ROUTES.get(self.drone_id, RING_CROSSING_ROUTES["uav_alpha"])
         elif self.route_mode == "disaster_flood":
             self.waypoints = DISASTER_FLOOD_ROUTES.get(self.drone_id, DISASTER_FLOOD_ROUTES["uav_alpha"])
@@ -207,6 +373,43 @@ class SwarmFixedPathNode(Node):
         self.has_pose = False
         self.is_airborne = False
         self.loop_count = 0
+
+        # Flight mode & resilience states
+        self.flight_mode = "MISSION"
+        if self.route_mode in ["canopy_forest", "forest"]:
+            self.home_coords = CANOPY_FOREST_HOME_COORDS.get(self.drone_id, (6.50, 5.50, 46.00))
+            self.takeoff_alt = self.home_coords[2]
+        elif self.route_mode == "disaster_flood":
+            self.home_coords = DISASTER_FLOOD_HOME_COORDS.get(self.drone_id, (16.02, -15.02, 54.02))
+            self.takeoff_alt = self.home_coords[2]
+        else:
+            self.home_coords = DRONE_HOME_COORDS.get(self.drone_id, (0.0, 0.0, 4.0))
+        self.hover_pos = self.home_coords
+
+        # Integral error terms for aerodynamic wind disturbance rejection
+        self.int_err_x = 0.0
+        self.int_err_y = 0.0
+        self.int_err_z = 0.0
+
+        # Dynamic ROS 2 parameter callback for live jury adjustments
+        self.add_on_set_parameters_callback(self._on_set_parameters)
+
+        # Command subscriber for live failsafe & mode triggers
+        self.sub_cmd = self.create_subscription(
+            String,
+            "/sutra/swarm/command",
+            self._on_swarm_command,
+            10
+        )
+
+        # Target Tracking State from Perception & Kaggle GPU
+        self.detected_target = None
+        self.sub_targets = self.create_subscription(
+            String,
+            "/sutra/perception/targets",
+            self._on_perception_targets,
+            10
+        )
 
         # Swarm peer states: drone_id → (x, y, z, vx, vy, vz)
         self.peer_states: dict[str, tuple] = {}
@@ -257,11 +460,89 @@ class SwarmFixedPathNode(Node):
         )
         self._log_route()
 
+    def _on_set_parameters(self, params):
+        for p in params:
+            if p.name == "cruise_speed":
+                self.cruise_speed = float(p.value)
+                self.solver.max_speed = self.cruise_speed
+                self.get_logger().info(f"⚡ [{self.drone_id}] Dynamic speed updated: {self.cruise_speed:.1f} m/s")
+            elif p.name == "orca_radius":
+                self.orca_radius = float(p.value)
+                self.solver.safety_radius = self.orca_radius
+                self.get_logger().info(f"🛡️ [{self.drone_id}] Dynamic ORCA safety radius updated: {self.orca_radius:.2f} m")
+            elif p.name == "waypoint_radius":
+                self.wp_radius = float(p.value)
+                self.get_logger().info(f"📍 [{self.drone_id}] Dynamic waypoint radius updated: {self.wp_radius:.2f} m")
+        return SetParametersResult(successful=True)
+
+    def _on_swarm_command(self, msg: String):
+        try:
+            data = json.loads(msg.data)
+            target = data.get("drone_id", "all")
+            target_sys = data.get("target_system", 0)
+
+            sys_to_name = {1: "uav_alpha", 2: "uav_beta", 3: "uav_gamma", 4: "uav_delta", 5: "uav_epsilon"}
+            if target_sys > 0 and target == "all":
+                target = sys_to_name.get(target_sys, "all")
+
+            if target not in ("all", self.drone_id):
+                return
+
+            action = data.get("action", "")
+            if action == "rtl":
+                self.flight_mode = "RTL"
+                self.get_logger().info(f"🚨 [{self.drone_id}] Failsafe: EMERGENCY RTL ENGAGED! Returning to home base {self.home_coords}")
+            elif action == "hover":
+                self.flight_mode = "HOVER"
+                self.hover_pos = (self.x, self.y, self.z)
+                self.get_logger().info(f"🛑 [{self.drone_id}] Failsafe: POSITION HOLD HOVER at ({self.x:.1f}, {self.y:.1f}, {self.z:.1f})")
+            elif action == "reset":
+                self.flight_mode = "MISSION"
+                self.get_logger().info(f"✅ [{self.drone_id}] Failsafe: MISSION RESUMED!")
+            elif action == "set_speed":
+                val = float(data.get("value", self.cruise_speed))
+                self.cruise_speed = val
+                self.solver.max_speed = val
+                self.get_logger().info(f"⚡ [{self.drone_id}] Speed set via command: {self.cruise_speed:.1f} m/s")
+            elif action == "set_radius":
+                val = float(data.get("value", self.orca_radius))
+                self.orca_radius = val
+                self.solver.safety_radius = val
+        except Exception as e:
+            self.get_logger().error(f"Error handling swarm command: {e}")
+
     def _log_route(self):
         wp_str = " → ".join(
             f"({x:.1f},{y:.1f},{z:.1f})" for x, y, z in self.waypoints
         )
         self.get_logger().info(f"📍 [{self.drone_id}] Route: {wp_str} → (loop)")
+
+    def _on_perception_targets(self, msg: String):
+        try:
+            payload = json.loads(msg.data)
+            targets = payload if isinstance(payload, list) else payload.get("targets", [payload])
+            for tgt in targets:
+                if isinstance(tgt, dict):
+                    loc = tgt.get("local_ned", {})
+                    if loc and "x" in loc and "y" in loc:
+                        x, y, z = float(loc["x"]), float(loc["y"]), float(loc.get("z", 37.0))
+                    elif "x" in tgt and "y" in tgt:
+                        x, y, z = float(tgt["x"]), float(tgt["y"]), float(tgt.get("z", 37.0))
+                    else:
+                        continue
+
+                    self.detected_target = (x, y, z)
+                    if self.flight_mode != "TARGET_TRACK":
+                        self.flight_mode = "TARGET_TRACK"
+                        label = tgt.get("class_name", tgt.get("label", "TARGET"))
+                        conf = float(tgt.get("confidence", 0.95))
+                        self.get_logger().warn(
+                            f"🚨 [{self.drone_id}] PERCEPTION TARGET CONFIRMED: {label} ({conf*100:.1f}%) at "
+                            f"(x={x:.2f}, y={y:.2f}, z={z:.2f})m -> TRANSITIONING TO TACTICAL CONCENTRIC ORBIT!"
+                        )
+                    break
+        except Exception:
+            pass
 
     # ── Callbacks ─────────────────────────────────────────────────────────────
     def _odom_cb(self, msg: Odometry):
@@ -271,6 +552,9 @@ class SwarmFixedPathNode(Node):
         self.vx = msg.twist.twist.linear.x
         self.vy = msg.twist.twist.linear.y
         self.vz = msg.twist.twist.linear.z
+        if not self.has_pose:
+            self.has_pose = True
+            self.initial_z = msg.pose.pose.position.z
         self.has_pose = True
 
         # Broadcast own pose for GCS
@@ -326,7 +610,78 @@ class SwarmFixedPathNode(Node):
                 )
             return
 
-        # Phase 2: Waypoint pursuit
+        # Phase 2: Mode Execution (HOVER, RTL, or MISSION)
+        if self.flight_mode == "HOVER":
+            hx, hy, hz = self.hover_pos
+            dx, dy, dz = hx - self.x, hy - self.y, hz - self.z
+            vx_des = min(2.0, max(-2.0, dx * 1.5))
+            vy_des = min(2.0, max(-2.0, dy * 1.5))
+            vz_des = min(1.0, max(-1.0, dz * 1.5))
+            vx_final, vy_final, vz_final = self._orca_velocity(vx_des, vy_des, vz_des)
+            self._apply_wind_compensated_twist(vx_final, vy_final, vz_final)
+            return
+
+        elif self.flight_mode == "RTL":
+            hx, hy, hz = self.home_coords
+            dx, dy, dz = hx - self.x, hy - self.y, hz - self.z
+            dist_xy = math.hypot(dx, dy)
+            if dist_xy > 0.6:
+                dist_3d = math.sqrt(dx*dx + dy*dy + dz*dz)
+                scale = self.cruise_speed / max(0.01, dist_3d)
+                vx_des = dx * scale
+                vy_des = dy * scale
+                vz_des = dz * scale
+                vx_final, vy_final, vz_final = self._orca_velocity(vx_des, vy_des, vz_des)
+                self._apply_wind_compensated_twist(vx_final, vy_final, vz_final)
+            else:
+                # Over home pad -> automated safe descent to initial touchdown altitude
+                landing_z = getattr(self, "initial_z", 0.3)
+                if self.z > (landing_z + 0.15):
+                    self._send_twist(0.0, 0.0, -0.6)
+                else:
+                    self._send_twist(0.0, 0.0, 0.0)
+            return
+
+        elif self.flight_mode == "TARGET_TRACK" and self.detected_target is not None:
+            # Dynamic Tactical Concentric Orbit around detected ground target / squad
+            tgt_x, tgt_y, tgt_z = self.detected_target
+
+            # Calibrated concentric radii & altitudes per drone tactical role
+            role_configs = {
+                "uav_alpha":   {"radius": 7.0,  "alt_offset": 6.0,  "ang_vel": 0.45, "phase": 0.0},
+                "uav_beta":    {"radius": 14.0, "alt_offset": 14.0, "ang_vel": 0.35, "phase": math.pi * 0.5},
+                "uav_gamma":   {"radius": 1.5,  "alt_offset": 24.0, "ang_vel": 0.10, "phase": 0.0},
+                "uav_delta":   {"radius": 20.0, "alt_offset": 12.0, "ang_vel": 0.28, "phase": math.pi},
+                "uav_epsilon": {"radius": 11.0, "alt_offset": 9.0,  "ang_vel": 0.38, "phase": math.pi * 1.5},
+            }
+            cfg = role_configs.get(self.drone_id, {"radius": 10.0, "alt_offset": 8.0, "ang_vel": 0.3, "phase": 0.0})
+
+            t = self.get_clock().now().nanoseconds * 1e-9
+            theta = cfg["ang_vel"] * t + cfg["phase"]
+
+            tx = tgt_x + cfg["radius"] * math.cos(theta)
+            ty = tgt_y + cfg["radius"] * math.sin(theta)
+            tz = tgt_z + cfg["alt_offset"]
+
+            dx = tx - self.x
+            dy = ty - self.y
+            dz = tz - self.z
+            dist_3d = math.sqrt(dx*dx + dy*dy + dz*dz)
+
+            spd = min(self.cruise_speed, max(1.2, dist_3d * 1.2))
+            if dist_3d > 0.05:
+                vx_des = (dx / dist_3d) * spd
+                vy_des = (dy / dist_3d) * spd
+                vz_des = (dz / dist_3d) * spd
+            else:
+                vx_des, vy_des, vz_des = 0.0, 0.0, 0.0
+
+            # Safe ORCA velocity avoidance during concentric orbit
+            vx_final, vy_final, vz_final = self._orca_velocity(vx_des, vy_des, vz_des)
+            self._apply_wind_compensated_twist(vx_final, vy_final, vz_final)
+            return
+
+        # Normal MISSION mode
         tx, ty, tz = self.waypoints[self.wp_idx]
 
         dx = tx - self.x
@@ -368,7 +723,27 @@ class SwarmFixedPathNode(Node):
         # Apply ORCA avoidance
         vx_final, vy_final, vz_final = self._orca_velocity(vx_des, vy_des, vz_des)
 
-        self._send_twist(vx_final, vy_final, vz_final)
+        self._apply_wind_compensated_twist(vx_final, vy_final, vz_final)
+
+    def _apply_wind_compensated_twist(self, vx: float, vy: float, vz: float):
+        """Applies closed-loop integral velocity compensation for physical wind shear rejection."""
+        dt = 0.02
+        err_x = vx - self.vx
+        err_y = vy - self.vy
+        err_z = vz - self.vz
+
+        self.int_err_x += err_x * dt
+        self.int_err_y += err_y * dt
+        self.int_err_z += err_z * dt
+
+        # Integral gain and anti-windup saturation limit (±1.5 m/s)
+        ki = 0.35
+        max_int = 1.5
+        int_x = max(-max_int, min(max_int, self.int_err_x * ki))
+        int_y = max(-max_int, min(max_int, self.int_err_y * ki))
+        int_z = max(-max_int, min(max_int, self.int_err_z * ki))
+
+        self._send_twist(vx + int_x, vy + int_y, vz + int_z)
 
     def _send_twist(self, vx: float, vy: float, vz: float):
         msg = TwistStamped()

@@ -175,7 +175,7 @@ To convince seasoned jury members, Project SUTRA incorporates 5 concrete physica
 ### 1. 🧰 Packaging & Rapid Mobility (The "Two-Case Solution")
 * The entire 5-UAV system packs into **two Pelican 1650 ruggedized Protector Cases** (IP67 submersible, crushproof, dustproof):
   * **Case 1 (Avionics & Ground Post)**: Panasonic Toughbook GCS, 802.11s high-gain mast antenna, 10x 6S 6500mAh Solid-State LiPo batteries, multi-bank balance charger.
-  * **Case 2 (The Fleet)**: 5x SUTRA quadcopters with folding carbon-fiber arms, quick-release prop mechanisms, and modular sensor pods.
+  * **Case 2 (The Fleet)**: 5x SUTRA fault-tolerant hexacopters with folding carbon-fiber arms, quick-release prop mechanisms, and modular sensor pods.
 * **Total Weight**: $18.5\,\text{kg}$ per case. Designed to be carried by **two jawans** over rugged mountain trails or loaded into an NDRF Mahindra Scorpio / Army ALH Dhruv helicopter.
 
 ### 2. ⏱️ The 180-Second Cold-Start SOP
@@ -190,7 +190,7 @@ From the instant the response vehicle halts at the staging area:
 * **$T+150$ to $T+180\text{s}$**: Operator taps **"EXECUTE SECTOR SEARCH"** $\to$ Drones launch sequentially with 4-second stagger to prevent rotor wash interference.
 
 ### 3. 🔋 Continuous 24-Hour Persistence (The "4+1 Leapfrog Swarm Rotation")
-Quadcopters face an immutable physics constraint: battery flight time is $\approx 28\text{ minutes}$. 
+Electric multi-rotors face an immutable physics constraint: battery flight time is $\approx 28\text{ minutes}$. 
 * **The Fatal Mistake**: Flying all 5 drones together, landing all 5 together, causing a 20-minute total blackout while charging.
 * **The SUTRA Solution**: We run a continuous **4+1 Leapfrog Rotation**:
   * **4 UAVs** remain airborne in active search and mesh relay formation.
