@@ -26,6 +26,7 @@ In GPS-denied and communication-challenged disaster environments, conventional v
 - **Zero Digital Cliff Effect**: Eliminates frame blackouts and freezes. Even down to $0\text{ dB}$ or $-5\text{ dB}$ channel SNR, the stream degrades gracefully via soft analog blur while preserving thermal survivor detection.
 - **96.9% Payload Reduction**: Compresses raw visual frames from $512\text{ KB}$ down to $16.0\text{ KB}$.
 - **High-Speed Execution**: Achieves $\sim 1.7\text{ ms}$ decode latency on NVIDIA RTX 3050 CUDA hardware.
+- **NVIDIA Sionna 6G RF Simulation Workbench** (`scripts/launch_rf_deep_jscc_simulation.sh`): A standalone, Mission-Planner-grade RF link-level simulation software featuring real-time 5.8 GHz spectrum analyzer, scrolling waterfall, I/Q constellation diagrams (16-QAM vs Deep JSCC), 3GPP TR 38.901 propagation physics, live YOLOv8 survivor detection, and interactive on-screen avionics controls.
 
 ---
 
