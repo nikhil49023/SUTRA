@@ -23,7 +23,7 @@ import json
 import base64
 import asyncio
 import threading
-from typing import Dict, Set, Optional
+from typing import Dict, Set, Optional, List
 from pathlib import Path
 
 import cv2
@@ -107,6 +107,10 @@ class SutraSimExporter(Node if RCLPY_AVAILABLE else object):
                 "timestamp": 0.0
             }
 
+        # Perception survivor alerts cache (pre-loaded with verified canopy detections)
+        self.cached_alerts: List[dict] = []
+        self._load_canopy_perception_targets()
+
         if self.is_ros_node:
             sensor_qos = QoSProfile(depth=2, reliability=ReliabilityPolicy.BEST_EFFORT)
             
@@ -138,6 +142,13 @@ class SutraSimExporter(Node if RCLPY_AVAILABLE else object):
             self.create_subscription(
                 String, "/vio/status",
                 self._on_vio_status_shared,
+                10
+            )
+
+            # GCS perception alert subscription (from stream_perception_targets_to_swarm.py)
+            self.create_subscription(
+                String, "/sutra/gcs/alerts",
+                self._on_gcs_alert,
                 10
             )
 
@@ -232,6 +243,60 @@ class SutraSimExporter(Node if RCLPY_AVAILABLE else object):
         }
         self.broadcast_json(payload)
 
+    def _load_canopy_perception_targets(self):
+        """Pre-loads verified canopy perception targets from kaggle_perception_results/sutra_canopy_detections.json."""
+        manifest_path = Path(__file__).resolve().parents[4] / "kaggle_perception_results/sutra_canopy_detections.json"
+        if manifest_path.exists():
+            try:
+                with open(manifest_path, "r") as f:
+                    manifest = json.load(f)
+                targets = manifest.get("targets", [])
+                for tgt in targets:
+                    wgs84 = tgt.get("wgs84", {})
+                    alert = {
+                        "id": tgt.get("target_code", f"TGT-{tgt.get('id', 1)}"),
+                        "type": "SURVIVOR" if "survivor" in tgt.get("class_name", "").lower() else "THREAT",
+                        "lat": float(wgs84.get("latitude", self.origin_lat)),
+                        "lon": float(wgs84.get("longitude", self.origin_lon)),
+                        "alt": float(wgs84.get("altitude_m", self.origin_alt)),
+                        "confidence": float(tgt.get("confidence", 0.95)),
+                        "drone": "uav_alpha",
+                        "time": time.strftime("%H:%M:%S"),
+                        "sensors": ["YOLOv8-TRT", "Thermal-LWIR", "WGS84-Raycast"],
+                        "raycast_error_m": float(tgt.get("raycast_error_m", 0.28))
+                    }
+                    self.cached_alerts.append(alert)
+            except Exception as e:
+                if hasattr(self, "get_logger"):
+                    self.get_logger().warn(f"Could not load canopy targets: {e}")
+
+    def _on_gcs_alert(self, msg: String):
+        """Processes incoming perception alert from /sutra/gcs/alerts and broadcasts SURVIVOR_ALERT packet to GCS."""
+        try:
+            raw = json.loads(msg.data)
+            wgs84 = raw.get("wgs84", {})
+            alert_data = {
+                "id": raw.get("target_id", raw.get("id", "TGT-NEW")),
+                "type": "SURVIVOR" if "survivor" in raw.get("class", raw.get("type", "")).lower() else "THREAT",
+                "lat": float(wgs84.get("latitude", raw.get("lat", self.origin_lat))),
+                "lon": float(wgs84.get("longitude", raw.get("lon", self.origin_lon))),
+                "alt": float(wgs84.get("altitude_m", raw.get("alt", self.origin_alt))),
+                "confidence": float(raw.get("confidence", 0.95)),
+                "drone": raw.get("drone", "uav_alpha"),
+                "time": time.strftime("%H:%M:%S"),
+                "sensors": ["YOLOv8-TRT", "Thermal-LWIR", "WGS84-Raycast"]
+            }
+            self.cached_alerts.insert(0, alert_data)
+            payload = {
+                "topic": "SURVIVOR_ALERT",
+                "data": alert_data,
+                "timestamp": time.time()
+            }
+            self.broadcast_json(payload)
+        except Exception as e:
+            if hasattr(self, "get_logger"):
+                self.get_logger().warn(f"Failed to broadcast GCS alert: {e}")
+
     def _on_camera(self, msg: Image, did: str, stream_type: str):
         now = time.time()
         if (now - self.last_frame_times.get(did, 0.0)) < 0.08:  # Max 12 FPS per drone
@@ -305,7 +370,8 @@ class SutraSimExporter(Node if RCLPY_AVAILABLE else object):
             "topic": "SWARM_TELEMETRY",
             "timestamp": t,
             "origin": {"latitude": self.origin_lat, "longitude": self.origin_lon, "altitude": self.origin_alt},
-            "telemetry": self.swarm_telemetry
+            "telemetry": self.swarm_telemetry,
+            "survivors": self.cached_alerts
         }
         self.broadcast_json(payload)
 
@@ -338,6 +404,18 @@ class SutraSimExporter(Node if RCLPY_AVAILABLE else object):
         peer = getattr(websocket, 'remote_address', 'remote')
         if self.is_ros_node:
             self.get_logger().info(f"⚡ Remote GCS Compute Node Connected from: {peer}")
+
+        # Immediately deliver cached perception alerts to newly connected GCS client
+        for alert in self.cached_alerts:
+            try:
+                pkt = {
+                    "topic": "SURVIVOR_ALERT",
+                    "data": alert,
+                    "timestamp": time.time()
+                }
+                await websocket.send(json.dumps(pkt))
+            except Exception:
+                break
 
         try:
             async for raw in websocket:
