@@ -41,6 +41,7 @@ class RemoteCameraBridge(Node):
     def __init__(self, gcs_ws_url="ws://127.0.0.1:8765"):
         super().__init__("sutra_remote_camera_bridge")
         self.gcs_ws_url = gcs_ws_url
+        self.active_world = "WORLD_1"
         self.active_uav = "uav_1"
         self.active_modality = "RGB"
         
@@ -159,9 +160,11 @@ class RemoteCameraBridge(Node):
             packet = {
                 "type": "CAMERA_FRAME",
                 "topic": "CAMERA_FRAME",
+                "world_id": self.active_world,
                 "drone_id": drone_id,
                 "stream_type": modality,
                 "image_b64": f"data:image/jpeg;base64,{b64_str}",
+                "stream_url": f"http://10.152.0.191:8080/stream/{drone_id}" if modality == "RGB" else f"http://10.152.0.191:8080/stream/{drone_id}/thermal",
                 "timestamp": now,
                 "width": target_w,
                 "height": target_h,
@@ -201,11 +204,13 @@ class RemoteCameraBridge(Node):
                             cmd = cmd_data.get("command") or cmd_data.get("type")
                             if cmd in ("SELECT_STREAM", "camera.select_stream"):
                                 payload = cmd_data.get("payload") or cmd_data
-                                new_uav = payload.get("drone_id", self.active_uav).lower()
-                                new_mod = payload.get("modality", self.active_modality).upper()
+                                new_world = str(payload.get("world_id", self.active_world)).upper()
+                                new_uav = str(payload.get("drone_id", self.active_uav)).lower()
+                                new_mod = str(payload.get("modality", self.active_modality)).upper()
+                                self.active_world = new_world
                                 self.active_uav = new_uav
                                 self.active_modality = new_mod
-                                self.get_logger().info(f"🎥 Active stream switched to: {self.active_uav} [{self.active_modality}]")
+                                self.get_logger().info(f"🎥 Active stream switched to: {self.active_world} + {self.active_uav} [{self.active_modality}]")
                         except Exception:
                             pass
             except Exception as e:

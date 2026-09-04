@@ -42,11 +42,35 @@ DRONE_ID_MAP: Dict[str, str] = {
     "drone_charlie": "charlie",
     "drone_delta": "delta",
     "drone_epsilon": "epsilon",
+    "uav_1": "alpha",
+    "uav_2": "bravo",
+    "uav_3": "charlie",
+    "uav_4": "delta",
+    "uav_5": "epsilon",
+    "uav_6": "foxtrot",
+    "uav_7": "golf",
+    "uav_8": "hotel",
+    "uav1": "alpha",
+    "uav2": "bravo",
+    "uav3": "charlie",
+    "uav4": "delta",
+    "uav5": "epsilon",
+    "uav6": "foxtrot",
+    "uav7": "golf",
+    "uav8": "hotel",
+    "drone_1": "alpha",
+    "drone_2": "bravo",
+    "drone_3": "charlie",
+    "drone_4": "delta",
+    "drone_5": "epsilon",
     "alpha": "alpha",
     "bravo": "bravo",
     "charlie": "charlie",
     "delta": "delta",
     "epsilon": "epsilon",
+    "foxtrot": "foxtrot",
+    "golf": "golf",
+    "hotel": "hotel",
 }
 
 
@@ -179,11 +203,34 @@ class PerceptionSubsystemAdapter:
         self._alert_cooldowns: Dict[str, float] = {}
         self._lock = threading.Lock()
 
+        # Active Multi-World Gazebo & Camera Feed Tracking
+        self.active_world_id: str = "WORLD_1"
+        self.active_drone_id: str = "alpha"
+
         # ROS 2 Handle
         self._ros_node = None
         self._ros_sub = None
         self._is_running = False
         self._pruning_thread: Optional[threading.Thread] = None
+
+    def set_active_feed(self, world_id: str, drone_id: str) -> None:
+        """
+        Synchronizes active Gazebo world and UAV camera feed selection with Subsystem C perception.
+        Ensures detections from the incoming stream are associated with the correct world and drone.
+        """
+        with self._lock:
+            self.active_world_id = str(world_id).strip().upper() if world_id else "WORLD_1"
+            self.active_drone_id = normalize_drone_id(drone_id) if drone_id else "alpha"
+        logger.info(f"🎯 Perception Subsystem C active feed synchronized: {self.active_world_id} + {self.active_drone_id}")
+        self.event_bus.emit(
+            "ai.active_feed_updated",
+            payload={
+                "world_id": self.active_world_id,
+                "drone_id": self.active_drone_id,
+                "timestamp": time.time(),
+            },
+            source="perception_adapter",
+        )
 
     def start(self, try_ros: bool = True) -> None:
         """Starts adapter background maintenance and attempts ROS 2 initialization."""
@@ -346,7 +393,10 @@ class PerceptionSubsystemAdapter:
             label = label_upper or "SURVIVOR"
 
         confidence = float(raw.get("confidence", 1.0))
-        drone_id = normalize_drone_id(raw.get("drone") or raw.get("drone_id"))
+        raw_world = raw.get("world_id") or raw.get("world") or self.active_world_id
+        world_id = str(raw_world).strip().upper()
+        raw_drone = raw.get("drone") or raw.get("drone_id") or self.active_drone_id
+        drone_id = normalize_drone_id(raw_drone)
         
         # Resolve Coordinates: direct lat/lon, gps array/tuple, or relative offsets
         lat = raw.get("lat") if "lat" in raw else raw.get("latitude")
@@ -427,6 +477,7 @@ class PerceptionSubsystemAdapter:
                 heading_deg=heading_deg,
                 source=source,
                 drone_id=drone_id,
+                world_id=world_id,
                 modalities=modalities,
                 tracking_status="TRACKED",
                 history=history,
@@ -446,6 +497,7 @@ class PerceptionSubsystemAdapter:
                 confidence=confidence,
                 source=source,
                 drone_id=drone_id,
+                world_id=world_id,
                 modalities=modalities,
                 tracking_status="DETECTED",
                 history=history,
@@ -480,6 +532,7 @@ class PerceptionSubsystemAdapter:
                 metadata={
                     "target_id": target_id,
                     "drone_id": drone_id,
+                    "world_id": world_id,
                     "label": label,
                     "confidence": confidence,
                     "tracking_status": updated_target.tracking_status,
@@ -496,6 +549,7 @@ class PerceptionSubsystemAdapter:
                 "target": self._serialize_target(updated_target),
                 "target_id": target_id,
                 "drone_id": drone_id,
+                "world_id": world_id,
                 "label": label,
                 "confidence": confidence,
             },
@@ -554,6 +608,7 @@ class PerceptionSubsystemAdapter:
                 "alert_id": alert.alert_id,
                 "target_id": target.target_id,
                 "drone_id": target.drone_id,
+                "world_id": getattr(target, "world_id", "WORLD_1"),
                 "label": target.label,
                 "confidence": target.confidence,
                 "latitude": target.latitude,

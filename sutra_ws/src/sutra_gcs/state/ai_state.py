@@ -125,6 +125,7 @@ class TrackedTarget:
     confidence: float = 1.0
     source: str = "PERCEPTION"
     drone_id: Optional[str] = None
+    world_id: str = "WORLD_1"
     modalities: List[str] = field(default_factory=list)
     tracking_status: str = "TRACKED"
     history: List[Dict[str, Any]] = field(default_factory=list)

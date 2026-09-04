@@ -1,74 +1,116 @@
 /**
- * Smart Horizon GCS — Remote Multi-UAV Live Camera Receiver Section
+ * Smart Horizon GCS — Remote Multi-UAV & Multi-World Gazebo Live Camera Command Section
  * Subsystem: Subsystem D (3D GIS GCS / Remote Camera Receiver)
  *
- * Feed source: Direct MJPEG stream from Nikhil's Gazebo simulation server
- *   http://10.152.0.191:8080/stream/{uav_id}          ← RGB optical
- *   http://10.152.0.191:8080/stream/{uav_id}/thermal  ← Thermal LWIR
+ * Feed Sources:
+ * - WORLD 1 (Friend 1 - Gazebo Primary Master):
+ *     RGB:     {WORLD_1_BASE}/stream/{uav_id}
+ *     Thermal: {WORLD_1_BASE}/stream/{uav_id}/thermal
+ *     Topic:   /{uav_id}/camera/image_raw
+ * - WORLD 2 (Friend 2 - Gazebo Recon Secondary):
+ *     RGB:     {WORLD_2_BASE}/stream/{uav_id}
+ *     Thermal: {WORLD_2_BASE}/stream/{uav_id}/thermal
+ *     Topic:   /world_2/{uav_id}/camera/image_raw
  *
- * No WebSocket bridge needed — browser loads MJPEG natively via <img> tag.
- * MJPEG = Motion JPEG: server pushes JPEGs continuously (multipart/x-mixed-replace).
+ * Features:
+ * 1. World selector: WORLD 1 | WORLD 2
+ * 2. Tactical Drone selector for active world: UAV-1 to UAV-8
+ * 3. Connection status indicators: Connected | Connecting | Offline per world and feed
+ * 4. Subsystem C integration: syncs selected world_id + drone_id with perception & survivor detection
+ * 5. High-performance stream switching: smoothly stops inactive streams without reloading parent
  */
 
-
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   Flame, Eye, Radio, Activity, Maximize2, Minimize2,
-  Camera, AlertCircle, RefreshCw, ExternalLink,
+  Camera, AlertCircle, RefreshCw, ExternalLink, Globe,
+  Settings, Check, X, ShieldAlert, Target, Crosshair, Users
 } from 'lucide-react';
+import { useCameraStore, WorldId, Modality } from '../../stores/cameraStore';
+import { useAIStore } from '../../stores/aiStore';
 
-// ── Gazebo MJPEG Server (Nikhil's laptop) ─────────────────────────────────────
-const MJPEG_BASE = 'http://10.152.0.191:8080';
-
-const getMjpegUrl = (uavId: string, modality: 'RGB' | 'THERMAL'): string => {
-  if (modality === 'THERMAL') {
-    return `${MJPEG_BASE}/stream/${uavId}/thermal`;
-  }
-  return `${MJPEG_BASE}/stream/${uavId}`;
-};
-
-// ── UAV list ──────────────────────────────────────────────────────────────────
-const UAV_LIST = [
-  { id: 'uav_1', label: 'UAV-1', name: 'Alpha Recon' },
-  { id: 'uav_2', label: 'UAV-2', name: 'Bravo Scout' },
-  { id: 'uav_3', label: 'UAV-3', name: 'Charlie Relay' },
-  { id: 'uav_4', label: 'UAV-4', name: 'Delta SAR' },
-  { id: 'uav_5', label: 'UAV-5', name: 'Echo Patrol' },
-  { id: 'uav_6', label: 'UAV-6', name: 'Foxtrot Flank' },
-  { id: 'uav_7', label: 'UAV-7', name: 'Golf Perimeter' },
-  { id: 'uav_8', label: 'UAV-8', name: 'Hotel Rear' },
-];
-
-// ── Component ─────────────────────────────────────────────────────────────────
 export const LiveCameraFeedSection: React.FC = () => {
-  const [activeUav, setActiveUav]     = useState('uav_1');
-  const [modality, setModality]       = useState<'RGB' | 'THERMAL'>('RGB');
-  const [isLive, setIsLive]           = useState(false);
+  const {
+    activeWorld,
+    activeUav,
+    modality,
+    worlds,
+    frames,
+    setActiveWorld,
+    setActiveUav,
+    setModality,
+    selectFeed,
+    setWorldBaseUrl,
+    getFeedStatus,
+    getWorldStatus,
+    getStreamUrl,
+    getStreamTopic,
+    markFeedConnected,
+    markFeedConnecting,
+    markFeedOffline,
+  } = useCameraStore();
+
+  const trackedTargets = useAIStore((s) => s.tracked_targets);
+  const perceptionStatus = useAIStore((s) => s.perception_status);
+
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [imgKey, setImgKey]           = useState(0); // force reload on demand
   const [snapshotSuccess, setSnapshotSuccess] = useState(false);
+  const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const [world1UrlInput, setWorld1UrlInput] = useState(worlds.WORLD_1.baseUrl);
+  const [world2UrlInput, setWorld2UrlInput] = useState(worlds.WORLD_2.baseUrl);
+  const [reconnectCounter, setReconnectCounter] = useState(0);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const imgRef       = useRef<HTMLImageElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
 
-  // Build current stream URL
-  const streamUrl = getMjpegUrl(activeUav, modality);
+  // Current stream metadata
+  const currentWorldConfig = worlds[activeWorld] || worlds.WORLD_1;
+  const currentStreamUrl = getStreamUrl(activeWorld, activeUav, modality);
+  const currentTopic = getStreamTopic(activeWorld, activeUav, modality);
+  const currentStatus = getFeedStatus(activeWorld, activeUav, modality);
+  const worldStatus1 = getWorldStatus('WORLD_1');
+  const worldStatus2 = getWorldStatus('WORLD_2');
 
-  // Switch UAV
+  // Check if WebSocket frame is available as fallback/supplement
+  const wsFrameKey = `${activeWorld}_${activeUav}_${modality}`;
+  const wsFrameLegacyKey = `${activeUav}_${modality}`;
+  const wsFrame = frames[wsFrameKey] || frames[wsFrameLegacyKey];
+
+  // Inactive feed cleanup on switch
+  useEffect(() => {
+    // When stream changes, mark connecting and reset old image to drop multipart connection
+    markFeedConnecting(activeWorld, activeUav, modality);
+    if (imgRef.current) {
+      imgRef.current.src = '';
+      imgRef.current.src = currentStreamUrl;
+    }
+  }, [activeWorld, activeUav, modality, currentStreamUrl, reconnectCounter]);
+
+  // World switch handler
+  const handleSelectWorld = (worldId: WorldId) => {
+    if (activeWorld === worldId) return;
+    setActiveWorld(worldId);
+  };
+
+  // UAV switch handler
   const handleSelectUav = (uavId: string) => {
+    if (activeUav === uavId) return;
     setActiveUav(uavId);
-    setIsLive(false);
-    setImgKey((k) => k + 1); // force <img> re-mount → re-connects stream
   };
 
-  // Switch modality
-  const handleSelectModality = (mod: 'RGB' | 'THERMAL') => {
+  // Modality switch handler
+  const handleSelectModality = (mod: Modality) => {
+    if (modality === mod) return;
     setModality(mod);
-    setIsLive(false);
-    setImgKey((k) => k + 1);
   };
 
-  // Fullscreen
+  // Reconnect stream
+  const handleReconnect = () => {
+    markFeedConnecting(activeWorld, activeUav, modality);
+    setReconnectCounter((c) => c + 1);
+  };
+
+  // Fullscreen toggle
   const toggleFullscreen = () => {
     if (!containerRef.current) return;
     if (!document.fullscreenElement) {
@@ -78,131 +120,343 @@ export const LiveCameraFeedSection: React.FC = () => {
     }
   };
 
-  // Snapshot (draw current MJPEG frame onto canvas → download)
+  // Snapshot capture
   const captureSnapshot = useCallback(() => {
     const img = imgRef.current;
     if (!img) return;
-    const canvas = document.createElement('canvas');
-    canvas.width  = img.naturalWidth  || img.width;
-    canvas.height = img.naturalHeight || img.height;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.drawImage(img, 0, 0);
-    const link = document.createElement('a');
-    link.href     = canvas.toDataURL('image/jpeg', 0.92);
-    link.download = `SUTRA_${activeUav.toUpperCase()}_${modality}_${Date.now()}.jpg`;
-    link.click();
-    setSnapshotSuccess(true);
-    setTimeout(() => setSnapshotSuccess(false), 2000);
-  }, [activeUav, modality]);
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth || img.width || 640;
+      canvas.height = img.naturalHeight || img.height || 360;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(img, 0, 0);
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/jpeg', 0.92);
+      link.download = `SUTRA_${activeWorld}_${activeUav.toUpperCase()}_${modality}_${Date.now()}.jpg`;
+      link.click();
+      setSnapshotSuccess(true);
+      setTimeout(() => setSnapshotSuccess(false), 2000);
+    } catch {
+      // ignore
+    }
+  }, [activeWorld, activeUav, modality]);
+
+  // Filter survivor detections for the active feed
+  const activeSurvivors = trackedTargets.filter(
+    (t) =>
+      t.tracking_status !== 'LOST' &&
+      (t.label?.toUpperCase().includes('SURVIVOR') ?? true) &&
+      (!t.world_id || t.world_id === activeWorld)
+  );
+
+  // Status badge styling helper
+  const renderStatusBadge = (status: 'CONNECTED' | 'CONNECTING' | 'OFFLINE', size: 'sm' | 'md' = 'sm') => {
+    if (status === 'CONNECTED') {
+      return (
+        <span className={`inline-flex items-center space-x-1 font-bold text-[#10B981] ${size === 'md' ? 'text-xs' : 'text-[10px]'}`}>
+          <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse shadow-[0_0_6px_#10B981]" />
+          <span>Connected</span>
+        </span>
+      );
+    }
+    if (status === 'CONNECTING') {
+      return (
+        <span className={`inline-flex items-center space-x-1 font-bold text-[#F59E0B] ${size === 'md' ? 'text-xs' : 'text-[10px]'}`}>
+          <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] animate-ping" />
+          <span>Connecting</span>
+        </span>
+      );
+    }
+    return (
+      <span className={`inline-flex items-center space-x-1 font-bold text-[#EF4444] ${size === 'md' ? 'text-xs' : 'text-[10px]'}`}>
+        <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444]" />
+        <span>Offline</span>
+      </span>
+    );
+  };
 
   return (
     <div className="flex flex-col h-full bg-[#0B0F14] text-[#E7EBEF] font-mono select-none overflow-y-auto">
 
-      {/* ── UAV SELECTOR BAR ── */}
-      <div className="p-3 bg-[#11171E] border-b border-[#2B3743] flex-shrink-0">
-        <div className="flex items-center justify-between mb-2">
+      {/* ── 1. MASTER WORLD SELECTOR & TACTICAL HEADER ── */}
+      <div className="p-3 bg-[#11171E] border-b border-[#2B3743] flex-shrink-0 space-y-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          
+          {/* World Selector Tabs */}
           <div className="flex items-center space-x-2">
-            <Radio className="w-3.5 h-3.5 text-[#5B8FB9]" />
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#A9B3BD]">
-              Select Tactical UAV Stream:
+            <div className="flex items-center space-x-1.5 text-xs text-[#707C88] font-bold uppercase tracking-wider pr-2 border-r border-[#2B3743]">
+              <Globe className="w-4 h-4 text-[#5B8FB9]" />
+              <span>Gazebo World:</span>
+            </div>
+
+            <div className="flex items-center bg-[#151D26] p-1 rounded-xl border border-[#2B3743] space-x-1">
+              {/* WORLD 1 Tab */}
+              <button
+                onClick={() => handleSelectWorld('WORLD_1')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
+                  activeWorld === 'WORLD_1'
+                    ? 'bg-[#1B2530] text-[#E7EBEF] border border-[#5B8FB9] shadow-[0_0_12px_rgba(91,143,185,0.3)]'
+                    : 'text-[#A9B3BD] hover:text-[#E7EBEF] hover:bg-[#1A232E] border border-transparent'
+                }`}
+                title="Connect to Friend 1's Gazebo World (Nikhil)"
+              >
+                <div className="flex items-center space-x-1.5">
+                  <span className="font-extrabold tracking-wider">WORLD 1</span>
+                  <span className="text-[10px] text-[#707C88] hidden sm:inline">(Friend 1)</span>
+                </div>
+                <div className="pl-1 border-l border-[#2B3743]">
+                  {renderStatusBadge(worldStatus1)}
+                </div>
+              </button>
+
+              {/* WORLD 2 Tab */}
+              <button
+                onClick={() => handleSelectWorld('WORLD_2')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
+                  activeWorld === 'WORLD_2'
+                    ? 'bg-[#1B2530] text-[#E7EBEF] border border-[#5B8FB9] shadow-[0_0_12px_rgba(91,143,185,0.3)]'
+                    : 'text-[#A9B3BD] hover:text-[#E7EBEF] hover:bg-[#1A232E] border border-transparent'
+                }`}
+                title="Connect to Friend 2's Gazebo World (Recon)"
+              >
+                <div className="flex items-center space-x-1.5">
+                  <span className="font-extrabold tracking-wider">WORLD 2</span>
+                  <span className="text-[10px] text-[#707C88] hidden sm:inline">(Friend 2)</span>
+                </div>
+                <div className="pl-1 border-l border-[#2B3743]">
+                  {renderStatusBadge(worldStatus2)}
+                </div>
+              </button>
+            </div>
+
+            {/* Endpoint Config Toggle */}
+            <button
+              onClick={() => setIsConfigOpen(!isConfigOpen)}
+              className="p-1.5 rounded-lg bg-[#151D26] hover:bg-[#1B2530] border border-[#2B3743] text-[#A9B3BD] hover:text-[#E7EBEF] transition text-xs flex items-center space-x-1 cursor-pointer"
+              title="Configure Simulation Camera Endpoints"
+            >
+              <Settings className="w-3.5 h-3.5 text-[#5B8FB9]" />
+              <span className="text-[10px] font-semibold hidden md:inline">ENDPOINTS</span>
+            </button>
+          </div>
+
+          {/* Right Controls: Subsystem C Status & Modality Toggle */}
+          <div className="flex items-center space-x-3">
+            {/* Subsystem C Perception Sync Pill */}
+            <div className="hidden lg:flex items-center space-x-2 px-2.5 py-1 rounded-lg bg-[#151D26] border border-[#2B3743] text-[10px]">
+              <Target className="w-3 h-3 text-[#10B981]" />
+              <span className="text-[#707C88]">AI SYNC:</span>
+              <span className="font-bold text-[#E7EBEF]">{activeWorld} + {activeUav.toUpperCase()}</span>
+              <span className="text-[#707C88]">|</span>
+              <span className="text-[#10B981] font-bold flex items-center space-x-1">
+                <Users className="w-2.5 h-2.5" />
+                <span>{activeSurvivors.length} SURVIVORS</span>
+              </span>
+            </div>
+
+            {/* RGB / Thermal Modality Toggle */}
+            <div className="flex items-center bg-[#151D26] p-0.5 rounded-lg border border-[#2B3743]">
+              <button
+                onClick={() => handleSelectModality('RGB')}
+                className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold transition flex items-center space-x-1 cursor-pointer ${
+                  modality === 'RGB'
+                    ? 'bg-[#5B8FB9] text-white shadow-sm'
+                    : 'text-[#707C88] hover:text-[#E7EBEF]'
+                }`}
+              >
+                <Eye className="w-3 h-3" />
+                <span>RGB (OPTICAL)</span>
+              </button>
+              <button
+                onClick={() => handleSelectModality('THERMAL')}
+                className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold transition flex items-center space-x-1 cursor-pointer ${
+                  modality === 'THERMAL'
+                    ? 'bg-[#F59E0B] text-black shadow-sm'
+                    : 'text-[#707C88] hover:text-[#E7EBEF]'
+                }`}
+              >
+                <Flame className="w-3 h-3" />
+                <span>THERMAL (LWIR)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── 2. DRONE SELECTOR BAR FOR SELECTED WORLD ── */}
+        <div>
+          <div className="flex items-center justify-between text-[11px] text-[#A9B3BD] mb-1.5">
+            <div className="flex items-center space-x-2">
+              <Radio className="w-3.5 h-3.5 text-[#5B8FB9]" />
+              <span className="font-bold uppercase tracking-wider">
+                {currentWorldConfig.label} TACTICAL UAV FEEDS ({currentWorldConfig.name}):
+              </span>
+            </div>
+            <span className="text-[10px] text-[#707C88]">
+              {currentWorldConfig.owner}
             </span>
           </div>
 
-          {/* RGB / Thermal Toggle */}
-          <div className="flex items-center bg-[#151D26] p-0.5 rounded-lg border border-[#2B3743]">
-            <button
-              onClick={() => handleSelectModality('RGB')}
-              className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold transition flex items-center space-x-1 cursor-pointer ${
-                modality === 'RGB'
-                  ? 'bg-[#5B8FB9] text-white shadow-sm'
-                  : 'text-[#707C88] hover:text-[#E7EBEF]'
-              }`}
-            >
-              <Eye className="w-3 h-3" />
-              <span>RGB (OPTICAL)</span>
-            </button>
-            <button
-              onClick={() => handleSelectModality('THERMAL')}
-              className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold transition flex items-center space-x-1 cursor-pointer ${
-                modality === 'THERMAL'
-                  ? 'bg-[#F59E0B] text-black shadow-sm'
-                  : 'text-[#707C88] hover:text-[#E7EBEF]'
-              }`}
-            >
-              <Flame className="w-3 h-3" />
-              <span>THERMAL (LWIR)</span>
-            </button>
-          </div>
-        </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1.5">
+            {currentWorldConfig.uavs.map((uav) => {
+              const isSelected = activeUav === uav.id;
+              const uavStatus = getFeedStatus(activeWorld, uav.id, modality);
 
-        {/* UAV Pills */}
-        <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
-          {UAV_LIST.map((uav) => {
-            const isSelected = activeUav === uav.id;
-            return (
-              <button
-                key={uav.id}
-                onClick={() => handleSelectUav(uav.id)}
-                className={`py-1.5 px-2 rounded-lg border text-center transition cursor-pointer ${
-                  isSelected
-                    ? 'bg-[#1B2530] border-[#5B8FB9] text-white shadow-[0_0_12px_rgba(91,143,185,0.3)]'
-                    : 'bg-[#151D26] hover:bg-[#1A232E] border-[#2B3743] text-[#A9B3BD]'
-                }`}
-              >
-                <div className="flex items-center justify-center space-x-1.5">
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      isSelected && isLive
-                        ? 'bg-[#10B981] shadow-[0_0_6px_#10B981] animate-pulse'
-                        : 'bg-[#4B5563]'
-                    }`}
-                  />
-                  <span className="font-extrabold text-[11px]">{uav.label}</span>
-                </div>
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={uav.id}
+                  onClick={() => handleSelectUav(uav.id)}
+                  className={`py-1.5 px-2 rounded-lg border text-left transition cursor-pointer relative overflow-hidden ${
+                    isSelected
+                      ? 'bg-[#1B2530] border-[#5B8FB9] text-white shadow-[0_0_12px_rgba(91,143,185,0.3)]'
+                      : 'bg-[#151D26] hover:bg-[#1A232E] border-[#2B3743] text-[#A9B3BD]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="font-extrabold text-[11px]">{uav.label}</span>
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        uavStatus === 'CONNECTED'
+                          ? 'bg-[#10B981] shadow-[0_0_6px_#10B981] animate-pulse'
+                          : uavStatus === 'CONNECTING'
+                          ? 'bg-[#F59E0B] animate-ping'
+                          : 'bg-[#4B5563]'
+                      }`}
+                    />
+                  </div>
+                  <div className="text-[9px] text-[#707C88] truncate">
+                    {uav.name}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {/* ── VIDEO VIEWPORT ── */}
+      {/* ── 3. OPTIONAL ENDPOINT CONFIGURATION MODAL ── */}
+      {isConfigOpen && (
+        <div className="bg-[#11171E] border-b border-[#2B3743] p-4 text-xs animate-in fade-in">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center space-x-2">
+              <Settings className="w-4 h-4 text-[#5B8FB9]" />
+              <span className="font-bold text-[#E7EBEF] uppercase tracking-wider">
+                GAZEBO SIMULATION CAMERA STREAM ENDPOINTS
+              </span>
+            </div>
+            <button
+              onClick={() => setIsConfigOpen(false)}
+              className="p-1 rounded hover:bg-[#1B2530] text-[#707C88] hover:text-[#E7EBEF]"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* World 1 Endpoint */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] text-[#A9B3BD] font-semibold flex items-center justify-between">
+                <span>Friend 1 Gazebo MJPEG Base (WORLD 1):</span>
+                <span className="text-[10px] text-[#5B8FB9]">{worlds.WORLD_1.owner}</span>
+              </label>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="text"
+                  value={world1UrlInput}
+                  onChange={(e) => setWorld1UrlInput(e.target.value)}
+                  className="flex-1 bg-[#151D26] border border-[#2B3743] rounded px-2.5 py-1.5 text-xs text-[#E7EBEF] font-mono focus:outline-none focus:border-[#5B8FB9]"
+                  placeholder="e.g. http://10.152.0.191:8080"
+                />
+                <button
+                  onClick={() => {
+                    setWorldBaseUrl('WORLD_1', world1UrlInput);
+                    handleReconnect();
+                  }}
+                  className="px-3 py-1.5 rounded bg-[#5B8FB9] hover:bg-[#4a779d] text-white font-bold text-xs transition flex items-center space-x-1"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>SAVE</span>
+                </button>
+              </div>
+            </div>
+
+            {/* World 2 Endpoint */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] text-[#A9B3BD] font-semibold flex items-center justify-between">
+                <span>Friend 2 Gazebo MJPEG Base (WORLD 2):</span>
+                <span className="text-[10px] text-[#5B8FB9]">{worlds.WORLD_2.owner}</span>
+              </label>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="text"
+                  value={world2UrlInput}
+                  onChange={(e) => setWorld2UrlInput(e.target.value)}
+                  className="flex-1 bg-[#151D26] border border-[#2B3743] rounded px-2.5 py-1.5 text-xs text-[#E7EBEF] font-mono focus:outline-none focus:border-[#5B8FB9]"
+                  placeholder="e.g. http://10.152.0.192:8080"
+                />
+                <button
+                  onClick={() => {
+                    setWorldBaseUrl('WORLD_2', world2UrlInput);
+                    handleReconnect();
+                  }}
+                  className="px-3 py-1.5 rounded bg-[#5B8FB9] hover:bg-[#4a779d] text-white font-bold text-xs transition flex items-center space-x-1"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>SAVE</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 4. VIDEO VIEWPORT ── */}
       <div className="p-3 flex-1 flex flex-col min-h-0">
         <div
           ref={containerRef}
           className="relative w-full aspect-video bg-[#05080C] border border-[#2B3743] rounded-xl overflow-hidden flex items-center justify-center shadow-2xl group"
         >
-          {/* Corner brackets */}
+          {/* Tactical Corner brackets */}
           <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-[#5B8FB9]/70 z-10 pointer-events-none" />
           <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-[#5B8FB9]/70 z-10 pointer-events-none" />
           <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-[#5B8FB9]/70 z-10 pointer-events-none" />
           <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-[#5B8FB9]/70 z-10 pointer-events-none" />
 
-          {/* LIVE status ribbon */}
-          <div className="absolute top-3 left-3 z-20 flex items-center space-x-2 bg-[#0B0F14]/85 backdrop-blur-md px-2.5 py-1 rounded border border-[#2B3743] text-[10px]">
+          {/* LIVE STATUS RIBBON (Feed Identification) */}
+          <div className="absolute top-3 left-3 z-20 flex flex-wrap items-center gap-1.5 bg-[#0B0F14]/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-[#2B3743] text-[10px]">
             <span
               className={`w-2 h-2 rounded-full ${
-                isLive ? 'bg-[#10B981] animate-pulse shadow-[0_0_8px_#10B981]' : 'bg-[#EF4444]'
+                currentStatus === 'CONNECTED'
+                  ? 'bg-[#10B981] animate-pulse shadow-[0_0_8px_#10B981]'
+                  : currentStatus === 'CONNECTING'
+                  ? 'bg-[#F59E0B] animate-ping'
+                  : 'bg-[#EF4444]'
               }`}
             />
             <span className="font-extrabold tracking-wider">
-              {isLive ? 'LIVE MJPEG FEED' : 'CONNECTING...'}
+              {currentStatus === 'CONNECTED' ? 'LIVE STREAM' : currentStatus === 'CONNECTING' ? 'CONNECTING...' : 'OFFLINE'}
             </span>
             <span className="text-[#707C88]">|</span>
-            <span className="text-[#5B8FB9] font-bold uppercase">{activeUav.toUpperCase()}</span>
+            <span className="text-[#5B8FB9] font-extrabold uppercase">
+              {activeWorld} · {activeUav.toUpperCase()}
+            </span>
             <span className="text-[#707C88]">[{modality}]</span>
+            <span className="text-[#707C88]">|</span>
+            <span className="text-[9px] text-[#A9B3BD] hidden sm:inline truncate max-w-[200px]">
+              {currentTopic}
+            </span>
           </div>
 
-          {/* Controls overlay (top-right, hover only) */}
+          {/* Viewport Action Controls (Top Right, Hover) */}
           <div className="absolute top-3 right-3 z-20 flex items-center space-x-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
-              onClick={() => setImgKey((k) => k + 1)}
+              onClick={handleReconnect}
               className="p-1.5 rounded bg-[#11171E]/90 hover:bg-[#1B2530] border border-[#2B3743] text-[#A9B3BD] hover:text-[#E7EBEF] transition cursor-pointer"
-              title="Reconnect stream"
+              title="Reconnect Stream"
             >
               <RefreshCw className="w-3.5 h-3.5" />
             </button>
-            {isLive && (
+            {currentStatus === 'CONNECTED' && (
               <button
                 onClick={captureSnapshot}
                 className="p-1.5 rounded bg-[#11171E]/90 hover:bg-[#1B2530] border border-[#2B3743] text-[#A9B3BD] hover:text-[#E7EBEF] transition cursor-pointer"
@@ -212,11 +466,11 @@ export const LiveCameraFeedSection: React.FC = () => {
               </button>
             )}
             <a
-              href={streamUrl}
+              href={currentStreamUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="p-1.5 rounded bg-[#11171E]/90 hover:bg-[#1B2530] border border-[#2B3743] text-[#A9B3BD] hover:text-[#E7EBEF] transition"
-              title="Open stream in new tab"
+              title="Open Raw Stream in New Tab"
             >
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
@@ -229,98 +483,145 @@ export const LiveCameraFeedSection: React.FC = () => {
             </button>
           </div>
 
-          {/* ── DIRECT MJPEG STREAM ── */}
-          {/* Browser loads this natively — no WebSocket, no bridge, no base64 */}
+          {/* ── LIVE VIDEO DISPLAY ── */}
+          {/* Supports direct MJPEG feed natively via <img> */}
           <img
-            key={imgKey}                     // changing key forces full remount = reconnect
             ref={imgRef}
-            src={streamUrl}
-            alt={`Live MJPEG feed from ${activeUav}`}
+            src={currentStreamUrl}
+            alt={`Live stream from ${activeWorld} ${activeUav}`}
             className="w-full h-full object-contain pointer-events-none"
             crossOrigin="anonymous"
-            onLoad={() => setIsLive(true)}
-            onError={() => setIsLive(false)}
+            onLoad={() => markFeedConnected(activeWorld, activeUav, modality)}
+            onError={() => {
+              // If image fails to load and no WebSocket frame is available, mark offline
+              if (!wsFrame?.image_b64) {
+                markFeedOffline(activeWorld, activeUav, modality);
+              }
+            }}
           />
 
-          {/* NO SIGNAL overlay — shown while connecting or on error */}
-          {!isLive && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 space-y-3 bg-[#05080C]">
-              <div className="relative w-16 h-16 rounded-full border border-[#2B3743] flex items-center justify-center">
-                <div className="absolute inset-0 rounded-full border-t border-[#EF4444] animate-spin" />
-                <AlertCircle className="w-7 h-7 text-[#EF4444]/80" />
-              </div>
-              <div>
-                <div className="text-sm font-extrabold text-[#EF4444] tracking-widest uppercase">
-                  Connecting to MJPEG Stream...
+          {/* Fallback to WebSocket Base64 Frame if available and MJPEG is not live */}
+          {currentStatus !== 'CONNECTED' && wsFrame?.image_b64 && (
+            <img
+              src={wsFrame.image_b64}
+              alt={`WebSocket frame for ${activeWorld} ${activeUav}`}
+              className="w-full h-full object-contain pointer-events-none absolute inset-0"
+              onLoad={() => markFeedConnected(activeWorld, activeUav, modality)}
+            />
+          )}
+
+          {/* Subsystem C Survivor Detection Overlay & Crosshair Tags */}
+          {activeSurvivors.length > 0 && (
+            <div className="absolute inset-0 pointer-events-none p-4 flex flex-col justify-end space-y-1.5 z-10">
+              {activeSurvivors.slice(0, 3).map((target) => (
+                <div
+                  key={target.target_id}
+                  className="self-start px-2.5 py-1 rounded bg-[#EF4444]/90 text-white text-[10px] font-bold border border-red-400 flex items-center space-x-1.5 shadow-lg animate-pulse"
+                >
+                  <Target className="w-3 h-3" />
+                  <span>TARGET #{target.target_id}: {target.label}</span>
+                  <span className="text-red-200">({Math.round(target.confidence * 100)}%)</span>
+                  <span className="text-red-200">[{target.latitude.toFixed(5)}°, {target.longitude.toFixed(5)}°]</span>
                 </div>
-                <div className="text-[11px] text-[#707C88] max-w-xs mt-1 leading-relaxed">
-                  Waiting for Gazebo camera feed from{' '}
-                  <strong className="text-[#5B8FB9]">10.152.0.191:8080</strong>
-                  <br />
-                  <span className="text-[10px]">{streamUrl}</span>
-                </div>
-              </div>
-              <button
-                onClick={() => setImgKey((k) => k + 1)}
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-[#1B2530] border border-[#2B3743] text-[#A9B3BD] hover:text-white text-[11px] font-bold transition cursor-pointer"
-              >
-                <RefreshCw className="w-3 h-3" />
-                <span>Retry Connection</span>
-              </button>
+              ))}
             </div>
           )}
 
-          {/* Crosshair when live */}
-          {isLive && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-30">
-              <div className="w-8 h-px bg-[#5B8FB9]" />
-              <div className="w-2 h-2 rounded-full border border-[#5B8FB9]" />
-              <div className="w-8 h-px bg-[#5B8FB9]" />
+          {/* NO SIGNAL / CONNECTING OVERLAY */}
+          {currentStatus !== 'CONNECTED' && !wsFrame?.image_b64 && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 space-y-3 bg-[#05080C]/95">
+              <div className="relative w-16 h-16 rounded-full border border-[#2B3743] flex items-center justify-center">
+                <div className="absolute inset-0 rounded-full border-t border-[#F59E0B] animate-spin" />
+                <AlertCircle className="w-7 h-7 text-[#F59E0B]" />
+              </div>
+              <div>
+                <div className="text-sm font-extrabold text-[#F59E0B] tracking-widest uppercase">
+                  Connecting to {currentWorldConfig.label} ({activeUav.toUpperCase()})...
+                </div>
+                <div className="text-[11px] text-[#707C88] max-w-sm mt-1 leading-relaxed">
+                  Waiting for live stream from <strong className="text-[#5B8FB9]">{currentWorldConfig.owner}</strong>
+                  <br />
+                  <span className="text-[10px] text-[#A9B3BD]">{currentStreamUrl}</span>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2 pt-1">
+                <button
+                  onClick={handleReconnect}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-[#1B2530] border border-[#2B3743] hover:border-[#5B8FB9] text-[#A9B3BD] hover:text-white text-[11px] font-bold transition cursor-pointer"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  <span>Retry Stream</span>
+                </button>
+                <button
+                  onClick={() => setIsConfigOpen(true)}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-[#151D26] border border-[#2B3743] hover:border-[#5B8FB9] text-[#707C88] hover:text-[#A9B3BD] text-[11px] font-semibold transition cursor-pointer"
+                >
+                  <Settings className="w-3 h-3" />
+                  <span>Change IP/Port</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Crosshair Overlay when live */}
+          {currentStatus === 'CONNECTED' && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-40">
+              <div className="w-10 h-px bg-[#5B8FB9]" />
+              <div className="w-3 h-3 rounded-full border border-[#5B8FB9]" />
+              <div className="w-10 h-px bg-[#5B8FB9]" />
             </div>
           )}
         </div>
 
-        {/* ── STREAM INFO BAR ── */}
+        {/* ── 5. STREAM TELEMETRY & FEED ARCHITECTURE METRICS ── */}
         <div className="mt-3 bg-[#11171E] border border-[#2B3743] rounded-xl p-3 flex-shrink-0">
           <div className="flex items-center justify-between pb-2 border-b border-[#2B3743] mb-2 text-[11px]">
             <div className="flex items-center space-x-2">
               <Activity className="w-3.5 h-3.5 text-[#5B8FB9]" />
-              <span className="font-extrabold tracking-wide">DIRECT MJPEG STREAM — NO BRIDGE</span>
+              <span className="font-extrabold tracking-wide">
+                TACTICAL FEED IDENTIFICATION: {activeWorld} + {activeUav.toUpperCase()}
+              </span>
             </div>
-            <div className={`text-[10px] font-bold ${isLive ? 'text-[#10B981]' : 'text-[#F59E0B]'}`}>
-              {isLive ? '✓ LIVE FEED' : '○ CONNECTING'}
+            <div>
+              {renderStatusBadge(currentStatus, 'md')}
             </div>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center font-mono">
             <div className="bg-[#151D26] p-2 rounded-lg border border-[#2B3743]/60">
-              <div className="text-[9px] text-[#707C88] uppercase">Stream Source</div>
-              <div className="text-xs font-bold text-[#5B8FB9] truncate">10.152.0.191:8080</div>
-            </div>
-            <div className="bg-[#151D26] p-2 rounded-lg border border-[#2B3743]/60">
-              <div className="text-[9px] text-[#707C88] uppercase">Protocol</div>
-              <div className="text-xs font-bold text-[#E7EBEF]">MJPEG / HTTP</div>
-            </div>
-            <div className="bg-[#151D26] p-2 rounded-lg border border-[#2B3743]/60">
-              <div className="text-[9px] text-[#707C88] uppercase">Active Stream</div>
-              <div className="text-xs font-bold text-[#10B981] truncate">
-                /stream/{activeUav}
-                {modality === 'THERMAL' ? '/thermal' : ''}
+              <div className="text-[9px] text-[#707C88] uppercase">Selected World</div>
+              <div className="text-xs font-bold text-[#5B8FB9] truncate">
+                {activeWorld} ({currentWorldConfig.owner.split(' ')[0]})
               </div>
             </div>
             <div className="bg-[#151D26] p-2 rounded-lg border border-[#2B3743]/60">
-              <div className="text-[9px] text-[#707C88] uppercase">Bridge Needed</div>
-              <div className="text-xs font-bold text-[#10B981]">NONE ✓</div>
+              <div className="text-[9px] text-[#707C88] uppercase">Selected UAV Feed</div>
+              <div className="text-xs font-bold text-[#E7EBEF] uppercase">
+                {activeUav} · {modality}
+              </div>
+            </div>
+            <div className="bg-[#151D26] p-2 rounded-lg border border-[#2B3743]/60">
+              <div className="text-[9px] text-[#707C88] uppercase">Endpoint Stream URL</div>
+              <div className="text-xs font-bold text-[#10B981] truncate" title={currentStreamUrl}>
+                {currentStreamUrl.replace('http://', '')}
+              </div>
+            </div>
+            <div className="bg-[#151D26] p-2 rounded-lg border border-[#2B3743]/60">
+              <div className="text-[9px] text-[#707C88] uppercase">Subsystem C Sync</div>
+              <div className="text-xs font-bold text-[#10B981] flex items-center justify-center space-x-1">
+                <span>ACTIVE ✓</span>
+              </div>
             </div>
           </div>
         </div>
 
         {snapshotSuccess && (
           <div className="mt-2 p-2 rounded bg-[#10B981]/20 border border-[#10B981]/50 text-[#10B981] text-[11px] text-center font-bold animate-in fade-in">
-            ✓ Snapshot saved!
+            ✓ Snapshot saved for {activeWorld} {activeUav.toUpperCase()}!
           </div>
         )}
       </div>
     </div>
   );
 };
+

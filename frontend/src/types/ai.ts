@@ -95,6 +95,7 @@ export interface TrackedTarget {
   confidence: number;
   source: string;
   drone_id?: string;
+  world_id?: string;
   modalities?: string[];
   tracking_status: 'DETECTED' | 'TRACKED' | 'LOST' | string;
   history?: { lat: number; lon: number; alt: number; ts: number }[];

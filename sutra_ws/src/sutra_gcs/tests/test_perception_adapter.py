@@ -334,3 +334,58 @@ def test_2d_mapping_engine_forwarding(test_setup):
     assert cell.confidence >= 0.90
     assert "alpha" in cell.observed_by
 
+
+def test_multi_world_active_feed_synchronization(test_setup):
+    """Verifies that selecting feeds across WORLD 1 and WORLD 2 correctly associates targets."""
+    state_store, event_bus, adapter = test_setup
+
+    active_feed_events = []
+    event_bus.subscribe("ai.active_feed_updated", lambda e: active_feed_events.append(e.payload))
+
+    # 1. Switch active feed to WORLD 2 + UAV 2 (bravo)
+    adapter.set_active_feed("WORLD_2", "uav_2")
+    assert adapter.active_world_id == "WORLD_2"
+    assert adapter.active_drone_id == "bravo"
+    assert len(active_feed_events) == 1
+    assert active_feed_events[0]["world_id"] == "WORLD_2"
+    assert active_feed_events[0]["drone_id"] == "bravo"
+
+    # 2. Ingest detection from incoming feed
+    res = adapter.inject_fused_target({
+        "id": 401,
+        "label": "SURVIVOR",
+        "confidence": 0.93,
+        "lat": 12.935100,
+        "lon": 77.692200,
+        "alt": 14.0,
+    })
+    assert len(res) == 1
+    assert res[0].world_id == "WORLD_2"
+    assert res[0].drone_id == "bravo"
+
+    # 3. Switch active feed back to WORLD 1 + UAV 1 (alpha)
+    adapter.set_active_feed("WORLD_1", "uav_1")
+    assert adapter.active_world_id == "WORLD_1"
+    assert adapter.active_drone_id == "alpha"
+
+    res_w1 = adapter.inject_fused_target({
+        "id": 402,
+        "label": "SURVIVOR",
+        "confidence": 0.97,
+        "lat": 12.934600,
+        "lon": 77.691900,
+        "alt": 15.5,
+    })
+    assert len(res_w1) == 1
+    assert res_w1[0].world_id == "WORLD_1"
+    assert res_w1[0].drone_id == "alpha"
+
+    # 4. Verify both targets coexist in state
+    all_targets = state_store.get_state().ai_state.tracked_targets
+    assert len(all_targets) == 2
+    w1_target = next(t for t in all_targets if t.target_id == "402")
+    w2_target = next(t for t in all_targets if t.target_id == "401")
+    assert w1_target.world_id == "WORLD_1"
+    assert w2_target.world_id == "WORLD_2"
+
+

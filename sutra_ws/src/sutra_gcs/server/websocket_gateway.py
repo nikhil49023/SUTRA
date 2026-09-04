@@ -380,6 +380,19 @@ class WebSocketGatewayServer:
             return
 
         if cmd_type in ("SELECT_STREAM", "camera.select_stream"):
+            stream_payload = payload if payload else data.get("payload", data)
+            world_id = str(stream_payload.get("world_id", "WORLD_1")).strip().upper()
+            drone_id = str(stream_payload.get("drone_id", "uav_1")).strip()
+            if self.perception_adapter:
+                self.perception_adapter.set_active_feed(world_id, drone_id)
+            await self._async_broadcast(json.dumps({
+                "type": "STREAM_SELECTED",
+                "world_id": world_id,
+                "drone_id": drone_id,
+                "modality": stream_payload.get("modality", "RGB"),
+                "timestamp": time.time(),
+                "payload": stream_payload,
+            }))
             await self._async_broadcast(json.dumps(data))
             return
 
