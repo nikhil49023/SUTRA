@@ -194,9 +194,11 @@ echo "==========================================================================
 # Keep alive
 while true; do
     sleep 3
-    for pid in "${CHILD_PIDS[@]}"; do
+    for i in "${!CHILD_PIDS[@]}"; do
+        pid="${CHILD_PIDS[$i]}"
         if ! kill -0 "$pid" 2>/dev/null; then
             echo "⚠️  Process $pid exited. Check /tmp/sutra_*.log."
+            unset 'CHILD_PIDS[i]'
         fi
     done
 done
