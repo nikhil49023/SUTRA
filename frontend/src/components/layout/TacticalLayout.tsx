@@ -189,29 +189,44 @@ export const TacticalLayout: React.FC = () => {
           </ErrorBoundary>
         )}
 
-        {/* Central Tactical Workspaces & Context Panels */}
+        {/* Central Tactical Workspaces & Context Panels (Zero Static Map Section) */}
         <div className="flex-1 flex flex-col relative overflow-hidden bg-[#0B0F14]">
-          {/* Base Spatial Layer: Full MapLibre 2D/3D Canvas with Real-Time Autonomous 2D Mapping */}
-          <div className="absolute inset-0 z-0 overflow-hidden">
-            <ErrorBoundary fallbackTitle="2D DYNAMIC MAP">
-              <MapView />
-            </ErrorBoundary>
-          </div>
-
-          {/* Live Drone Camera Stream (Full Screen when active) */}
-          {activeSection === 'CAMERA' && (
-            <div className="absolute inset-0 z-20 flex flex-col bg-[#0B0F14] overflow-hidden">
+          {/* Default / Camera View: Full-screen Live Drone Camera Receiver (No Static Map) */}
+          {(activeSection === 'CAMERA' || activeSection === 'COMMAND') && (
+            <div className="absolute inset-0 z-10 flex flex-col bg-[#0B0F14] overflow-hidden">
               <ErrorBoundary fallbackTitle="CAMERA RECEIVER SUBSYSTEM">
                 <LiveCameraFeedPanelMemo />
               </ErrorBoundary>
             </div>
           )}
 
-          {/* 2D Autonomous Mapping Intelligence Drawer / HUD (Overlaid over the live map) */}
+          {/* 2D Autonomous Mapping Intelligence Workspace */}
           {activeSection === 'MAPPING' && (
-            <div className="absolute top-3 left-3 bottom-3 w-[460px] max-w-[calc(100vw-5rem)] z-20 pointer-events-auto flex flex-col animate-in fade-in slide-in-from-left-3 duration-200 shadow-2xl">
-              <div className="h-full rounded-2xl border border-[#2B3743] bg-[#0B0F14]/95 backdrop-blur-xl overflow-hidden flex flex-col shadow-[0_12px_40px_rgba(0,0,0,0.8)]">
-                <ErrorBoundary fallbackTitle="2D AUTONOMOUS MAPPING HUD">
+            <div className="absolute inset-0 z-20 flex flex-col bg-[#0B0F14] overflow-hidden">
+              <div className="h-11 bg-[#11171E] border-b border-[#2B3743] px-4 flex items-center justify-between font-mono text-xs flex-shrink-0 z-10">
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-6 h-6 rounded bg-[#1B2530] border border-[#5B8FB9]/50 flex items-center justify-center text-[#5B8FB9]">
+                    <Grid className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-[#E7EBEF] tracking-wide">2D AUTONOMOUS SPATIAL MAPPING ENGINE</span>
+                    <span className="hidden md:inline text-[10px] text-[#707C88] ml-2 font-normal">
+                      // Real-Time Multi-Drone Bayesian Occupancy Grid & Semantic SLAM
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setActiveSection('CAMERA')}
+                  className="px-2.5 py-1 rounded-lg bg-[#151D26] hover:bg-[#1B2530] border border-[#2B3743] hover:border-[#5B8FB9] text-[#A9B3BD] hover:text-[#E7EBEF] text-[11px] font-bold flex items-center space-x-1.5 transition cursor-pointer"
+                  title="Return to Camera Feed (Esc)"
+                >
+                  <span>CLOSE</span>
+                  <kbd className="px-1 py-0.2 rounded bg-[#0B0F14] border border-[#2B3743] text-[9px] text-[#707C88]">ESC</kbd>
+                  <X className="w-3.5 h-3.5 ml-0.5" />
+                </button>
+              </div>
+              <div className="flex-1 w-full overflow-hidden">
+                <ErrorBoundary fallbackTitle="2D AUTONOMOUS MAPPING">
                   <Autonomous2DMappingPanelMemo />
                 </ErrorBoundary>
               </div>
@@ -236,9 +251,9 @@ export const TacticalLayout: React.FC = () => {
                     </div>
                   </div>
                   <button
-                    onClick={() => setActiveSection('COMMAND')}
+                    onClick={() => setActiveSection('CAMERA')}
                     className="px-2.5 py-1 rounded-lg bg-[#151D26] hover:bg-[#1B2530] border border-[#2B3743] hover:border-[#5B8FB9] text-[#A9B3BD] hover:text-[#E7EBEF] text-[11px] font-bold flex items-center space-x-1.5 transition cursor-pointer"
-                    title="Return to 2D Dynamic Map (Esc)"
+                    title="Return to Camera Feed (Esc)"
                   >
                     <span>CLOSE</span>
                     <kbd className="px-1 py-0.2 rounded bg-[#0B0F14] border border-[#2B3743] text-[9px] text-[#707C88]">ESC</kbd>
@@ -264,9 +279,17 @@ export const TacticalLayout: React.FC = () => {
                     <FleetPanelMemo />
                   </div>
                 </ErrorBoundary>
+                {/* Real Dynamic MapLibre GIS Map: strictly active when in GIS view */}
                 <ErrorBoundary fallbackTitle="GIS SUBSYSTEM">
-                  <div style={{ display: activeSection === 'GIS' ? 'block' : 'none', width: '100%', height: '100%' }}>
-                    <GisPanelMemo />
+                  <div style={{ display: activeSection === 'GIS' ? 'block' : 'none', width: '100%', height: '100%', position: 'relative' }}>
+                    <div className="absolute inset-0 z-0 overflow-hidden">
+                      <MapView />
+                    </div>
+                    <div className="absolute top-3 left-3 bottom-3 w-96 max-w-[calc(100vw-5rem)] z-10 pointer-events-auto flex flex-col animate-in fade-in slide-in-from-left-2 duration-200">
+                      <div className="h-full rounded-2xl border border-[#2B3743] bg-[#0B0F14]/95 backdrop-blur-md overflow-hidden flex flex-col shadow-2xl">
+                        <GisPanelMemo />
+                      </div>
+                    </div>
                   </div>
                 </ErrorBoundary>
                 <ErrorBoundary fallbackTitle="AI SUBSYSTEM">
