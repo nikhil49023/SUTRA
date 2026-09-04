@@ -175,7 +175,9 @@ class GcsComputeWorker:
     def _run_local_server(self):
         asyncio.set_event_loop(self.loop)
         if WEBSOCKETS_AVAILABLE:
-            self.server = self.loop.run_until_complete(websockets.serve(self._local_ws_handler, "0.0.0.0", self.local_ws_port))
+            async def _start():
+                return await websockets.serve(self._local_ws_handler, "0.0.0.0", self.local_ws_port)
+            self.server = self.loop.run_until_complete(_start())
             self.loop.run_forever()
 
     async def _client_loop(self):
