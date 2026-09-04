@@ -359,7 +359,7 @@
 
     <!-- 🚤 RESCUE BOAT ALPHA (Navigating Flooded Street) -->
     <model name="rescue_boat_alpha">
-      <pose>14.0 -12.0 3.20 0 0 0.15</pose>
+      <pose>14.0 -12.0 1.65 0 0 0.15</pose>
       <static>false</static>
       <link name="hull">
         <gravity>false</gravity>
@@ -501,7 +501,7 @@
 
     <!-- 🏊‍♀️ 6. SWIMMING GIRL 1 - River Channel Downstream Drift (Drowning Survivor) -->
     <model name="swimming_girl_1">
-      <pose>15.0 -10.0 2.95 0 0 0.2</pose>
+      <pose>15.0 -10.0 1.45 0 0 0.2</pose>
       <static>false</static>
       <link name="link">
         <gravity>false</gravity>
@@ -524,7 +524,7 @@
 
     <!-- 🏊‍♀️ 7. SWIMMING GIRL 2 - Flooded Intersection Crossing (Treading Water) -->
     <model name="swimming_girl_2">
-      <pose>22.0 -8.0 2.95 0 0 -0.4</pose>
+      <pose>22.0 -8.0 1.45 0 0 -0.4</pose>
       <static>false</static>
       <link name="link">
         <gravity>false</gravity>
@@ -547,7 +547,7 @@
 
     <!-- 🏊‍♀️ 8. SWIMMING GIRL 3 - Floating Debris Corridor (Clinging & Swimming) -->
     <model name="swimming_girl_3">
-      <pose>10.0 -4.0 2.95 0 0 0.8</pose>
+      <pose>10.0 -4.0 1.45 0 0 0.8</pose>
       <static>false</static>
       <link name="link">
         <gravity>false</gravity>
@@ -570,7 +570,7 @@
 
     <!-- 🏊‍♀️ 9. SWIMMING GIRL 4 - Eddy Current / Whirlpool Zone -->
     <model name="swimming_girl_4">
-      <pose>27.0 -12.0 2.95 0 0 1.57</pose>
+      <pose>27.0 -12.0 1.45 0 0 1.57</pose>
       <static>false</static>
       <link name="link">
         <gravity>false</gravity>
@@ -593,7 +593,7 @@
 
     <!-- 🏊‍♀️ 10. SWIMMING GIRL 5 - Submerged Bridge Approach -->
     <model name="swimming_girl_5">
-      <pose>18.0 4.0 2.95 0 0 -1.2</pose>
+      <pose>18.0 4.0 1.45 0 0 -1.2</pose>
       <static>false</static>
       <link name="link">
         <gravity>false</gravity>
@@ -663,10 +663,10 @@
     </model>
 
   
-    <!-- 🌊 Raised Floodwater Surface (+1.55m Synchronized Datum) -->
+    <!-- 🌊 Floodwater Surface (Original Datum Baseline: 1.55m) -->
     <model name="floodwater_surface">
       <static>true</static>
-      <pose>25.0 50.0 3.10 0 0 0</pose>
+      <pose>25.0 50.0 1.55 0 0 0</pose>
       <link name="water_link">
         <visual name="water_visual">
           <geometry>
