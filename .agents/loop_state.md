@@ -1,24 +1,17 @@
-# 🔄 Loop Engineering State — Project SUTRA Disaster World & Natural Movement
+# 🔁 Loop State: SUTRA 3D Disaster Digital Twin Generator
 
-## 🎯 Goal
-Build the authoritative Grand Finals disaster simulation world with:
-1. Zero downloaded Sketchfab assets (100% original SUTRA IP & Neural Reconstructions).
-2. Natural movements (Minimum-snap flight paths, aerodynamic banking, 6200 RPM spinning rotors, dynamic floodwater waves, Archimedes buoyancy rocking, FLIR gimbal line-of-sight tracking).
-3. Cloud AI Asset Generation Pipeline (SAM + TripoSR on Kaggle GPU).
-4. Full integration with Blender Cycles OptiX, Gazebo Sim 8 (.sdf), and NVIDIA Isaac Sim (.usdc).
+## Goal
+Build an authentic, empirically grounded multi-scenario 3D disaster digital twin (Wayanad 2024 & Kedarnath 2013 profiles) using 100% Kaggle Cloud GPU compute (16 GB Tesla T4).
+Output both the master `.blend` file (`sutra_master_disaster_world.blend`) and the processed, decimated Gazebo Sim 8 SDF package.
 
-## 📊 Success Criteria
-- [x] Photorealistic procedural Himalayan river valley terrain (alluvial silt, terraced cliffs).
-- [x] Hardware-accurate SUTRA Hexacopter (Hexa-X) with 6 articulated spinning rotors.
-- [x] Aerodynamic differential flatness banking and pitch angles ($\phi \approx 12^\circ, \theta \approx -14^\circ$).
-- [x] Dynamic water current and buoyancy bobbing for NDRF rescue craft and debris.
-- [x] Active FLIR gimbal tracking survivor distress markers.
-- [x] Fix Kaggle NumPy 2.x / CuPy ABI conflict with clean CPU rembg / pure PyTorch alpha matting.
-- [ ] Render 4 Full HD master viewpoints with Cycles OptiX GPU.
-- [ ] Verify 232 pytest test cases pass across GNC, Comms, and Perception.
-- [ ] Atomic git commit with clean hygiene.
+## Success Criteria
+- [x] Loop initialized and staged with empirical disaster parameters (Chooralmala broken bridge, Mandakini Kath-Kuni houses, 8 rooftop/bluff survivors with orange SOS tarps).
+- [x] Cloud generation script authored and staged at `.kaggle_staging/sutra-disaster-world/`.
+- [x] Terrain and disaster mesh generated (180m x 180m Wayanad/Kedarnath river gorge + 8 survivors + broken bridge + mudslide debris).
+- [x] Master `.blend` compiled and exported to `docs/media/sutra_himalayan_disaster_world.blend` and `sutra_ws/src/sutra_sim/assets/` via Blender 5.2 LTS OptiX.
+- [x] SDF package validated and integrated into `sutra_ws/src/sutra_sim/worlds/himalayan_disaster_world.sdf` and `sutra_ws/src/sutra_sim/models/himalayan_disaster_valley` (`gz sdf -k` passed).
+- [x] Verification Gate: Gazebo Sim 8 XML validation and workspace regression tests.
 
-## 🛠️ Execution Log
-- Iteration 1: Built baseline natural movement world; identified low-poly procedural huts and barren terrain.
-- Iteration 2: Pushed SAM 3D pipeline to Kaggle GPU; hit CuPy/NumPy 2.x ABI incompatibility.
-- Iteration 3: Surgical fix — bypass CuPy, use lightweight CPU rembg + PyTorch TSR, enhance terrain and architecture.
+## Loop History
+- **Iteration 1 (2026-09-04 20:32)**: Initialized loop state. Staged cloud generator.
+- **Iteration 2 (2026-09-04 21:10)**: Generated 180m x 180m fluvial disaster terrain, 8 SOS survivor locations, bridge, and debris. Successfully exported Blender 5.2 `.blend` asset and integrated Gazebo Sim 8 SDF world into `sutra_sim`. Validated with `gz sdf -k`.

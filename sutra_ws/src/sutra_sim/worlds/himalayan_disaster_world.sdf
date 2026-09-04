@@ -1,0 +1,127 @@
+<?xml version="1.0" ?>
+<sdf version="1.8">
+  <world name="himalayan_disaster_world">
+    <!-- Physics Configuration for Locked 60 FPS Real-Time Factor -->
+    <physics name="1ms" type="dart">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>1000</real_time_update_rate>
+    </physics>
+
+    <!-- Core Gazebo Sim 8 Harmonic Plugins -->
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics" />
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands" />
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster" />
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu" />
+    <plugin filename="gz-sim-navsat-system" name="gz::sim::systems::NavSat" />
+
+    <!-- Monsoon Overcast Atmospheric Lighting -->
+    <light type="directional" name="monsoon_sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 100 0 0.45 1.2</pose>
+      <diffuse>0.72 0.76 0.82 1</diffuse>
+      <specular>0.25 0.28 0.35 1</specular>
+      <attenuation><range>1000</range><constant>0.9</constant><linear>0.01</linear></attenuation>
+    </light>
+
+    <scene>
+      <ambient>0.48 0.52 0.58 1.0</ambient>
+      <background>0.55 0.60 0.68 1.0</background>
+      <shadows>true</shadows>
+      <grid>false</grid>
+    </scene>
+
+    <!-- GUI Camera Preset: Overlooking Chooralmala River Gorge -->
+    <gui fullscreen="0">
+      <camera name="user_camera">
+        <pose>0.0 -75.0 42.0 0 0.45 1.57</pose>
+        <view_controller>orbit</view_controller>
+      </camera>
+    </gui>
+
+    <!-- Static Disaster Environment Mesh -->
+    <include>
+      <uri>model://himalayan_disaster_valley</uri>
+      <pose>0 0 0 0 0 0</pose>
+    </include>
+
+    <!-- 5x SUTRA Autonomous Pegasus UAVs (Alpha..Epsilon) -->
+    <!-- UAV_ALPHA: Lead Downstream River Scout (14.0m AGL) -->
+    <model name="uav_alpha">
+      <pose>0.0 -45.0 14.0 0 0 1.57</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <visual name="v"><geometry><cylinder><radius>0.42</radius><length>0.14</length></cylinder></geometry>
+        <material><ambient>0 0.8 1 1</ambient><diffuse>0 0.8 1 1</diffuse><emissive>0 0.4 0.8 1</emissive></material></visual>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <topic>/uav_alpha/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+    </model>
+
+    <!-- UAV_BETA: West Riverbank Flooded Settlement Scout (15.5m AGL) -->
+    <model name="uav_beta">
+      <pose>-30.0 -35.0 15.5 0 0 1.57</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <visual name="v"><geometry><cylinder><radius>0.42</radius><length>0.14</length></cylinder></geometry>
+        <material><ambient>1 0.4 0 1</ambient><diffuse>1 0.4 0 1</diffuse><emissive>0.8 0.3 0 1</emissive></material></visual>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <topic>/uav_beta/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+    </model>
+
+    <!-- UAV_GAMMA: East Riverbank & Debris Fan Scout (16.0m AGL) -->
+    <model name="uav_gamma">
+      <pose>30.0 -35.0 16.0 0 0 1.57</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <visual name="v"><geometry><cylinder><radius>0.42</radius><length>0.14</length></cylinder></geometry>
+        <material><ambient>0.2 1 0.2 1</ambient><diffuse>0.2 1 0.2 1</diffuse><emissive>0.1 0.6 0.1 1</emissive></material></visual>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <topic>/uav_gamma/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+    </model>
+
+    <!-- UAV_DELTA: Perimeter Scanner (15.0m AGL) -->
+    <model name="uav_delta">
+      <pose>50.0 -20.0 15.0 0 0 1.57</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <visual name="v"><geometry><cylinder><radius>0.42</radius><length>0.14</length></cylinder></geometry>
+        <material><ambient>1 0.2 0.8 1</ambient><diffuse>1 0.2 0.8 1</diffuse><emissive>0.7 0.1 0.5 1</emissive></material></visual>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <topic>/uav_delta/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+    </model>
+
+    <!-- UAV_EPSILON: High Mesh Comms Relay Overlook (22.0m AGL) -->
+    <model name="uav_epsilon">
+      <pose>0.0 0.0 22.0 0 0 1.57</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <visual name="v"><geometry><cylinder><radius>0.48</radius><length>0.16</length></cylinder></geometry>
+        <material><ambient>1 1 0 1</ambient><diffuse>1 1 0 1</diffuse><emissive>0.8 0.8 0 1</emissive></material></visual>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <topic>/uav_epsilon/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+    </model>
+  </world>
+</sdf>
