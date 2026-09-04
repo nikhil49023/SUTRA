@@ -264,3 +264,73 @@ def test_ros_unavailable_graceful_handling(test_setup):
     })
     assert len(processed) == 1
     assert adapter.status == "CONNECTED"
+
+
+def test_gps_array_and_label_normalization(test_setup):
+    """Verifies GPS tuple/array parsing and automatic label normalization to canonical SURVIVOR."""
+    state_store, event_bus, adapter = test_setup
+
+    # 1. Test GPS array with "person" label
+    payload_person = {
+        "track_id": 201,
+        "label": "person",
+        "confidence": 0.93,
+        "gps": [12.934444, 77.691722, 18.5],
+        "drone": "uav_alpha",
+    }
+    valid, err = validate_target_payload(payload_person)
+    assert valid is True
+    assert err is None
+
+    res = adapter.inject_fused_target(payload_person)
+    assert len(res) == 1
+    assert res[0].target_id == "201"
+    assert res[0].label == "SURVIVOR"
+    assert res[0].latitude == 12.934444
+    assert res[0].longitude == 77.691722
+    assert res[0].altitude_m == 18.5
+    assert res[0].drone_id == "alpha"
+
+    # 2. Test "human" / "victim" labels
+    payload_victim = {
+        "id": 202,
+        "label": "victim_critical",
+        "confidence": 0.89,
+        "lat": 12.935000,
+        "lon": 77.692000,
+        "alt": 15.0,
+        "drone_id": "uav_beta",
+    }
+    res_victim = adapter.inject_fused_target(payload_victim)
+    assert len(res_victim) == 1
+    assert res_victim[0].label == "SURVIVOR"
+    assert res_victim[0].drone_id == "bravo"
+
+
+def test_2d_mapping_engine_forwarding(test_setup):
+    """Verifies that perception detections are automatically projected to 2D Autonomous Mapping Engine."""
+    state_store, event_bus, adapter = test_setup
+    from mapping.autonomous_2d_mapping_engine import get_mapping_engine, SemanticCellType
+
+    mapping_eng = get_mapping_engine()
+    mapping_eng.reset()
+
+    # Inject confirmed survivor
+    adapter.inject_fused_target({
+        "id": 301,
+        "label": "SURVIVOR",
+        "confidence": 0.96,
+        "lat": 12.934500,
+        "lon": 77.691800,
+        "alt": 16.0,
+        "drone_id": "uav_alpha",
+    })
+
+    # Verify cell exists and is registered as SURVIVOR in 2D world model
+    gx, gy = mapping_eng.latlon_to_grid(12.934500, 77.691800)
+    cell = mapping_eng.get_cell(gx, gy)
+    assert cell is not None
+    assert cell.semantic_type == SemanticCellType.SURVIVOR
+    assert cell.confidence >= 0.90
+    assert "alpha" in cell.observed_by
+

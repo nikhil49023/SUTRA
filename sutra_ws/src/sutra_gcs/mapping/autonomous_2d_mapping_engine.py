@@ -190,6 +190,19 @@ class Autonomous2DMappingEngine:
 
         return (self.origin_lat + d_lat_deg, self.origin_lon + d_lon_deg)
 
+    def get_cell(self, x_idx: int, y_idx: int) -> Optional[Map2DCell]:
+        """Returns the Map2DCell at the specified grid indices, or None if unmapped."""
+        with self._lock:
+            return self._cells.get((x_idx, y_idx))
+
+    def get_cell_at_latlon(self, lat: float, lon: float) -> Optional[Map2DCell]:
+        """Returns the Map2DCell covering the given WGS84 coordinate, or None if unmapped."""
+        with self._lock:
+            if self.origin_lat is None or self.origin_lon is None:
+                return None
+            gx, gy = self.latlon_to_grid(lat, lon)
+            return self._cells.get((gx, gy))
+
     # ── Telemetry & Field-of-View Ingestion ────────────────────────────────────
     def ingest_drone_pose(
         self,
@@ -461,6 +474,10 @@ class Autonomous2DMappingEngine:
             self.origin_lon = None
             self._last_modified_timestamp = time.time()
         logger.info("Autonomous2DMappingEngine reset to empty state.")
+
+    def reset(self) -> None:
+        """Alias for reset_map."""
+        self.reset_map()
 
 
 # ── Global Singleton Accessor ─────────────────────────────────────────────────

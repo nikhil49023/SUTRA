@@ -69,20 +69,40 @@ def normalize_drone_id(raw_id: Any) -> str:
 def validate_target_payload(target_data: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
     """
     Validates incoming detection payload for numerical integrity and realistic bounds.
+    Supports direct lat/lon, gps: [lat, lon, alt], and relative offsets.
     Returns (is_valid, error_reason).
     """
     if not isinstance(target_data, dict):
         return False, "Target payload must be a dictionary"
 
     # 1. Target ID Check
-    t_id = target_data.get("id") if "id" in target_data else target_data.get("target_id")
-    if t_id is None or (isinstance(t_id, str) and not t_id.strip()):
+    t_id = target_data.get("id") if "id" in target_data else target_data.get("target_id", target_data.get("track_id"))
+    if t_id is None or (isinstance(t_id, str) and not str(t_id).strip()):
         return False, "Missing or empty target ID"
 
-    # 2. Latitude Validation (-90.0 to +90.0)
+    # 2. Extract Latitude & Longitude (Direct or via GPS tuple/array or relative offsets)
     raw_lat = target_data.get("lat") if "lat" in target_data else target_data.get("latitude")
-    if raw_lat is None:
-        return False, "Missing latitude coordinate"
+    raw_lon = target_data.get("lon") if "lon" in target_data else target_data.get("longitude")
+    raw_alt = target_data.get("alt") if "alt" in target_data else target_data.get("altitude", target_data.get("altitude_m", 15.0))
+
+    if (raw_lat is None or raw_lon is None) and "gps" in target_data:
+        gps = target_data["gps"]
+        if isinstance(gps, (list, tuple)) and len(gps) >= 2:
+            raw_lat = gps[0]
+            raw_lon = gps[1]
+            if len(gps) >= 3 and (target_data.get("alt") is None and target_data.get("altitude") is None):
+                raw_alt = gps[2]
+
+    # Support relative offsets if lat/lon not explicitly provided
+    if raw_lat is None or raw_lon is None:
+        if "rel_x" in target_data or "rel_y" in target_data or "offset_east_m" in target_data or "offset_north_m" in target_data:
+            # Relative coordinates are accepted and will be transformed using drone pose
+            raw_lat = 12.934444
+            raw_lon = 77.691722
+        else:
+            return False, "Missing latitude/longitude coordinates or relative offset"
+
+    # Latitude Validation (-90.0 to +90.0)
     try:
         lat = float(raw_lat)
         if math.isnan(lat) or math.isinf(lat) or not (-90.0 <= lat <= 90.0):
@@ -90,10 +110,7 @@ def validate_target_payload(target_data: Dict[str, Any]) -> Tuple[bool, Optional
     except (ValueError, TypeError):
         return False, f"Invalid latitude format: {raw_lat}"
 
-    # 3. Longitude Validation (-180.0 to +180.0)
-    raw_lon = target_data.get("lon") if "lon" in target_data else target_data.get("longitude")
-    if raw_lon is None:
-        return False, "Missing longitude coordinate"
+    # Longitude Validation (-180.0 to +180.0)
     try:
         lon = float(raw_lon)
         if math.isnan(lon) or math.isinf(lon) or not (-180.0 <= lon <= 180.0):
@@ -101,8 +118,7 @@ def validate_target_payload(target_data: Dict[str, Any]) -> Tuple[bool, Optional
     except (ValueError, TypeError):
         return False, f"Invalid longitude format: {raw_lon}"
 
-    # 4. Altitude Validation
-    raw_alt = target_data.get("alt") if "alt" in target_data else target_data.get("altitude", target_data.get("altitude_m", 0.0))
+    # Altitude Validation
     try:
         alt = float(raw_alt)
         if math.isnan(alt) or math.isinf(alt) or not (-500.0 <= alt <= 50000.0):
@@ -110,7 +126,7 @@ def validate_target_payload(target_data: Dict[str, Any]) -> Tuple[bool, Optional
     except (ValueError, TypeError):
         return False, f"Invalid altitude format: {raw_alt}"
 
-    # 5. Confidence Validation (0.0 to 1.0)
+    # 3. Confidence Validation (0.0 to 1.0)
     raw_conf = target_data.get("confidence", 1.0)
     try:
         conf = float(raw_conf)
@@ -119,7 +135,7 @@ def validate_target_payload(target_data: Dict[str, Any]) -> Tuple[bool, Optional
     except (ValueError, TypeError):
         return False, f"Invalid confidence format: {raw_conf}"
 
-    # 6. Timestamp Validation
+    # 4. Timestamp Validation
     raw_ts = target_data.get("ts") if "ts" in target_data else target_data.get("timestamp", time.time())
     try:
         ts = float(raw_ts)
@@ -311,18 +327,63 @@ class PerceptionSubsystemAdapter:
         now: float,
     ) -> Optional[TrackedTarget]:
         """Normalizes and updates a single validated target record."""
-        target_id_raw = raw.get("id") if "id" in raw else raw.get("target_id")
+        target_id_raw = raw.get("id") if "id" in raw else raw.get("target_id", raw.get("track_id"))
         target_id = str(target_id_raw)
-        label = str(raw.get("label", "SURVIVOR")).upper()
+        
+        # Label Normalization
+        raw_label = str(raw.get("label", "SURVIVOR")).strip()
+        label_upper = raw_label.upper()
+        if any(k in label_upper for k in ("SURVIVOR", "PERSON", "VICTIM", "HUMAN")):
+            if "POSSIBLE" in label_upper:
+                label = "POSSIBLE_SURVIVOR"
+            else:
+                label = "SURVIVOR"
+        elif any(k in label_upper for k in ("THREAT", "HAZARD", "ENEMY", "HOSTILE")):
+            label = "THREAT"
+        elif any(k in label_upper for k in ("DEBRIS", "RUBBLE", "WRECK")):
+            label = "DEBRIS"
+        else:
+            label = label_upper or "SURVIVOR"
+
         confidence = float(raw.get("confidence", 1.0))
-        lat = float(raw.get("lat") if "lat" in raw else raw.get("latitude"))
-        lon = float(raw.get("lon") if "lon" in raw else raw.get("longitude"))
-        alt = float(raw.get("alt") if "alt" in raw else raw.get("altitude", raw.get("altitude_m", 15.0)))
         drone_id = normalize_drone_id(raw.get("drone") or raw.get("drone_id"))
+        
+        # Resolve Coordinates: direct lat/lon, gps array/tuple, or relative offsets
+        lat = raw.get("lat") if "lat" in raw else raw.get("latitude")
+        lon = raw.get("lon") if "lon" in raw else raw.get("longitude")
+        alt = raw.get("alt") if "alt" in raw else raw.get("altitude", raw.get("altitude_m", 15.0))
+
+        if (lat is None or lon is None) and "gps" in raw:
+            gps = raw["gps"]
+            if isinstance(gps, (list, tuple)) and len(gps) >= 2:
+                lat = gps[0]
+                lon = gps[1]
+                if len(gps) >= 3 and (raw.get("alt") is None and raw.get("altitude") is None):
+                    alt = gps[2]
+
+        state = self.state_store.get_state()
+        if (lat is None or lon is None) and ("rel_x" in raw or "rel_y" in raw or "offset_east_m" in raw or "offset_north_m" in raw):
+            rel_e = float(raw.get("offset_east_m", raw.get("rel_x", 0.0)))
+            rel_n = float(raw.get("offset_north_m", raw.get("rel_y", 0.0)))
+            drone = state.fleet_state.drones.get(drone_id)
+            origin_lat = drone.latitude if drone else 12.934444
+            origin_lon = drone.longitude if drone else 77.691722
+            origin_alt = drone.altitude if drone else 15.0
+
+            earth_radius_m = 6378137.0
+            d_lat = rel_n / earth_radius_m
+            d_lon = rel_e / (earth_radius_m * math.cos(math.radians(origin_lat)))
+            lat = round(origin_lat + math.degrees(d_lat), 6)
+            lon = round(origin_lon + math.degrees(d_lon), 6)
+            alt = round(origin_alt + float(raw.get("offset_up_m", raw.get("rel_z", 0.0))), 2)
+
+        lat = float(lat if lat is not None else 12.934444)
+        lon = float(lon if lon is not None else 77.691722)
+        alt = float(alt if alt is not None else 15.0)
+
         modalities = list(raw.get("modalities") or ["visual"])
         ts = float(raw.get("ts") if "ts" in raw else raw.get("timestamp", now))
 
-        state = self.state_store.get_state()
         existing_targets = list(state.ai_state.tracked_targets)
         existing = next((t for t in existing_targets if t.target_id == target_id), None)
 
@@ -405,6 +466,28 @@ class PerceptionSubsystemAdapter:
                 ),
             )
         )
+
+        # Forward observation to 2D Autonomous Mapping Engine
+        try:
+            from mapping.autonomous_2d_mapping_engine import get_mapping_engine
+            mapping_eng = get_mapping_engine()
+            mapping_eng.ingest_semantic_observation(
+                drone_id=drone_id,
+                latitude=lat,
+                longitude=lon,
+                semantic_type_str=label,
+                confidence=confidence,
+                metadata={
+                    "target_id": target_id,
+                    "drone_id": drone_id,
+                    "label": label,
+                    "confidence": confidence,
+                    "tracking_status": updated_target.tracking_status,
+                    "timestamp": ts,
+                },
+            )
+        except Exception as map_err:
+            logger.debug(f"Perception target could not be added to 2D mapping engine: {map_err}")
 
         # Emit Canonical EventBus Event
         self.event_bus.emit(

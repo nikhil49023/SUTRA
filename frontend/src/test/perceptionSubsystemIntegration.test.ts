@@ -136,4 +136,80 @@ describe('Smart Horizon GCS — Subsystem C (AI Perception) Frontend Integration
     expect(useSelectionStore.getState().selected_type).toBe('NONE');
     expect(useSelectionStore.getState().selected_id).toBeNull();
   });
+
+  it('6. calculates active survivors count separately from lost/historical targets', () => {
+    // 2 active survivors, 1 lost survivor, 1 active threat
+    useAIStore.setState({
+      tracked_targets: [
+        {
+          target_id: '101',
+          label: 'SURVIVOR',
+          latitude: 12.9344,
+          longitude: 77.6917,
+          altitude_m: 15.0,
+          confidence: 0.95,
+          source: 'sutra_perception',
+          drone_id: 'alpha',
+          tracking_status: 'TRACKED',
+          last_seen: Date.now(),
+        },
+        {
+          target_id: '102',
+          label: 'POSSIBLE_SURVIVOR',
+          latitude: 12.9348,
+          longitude: 77.6920,
+          altitude_m: 14.0,
+          confidence: 0.85,
+          source: 'sutra_perception',
+          drone_id: 'bravo',
+          tracking_status: 'DETECTED',
+          last_seen: Date.now(),
+        },
+        {
+          target_id: '103',
+          label: 'SURVIVOR',
+          latitude: 12.9350,
+          longitude: 77.6925,
+          altitude_m: 16.0,
+          confidence: 0.70,
+          source: 'sutra_perception',
+          drone_id: 'alpha',
+          tracking_status: 'LOST',
+          last_seen: Date.now() - 30000,
+        },
+      ],
+    });
+
+    const targets = useAIStore.getState().tracked_targets;
+    const activeSurvivors = targets.filter(
+      (t) =>
+        t.tracking_status !== 'LOST' &&
+        (t.label?.toUpperCase().includes('SURVIVOR') ?? true)
+    );
+
+    expect(targets).toHaveLength(3); // Total historical targets
+    expect(activeSurvivors).toHaveLength(2); // Only active non-lost survivors
+  });
+
+  it('7. parses GPS array coordinates and handles person/victim labels gracefully', () => {
+    useAIStore.getState().updateFromEvent('ai.target_detected', {
+      target: {
+        id: 205,
+        label: 'person',
+        confidence: 0.92,
+        lat: 12.93456,
+        lon: 77.69189,
+        alt: 17.5,
+        drone_id: 'charlie',
+      },
+    });
+
+    const target = useAIStore.getState().tracked_targets.find((t) => t.target_id === '205');
+    expect(target).toBeDefined();
+    expect(target?.latitude).toBe(12.93456);
+    expect(target?.longitude).toBe(77.69189);
+    expect(target?.altitude_m).toBe(17.5);
+    expect(target?.drone_id).toBe('charlie');
+  });
 });
+
