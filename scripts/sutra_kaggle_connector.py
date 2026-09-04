@@ -31,10 +31,21 @@ NOTEBOOK_PATH = SCRIPT_DIR / "SUTRA_VisDrone_Finetune_Kaggle.ipynb"
 DEFAULT_WEIGHTS_DIR = PROJECT_ROOT / "sutra_ws/src/sutra_perception/models"
 STAGING_DIR = PROJECT_ROOT / ".kaggle_staging"
 
-# Default Kernel Slugs
-DEFAULT_USERNAME = "sainikhilkilani"
+# Multi-Account Usernames & Slugs
+ACCOUNT_USERNAMES = {
+    "1": "sainikhilkilani",
+    "2": "sainikhil963"
+}
 VISDRONE_SLUG = "sutra-yolov8-visdrone-sar-drone-fine-tuning"
 BLENDER_SLUG = "sutra-blender-flood-render"
+
+
+def get_username(account="1"):
+    """Retrieve username for Account 1 or 2."""
+    return ACCOUNT_USERNAMES.get(str(account), ACCOUNT_USERNAMES["1"])
+
+
+DEFAULT_USERNAME = get_username("1")
 
 
 def ensure_kaggle_cli():
@@ -48,7 +59,7 @@ def ensure_kaggle_cli():
 
 def get_account_token(account="1"):
     """Retrieve API token for account 1 or 2."""
-    if account == "2":
+    if str(account) == "2":
         token_file = Path.home() / ".kaggle/access_token_2"
         env_token = os.environ.get("KAGGLE_API_TOKEN_2")
         if env_token:
@@ -83,22 +94,27 @@ def run_cmd(cmd, account="1", check=True, capture_output=True):
 
 
 def cmd_auth(args):
-    """Verify Kaggle authentication and show user info for all configured accounts."""
+    """Verify Kaggle authentication and show user info & quota for all configured accounts."""
     kaggle_bin = ensure_kaggle_cli()
     account = getattr(args, "account", "all")
 
-    accounts_to_check = ["1", "2"] if account == "all" else [account]
+    accounts_to_check = ["1", "2"] if account == "all" else [str(account)]
     for acc in accounts_to_check:
         token = get_account_token(acc)
-        print(f"\n🔑 Checking Kaggle API Authentication for Account {acc}...")
+        username = get_username(acc)
+        print(f"\n🔑 Checking Kaggle API Authentication for Account {acc} ({username})...")
         if not token:
             print(f"⚠️ Account {acc} token not configured (set KAGGLE_API_TOKEN_{acc} or ~/.kaggle/access_token_{acc}).")
             continue
         res = run_cmd([kaggle_bin, "kernels", "list", "--mine", "--page-size", "3"], account=acc, check=False)
         if res.returncode == 0:
-            print(f"✅ Kaggle Account {acc} Authenticated successfully!")
+            print(f"✅ Kaggle Account {acc} ({username}) Authenticated successfully!")
             print("Recent Cloud Kernels:")
             print(res.stdout.strip())
+            quota_res = run_cmd([kaggle_bin, "quota"], account=acc, check=False)
+            if quota_res.returncode == 0:
+                print("\nCompute Quota:")
+                print(quota_res.stdout.strip())
         else:
             print(f"❌ Authentication failed for Account {acc}.")
             if res.stderr:
