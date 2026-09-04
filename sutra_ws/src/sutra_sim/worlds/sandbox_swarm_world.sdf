@@ -40,6 +40,16 @@
             name="gz::sim::systems::Magnetometer" />
     <plugin filename="gz-sim-navsat-system"
             name="gz::sim::systems::NavSat" />
+    <plugin filename="gz-sim-wind-effects-system"
+            name="gz::sim::systems::WindEffects">
+      <horizontal>
+        <magnitude>0.0</magnitude>
+        <direction>1.0 0.0 0.0</direction>
+      </horizontal>
+      <vertical>
+        <magnitude>0.0</magnitude>
+      </vertical>
+    </plugin>
 
     <!-- ── Sun & Ambient Lighting ──────────────────────────────────────── -->
     <light name="sun" type="directional">

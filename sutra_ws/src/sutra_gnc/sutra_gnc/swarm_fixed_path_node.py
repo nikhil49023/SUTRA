@@ -20,14 +20,26 @@ Control rate: 50 Hz
 """
 
 import math
+import json
 import rclpy
 from rclpy.node import Node
+from rcl_interfaces.msg import SetParametersResult
 from geometry_msgs.msg import TwistStamped, PoseStamped
 from nav_msgs.msg import Odometry
 from visualization_msgs.msg import Marker, MarkerArray
-from std_msgs.msg import ColorRGBA
+from std_msgs.msg import ColorRGBA, String
 from geometry_msgs.msg import Point
 from sutra_gnc.orca_avoidance import Orca3DSolver
+
+
+# ── Home Pad Coordinates for Safe RTL ─────────────────────────────────────────
+DRONE_HOME_COORDS = {
+    "uav_alpha":   ( 15.0,   0.0, 4.0),
+    "uav_beta":    (  0.0,  15.0, 4.0),
+    "uav_gamma":   (-15.0,   0.0, 4.0),
+    "uav_delta":   (  0.0, -15.0, 4.0),
+    "uav_epsilon": ( 10.0,  10.0, 4.0),
+}
 
 
 # ── Pre-Defined Waypoint Routes ──────────────────────────────────────────────
@@ -208,6 +220,27 @@ class SwarmFixedPathNode(Node):
         self.is_airborne = False
         self.loop_count = 0
 
+        # Flight mode & resilience states
+        self.flight_mode = "MISSION"
+        self.home_coords = DRONE_HOME_COORDS.get(self.drone_id, (0.0, 0.0, 4.0))
+        self.hover_pos = (0.0, 0.0, 4.0)
+
+        # Integral error terms for aerodynamic wind disturbance rejection
+        self.int_err_x = 0.0
+        self.int_err_y = 0.0
+        self.int_err_z = 0.0
+
+        # Dynamic ROS 2 parameter callback for live jury adjustments
+        self.add_on_set_parameters_callback(self._on_set_parameters)
+
+        # Command subscriber for live failsafe & mode triggers
+        self.sub_cmd = self.create_subscription(
+            String,
+            "/sutra/swarm/command",
+            self._on_swarm_command,
+            10
+        )
+
         # Swarm peer states: drone_id → (x, y, z, vx, vy, vz)
         self.peer_states: dict[str, tuple] = {}
 
@@ -256,6 +289,58 @@ class SwarmFixedPathNode(Node):
             f"ORCA radius {self.orca_radius} m"
         )
         self._log_route()
+
+    def _on_set_parameters(self, params):
+        for p in params:
+            if p.name == "cruise_speed":
+                self.cruise_speed = float(p.value)
+                self.solver.max_speed = self.cruise_speed
+                self.get_logger().info(f"⚡ [{self.drone_id}] Dynamic speed updated: {self.cruise_speed:.1f} m/s")
+            elif p.name == "orca_radius":
+                self.orca_radius = float(p.value)
+                self.solver.safety_radius = self.orca_radius
+                self.get_logger().info(f"🛡️ [{self.drone_id}] Dynamic ORCA safety radius updated: {self.orca_radius:.2f} m")
+            elif p.name == "waypoint_radius":
+                self.wp_radius = float(p.value)
+                self.get_logger().info(f"📍 [{self.drone_id}] Dynamic waypoint radius updated: {self.wp_radius:.2f} m")
+        return SetParametersResult(successful=True)
+
+    def _on_swarm_command(self, msg: String):
+        try:
+            data = json.loads(msg.data)
+            target = data.get("drone_id", "all")
+            target_sys = data.get("target_system", 0)
+
+            sys_to_name = {1: "uav_alpha", 2: "uav_beta", 3: "uav_gamma", 4: "uav_delta", 5: "uav_epsilon"}
+            if target_sys > 0 and target == "all":
+                target = sys_to_name.get(target_sys, "all")
+
+            if target not in ("all", self.drone_id):
+                return
+
+            action = data.get("action", "")
+            if action == "rtl":
+                self.flight_mode = "RTL"
+                self.get_logger().info(f"🚨 [{self.drone_id}] Failsafe: EMERGENCY RTL ENGAGED! Returning to home base {self.home_coords}")
+            elif action == "hover":
+                self.flight_mode = "HOVER"
+                self.hover_pos = (self.x, self.y, self.z)
+                self.get_logger().info(f"🛑 [{self.drone_id}] Failsafe: POSITION HOLD HOVER at ({self.x:.1f}, {self.y:.1f}, {self.z:.1f})")
+            elif action == "reset":
+                self.flight_mode = "MISSION"
+                self.get_logger().info(f"✅ [{self.drone_id}] Failsafe: MISSION RESUMED!")
+            elif action == "set_speed":
+                val = float(data.get("value", self.cruise_speed))
+                self.cruise_speed = val
+                self.solver.max_speed = val
+                self.get_logger().info(f"⚡ [{self.drone_id}] Speed set via command: {self.cruise_speed:.1f} m/s")
+            elif action == "set_radius":
+                val = float(data.get("value", self.orca_radius))
+                self.orca_radius = val
+                self.solver.safety_radius = val
+                self.get_logger().info(f"🛡️ [{self.drone_id}] ORCA radius set via command: {self.orca_radius:.2f} m")
+        except Exception as e:
+            self.get_logger().error(f"Error handling swarm command: {e}")
 
     def _log_route(self):
         wp_str = " → ".join(
@@ -326,7 +411,38 @@ class SwarmFixedPathNode(Node):
                 )
             return
 
-        # Phase 2: Waypoint pursuit
+        # Phase 2: Mode Execution (HOVER, RTL, or MISSION)
+        if self.flight_mode == "HOVER":
+            hx, hy, hz = self.hover_pos
+            dx, dy, dz = hx - self.x, hy - self.y, hz - self.z
+            vx_des = min(2.0, max(-2.0, dx * 1.5))
+            vy_des = min(2.0, max(-2.0, dy * 1.5))
+            vz_des = min(1.0, max(-1.0, dz * 1.5))
+            vx_final, vy_final, vz_final = self._orca_velocity(vx_des, vy_des, vz_des)
+            self._apply_wind_compensated_twist(vx_final, vy_final, vz_final)
+            return
+
+        elif self.flight_mode == "RTL":
+            hx, hy, hz = self.home_coords
+            dx, dy, dz = hx - self.x, hy - self.y, hz - self.z
+            dist_xy = math.hypot(dx, dy)
+            if dist_xy > 0.6:
+                dist_3d = math.sqrt(dx*dx + dy*dy + dz*dz)
+                scale = self.cruise_speed / max(0.01, dist_3d)
+                vx_des = dx * scale
+                vy_des = dy * scale
+                vz_des = dz * scale
+                vx_final, vy_final, vz_final = self._orca_velocity(vx_des, vy_des, vz_des)
+                self._apply_wind_compensated_twist(vx_final, vy_final, vz_final)
+            else:
+                # Over home pad -> automated safe descent
+                if self.z > 0.4:
+                    self._send_twist(0.0, 0.0, -0.8)
+                else:
+                    self._send_twist(0.0, 0.0, 0.0)
+            return
+
+        # Normal MISSION mode
         tx, ty, tz = self.waypoints[self.wp_idx]
 
         dx = tx - self.x
@@ -368,7 +484,27 @@ class SwarmFixedPathNode(Node):
         # Apply ORCA avoidance
         vx_final, vy_final, vz_final = self._orca_velocity(vx_des, vy_des, vz_des)
 
-        self._send_twist(vx_final, vy_final, vz_final)
+        self._apply_wind_compensated_twist(vx_final, vy_final, vz_final)
+
+    def _apply_wind_compensated_twist(self, vx: float, vy: float, vz: float):
+        """Applies closed-loop integral velocity compensation for physical wind shear rejection."""
+        dt = 0.02
+        err_x = vx - self.vx
+        err_y = vy - self.vy
+        err_z = vz - self.vz
+
+        self.int_err_x += err_x * dt
+        self.int_err_y += err_y * dt
+        self.int_err_z += err_z * dt
+
+        # Integral gain and anti-windup saturation limit (±1.5 m/s)
+        ki = 0.35
+        max_int = 1.5
+        int_x = max(-max_int, min(max_int, self.int_err_x * ki))
+        int_y = max(-max_int, min(max_int, self.int_err_y * ki))
+        int_z = max(-max_int, min(max_int, self.int_err_z * ki))
+
+        self._send_twist(vx + int_x, vy + int_y, vz + int_z)
 
     def _send_twist(self, vx: float, vy: float, vz: float):
         msg = TwistStamped()

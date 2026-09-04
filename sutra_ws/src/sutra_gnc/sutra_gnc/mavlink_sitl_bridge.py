@@ -22,6 +22,7 @@ import math
 import os
 import sys
 import time
+import json
 import socket
 import threading
 from typing import Dict, Any, Optional
@@ -39,6 +40,7 @@ try:
     from rclpy.node import Node
     from geometry_msgs.msg import Pose
     from nav_msgs.msg import Odometry
+    from std_msgs.msg import String
     ROS2_AVAILABLE = True
 except ImportError:
     ROS2_AVAILABLE = False
@@ -87,6 +89,9 @@ class DroneTelemetry:
 
         self.armed = True
         self.flight_mode = "OFFBOARD"
+        self.failsafe_mode = "NORMAL"
+        self.gps_healthy = True
+        self.is_alive = True
         self.current_alt_agl = 0.0
         self.roll_deg = 0.0
         self.pitch_deg = 0.0
@@ -112,7 +117,13 @@ class DroneTelemetry:
         self.last_ros_time = time.time()
         self.has_physical_telemetry = True
 
-        if self.current_alt_agl > 0.5 or self.groundspeed > 0.2:
+        if self.failsafe_mode == "RTL":
+            self.armed = True
+            self.flight_mode = "RTL"
+        elif not self.gps_healthy:
+            self.armed = True
+            self.flight_mode = "VIO_HOLD"
+        elif self.current_alt_agl > 0.5 or self.groundspeed > 0.2:
             self.armed = True
             self.flight_mode = "OFFBOARD"
         else:
@@ -164,9 +175,9 @@ class SutraMavlinkSITLBridge:
         target_port: int = 14550,
         drone_id: int = 1,
         drone_name: str = "uav_alpha",
-        lat_origin: float = 30.7352,   # Kedarnath / Disaster Datum
-        lon_origin: float = 79.0669,
-        alt_origin_msl: float = 3584.0,
+        lat_origin: float = 9.4981,    # Kuttanad / Alappuzha Coastal River Delta (Kerala)
+        lon_origin: float = 76.3388,   # Alluvial Floodplain & River Delta
+        alt_origin_msl: float = 2.0,   # 2.0m MSL Elevation
         enable_swarm_broadcast: bool = True,
         autopilot_type: str = "ardupilot"
     ):
@@ -179,6 +190,7 @@ class SutraMavlinkSITLBridge:
         self.alt_origin_msl = alt_origin_msl
         self.enable_swarm_broadcast = enable_swarm_broadcast
         self.autopilot_type = autopilot_type
+        self.cmd_publisher_callback = None
 
         self.time_start = time.time()
         self.last_status_time = 0.0
@@ -373,6 +385,21 @@ class SutraMavlinkSITLBridge:
 
             elif msg_type == "COMMAND_LONG":
                 self.mav.mav.command_ack_send(msg.command, mavutil.mavlink.MAV_RESULT_ACCEPTED)
+                if msg.command == 20:  # MAV_CMD_NAV_RETURN_TO_LAUNCH
+                    target_sys = getattr(msg, "target_system", 0)
+                    print(f"🚨 MAVLink: RETURN_TO_LAUNCH received for SysID {target_sys}")
+                    if target_sys == 0:
+                        for d in self.drones.values():
+                            d.failsafe_mode = "RTL"
+                            d.flight_mode = "RTL"
+                    else:
+                        for d in self.drones.values():
+                            if d.sysid == target_sys:
+                                d.failsafe_mode = "RTL"
+                                d.flight_mode = "RTL"
+                    self.send_status_text("🚨 EMERGENCY RTL ACTIVATED BY GCS")
+                    if self.cmd_publisher_callback:
+                        self.cmd_publisher_callback({"action": "rtl", "target_system": target_sys})
 
     def _send_drone_telemetry(self, drone: DroneTelemetry, send_slow_telemetry: bool):
         """Sends MAVLink packets for a specific drone."""
@@ -386,10 +413,16 @@ class SutraMavlinkSITLBridge:
 
         if getattr(self, "autopilot_type", "px4") == "ardupilot":
             autopilot = mavutil.mavlink.MAV_AUTOPILOT_ARDUPILOTMEGA
-            custom_mode = 4  # GUIDED in ArduCopter
+            if drone.failsafe_mode == "RTL":
+                custom_mode = 6  # RTL in ArduCopter
+            else:
+                custom_mode = 4  # GUIDED in ArduCopter
         else:
             autopilot = mavutil.mavlink.MAV_AUTOPILOT_PX4
-            custom_mode = 6  # OFFBOARD in PX4
+            if drone.failsafe_mode == "RTL":
+                custom_mode = 5  # AUTO_RTL in PX4
+            else:
+                custom_mode = 6  # OFFBOARD in PX4
 
         self.mav.mav.heartbeat_send(
             mavutil.mavlink.MAV_TYPE_QUADROTOR,
@@ -454,16 +487,28 @@ class SutraMavlinkSITLBridge:
                 0, 0, 0, 0, 0, 0
             )
 
+            # GPS Raw INT (Fix type degraded if GPS denial active)
+            if drone.gps_healthy:
+                fix_type = 3  # 3D Fix
+                sats = 14
+                eph = 120
+                epv = 150
+            else:
+                fix_type = 0  # NO_FIX
+                sats = 0
+                eph = 9999
+                epv = 9999
+
             self.mav.mav.gps_raw_int_send(
                 self.get_boot_time_ms() * 1000,
-                3,
+                fix_type,
                 int(drone.current_lat * 1e7),
                 int(drone.current_lon * 1e7),
                 int((drone.alt_origin_msl + drone.current_alt_agl) * 1000),
-                120, 150,
+                eph, epv,
                 int(drone.groundspeed * 100),
                 int(drone.yaw_deg * 100),
-                14
+                sats
             )
 
     def send_status_text(self, text: str, severity: int = mavutil.mavlink.MAV_SEVERITY_INFO):
@@ -515,6 +560,18 @@ if ROS2_AVAILABLE:
             self.bridge = bridge
             self.subs = []
 
+            # Publisher to broadcast commands from MAVLink to ROS 2
+            self.pub_swarm_cmd = self.create_publisher(String, "/sutra/swarm/command", 10)
+            self.bridge.cmd_publisher_callback = self._on_bridge_cmd
+
+            # Subscriber to listen to ROS 2 commands (from CLI injector or GCS)
+            self.sub_swarm_cmd = self.create_subscription(
+                String,
+                "/sutra/swarm/command",
+                self._on_swarm_cmd,
+                10
+            )
+
             for did in bridge.SWARM_CONFIG.keys():
                 topic = f"/model/{did}/odometry"
                 sub = self.create_subscription(
@@ -525,6 +582,40 @@ if ROS2_AVAILABLE:
                 )
                 self.subs.append(sub)
                 self.get_logger().info(f"Subscribed to Gazebo Odometry topic: {topic}")
+
+        def _on_bridge_cmd(self, cmd_dict: dict):
+            try:
+                msg = String()
+                msg.data = json.dumps(cmd_dict)
+                self.pub_swarm_cmd.publish(msg)
+            except Exception as e:
+                self.get_logger().error(f"Error publishing bridge cmd: {e}")
+
+        def _on_swarm_cmd(self, msg: String):
+            try:
+                data = json.loads(msg.data)
+                action = data.get("action", "")
+                if action == "toggle_gps":
+                    did = data.get("drone_id", "all")
+                    enabled = data.get("enabled", True)
+                    if did == "all":
+                        for d in self.bridge.drones.values():
+                            d.gps_healthy = enabled
+                    elif did in self.bridge.drones:
+                        self.bridge.drones[did].gps_healthy = enabled
+                    self.bridge.send_status_text(f"GPS {'ONLINE' if enabled else 'DENIED (VIO Hold)'}: {did}")
+                elif action == "rtl":
+                    for d in self.bridge.drones.values():
+                        d.failsafe_mode = "RTL"
+                        d.flight_mode = "RTL"
+                    self.bridge.send_status_text("🚨 EMERGENCY RTL: Swarm Returning")
+                elif action == "reset":
+                    for d in self.bridge.drones.values():
+                        d.failsafe_mode = "NORMAL"
+                        d.gps_healthy = True
+                    self.bridge.send_status_text("✅ Swarm Mission Resumed: Normal")
+            except Exception as e:
+                self.get_logger().error(f"Failed to process swarm command: {e}")
 
         def _odom_callback(self, msg: Odometry, did: str):
             p = msg.pose.pose.position

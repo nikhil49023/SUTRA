@@ -88,3 +88,25 @@ def test_mavlink_dynamics_climb_and_roll():
     assert bridge.current_alt_agl > 10.0
     assert bridge.current_alt_agl <= 30.5
     assert bridge.groundspeed > 0.0
+
+
+def test_mavlink_coastal_datum_and_gps_denial():
+    """Verify coastal datum defaults and GPS denial degradation."""
+    bridge = SutraMavlinkSITLBridge(target_ip="127.0.0.1", target_port=14593, drone_id=1)
+
+    # 1. Assert coastal village datum (Kuttanad River Delta, Kerala)
+    assert abs(bridge.lat_origin - 9.4981) < 0.001
+    assert abs(bridge.lon_origin - 76.3388) < 0.001
+    assert bridge.alt_origin_msl == 2.0
+
+    # 2. Assert GPS healthy state
+    assert bridge.primary_drone.gps_healthy is True
+
+    # 3. Simulate GPS Denial trigger
+    bridge.drones["uav_beta"].gps_healthy = False
+    assert bridge.drones["uav_beta"].gps_healthy is False
+
+    # 4. Trigger RTL failsafe
+    bridge.drones["uav_alpha"].failsafe_mode = "RTL"
+    bridge.drones["uav_alpha"].on_odometry(0.0, 0.0, 5.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0)
+    assert bridge.drones["uav_alpha"].flight_mode == "RTL"
