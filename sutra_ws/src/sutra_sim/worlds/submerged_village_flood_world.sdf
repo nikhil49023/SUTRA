@@ -364,7 +364,6 @@
       <link name="hull">
         <gravity>false</gravity>
         <inertial><mass>200.0</mass><inertia><ixx>10.0</ixx><iyy>25.0</iyy><izz>30.0</izz></inertia></inertial>
-        <collision name="c"><geometry><box><size>1.8 4.2 0.8</size></box></geometry></collision>
         <visual name="hull_vis">
           <geometry><box><size>1.8 4.2 0.8</size></box></geometry>
           <material>
@@ -501,17 +500,16 @@
 
     <!-- 🏊‍♀️ 6. SWIMMING GIRL 1 - River Channel Downstream Drift (Drowning Survivor) -->
     <model name="swimming_girl_1">
-      <pose>15.0 -10.0 1.45 0 0 0.2</pose>
+      <pose>15.0 -10.0 1.60 0 0 0.2</pose>
       <static>false</static>
       <link name="link">
         <gravity>false</gravity>
         <inertial><mass>60.0</mass><inertia><ixx>1.2</ixx><iyy>1.2</iyy><izz>1.2</izz></inertia></inertial>
-        <collision name="c"><pose>0 0 0.2 0 0 0</pose><geometry><cylinder><radius>0.4</radius><length>0.8</length></cylinder></geometry></collision>
         <visual name="mesh">
           <geometry><mesh><uri>model://swimming_girl/meshes/swimming_girl.glb</uri><scale>1.0 1.0 1.0</scale></mesh></geometry>
         </visual>
         <visual name="beacon">
-          <pose>0 0 1.0 0 0 0</pose>
+          <pose>0 0 0.55 0 0 0</pose>
           <geometry><sphere><radius>0.12</radius></sphere></geometry>
           <material><ambient>1.0 0.1 0.1 1</ambient><diffuse>1.0 0.1 0.1 1</diffuse><emissive>1.00 0.10 0.10 1</emissive></material>
         </visual>
@@ -524,17 +522,16 @@
 
     <!-- 🏊‍♀️ 7. SWIMMING GIRL 2 - Flooded Intersection Crossing (Treading Water) -->
     <model name="swimming_girl_2">
-      <pose>22.0 -8.0 1.45 0 0 -0.4</pose>
+      <pose>22.0 -8.0 1.60 0 0 -0.4</pose>
       <static>false</static>
       <link name="link">
         <gravity>false</gravity>
         <inertial><mass>60.0</mass><inertia><ixx>1.2</ixx><iyy>1.2</iyy><izz>1.2</izz></inertia></inertial>
-        <collision name="c"><pose>0 0 0.2 0 0 0</pose><geometry><cylinder><radius>0.4</radius><length>0.8</length></cylinder></geometry></collision>
         <visual name="mesh">
           <geometry><mesh><uri>model://swimming_girl/meshes/swimming_girl.glb</uri><scale>1.0 1.0 1.0</scale></mesh></geometry>
         </visual>
         <visual name="beacon">
-          <pose>0 0 1.0 0 0 0</pose>
+          <pose>0 0 0.55 0 0 0</pose>
           <geometry><sphere><radius>0.12</radius></sphere></geometry>
           <material><ambient>1.0 0.1 0.1 1</ambient><diffuse>1.0 0.1 0.1 1</diffuse><emissive>1.00 0.10 0.10 1</emissive></material>
         </visual>
@@ -547,17 +544,16 @@
 
     <!-- 🏊‍♀️ 8. SWIMMING GIRL 3 - Floating Debris Corridor (Clinging & Swimming) -->
     <model name="swimming_girl_3">
-      <pose>10.0 -4.0 1.45 0 0 0.8</pose>
+      <pose>10.0 -4.0 1.60 0 0 0.8</pose>
       <static>false</static>
       <link name="link">
         <gravity>false</gravity>
         <inertial><mass>60.0</mass><inertia><ixx>1.2</ixx><iyy>1.2</iyy><izz>1.2</izz></inertia></inertial>
-        <collision name="c"><pose>0 0 0.2 0 0 0</pose><geometry><cylinder><radius>0.4</radius><length>0.8</length></cylinder></geometry></collision>
         <visual name="mesh">
           <geometry><mesh><uri>model://swimming_girl/meshes/swimming_girl.glb</uri><scale>1.0 1.0 1.0</scale></mesh></geometry>
         </visual>
         <visual name="beacon">
-          <pose>0 0 1.0 0 0 0</pose>
+          <pose>0 0 0.55 0 0 0</pose>
           <geometry><sphere><radius>0.12</radius></sphere></geometry>
           <material><ambient>1.0 0.1 0.1 1</ambient><diffuse>1.0 0.1 0.1 1</diffuse><emissive>1.00 0.10 0.10 1</emissive></material>
         </visual>
@@ -570,17 +566,16 @@
 
     <!-- 🏊‍♀️ 9. SWIMMING GIRL 4 - Eddy Current / Whirlpool Zone -->
     <model name="swimming_girl_4">
-      <pose>27.0 -12.0 1.45 0 0 1.57</pose>
+      <pose>27.0 -12.0 1.60 0 0 1.57</pose>
       <static>false</static>
       <link name="link">
         <gravity>false</gravity>
         <inertial><mass>60.0</mass><inertia><ixx>1.2</ixx><iyy>1.2</iyy><izz>1.2</izz></inertia></inertial>
-        <collision name="c"><pose>0 0 0.2 0 0 0</pose><geometry><cylinder><radius>0.4</radius><length>0.8</length></cylinder></geometry></collision>
         <visual name="mesh">
           <geometry><mesh><uri>model://swimming_girl/meshes/swimming_girl.glb</uri><scale>1.0 1.0 1.0</scale></mesh></geometry>
         </visual>
         <visual name="beacon">
-          <pose>0 0 1.0 0 0 0</pose>
+          <pose>0 0 0.55 0 0 0</pose>
           <geometry><sphere><radius>0.12</radius></sphere></geometry>
           <material><ambient>1.0 0.1 0.1 1</ambient><diffuse>1.0 0.1 0.1 1</diffuse><emissive>1.00 0.10 0.10 1</emissive></material>
         </visual>
@@ -593,17 +588,16 @@
 
     <!-- 🏊‍♀️ 10. SWIMMING GIRL 5 - Submerged Bridge Approach -->
     <model name="swimming_girl_5">
-      <pose>18.0 4.0 1.45 0 0 -1.2</pose>
+      <pose>18.0 4.0 1.60 0 0 -1.2</pose>
       <static>false</static>
       <link name="link">
         <gravity>false</gravity>
         <inertial><mass>60.0</mass><inertia><ixx>1.2</ixx><iyy>1.2</iyy><izz>1.2</izz></inertia></inertial>
-        <collision name="c"><pose>0 0 0.2 0 0 0</pose><geometry><cylinder><radius>0.4</radius><length>0.8</length></cylinder></geometry></collision>
         <visual name="mesh">
           <geometry><mesh><uri>model://swimming_girl/meshes/swimming_girl.glb</uri><scale>1.0 1.0 1.0</scale></mesh></geometry>
         </visual>
         <visual name="beacon">
-          <pose>0 0 1.0 0 0 0</pose>
+          <pose>0 0 0.55 0 0 0</pose>
           <geometry><sphere><radius>0.12</radius></sphere></geometry>
           <material><ambient>1.0 0.1 0.1 1</ambient><diffuse>1.0 0.1 0.1 1</diffuse><emissive>1.00 0.10 0.10 1</emissive></material>
         </visual>

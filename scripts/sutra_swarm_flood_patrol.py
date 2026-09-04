@@ -87,13 +87,13 @@ def get_velocities(t):
         0.20
     )
 
-    # --- 🚤 RESCUE BOAT ALPHA ---
-    # Cruising along flooded street corridor with hydrodynamic pitch/bow wave bobbing
+    # --- 🚤 RESCUE BOAT ALPHA (Navigating Flooded Street Channel) ---
+    # Safe back-and-forth channel patrol (zero vertical drift, remains on water plane)
     vels["rescue_boat_alpha"] = (
-        0.6 * math.cos(0.15 * t),
-        0.8 + 0.3 * math.sin(0.2 * t),
-        0.04 * math.sin(1.5 * t),
-        0.12 * math.sin(0.3 * t)
+        0.25 * math.sin(0.12 * t),
+        0.50 * math.cos(0.12 * t),
+        0.0,
+        0.12 * math.cos(0.12 * t)
     )
     
     # --- 👤 STANDING MEN (Rooftops & High Ground Evacuation Sectors) ---
@@ -125,49 +125,49 @@ def get_velocities(t):
     vels["standing_man_balcony"] = (
         0.12 * math.cos(0.4 * t),
         0.08 * math.sin(0.4 * t),
-        0.01 * math.sin(1.2 * t),
+        0.0,
         0.15
     )
     
-    # --- 🏊‍♀️ SWIMMING GIRLS (Floodwaters Drowning / Swimming / Treading Water) ---
-    # Swimming Girl 1: River Channel Downstream Drift + Wave Bobbing
+    # --- 🏊‍♀️ SWIMMING GIRLS (Floating & Treading Water at Surface - Zero Sinking) ---
+    # Swimming Girl 1: River Channel Treading Water & Waving (Centered at surface)
     vels["swimming_girl_1"] = (
-        0.20 * math.cos(0.4 * t),
-        -0.45 + 0.1 * math.sin(0.3 * t),
-        0.06 * math.sin(2.0 * t),
-        0.10
+        0.15 * math.cos(0.45 * t),
+        0.12 * math.sin(0.45 * t),
+        0.0,
+        0.10 * math.cos(0.25 * t)
     )
     
-    # Swimming Girl 2: Flooded Intersection Crossing (Treading Water)
+    # Swimming Girl 2: Flooded Intersection (Treading Water & Signaling UAV)
     vels["swimming_girl_2"] = (
-        -0.18 * math.sin(0.35 * t),
-        -0.35 + 0.08 * math.cos(0.25 * t),
-        0.05 * math.cos(1.8 * t),
-        0.08
+        -0.12 * math.sin(0.4 * t),
+        0.14 * math.cos(0.4 * t),
+        0.0,
+        0.08 * math.sin(0.2 * t)
     )
     
-    # Swimming Girl 3: Floating Debris Corridor (Swimming & Clinging)
+    # Swimming Girl 3: Debris Corridor (Swimming & Clinging at Surface)
     vels["swimming_girl_3"] = (
-        0.15 * math.sin(0.25 * t),
-        -0.38,
-        0.06 * math.sin(1.6 * t),
-        0.05
+        0.14 * math.cos(0.35 * t),
+        -0.12 * math.sin(0.35 * t),
+        0.0,
+        0.06 * math.cos(0.3 * t)
     )
     
-    # Swimming Girl 4: Eddy Current Whirlpool (Rotational Swimming)
+    # Swimming Girl 4: Eddy Current (Circular Swimming at Surface)
     vels["swimming_girl_4"] = (
-        0.28 * math.cos(0.5 * t),
-        0.28 * math.sin(0.5 * t),
-        0.05 * math.cos(2.2 * t),
-        0.45
+        0.16 * math.cos(0.55 * t),
+        0.16 * math.sin(0.55 * t),
+        0.0,
+        0.25
     )
     
-    # Swimming Girl 5: Submerged Bridge Approach
+    # Swimming Girl 5: Submerged Bridge Approach (Floating & Backstroking)
     vels["swimming_girl_5"] = (
-        0.15 * math.cos(0.3 * t),
-        -0.25 + 0.05 * math.sin(0.4 * t),
-        0.04 * math.sin(1.5 * t),
-        0.12
+        0.12 * math.sin(0.4 * t),
+        0.10 * math.cos(0.4 * t),
+        0.0,
+        0.10 * math.sin(0.25 * t)
     )
     
     return vels
