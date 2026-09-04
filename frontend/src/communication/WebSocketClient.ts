@@ -30,7 +30,7 @@ const getInitialWsUrl = (): string => {
   }
   return (
     (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_WS_URL) ||
-    'ws://127.0.0.1:8765'
+    'ws://49.200.103.222:8765'
   );
 };
 
