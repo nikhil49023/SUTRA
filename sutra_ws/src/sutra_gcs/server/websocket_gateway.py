@@ -371,6 +371,17 @@ class WebSocketGatewayServer:
         timestamp = data.get("timestamp") or time.time()
 
         # ==========================================================
+        # 0. LIVE CAMERA STREAM & SELECTOR (Pass-Through Broadcast)
+        # ==========================================================
+        if cmd_type in ("CAMERA_FRAME", "camera.frame"):
+            await self._async_broadcast(json.dumps(data))
+            return
+
+        if cmd_type in ("SELECT_STREAM", "camera.select_stream"):
+            await self._async_broadcast(json.dumps(data))
+            return
+
+        # ==========================================================
         # 1. AUTHENTICATION & SESSION COMMANDS
         # ==========================================================
         if cmd_type in ("auth.login", "AUTH_LOGIN"):

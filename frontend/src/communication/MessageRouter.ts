@@ -33,6 +33,7 @@ import { useAlertStore } from '../stores/alertStore';
 import { useDefensiveUpgradesStore } from '../stores/defensiveUpgradesStore';
 import { useCommunicationStore } from '../stores/communicationStore';
 import { useAuthStore } from '../security/authStore';
+import { useCameraStore } from '../stores/cameraStore';
 import { commandManager } from './CommandManager';
 import { wsClient } from './WebSocketClient';
 import { CommandAck, EventEnvelope } from '../types/communication';
@@ -59,7 +60,13 @@ class MessageRouter {
   public routeMessage(message: any): void {
     if (!message || typeof message !== 'object') return;
 
-    const msgType = message.type || message.event_type;
+    const msgType = message.type || message.event_type || message.topic;
+
+    // 0. LIVE CAMERA FRAME ROUTING (Direct high-frequency feed from ROS 2 Gazebo)
+    if (msgType === 'CAMERA_FRAME' || message.topic === 'CAMERA_FRAME') {
+      useCameraStore.getState().handleCameraFrame(message.data || message);
+      return;
+    }
 
     // 1. AUTHENTICATION RESPONSES
     if (msgType === 'AUTH_RESPONSE') {

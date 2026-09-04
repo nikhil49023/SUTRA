@@ -11,6 +11,7 @@ import {
   Compass,
   Terminal,
   Target,
+  Video,
 } from 'lucide-react';
 
 import { FormationType } from '../../types/fleet';
@@ -28,6 +29,8 @@ export const SwarmQuickDock: React.FC = memo(() => {
   const isConsoleOpen = useAppStore((s) => s.isConsoleOpen);
   const isHudOpen = useAppStore((s) => s.isHudOpen);
   const toggleHud = useAppStore((s) => s.toggleHud);
+  const activeSection = useAppStore((s) => s.activeSection);
+  const setActiveSection = useAppStore((s) => s.setActiveSection);
 
   const droneCount = Object.keys(drones).length;
   const latestTarget = trackedTargets && trackedTargets.length > 0 ? trackedTargets[0] : null;
@@ -152,8 +155,19 @@ export const SwarmQuickDock: React.FC = memo(() => {
 
         <div className="h-6 w-px bg-white/10" />
 
-        {/* HUD & Terminal Toggles */}
+        {/* HUD, Camera & Terminal Toggles */}
         <div className="flex items-center space-x-1">
+          <button
+            onClick={() => setActiveSection(activeSection === 'CAMERA' ? 'COMMAND' : 'CAMERA')}
+            className={`p-1.5 rounded-xl border transition cursor-pointer ${
+              activeSection === 'CAMERA'
+                ? 'bg-[#5B8FB9]/20 border-[#5B8FB9] text-[#5B8FB9]'
+                : 'bg-[#151D26] border-white/10 text-[#707C88] hover:text-[#E7EBEF]'
+            }`}
+            title="Toggle Remote Live Camera Receiver (C)"
+          >
+            <Video className="w-4 h-4" />
+          </button>
           <button
             onClick={toggleHud}
             className={`p-1.5 rounded-xl border transition cursor-pointer ${

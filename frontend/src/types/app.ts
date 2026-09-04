@@ -10,6 +10,7 @@ export type NavigationSection =
   | 'DISASTER_INTEL'
   | 'RISK'
   | 'LIVEOPS'
+  | 'CAMERA'
   | 'SETTINGS';
 
 export type MapStyleType = 'tactical-dark' | 'satellite' | 'terrain' | 'streets';

@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   Clock,
   LifeBuoy,
+  Video,
 } from 'lucide-react';
 
 import { useGeofenceNotificationStore } from '../../geofence/GeofenceNotificationStore';
@@ -23,6 +24,7 @@ import { useGeofenceNotificationStore } from '../../geofence/GeofenceNotificatio
 const NAV_ITEMS: { id: NavigationSection; label: string; shortcut: string; icon: any }[] = [
   { id: 'COMMAND', label: 'COMMAND', shortcut: 'ESC', icon: Compass },
   { id: 'MISSION', label: 'MISSION', shortcut: 'M', icon: Route },
+  { id: 'CAMERA', label: 'LIVE CAMERA', shortcut: 'C', icon: Video },
   { id: 'GEOFENCE', label: 'GEOFENCES', shortcut: 'G', icon: Shield },
   { id: 'GIS', label: 'GIS INTEL', shortcut: 'I', icon: Mountain },
   { id: 'FLEET', label: 'SWARM FLEET', shortcut: 'F', icon: Users },

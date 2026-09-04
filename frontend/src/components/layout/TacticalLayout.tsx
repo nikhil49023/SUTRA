@@ -38,7 +38,8 @@ import { DisasterIntelPanel } from '../../risk/DisasterIntelPanel';
 import { GlobalGeofenceBreachMonitor } from '../../geofence/GlobalGeofenceBreachMonitor';
 import { wsClient } from '../../communication/WebSocketClient';
 import { NavigationSection } from '../../types/app';
-import { Route, Users, Mountain, Brain, Settings, Compass, Shield, ShieldAlert, X } from 'lucide-react';
+import { Route, Users, Mountain, Brain, Settings, Compass, Shield, ShieldAlert, X, Video } from 'lucide-react';
+import { LiveCameraFeedSection } from '../camera/LiveCameraFeedSection';
 
 // SUTRA 7 Defensive Upgrades Modals
 import { FailureLabModal } from '../failure/FailureLabModal';
@@ -53,6 +54,7 @@ import { MissionSafetyGateModal } from '../mission/MissionSafetyGateModal';
 
 // ── Memoized panels — mount once, stay mounted, toggled via CSS visibility ─────
 const MissionPlannerPanel = memo(() => <MissionPlanner />);
+const LiveCameraFeedPanelMemo = memo(() => <LiveCameraFeedSection />);
 const GeofencePanelMemo = memo(() => <GeofencePanel />);
 const FleetPanelMemo = memo(() => <FleetPanel />);
 const GisPanelMemo = memo(() => <GisPanel />);
@@ -60,13 +62,18 @@ const AiPanelMemo = memo(() => <AiPanel />);
 const DisasterIntelPanelMemo = memo(() => <DisasterIntelPanel />);
 const SettingsPanelMemo = memo(() => <SettingsPanel />);
 
-const OVERLAY_SECTIONS: NavigationSection[] = ['MISSION', 'GEOFENCE', 'FLEET', 'GIS', 'AI', 'DISASTER_INTEL', 'RISK', 'SETTINGS'];
+const OVERLAY_SECTIONS: NavigationSection[] = ['MISSION', 'CAMERA', 'GEOFENCE', 'FLEET', 'GIS', 'AI', 'DISASTER_INTEL', 'RISK', 'SETTINGS'];
 
 const SECTION_METADATA: Record<string, { title: string; subtitle: string; icon: any }> = {
   MISSION: {
     title: 'TACTICAL MISSION PLANNER',
     subtitle: 'Autonomous Waypoint Corridor & Pre-Flight Validation Engine',
     icon: Route,
+  },
+  CAMERA: {
+    title: 'REMOTE GAZEBO CAMERA RECEIVER',
+    subtitle: 'Multi-UAV Low-Latency Wi-Fi Video Feed & Sensor Diagnostics',
+    icon: Video,
   },
   GEOFENCE: {
     title: 'TACTICAL GEOFENCE OPERATIONS CENTER',
@@ -127,6 +134,7 @@ export const TacticalLayout: React.FC = () => {
 
       switch (e.key.toUpperCase()) {
         case 'M': setActiveSection('MISSION'); break;
+        case 'C': setActiveSection('CAMERA'); break;
         case 'G': setActiveSection('GEOFENCE'); break;
         case 'F': setActiveSection('FLEET'); break;
         case 'I': setActiveSection('GIS'); break;
@@ -184,7 +192,7 @@ export const TacticalLayout: React.FC = () => {
 
           {/* Floating Tactical Card (3D Map remains live & visible in the background) */}
           <div
-            className="absolute left-3 top-3 bottom-3 w-[560px] max-w-[calc(100vw-5rem)] z-20 overflow-hidden flex flex-col bg-[#0B0F14]/94 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.85)] transition-all duration-300 animate-in fade-in slide-in-from-left-4"
+            className={`absolute left-3 top-3 bottom-3 ${activeSection === 'CAMERA' ? 'w-[780px]' : 'w-[560px]'} max-w-[calc(100vw-5rem)] z-20 overflow-hidden flex flex-col bg-[#0B0F14]/94 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.85)] transition-all duration-300 animate-in fade-in slide-in-from-left-4`}
             style={{ display: showOverlay ? 'flex' : 'none' }}
           >
             {/* Overlay Header Ribbon */}
@@ -221,6 +229,11 @@ export const TacticalLayout: React.FC = () => {
               <ErrorBoundary fallbackTitle="MISSION SUBSYSTEM">
                 <div style={{ display: activeSection === 'MISSION' ? 'block' : 'none', width: '100%', height: '100%' }}>
                   <MissionPlannerPanel />
+                </div>
+              </ErrorBoundary>
+              <ErrorBoundary fallbackTitle="CAMERA RECEIVER SUBSYSTEM">
+                <div style={{ display: activeSection === 'CAMERA' ? 'block' : 'none', width: '100%', height: '100%' }}>
+                  <LiveCameraFeedPanelMemo />
                 </div>
               </ErrorBoundary>
               <ErrorBoundary fallbackTitle="GEOFENCE SUBSYSTEM">

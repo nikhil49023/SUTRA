@@ -23,6 +23,17 @@ function saveMapStyle(style: MapStyleType) {
   }
 }
 
+function getInitialSection(): NavigationSection {
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    const sec = params.get('section')?.toUpperCase();
+    if (sec && ['COMMAND', 'MISSION', 'CAMERA', 'GEOFENCE', 'GIS', 'FLEET', 'AI', 'DISASTER_INTEL', 'RISK', 'SETTINGS'].includes(sec)) {
+      return sec as NavigationSection;
+    }
+  }
+  return 'COMMAND';
+}
+
 interface AppStoreState extends ApplicationState {
   activeSection: NavigationSection;
   isSidebarCollapsed: boolean;
@@ -92,7 +103,7 @@ export const useAppStore = create<AppStoreState>((set) => ({
   current_user: 'TACTICAL_OPERATOR',
   app_version: '1.0.0',
 
-  activeSection: 'COMMAND',
+  activeSection: getInitialSection(),
   isSidebarCollapsed: false,
   isInspectorOpen: false,
   isHudOpen: false,
