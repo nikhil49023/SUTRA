@@ -25,6 +25,7 @@ unset LOCPATH
 unset GIO_MODULE_DIR
 
 # Export Gazebo Resource Paths
+export SDF_PATH="$PROJECT_ROOT/sutra_ws/src/sutra_sim/models:$SDF_PATH"
 export GZ_SIM_RESOURCE_PATH="$PROJECT_ROOT/sutra_ws/src/sutra_sim/models:$PROJECT_ROOT/sutra_ws/src/sutra_sim:$GZ_SIM_RESOURCE_PATH"
 export IGN_GAZEBO_RESOURCE_PATH="$GZ_SIM_RESOURCE_PATH"
 
@@ -57,15 +58,19 @@ pkill -f "swarm_fixed_path_node.py" 2>/dev/null || true
 pkill -f "mavlink_sitl_bridge.py" 2>/dev/null || true
 
 # ── Step 1: Check / Launch Gazebo Sim 8 ──────────────────────────────────────
-WORLD_NAME="sutra_coastal_flood_world"
-WORLD_FILE="$PROJECT_ROOT/sutra_ws/src/sutra_sim/worlds/sutra_coastal_flood_world.sdf"
+WORLD_NAME="submerged_village_flood_world"
+WORLD_FILE="$PROJECT_ROOT/sutra_ws/src/sutra_sim/worlds/submerged_village_flood_world.sdf"
 
 if [ "$1" == "--sandbox" ]; then
     WORLD_NAME="sandbox_swarm_world"
     WORLD_FILE="$PROJECT_ROOT/sutra_ws/src/sutra_sim/worlds/sandbox_swarm_world.sdf"
     echo "🌍 Mode: Sandbox Arena Selected"
+elif [ "$1" == "--coastal" ]; then
+    WORLD_NAME="sutra_coastal_flood_world"
+    WORLD_FILE="$PROJECT_ROOT/sutra_ws/src/sutra_sim/worlds/sutra_coastal_flood_world.sdf"
+    echo "🌊 Mode: Coastal River Delta World Selected"
 else
-    echo "🌊 Mode: Authentic Coastal Flood Disaster World (Kuttanad, Kerala) Selected"
+    echo "🌊 Mode: Master Blender Converted Submerged Village Disaster World Selected"
 fi
 
 if pgrep -f "gz sim.*${WORLD_NAME}" > /dev/null; then

@@ -100,8 +100,8 @@ def run_ros_spin(node: ResilienceInjectorNode):
 
 
 def inject_gazebo_wind(magnitude_x: float, magnitude_y: float, magnitude_z: float):
-    """Publishes wind velocity vector to Gazebo Sim (supports both coastal flood and sandbox worlds)."""
-    for world in ["sutra_coastal_flood_world", "sandbox_swarm_world"]:
+    """Publishes wind velocity vector to Gazebo Sim (supports converted flood, coastal, and sandbox worlds)."""
+    for world in ["submerged_village_flood_world", "sutra_coastal_flood_world", "sandbox_swarm_world"]:
         cmd = (
             f'gz topic -t "/world/{world}/wind" -m gz.msgs.Wind '
             f'-p "linear: {{x: {magnitude_x}, y: {magnitude_y}, z: {magnitude_z}}}"'

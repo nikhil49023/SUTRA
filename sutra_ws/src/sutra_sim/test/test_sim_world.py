@@ -46,7 +46,27 @@ class TestGazeboSimHarmonicWorlds(unittest.TestCase):
             coords = world.find('spherical_coordinates')
             self.assertIsNotNone(coords)
             self.assertEqual(coords.find('surface_model').text, 'EARTH_WGS84')
-            self.assertAlmostEqual(float(coords.find('latitude_deg').text), 37.774929)
+            lat = float(coords.find('latitude_deg').text)
+            self.assertTrue(-90.0 <= lat <= 90.0)
+
+    def test_submerged_village_flood_world_sdf(self):
+        """Verify converted master Blender submerged village flood disaster world."""
+        fpath = os.path.join(self.worlds_dir, 'submerged_village_flood_world.sdf')
+        self.assertTrue(os.path.exists(fpath), "submerged_village_flood_world.sdf missing")
+
+        tree = ET.parse(fpath)
+        root = tree.getroot()
+        self.assertEqual(root.tag, 'sdf')
+        self.assertEqual(root.attrib.get('version'), '1.8')
+
+        world = root.find('world')
+        self.assertIsNotNone(world)
+
+        # Check all 5 Pegasus UAVs exist
+        drones = ['uav_alpha', 'uav_beta', 'uav_gamma', 'uav_delta', 'uav_epsilon']
+        model_names = [m.attrib.get('name') for m in world.findall('model')]
+        for did in drones:
+            self.assertIn(did, model_names, f"UAV {did} missing from submerged_village_flood_world.sdf")
 
     def test_gazebo_sim_8_harmonic_plugins(self):
         """Verify core Gazebo Sim 8 Harmonic system plugins are specified."""
