@@ -29,13 +29,15 @@ OUTPUT_OBJ = Path("/home/nikhil/Desktop/Project SUTRA/sutra_ws/src/sutra_sim/mod
 bpy.ops.wm.read_factory_settings(use_empty=True)
 scene = bpy.context.scene
 
-def import_glb(path, collection_name=None):
+def import_glb(path, collection_name=None, loc=(0,0,0), rot=(0,0,0), scale=(1,1,1)):
     if not path.exists():
         print(f"⚠️ Not found: {path}")
         return []
     before = set(bpy.data.objects)
     bpy.ops.import_scene.gltf(filepath=str(path))
     new_objs = list(set(bpy.data.objects) - before)
+    roots = [o for o in new_objs if o.parent is None]
+    
     if collection_name:
         col = bpy.data.collections.new(collection_name)
         scene.collection.children.link(col)
@@ -43,54 +45,99 @@ def import_glb(path, collection_name=None):
             for c in o.users_collection:
                 c.objects.unlink(o)
             col.objects.link(o)
+            
+    for r in roots:
+        r.location = loc
+        r.rotation_euler = rot
+        r.scale = scale
+    print(f"✅ Imported {path.name}: {len(new_objs)} objects, {len(roots)} roots at {loc}")
     return new_objs
 
-print("🏔️ [1/8] Importing Mountain Top Ridges (snowy_mountain_-_terrain.glb)...")
-mountain_objs = import_glb(DOWNLOADS / "snowy_mountain_-_terrain.glb", "MountainPeaks")
-for o in mountain_objs:
-    # Scale mountain backdrop to span 400m
-    o.scale = (8.0, 8.0, 6.0)
-    o.location = (0.0, 80.0, -15.0)
+print("🏔️ [1/11] Importing Mountain Top Ridges (snowy_mountain_-_terrain.glb)...")
+import_glb(
+    DOWNLOADS / "snowy_mountain_-_terrain.glb", 
+    "MountainPeaks", 
+    loc=(0.0, 120.0, -10.0), 
+    scale=(8.0, 8.0, 6.0)
+)
 
-print("🌲 [2/8] Importing Mountain Forest Landscape (the_landscape_is_a_forest_in_the_mountains.glb)...")
-landscape_objs = import_glb(DOWNLOADS / "the_landscape_is_a_forest_in_the_mountains.glb", "ForestLandscape")
-for o in landscape_objs:
-    o.location = (0.0, 0.0, 0.0)
+print("🌲 [2/11] Importing Mountain Forest Landscape (the_landscape_is_a_forest_in_the_mountains.glb)...")
+import_glb(
+    DOWNLOADS / "the_landscape_is_a_forest_in_the_mountains.glb", 
+    "ForestLandscape", 
+    loc=(0.0, 0.0, -2.0), 
+    scale=(1.0, 1.0, 1.0)
+)
 
-print("🛣️ [3/8] Importing Forest Road Corridor (a_forest_3_with_a_road_at_night_for_game.glb)...")
-road_objs = import_glb(DOWNLOADS / "a_forest_3_with_a_road_at_night_for_game.glb", "ForestRoad")
-for o in road_objs:
-    o.location = (-15.0, -30.0, 1.2)
-    o.scale = (1.5, 1.5, 1.5)
+print("🛣️ [3/11] Importing Ultra-HD Forest Dirt Road (update_dirt_road_through_forest.glb)...")
+import_glb(
+    DOWNLOADS / "update_dirt_road_through_forest.glb", 
+    "DirtRoadHD", 
+    loc=(0.0, 0.0, 0.0), 
+    scale=(0.25, 0.25, 0.25)
+)
 
-print("🌲 [4/8] Importing Detailed Pine Trees (more_trees.glb)...")
-tree_objs = import_glb(DOWNLOADS / "more_trees.glb", "DetailedTrees")
-for o in tree_objs:
-    # Scale down from cm units to real-world meters
-    o.scale = (0.012, 0.012, 0.012)
-    o.location = (25.0, 10.0, 2.0)
+print("🌲 [4/11] Importing Forest Road Corridor (a_forest_3_with_a_road_at_night_for_game.glb)...")
+import_glb(
+    DOWNLOADS / "a_forest_3_with_a_road_at_night_for_game.glb", 
+    "ForestRoadWest", 
+    loc=(-25.0, -20.0, 1.0), 
+    scale=(1.2, 1.2, 1.2)
+)
 
-print("🏚️ [5/8] Importing Forest House Ruin (forest_house_ruin.glb)...")
-ruin_objs = import_glb(DOWNLOADS / "forest_house_ruin.glb", "ForestRuin")
-for o in ruin_objs:
-    o.scale = (0.85, 0.85, 0.85)
-    o.location = (18.0, 22.0, 0.5)
+print("🌲 [5/11] Importing Detailed Pine Trees (more_trees.glb)...")
+import_glb(
+    DOWNLOADS / "more_trees.glb", 
+    "DetailedTrees", 
+    loc=(25.0, 10.0, 2.0), 
+    scale=(0.012, 0.012, 0.012)
+)
 
-print("🪨 [6/8] Importing Ground Rocks (small_rocks.glb)...")
-rock_objs = import_glb(DOWNLOADS / "small_rocks.glb", "GroundRocks")
-for o in rock_objs:
-    o.scale = (2.5, 2.5, 2.5)
-    o.location = (8.0, 12.0, 0.3)
+print("🏚️ [6/11] Importing Forest House Ruin (forest_house_ruin.glb)...")
+import_glb(
+    DOWNLOADS / "forest_house_ruin.glb", 
+    "ForestRuin", 
+    loc=(18.0, 22.0, 0.5), 
+    scale=(0.85, 0.85, 0.85)
+)
 
-print("🧑 [7/8] Importing Survivor & Orange SOS Tarp (man.glb)...")
-man_objs = import_glb(DOWNLOADS / "man.glb", "Survivor")
-for o in man_objs:
-    o.scale = (0.018, 0.018, 0.018)
-    o.location = (19.0, 20.5, 0.5)
-    o.rotation_euler = (math.pi / 2, 0, 0.4)
+print("🚙 [7/11] Importing NDRF Tactical SAR Jeep (military_jeep.glb)...")
+import_glb(
+    DOWNLOADS / "military_jeep.glb", 
+    "TacticalJeep", 
+    loc=(-6.0, -12.0, 0.4), 
+    rot=(0.0, 0.0, math.radians(25)), 
+    scale=(0.8, 0.8, 0.8)
+)
+
+print("🪖 [8/11] Importing Tactical Operative Survivor (private_military_contractor.glb)...")
+import_glb(
+    DOWNLOADS / "private_military_contractor.glb", 
+    "TacticalContractor", 
+    loc=(16.0, 20.0, 0.4), 
+    rot=(0.0, 0.0, math.radians(-40)), 
+    scale=(1.0, 1.0, 1.0)
+)
+
+print("🪨 [9/11] Importing Ground Rocks (small_rocks.glb)...")
+import_glb(
+    DOWNLOADS / "small_rocks.glb", 
+    "GroundRocks", 
+    loc=(8.0, 12.0, 0.3), 
+    scale=(2.5, 2.5, 2.5)
+)
+
+print("🧑 [10/11] Importing Civilian Survivor & SOS Tarp (man.glb)...")
+import_glb(
+    DOWNLOADS / "man.glb", 
+    "CivilianSurvivor", 
+    loc=(19.0, 21.0, 0.5), 
+    rot=(math.pi / 2, 0, 0.4), 
+    scale=(0.018, 0.018, 0.018)
+)
 
 # Create Orange Thermal Rescue Tarp
-bpy.ops.mesh.primitive_plane_add(size=3.2, location=(18.5, 20.5, 0.52))
+bpy.ops.mesh.primitive_plane_add(size=3.2, location=(18.5, 21.0, 0.52))
 tarp_obj = bpy.context.active_object
 tarp_obj.name = "SOS_Orange_Survival_Tarp"
 tarp_mat = bpy.data.materials.new(name="Orange_Tarp_Thermal")
@@ -100,13 +147,14 @@ if bsdf:
     bsdf.inputs["Roughness"].default_value = 0.35
 tarp_obj.data.materials.append(tarp_mat)
 
-print("🚁 [8/8] Importing SUTRA Hexacopter Airborne (hexa_copter_ar-e800_drone.glb)...")
-drone_objs = import_glb(DOWNLOADS / "hexa_copter_ar-e800_drone.glb", "SutraHexacopter")
-for o in drone_objs:
-    # Position hexacopter at 8.0m altitude in active survey over the road corridor
-    o.location = (-10.0, -15.0, 8.0)
-    o.rotation_euler = (math.radians(-10), math.radians(5), math.radians(45))
-    o.scale = (0.75, 0.75, 0.75)
+print("🚁 [11/11] Importing SUTRA Hexacopter Airborne (hexa_copter_ar-e800_drone.glb)...")
+import_glb(
+    DOWNLOADS / "hexa_copter_ar-e800_drone.glb", 
+    "SutraHexacopter", 
+    loc=(-8.0, -10.0, 8.5), 
+    rot=(math.radians(-10), math.radians(5), math.radians(45)), 
+    scale=(0.75, 0.75, 0.75)
+)
 
 # Atmospheric Lighting & Sun Setup
 print("☀️ Setting up mountain sun and atmospheric lighting...")
