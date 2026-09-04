@@ -1,9 +1,8 @@
 """
-SUTRA GCS — Artificial Horizon Drawing Geometry
+SUTRA GCS — Artificial Horizon Drawing Geometry Calculation
 """
 
-import math
-from typing import Tuple, Dict, Any
+from typing import Dict, Any
 
 
 class ArtificialHorizon:

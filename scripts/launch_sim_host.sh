@@ -143,7 +143,7 @@ echo "   ✅ Perception Streamer active."
 # Step 7: Launch GCS Web Dashboard Server (Port 5173 across LAN)
 echo "🌐 [7/7] Starting GCS Web Dashboard Server on http://0.0.0.0:5173..."
 fuser -k 5173/tcp 2>/dev/null || true
-python3 -m http.server 5173 --directory "$PROJECT_ROOT/sutra_ws/src/sutra_gcs/dist" > /tmp/sutra_web.log 2>&1 &
+python3 -m http.server 5173 --directory "$PROJECT_ROOT/frontend/dist" > /tmp/sutra_web.log 2>&1 &
 CHILD_PIDS+=($!)
 echo "   ✅ GCS Web Dashboard active at http://${HOST_IP}:5173"
 

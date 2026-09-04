@@ -54,7 +54,7 @@ fi
 # Step 3: Verify / Start Static GCS HTTP Server (Port 5173)
 if ! ss -tlpn | grep -q ":5173 "; then
     echo "🌐 [3/4] Serving GCS Tactical Frontend on port 5173..."
-    python3 -m http.server 5173 --directory "$PROJECT_ROOT/sutra_ws/src/sutra_gcs/dist" > /tmp/sutra_web.log 2>&1 &
+    python3 -m http.server 5173 --directory "$PROJECT_ROOT/frontend/dist" > /tmp/sutra_web.log 2>&1 &
     CHILD_PIDS+=($!)
     sleep 1.0
     echo "   ✅ GCS Web Dashboard active at http://127.0.0.1:5173"

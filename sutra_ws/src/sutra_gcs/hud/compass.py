@@ -1,5 +1,5 @@
 """
-SUTRA GCS — Compass HUD Tape
+SUTRA GCS — Compass HUD Tape Calculation
 """
 
 from typing import Dict, Any

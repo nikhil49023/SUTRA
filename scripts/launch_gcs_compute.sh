@@ -58,14 +58,16 @@ echo "   ✅ Compute worker active."
 
 # Step 3: Serve & Launch GCS Web UI
 echo "🌐 [3/3] Serving GCS Frontend Dashboard..."
-GCS_DIST="$PROJECT_ROOT/sutra_ws/src/sutra_gcs/dist"
+GCS_DIST="$PROJECT_ROOT/frontend/dist"
 
 # Launch lightweight static HTTP server for pre-built GCS bundle
 if [ -d "$GCS_DIST" ]; then
     python3 -m http.server 5173 --directory "$GCS_DIST" > /tmp/sutra_shiva_web.log 2>&1 &
     CHILD_PIDS+=($!)
 else
-    python3 -m http.server 5173 --directory "$PROJECT_ROOT/frontend" > /tmp/sutra_shiva_web.log 2>&1 &
+    echo "⚠️  Building frontend..."
+    (cd "$PROJECT_ROOT/frontend" && npm run build)
+    python3 -m http.server 5173 --directory "$GCS_DIST" > /tmp/sutra_shiva_web.log 2>&1 &
     CHILD_PIDS+=($!)
 fi
 

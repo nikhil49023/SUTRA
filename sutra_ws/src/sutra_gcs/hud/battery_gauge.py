@@ -1,5 +1,5 @@
 """
-SUTRA GCS — Battery Gauge & Power Diagnostics
+SUTRA GCS — Battery Gauge & Power Diagnostics Calculation
 """
 
 from typing import Dict, Any

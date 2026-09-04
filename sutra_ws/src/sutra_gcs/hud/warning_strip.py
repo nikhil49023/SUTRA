@@ -1,5 +1,5 @@
 """
-SUTRA GCS — Master Warning & Caution Strip
+SUTRA GCS — Master Warning & Caution Strip Calculation
 """
 
 from typing import List, Dict, Any

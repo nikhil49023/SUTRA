@@ -129,7 +129,7 @@ class HUDDataAdapter:
             heartbeat_ok=comm.heartbeat_ok,
             flight_mode=flight_mode,
             mission_name=mission.mission_name,
-            mission_state=mission.state.value,
+            mission_state=mission.state.value if hasattr(mission.state, "value") else str(mission.state),
             current_waypoint=cur_wp,
             total_waypoints=tot_wp,
             distance_to_waypoint=dist_wp,
