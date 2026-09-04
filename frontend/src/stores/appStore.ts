@@ -31,7 +31,7 @@ function getInitialSection(): NavigationSection {
       return sec as NavigationSection;
     }
   }
-  return 'COMMAND';
+  return 'CAMERA';
 }
 
 interface AppStoreState extends ApplicationState {
