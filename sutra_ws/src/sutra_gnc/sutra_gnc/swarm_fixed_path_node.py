@@ -118,6 +118,68 @@ RING_CROSSING_ROUTES = {
     "uav_epsilon": [(0.0, 0.0, 3.8), (-3.708, 11.413, 3.8), (0.0, 0.0, 3.8), (3.708, -11.413, 3.8)],
 }
 
+# Home coordinates for Forest Canopy SAR World (Calibrated Canopy Resilience Flight Altitudes)
+CANOPY_FOREST_HOME_COORDS = {
+    "uav_alpha":   ( 6.50,   5.50, 46.00),
+    "uav_beta":    (12.00,  -8.00, 54.00),
+    "uav_gamma":   ( 0.00,   0.00, 64.00),
+    "uav_delta":   (-10.00, -8.00, 52.00),
+    "uav_epsilon": (-5.00,   9.50, 49.00),
+}
+
+# 3D Forest Canopy Search Routes (Canopy Penetration, Tree Crown Skimming & High-Altitude RF Relay)
+CANOPY_FOREST_ROUTES = {
+    # Alpha: Lead Penetration Scout tracking the winding dirt trail / soldier squad at 46m (9.5m AGL)
+    "uav_alpha": [
+        ( 6.50,  5.50, 46.00),
+        ( 4.00,  3.50, 45.50),
+        ( 1.00,  3.50, 45.00),
+        (-2.00,  6.00, 45.50),
+        (-5.00,  9.50, 46.00),
+        (-2.00,  6.00, 46.50),
+        ( 1.00,  3.50, 46.50),
+        ( 4.00,  3.50, 46.00),
+    ],
+    # Beta: North-East Ridge & Clearing Reconnaissance at 54m (17.5m AGL)
+    "uav_beta": [
+        (12.00, -8.00, 54.00),
+        (18.00,  0.00, 53.50),
+        (14.00, 10.00, 54.00),
+        ( 8.00, 12.00, 54.50),
+        ( 4.00,  6.00, 54.00),
+        ( 8.00, -2.00, 53.50),
+    ],
+    # Gamma: Central High-Altitude RF Mesh Relay & Tactical Sentry at 64m (27.5m AGL)
+    "uav_gamma": [
+        ( 0.00,  0.00, 64.00),
+        ( 8.00,  8.00, 63.50),
+        ( 0.00,  0.00, 64.00),
+        (-8.00, -8.00, 64.50),
+        ( 0.00,  0.00, 64.00),
+        (-8.00,  8.00, 63.50),
+        ( 0.00,  0.00, 64.00),
+        ( 8.00, -8.00, 64.50),
+    ],
+    # Delta: East Flank & Ravine Search Loop at 52m (15.5m AGL)
+    "uav_delta": [
+        (-10.00, -8.00, 52.00),
+        (-14.00,  0.00, 51.50),
+        (-12.00,  8.00, 52.00),
+        ( -6.00,  6.00, 52.50),
+        ( -4.00, -2.00, 52.00),
+        ( -8.00, -6.00, 51.50),
+    ],
+    # Epsilon: West Trail Insertion Overwatch & Vehicle Perimeter at 49m (12.5m AGL)
+    "uav_epsilon": [
+        (-5.00,  9.50, 49.00),
+        (-8.00, 12.00, 48.50),
+        (-10.00,  8.00, 49.00),
+        (-8.00,  4.00, 49.50),
+        (-3.00,  5.00, 49.00),
+        (-2.00,  8.00, 48.50),
+    ],
+}
+
 # Home coordinates for disaster flood world (exact Blender starting positions)
 DISASTER_FLOOD_HOME_COORDS = {
     "uav_alpha":   (16.02, -15.02, 54.02),
@@ -292,7 +354,9 @@ class SwarmFixedPathNode(Node):
         )
 
         # Route for this drone
-        if self.route_mode == "ring_crossing":
+        if self.route_mode in ["canopy_forest", "forest"]:
+            self.waypoints = CANOPY_FOREST_ROUTES.get(self.drone_id, CANOPY_FOREST_ROUTES["uav_alpha"])
+        elif self.route_mode == "ring_crossing":
             self.waypoints = RING_CROSSING_ROUTES.get(self.drone_id, RING_CROSSING_ROUTES["uav_alpha"])
         elif self.route_mode == "disaster_flood":
             self.waypoints = DISASTER_FLOOD_ROUTES.get(self.drone_id, DISASTER_FLOOD_ROUTES["uav_alpha"])
@@ -312,7 +376,10 @@ class SwarmFixedPathNode(Node):
 
         # Flight mode & resilience states
         self.flight_mode = "MISSION"
-        if self.route_mode == "disaster_flood":
+        if self.route_mode in ["canopy_forest", "forest"]:
+            self.home_coords = CANOPY_FOREST_HOME_COORDS.get(self.drone_id, (6.50, 5.50, 46.00))
+            self.takeoff_alt = self.home_coords[2]
+        elif self.route_mode == "disaster_flood":
             self.home_coords = DISASTER_FLOOD_HOME_COORDS.get(self.drone_id, (16.02, -15.02, 54.02))
             self.takeoff_alt = self.home_coords[2]
         else:

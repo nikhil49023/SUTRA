@@ -23,6 +23,7 @@ unset GTK_PATH
 unset GTK_IM_MODULE
 unset LOCPATH
 unset GIO_MODULE_DIR
+unset LD_LIBRARY_PATH
 
 # Export Gazebo Resource Paths
 export SDF_PATH="$PROJECT_ROOT/sutra_ws/src/sutra_sim/models:$SDF_PATH"
@@ -61,7 +62,11 @@ pkill -f "mavlink_sitl_bridge.py" 2>/dev/null || true
 WORLD_NAME="submerged_village_flood_world"
 WORLD_FILE="$PROJECT_ROOT/sutra_ws/src/sutra_sim/worlds/submerged_village_flood_world.sdf"
 
-if [ "$1" == "--sandbox" ]; then
+if [ "$1" == "--canopy" ] || [ "$1" == "--forest" ]; then
+    WORLD_NAME="forest_canopy_sar_world"
+    WORLD_FILE="$PROJECT_ROOT/sutra_ws/src/sutra_sim/worlds/forest_canopy_sar_world.sdf"
+    echo "🌲 Mode: Master Forest Canopy & Mountain Ridge Search World Selected"
+elif [ "$1" == "--sandbox" ]; then
     WORLD_NAME="sandbox_swarm_world"
     WORLD_FILE="$PROJECT_ROOT/sutra_ws/src/sutra_sim/worlds/sandbox_swarm_world.sdf"
     echo "🌍 Mode: Sandbox Arena Selected"
@@ -70,7 +75,9 @@ elif [ "$1" == "--coastal" ]; then
     WORLD_FILE="$PROJECT_ROOT/sutra_ws/src/sutra_sim/worlds/sutra_coastal_flood_world.sdf"
     echo "🌊 Mode: Coastal River Delta World Selected"
 else
-    echo "🌊 Mode: Master Blender Converted Submerged Village Disaster World Selected"
+    WORLD_NAME="forest_canopy_sar_world"
+    WORLD_FILE="$PROJECT_ROOT/sutra_ws/src/sutra_sim/worlds/forest_canopy_sar_world.sdf"
+    echo "🌲 Mode: Master Forest Canopy & Mountain Ridge Search World Selected (Default)"
 fi
 
 if pgrep -f "gz sim.*${WORLD_NAME}" > /dev/null; then
@@ -118,7 +125,11 @@ echo "🚀 [4/5] Launching 5x Autonomous Flight Controllers (ORCA 3D Avoidance).
 DRONES=("uav_alpha" "uav_beta" "uav_gamma" "uav_delta" "uav_epsilon")
 SPEEDS=("3.8" "4.2" "3.5" "4.0" "3.2")
 
-if [ "$WORLD_NAME" == "submerged_village_flood_world" ]; then
+if [ "$WORLD_NAME" == "forest_canopy_sar_world" ]; then
+    ROUTE_MODE="canopy_forest"
+    ALTS=("46.0" "54.0" "64.0" "52.0" "49.0")
+    SPEEDS=("3.2" "3.8" "2.5" "3.5" "3.0")
+elif [ "$WORLD_NAME" == "submerged_village_flood_world" ]; then
     ROUTE_MODE="disaster_flood"
     ALTS=("54.02" "57.02" "66.02" "54.02" "52.02")
 elif [ "$WORLD_NAME" == "sandbox_swarm_world" ]; then
@@ -154,7 +165,7 @@ if pgrep -f "MissionPlanner.exe" > /dev/null; then
 elif [ -f "$MP_EXE" ] && command -v mono > /dev/null 2>&1; then
     echo "💻 [5/5] Launching Mission Planner via Mono..."
     cd "/home/nikhil/MissionPlanner"
-    mono MissionPlanner.exe > /tmp/sutra_missionplanner.log 2>&1 &
+    env -u LD_LIBRARY_PATH -u GTK_PATH -u GTK_IM_MODULE -u LOCPATH -u GIO_MODULE_DIR mono MissionPlanner.exe > /tmp/sutra_missionplanner.log 2>&1 &
     CHILD_PIDS+=($!)
     echo "   ✅ Mission Planner launched (PID: ${CHILD_PIDS[-1]})."
     cd "$PROJECT_ROOT"
