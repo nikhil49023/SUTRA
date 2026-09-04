@@ -6,6 +6,7 @@
 import React from 'react';
 import { useMappingStore } from '../stores/mappingStore';
 import { useFleetStore } from '../stores/fleetStore';
+import { useAppStore } from '../stores/appStore';
 import { mapController } from '../map/MapController';
 import {
   Grid,
@@ -22,6 +23,7 @@ import {
   Footprints,
   ShieldCheck,
   Waves,
+  X,
 } from 'lucide-react';
 
 const SEMANTIC_STYLES: Record<string, { label: string; color: string; bg: string; icon: any }> = {
@@ -114,6 +116,14 @@ export const Autonomous2DMappingPanel: React.FC = () => {
           >
             <Trash2 className="w-3.5 h-3.5" />
             <span>RESET MAP</span>
+          </button>
+
+          <button
+            onClick={() => useAppStore.getState().setActiveSection('COMMAND')}
+            className="p-1.5 rounded bg-[#151D26] hover:bg-[#1B2530] border border-[#2B3743] hover:border-[#5B8FB9] text-[#A9B3BD] hover:text-[#E7EBEF] transition cursor-pointer ml-1"
+            title="Collapse HUD / Full Map View"
+          >
+            <X className="w-4 h-4" />
           </button>
         </div>
       </div>

@@ -27,10 +27,16 @@ const getInitialWsUrl = (): string => {
     }
     const saved = localStorage.getItem('sutra_gcs_ws_url');
     if (saved) return saved;
+
+    const envUrl = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_WS_URL);
+    if (envUrl) return envUrl;
+
+    const hostname = window.location.hostname || '127.0.0.1';
+    return `ws://${hostname}:8765`;
   }
   return (
     (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_WS_URL) ||
-    'ws://49.200.103.222:8765'
+    'ws://127.0.0.1:8765'
   );
 };
 

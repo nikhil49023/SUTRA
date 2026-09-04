@@ -27,11 +27,11 @@ function getInitialSection(): NavigationSection {
   if (typeof window !== 'undefined') {
     const params = new URLSearchParams(window.location.search);
     const sec = params.get('section')?.toUpperCase();
-    if (sec && ['COMMAND', 'MISSION', 'CAMERA', 'GEOFENCE', 'GIS', 'FLEET', 'AI', 'DISASTER_INTEL', 'RISK', 'SETTINGS'].includes(sec)) {
+    if (sec && ['COMMAND', 'MAPPING', 'MISSION', 'CAMERA', 'GEOFENCE', 'GIS', 'FLEET', 'AI', 'DISASTER_INTEL', 'RISK', 'SETTINGS'].includes(sec)) {
       return sec as NavigationSection;
     }
   }
-  return 'CAMERA';
+  return 'MAPPING';
 }
 
 interface AppStoreState extends ApplicationState {

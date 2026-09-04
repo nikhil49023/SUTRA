@@ -40,6 +40,7 @@ import { NavigationSection } from '../../types/app';
 import { Route, Users, Mountain, Brain, Settings, Compass, Shield, ShieldAlert, X, Video, Grid } from 'lucide-react';
 import { LiveCameraFeedSection } from '../camera/LiveCameraFeedSection';
 import { Autonomous2DMappingPanel } from '../../mapping/Autonomous2DMappingPanel';
+import { MapView } from '../../map/MapView';
 
 // SUTRA 7 Defensive Upgrades Modals
 import { FailureLabModal } from '../failure/FailureLabModal';
@@ -188,19 +189,37 @@ export const TacticalLayout: React.FC = () => {
           </ErrorBoundary>
         )}
 
-        {/* Central Tactical Workspaces & Context Panels (Zero Map Section) */}
+        {/* Central Tactical Workspaces & Context Panels */}
         <div className="flex-1 flex flex-col relative overflow-hidden bg-[#0B0F14]">
-          {/* Default / Camera View: Full-screen Live Drone Camera Receiver */}
-          {(activeSection === 'CAMERA' || activeSection === 'COMMAND') && (
-            <div className="absolute inset-0 z-10 flex flex-col bg-[#0B0F14] overflow-hidden">
+          {/* Base Spatial Layer: Full MapLibre 2D/3D Canvas with Real-Time Autonomous 2D Mapping */}
+          <div className="absolute inset-0 z-0 overflow-hidden">
+            <ErrorBoundary fallbackTitle="2D DYNAMIC MAP">
+              <MapView />
+            </ErrorBoundary>
+          </div>
+
+          {/* Live Drone Camera Stream (Full Screen when active) */}
+          {activeSection === 'CAMERA' && (
+            <div className="absolute inset-0 z-20 flex flex-col bg-[#0B0F14] overflow-hidden">
               <ErrorBoundary fallbackTitle="CAMERA RECEIVER SUBSYSTEM">
                 <LiveCameraFeedPanelMemo />
               </ErrorBoundary>
             </div>
           )}
 
-          {/* Subsystem Workspaces */}
-          {activeSection !== 'CAMERA' && activeSection !== 'COMMAND' && (
+          {/* 2D Autonomous Mapping Intelligence Drawer / HUD (Overlaid over the live map) */}
+          {activeSection === 'MAPPING' && (
+            <div className="absolute top-3 left-3 bottom-3 w-[460px] max-w-[calc(100vw-5rem)] z-20 pointer-events-auto flex flex-col animate-in fade-in slide-in-from-left-3 duration-200 shadow-2xl">
+              <div className="h-full rounded-2xl border border-[#2B3743] bg-[#0B0F14]/95 backdrop-blur-xl overflow-hidden flex flex-col shadow-[0_12px_40px_rgba(0,0,0,0.8)]">
+                <ErrorBoundary fallbackTitle="2D AUTONOMOUS MAPPING HUD">
+                  <Autonomous2DMappingPanelMemo />
+                </ErrorBoundary>
+              </div>
+            </div>
+          )}
+
+          {/* Subsystem Workspaces (Full Screen Overlay with Close Button) */}
+          {activeSection !== 'CAMERA' && activeSection !== 'COMMAND' && activeSection !== 'MAPPING' && (
             <div className="absolute inset-0 z-20 flex flex-col bg-[#0B0F14] overflow-hidden">
               {/* Header ribbon */}
               {activeMeta && (
@@ -217,9 +236,9 @@ export const TacticalLayout: React.FC = () => {
                     </div>
                   </div>
                   <button
-                    onClick={() => setActiveSection('CAMERA')}
+                    onClick={() => setActiveSection('COMMAND')}
                     className="px-2.5 py-1 rounded-lg bg-[#151D26] hover:bg-[#1B2530] border border-[#2B3743] hover:border-[#5B8FB9] text-[#A9B3BD] hover:text-[#E7EBEF] text-[11px] font-bold flex items-center space-x-1.5 transition cursor-pointer"
-                    title="Return to live camera feed (Esc)"
+                    title="Return to 2D Dynamic Map (Esc)"
                   >
                     <span>CLOSE</span>
                     <kbd className="px-1 py-0.2 rounded bg-[#0B0F14] border border-[#2B3743] text-[9px] text-[#707C88]">ESC</kbd>
@@ -230,11 +249,6 @@ export const TacticalLayout: React.FC = () => {
 
               {/* Panel Content Body */}
               <div className="flex-1 w-full overflow-hidden">
-                <ErrorBoundary fallbackTitle="2D AUTONOMOUS MAPPING">
-                  <div style={{ display: activeSection === 'MAPPING' ? 'block' : 'none', width: '100%', height: '100%' }}>
-                    <Autonomous2DMappingPanelMemo />
-                  </div>
-                </ErrorBoundary>
                 <ErrorBoundary fallbackTitle="MISSION SUBSYSTEM">
                   <div style={{ display: activeSection === 'MISSION' ? 'block' : 'none', width: '100%', height: '100%' }}>
                     <MissionPlannerPanel />
