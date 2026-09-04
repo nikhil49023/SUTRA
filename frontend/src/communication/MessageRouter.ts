@@ -28,7 +28,9 @@ import { useTelemetryStore } from '../stores/telemetryStore';
 import { useGeofenceStore } from '../stores/geofenceStore';
 import { useGISStore } from '../stores/gisStore';
 import { useAIStore } from '../stores/aiStore';
+import { useRiskStore } from '../stores/riskStore';
 import { useAlertStore } from '../stores/alertStore';
+import { useDefensiveUpgradesStore } from '../stores/defensiveUpgradesStore';
 import { useCommunicationStore } from '../stores/communicationStore';
 import { useAuthStore } from '../security/authStore';
 import { commandManager } from './CommandManager';
@@ -259,6 +261,20 @@ class MessageRouter {
       useAIStore.getState().updateFromEvent(topic, payload);
     }
 
+    // Predictive Disaster Risk, Forecast & Pre-Positioning Events
+    else if (topic === 'risk.updated' && payload) {
+      useRiskStore.setState({ temporalMap: payload });
+    } else if (topic === 'forecast.updated' && payload) {
+      useRiskStore.setState({ forecast: payload });
+    } else if (topic === 'prepositioning.updated' && payload.recommendations) {
+      useRiskStore.setState({ recommendations: payload.recommendations });
+    } else if (topic === 'risk.theater_changed' && payload) {
+      if (payload.temporal_map) useRiskStore.setState({ temporalMap: payload.temporal_map });
+      if (payload.zone) useRiskStore.setState({ selectedZone: payload.zone, selectedTheater: `${payload.zone.place_name} (${payload.zone.state})` });
+    } else if ((topic === 'risk.disaster_zones' || topic === 'alerts.national_feed') && payload.disaster_zones) {
+      useRiskStore.setState({ disasterZones: payload.disaster_zones });
+    }
+
     // Alert Events
     else if (topic === 'alert.created' && payload.alert) {
       if (payload.alert.source !== 'geofence_monitor' && !payload.alert.title?.toLowerCase().includes('geofence')) {
@@ -293,6 +309,7 @@ class MessageRouter {
     if (Array.isArray(snapshot.alerts)) {
       useAlertStore.getState().hydrateFromSnapshot(snapshot.alerts);
     }
+    useDefensiveUpgradesStore.getState().hydrateFromSnapshot(snapshot);
   }
 
   private recordEventId(eventId: string): void {

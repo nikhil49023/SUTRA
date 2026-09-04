@@ -1,25 +1,42 @@
 import React, { useState } from 'react';
 import { useAIStore } from '../stores/aiStore';
-import { wsClient } from '../communication/WebSocketClient';
+import { commandManager } from '../communication/CommandManager';
 import { Bot, Send, User } from 'lucide-react';
 
 export const Assistant: React.FC = () => {
   const { assistant_messages, addAssistantMessage } = useAIStore();
   const [query, setQuery] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim()) return;
+    if (!query.trim() || isTyping) return;
 
+    const userText = query.trim();
+    setQuery('');
     addAssistantMessage({
       msg_id: `msg-${Date.now()}`,
       sender: 'USER',
-      text: query,
+      text: userText,
       timestamp: Date.now(),
     });
 
-    wsClient.sendCommand('AI_ASK', { query });
-    setQuery('');
+    setIsTyping(true);
+    try {
+      const resp = await commandManager.sendCommandAsync('ai.ask', { query: userText });
+      if (resp && resp.result && resp.result.reply) {
+        addAssistantMessage({
+          msg_id: `msg-${Date.now()}`,
+          sender: 'ASSISTANT',
+          text: resp.result.reply,
+          timestamp: Date.now(),
+        });
+      }
+    } catch (e) {
+      console.warn('AI Assistant query error:', e);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   return (

@@ -78,6 +78,7 @@ Thumbs.db
 
 # Temporary evaluation & cache directories
 runs/
+quarantine/
 .wwebjs_cache/
 .system_generated/
 
@@ -107,6 +108,8 @@ kaggle/
 *.mp4
 *.avi
 *.webm
+*.exr
+docs/media/textures/
 sutra_ws/src/sutra_sim/models/*/meshes/
 .firecrawl/
 
@@ -122,3 +125,5 @@ sutra_ws/src/sutra_comms/ns3/sutra_fanet_sim
 sutra_ws/src/sutra_comms/ns3/lib/
 sutra_ws/src/sutra_sim/ns3/sutra_fanet_sim
 sutra_ws/src/sutra_sim/ns3/lib/
+.kaggle_staging/
+SUTRA/

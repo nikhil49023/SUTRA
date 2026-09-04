@@ -26,11 +26,13 @@ All shortcuts are executable scripts located in `scripts/`:
 
 | Shortcut Command | Target Environment | What Runs Under The Hood | Primary Use Case |
 |---|---|---|---|
-| `bash scripts/sim_sandbox.sh` | **5-UAV Sandbox Swarm** (A+B Integrated) | Gazebo Sim 8 3D GUI + RViz2 + 5x Pegasus Autopilots + 802.11s Mesh Node | **Primary interactive evaluation & live jury demonstration** |
-| `bash scripts/sim_master.sh` | **Master 80m Disaster Arena** (Bengaluru Datum) | High-fidelity $80\text{m}\times 80\text{m}$ disaster arena with ruins, survivor actors, and thermal beacons | **Realistic disaster reconnaissance & survivor search test** |
-| `bash scripts/sim_headless.sh` | **Headless High-Speed SITL** | Physics server only (No GUI, `<5%` CPU, `0` GPU VRAM) | **Coding inside IDE while keeping live physics active** |
-| `bash scripts/sim_comms_ns3.sh` | **NS-3 Wireless Mesh Simulation** | Discrete-event C++ engine (Friis path loss, OLSR routing, FlowMonitor) | **Gate G2 verification: PDR 100%, sub-1ms latency** |
-| `bash scripts/sim_stop.sh` | **Surgical Simulation Stopper** | Cleanly terminates all Gazebo & ROS sim daemons | **Instantly free all RAM and GPU VRAM** |
+| `bash scripts/launch_jury_live_demonstration.sh` | 🏆 **ALL-IN-ONE JURY MASTER RUNNER** | **Gazebo Sim 8 + Bridge + 5x Flight Controllers + MAVLink Bridge + Mission Planner GUI** | 🌟 **OFFICIAL EVALUATION DEMO: Single command boots everything** |
+| `bash scripts/attach_flight_controllers.sh` | **Attach Flight Controllers to Running Gazebo** | ROS 2 Bridge + 5x ORCA 3D Controllers + MAVLink SITL Bridge | **Instant fly command when Gazebo is already open** |
+| `bash scripts/sim_sandbox.sh` | **5-UAV Sandbox Swarm** (A+B Integrated) | Gazebo Sim 8 3D GUI + RViz2 + 5x Pegasus Autopilots + 802.11s Mesh Node | Primary interactive evaluation & live jury demonstration |
+| `bash scripts/sim_master.sh` | **Master 80m Disaster Arena** (Bengaluru Datum) | High-fidelity $80\text{m}\times 80\text{m}$ disaster arena with ruins, survivor actors, and thermal beacons | Realistic disaster reconnaissance & survivor search test |
+| `bash scripts/sim_headless.sh` | **Headless High-Speed SITL** | Physics server only (No GUI, `<5%` CPU, `0` GPU VRAM) | Coding inside IDE while keeping live physics active |
+| `bash scripts/sim_comms_ns3.sh` | **NS-3 Wireless Mesh Simulation** | Discrete-event C++ engine (Friis path loss, OLSR routing, FlowMonitor) | Gate G2 verification: PDR 100%, sub-1ms latency |
+| `bash scripts/sim_stop.sh` | **Surgical Simulation Stopper** | Cleanly terminates all Gazebo & ROS sim daemons | Instantly free all RAM and GPU VRAM |
 
 ---
 

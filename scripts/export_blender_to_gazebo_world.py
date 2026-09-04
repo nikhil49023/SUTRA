@@ -12,11 +12,13 @@ Run via: python3 scripts/export_blender_to_gazebo_world.py
 import os
 import sys
 import time
+import shutil
 import subprocess
 
-PROJECT_ROOT = "/home/nikhil/Desktop/Project SUTRA"
-BLEND_FILE   = f"{PROJECT_ROOT}/sutra_ws/src/sutra_sim/assets/submerged_village_flood_world.blend"
-BLENDER_BIN  = "/home/nikhil/.local/bin/blender"
+SCRIPT_DIR   = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+BLEND_FILE   = os.environ.get("SUTRA_BLEND_FILE", f"{PROJECT_ROOT}/sutra_ws/src/sutra_sim/assets/submerged_village_flood_world.blend")
+BLENDER_BIN  = shutil.which("blender") or os.path.expanduser("~/.local/bin/blender")
 
 MODEL_DIR    = f"{PROJECT_ROOT}/sutra_ws/src/sutra_sim/models/submerged_village_flood"
 MESH_DIR     = f"{MODEL_DIR}/meshes"
