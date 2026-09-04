@@ -3,7 +3,9 @@
   <model name="forest_canopy">
     <static>true</static>
     <link name="terrain_link">
+      <pose>0 0 0 0 0 0</pose>
       <collision name="ground_collision">
+        <pose>0 0 24.0 0 0 0</pose>
         <geometry>
           <plane>
             <normal>0 0 1</normal>
@@ -23,6 +25,7 @@
         <geometry>
           <mesh>
             <uri>model://forest_canopy/meshes/forest_canopy_world.obj</uri>
+            <scale>1 1 1</scale>
           </mesh>
         </geometry>
       </visual>
