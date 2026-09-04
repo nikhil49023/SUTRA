@@ -184,3 +184,79 @@ def test_vio_status_string_parsing():
     assert exporter.vio_state["uav_alpha"]["mode"] == "DEAD_RECKONING_IMU_ONLY"
 
     exporter.stop()
+
+
+def test_survivor_alert_preloaded_canopy_targets():
+    """SutraSimExporter pre-loads verified canopy perception targets with sub-0.32m raycasting accuracy."""
+    exporter = SutraSimExporter(host="127.0.0.1", port=9186)
+    time.sleep(0.1)
+
+    assert len(exporter.cached_alerts) >= 4, "Expected pre-loaded canopy targets from sutra_canopy_detections.json"
+    survivor_targets = [a for a in exporter.cached_alerts if a["type"] == "SURVIVOR"]
+    assert len(survivor_targets) >= 3, "Expected at least 3 survivor targets"
+
+    for alert in exporter.cached_alerts:
+        assert "id" in alert
+        assert alert["type"] in ("SURVIVOR", "THREAT")
+        assert 11.0 <= alert["lat"] <= 12.0  # Wayanad coordinates latitude
+        assert 75.0 <= alert["lon"] <= 77.0  # Wayanad coordinates longitude
+        assert alert["confidence"] >= 0.85
+        assert "WGS84-Raycast" in alert["sensors"]
+        assert "raycast_error_m" in alert
+        assert alert["raycast_error_m"] <= 0.32, f"Raycast error {alert['raycast_error_m']}m exceeds 0.32m limit"
+
+    exporter.stop()
+
+
+def test_on_gcs_alert_broadcast():
+    """_on_gcs_alert() processes incoming /sutra/gcs/alerts and broadcasts SURVIVOR_ALERT packet to GCS clients."""
+    exporter = SutraSimExporter(host="127.0.0.1", port=9187)
+    time.sleep(0.1)
+
+    class FakeMsg:
+        def __init__(self, data): self.data = data
+
+    test_alert_data = {
+        "target_id": "TGT-LIVE-01",
+        "class": "survivor_adult",
+        "wgs84": {"latitude": 11.52491, "longitude": 76.12849, "altitude_m": 842.1},
+        "confidence": 0.962,
+        "drone": "uav_alpha"
+    }
+
+    captured = []
+    exporter.broadcast_json = lambda p: captured.append(p)
+    exporter._on_gcs_alert(FakeMsg(json.dumps(test_alert_data)))
+
+    assert len(captured) == 1
+    pkt = captured[0]
+    assert pkt["topic"] == "SURVIVOR_ALERT"
+    assert pkt["data"]["id"] == "TGT-LIVE-01"
+    assert pkt["data"]["type"] == "SURVIVOR"
+    assert abs(pkt["data"]["lat"] - 11.52491) < 1e-5
+    assert abs(pkt["data"]["lon"] - 76.12849) < 1e-5
+    assert pkt["data"]["confidence"] == 0.962
+    assert "WGS84-Raycast" in pkt["data"]["sensors"]
+
+    # Verify cached in exporter
+    assert exporter.cached_alerts[0]["id"] == "TGT-LIVE-01"
+
+    exporter.stop()
+
+
+def test_survivor_alert_in_swarm_telemetry():
+    """SWARM_TELEMETRY ticker packet includes the cached survivors list for GCS HUD integration."""
+    exporter = SutraSimExporter(host="127.0.0.1", port=9188)
+    time.sleep(0.1)
+
+    captured = []
+    exporter.broadcast_json = lambda p: captured.append(p)
+    exporter._telemetry_ticker()
+
+    telemetry_pkts = [p for p in captured if p.get("topic") == "SWARM_TELEMETRY"]
+    assert len(telemetry_pkts) >= 1
+    assert "survivors" in telemetry_pkts[0]
+    assert len(telemetry_pkts[0]["survivors"]) >= 4
+
+    exporter.stop()
+

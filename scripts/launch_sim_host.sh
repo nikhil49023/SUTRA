@@ -114,10 +114,16 @@ done
 echo "   ✅ 5x Flight controllers active."
 
 # Step 5: Launch SUTRA Sim Exporter
-echo "🌐 [5/5] Starting SUTRA Distributed Sim Exporter on ws://0.0.0.0:9090..."
+echo "🌐 [5/6] Starting SUTRA Distributed Sim Exporter on ws://0.0.0.0:9090..."
 python3 "$PROJECT_ROOT/sutra_ws/src/sutra_comms/sutra_comms/sutra_sim_exporter.py" > /tmp/sutra_sim_exporter.log 2>&1 &
 CHILD_PIDS+=($!)
 echo "   ✅ Simulation Exporter active."
+
+# Step 6: Launch Kaggle GPU Perception Streamer (Survivor Detections & 3D Raycasting)
+echo "🎯 [6/6] Starting Perception Target Streamer (YOLOv8-TRT + 3D Raycasting)..."
+python3 "$PROJECT_ROOT/scripts/stream_perception_targets_to_swarm.py" > /tmp/sutra_perception_streamer.log 2>&1 &
+CHILD_PIDS+=($!)
+echo "   ✅ Perception Streamer active."
 
 echo ""
 echo "=============================================================================="
