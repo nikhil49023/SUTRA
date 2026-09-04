@@ -62,11 +62,33 @@ class TestGazeboSimHarmonicWorlds(unittest.TestCase):
         world = root.find('world')
         self.assertIsNotNone(world)
 
-        # Check all 5 Pegasus UAVs exist
+        # Check all 5 Pegasus UAVs exist and spawn at true Blender altitudes
         drones = ['uav_alpha', 'uav_beta', 'uav_gamma', 'uav_delta', 'uav_epsilon']
-        model_names = [m.attrib.get('name') for m in world.findall('model')]
+        model_dict = {m.attrib.get('name'): m for m in world.findall('model')}
         for did in drones:
-            self.assertIn(did, model_names, f"UAV {did} missing from submerged_village_flood_world.sdf")
+            self.assertIn(did, model_dict, f"UAV {did} missing from submerged_village_flood_world.sdf")
+            pose_str = model_dict[did].find('pose').text.strip()
+            parts = [float(v) for v in pose_str.split()]
+            self.assertGreater(parts[2], 49.0, f"UAV {did} altitude {parts[2]}m should be > 49m in flood world")
+
+        # Verify artificial platform was cleanly purged
+        self.assertNotIn('coastal_launch_platform', model_dict, "Fake launch platform should be purged")
+
+        # Verify exact Blender camera viewpoints exist
+        cams = ['blender_cam_01_hero', 'blender_cam_02_drowning_pov', 'blender_cam_03_house_clingers',
+                'blender_cam_04_rooftop_lookdown', 'blender_cam_gis_ortho']
+        for c in cams:
+            self.assertIn(c, model_dict, f"Blender camera {c} missing from world SDF")
+
+        # Verify GUI user camera is configured at Blender Hero viewpoint
+        gui = world.find('gui')
+        self.assertIsNotNone(gui)
+        cam = gui.find('camera')
+        self.assertIsNotNone(cam)
+        cam_pose = [float(v) for v in cam.find('pose').text.strip().split()]
+        self.assertAlmostEqual(cam_pose[0], 18.0, delta=0.5)
+        self.assertAlmostEqual(cam_pose[1], -25.0, delta=0.5)
+        self.assertAlmostEqual(cam_pose[2], 48.5, delta=0.5)
 
     def test_gazebo_sim_8_harmonic_plugins(self):
         """Verify core Gazebo Sim 8 Harmonic system plugins are specified."""

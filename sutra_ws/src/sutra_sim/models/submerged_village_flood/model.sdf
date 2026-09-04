@@ -3,7 +3,7 @@
   <model name="submerged_village_flood">
     <static>true</static>
     <link name="link">
-      <!-- Water surface is normalized at Z = 0.0m -->
+      <!-- Water surface is at native Z = 37.80m, ground at Z = 18.7m -->
       <pose>0 0 0 0 0 0</pose>
       <collision name="collision">
         <geometry>

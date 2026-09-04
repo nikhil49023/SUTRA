@@ -117,7 +117,19 @@ sleep 1.0
 echo "🚀 [4/5] Launching 5x Autonomous Flight Controllers (ORCA 3D Avoidance)..."
 DRONES=("uav_alpha" "uav_beta" "uav_gamma" "uav_delta" "uav_epsilon")
 SPEEDS=("3.8" "4.2" "3.5" "4.0" "3.2")
-ALTS=("5.0" "6.5" "4.0" "7.0" "5.8")
+
+if [ "$WORLD_NAME" == "submerged_village_flood_world" ]; then
+    ROUTE_MODE="disaster_flood"
+    ALTS=("54.02" "57.02" "66.02" "54.02" "52.02")
+elif [ "$WORLD_NAME" == "sandbox_swarm_world" ]; then
+    ROUTE_MODE="ring_crossing"
+    ALTS=("4.0" "4.0" "4.0" "4.0" "4.0")
+else
+    ROUTE_MODE="standard"
+    ALTS=("5.0" "6.5" "4.0" "7.0" "5.8")
+fi
+
+echo "   🧭 Route Mode: $ROUTE_MODE (Exact Blender Flight Trajectories)"
 
 for i in "${!DRONES[@]}"; do
     did="${DRONES[$i]}"
@@ -126,6 +138,7 @@ for i in "${!DRONES[@]}"; do
     python3 "$PROJECT_ROOT/sutra_ws/src/sutra_gnc/sutra_gnc/swarm_fixed_path_node.py" \
       --ros-args \
       -p drone_id:="$did" \
+      -p route_mode:="$ROUTE_MODE" \
       -p cruise_speed:="$spd" \
       -p takeoff_altitude:="$alt" \
       -p use_sim_time:=true > "/tmp/sutra_ctrl_${did}.log" 2>&1 &

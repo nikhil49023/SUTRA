@@ -13,14 +13,17 @@ PURPOSE:
       * 02_Turbulent_Floodwater (Floodwater plane, floating debris planks)
       * 03_Drowning_Victims (12 victims in the water)
       * 04_Rooftop_Survivors (5 survivors on roofs)
-  - Explicitly PURGES all 560 baked-in static drone parts, cameras, and sensor cones.
-  - Makes all linked duplicate survivor meshes single-user to allow coordinate normalization.
-  - Normalizes coordinate system: Water surface at Z = 0.0m, village center at (0, 0).
-  - Decimates heavy meshes for zero-OOM execution (<35MB).
-  - Exports clean static OBJ + MTL to Gazebo model directory.
+  - Explicitly PURGES all 560 baked-in static drone parts, cones, and unneeded empties.
+  - Preserves 100% NATIVE BLENDER COORDINATES:
+      * World matrices are baked into mesh geometry before unparenting.
+      * Water surface at Z = 37.80m, ground at Z = 18.7m - 35m.
+      * Drowning survivors struggling in floodwater at Z = 36.5m - 38.3m.
+      * Rooftop survivors standing on roofs at Z = 40.4m - 47.8m.
+      * Drones spawn directly at their exact Blender starting locations (Z = 50m - 66m).
+  - Exports clean static OBJ + MTL with forward_axis='Y', up_axis='Z'.
   - Generates the complete, verified Gazebo Sim 8 world SDF (`submerged_village_flood_world.sdf`)
     with all 5 autonomous SUTRA Pegasus UAVs (Alpha..Epsilon), 50Hz velocity control,
-    elevated helipads, and dynamic wind plugins.
+    cinematic hero camera view, and 5 Blender camera viewpoints.
 ================================================================================
 """
 
@@ -40,10 +43,6 @@ MODEL_DIR = PROJECT_ROOT / "sutra_ws/src/sutra_sim/models/submerged_village_floo
 MESH_DIR = MODEL_DIR / "meshes"
 WORLDS_DIR = PROJECT_ROOT / "sutra_ws/src/sutra_sim/worlds"
 SDF_FILE = WORLDS_DIR / "submerged_village_flood_world.sdf"
-
-WATER_Z_OFFSET = 37.80  # Water surface in blender is at Z = 37.80m
-CENTER_X_OFFSET = 25.50
-CENTER_Y_OFFSET = 50.00
 
 
 def run_blender_export():
@@ -66,7 +65,7 @@ def run_blender_export():
     blender_py_script = f"""
 import bpy
 import os
-import math
+from mathutils import Matrix
 
 print("🌊 [1/4] Loading master blend file: {BLEND_FILE}...")
 bpy.ops.wm.open_mainfile(filepath="{BLEND_FILE}")
@@ -75,48 +74,45 @@ bpy.ops.wm.open_mainfile(filepath="{BLEND_FILE}")
 keep_collections = ["01_Submerged_Village", "02_Turbulent_Floodwater", "03_Drowning_Victims", "04_Rooftop_Survivors"]
 
 # Gather objects to keep
-objects_to_keep = set()
+objects_to_keep = []
 for c_name in keep_collections:
     c = bpy.data.collections.get(c_name)
     if c:
         for obj in c.all_objects:
-            if obj.type in ['MESH', 'EMPTY']:
-                objects_to_keep.add(obj)
+            if obj.type == 'MESH':
+                objects_to_keep.append(obj)
 
-print(f"   Identified {{len(objects_to_keep)}} disaster environment objects to keep.")
+print(f"   Identified {{len(objects_to_keep)}} disaster environment meshes to keep.")
 
-# Delete all objects NOT in keep collections (purges static drone parts & cameras)
-print("🧹 [2/4] Purging static baked drone parts, cameras, and sensor cones...")
+# Step 1: Capture all world matrices while hierarchy is intact
+print("⚙️ [2/4] Baking true world coordinates into geometry (native Z-up preservation)...")
+matrices = {{}}
+for obj in objects_to_keep:
+    matrices[obj.name] = obj.matrix_world.copy()
+
+# Step 2: Unparent and bake world transform into mesh vertices directly
+for obj in objects_to_keep:
+    if obj.data.users > 1:
+        obj.data = obj.data.copy()
+    mw = matrices[obj.name]
+    obj.parent = None
+    obj.matrix_world = Matrix.Identity(4)
+    obj.data.transform(mw)
+
+# Step 3: Purge all non-environment objects (static baked drones, markers, old cameras)
+print("🧹 [3/4] Purging static baked drone parts and non-environment objects...")
+keep_set = set(objects_to_keep)
 purged_count = 0
 for obj in list(bpy.data.objects):
-    if obj not in objects_to_keep:
+    if obj not in keep_set:
         bpy.data.objects.remove(obj, do_unlink=True)
         purged_count += 1
 print(f"   ✅ Purged {{purged_count}} non-environment objects (clean airspace guaranteed!).")
 
-# Convert remaining objects to mesh
-print("⚙️ [3/4] Normalizing coordinates and optimizing geometry...")
+# Select all environment meshes
 bpy.ops.object.select_all(action='DESELECT')
 for obj in objects_to_keep:
-    if obj.name in bpy.data.objects and obj.type == 'MESH':
-        obj.select_set(True)
-        # Ensure single-user mesh data for linked survivor duplicates
-        if obj.data and obj.data.users > 1:
-            obj.data = obj.data.copy()
-
-# Apply coordinate translation so floodwater surface is at Z = 0.0m and center is at (0, 0)
-for obj in bpy.context.selected_objects:
-    if obj.type == 'MESH':
-        obj.location.x -= {CENTER_X_OFFSET}
-        obj.location.y -= {CENTER_Y_OFFSET}
-        obj.location.z -= {WATER_Z_OFFSET}
-
-# Apply location transform to mesh data
-try:
-    bpy.ops.object.transform_apply(location=True, rotation=False, scale=False)
-    print("   ✅ Applied coordinate transform (water normalized at Z = 0.0m).")
-except Exception as e:
-    print(f"   Transform note: {{e}}")
+    obj.select_set(True)
 
 # Export textures
 for img in bpy.data.images:
@@ -130,14 +126,16 @@ for img in bpy.data.images:
         except Exception:
             pass
 
-# Export pure static OBJ + MTL
+# Export pure static OBJ + MTL with forward_axis='Y', up_axis='Z'
 obj_out = os.path.join("{MESH_DIR}", "submerged_village_disaster.obj")
 print(f"💾 [4/4] Exporting clean disaster terrain OBJ -> {{obj_out}}...")
 bpy.ops.wm.obj_export(
     filepath=obj_out,
     export_selected_objects=True,
     export_materials=True,
-    export_triangulated_mesh=True
+    export_triangulated_mesh=True,
+    forward_axis='Y',
+    up_axis='Z'
 )
 print(f"🎉 Blender mesh export completed successfully! File size: {{os.path.getsize(obj_out)/(1024*1024):.2f}} MB")
 """
@@ -179,7 +177,7 @@ def generate_gazebo_model():
   <model name="submerged_village_flood">
     <static>true</static>
     <link name="link">
-      <!-- Water surface is normalized at Z = 0.0m -->
+      <!-- Water surface is at native Z = 37.80m, ground at Z = 18.7m -->
       <pose>0 0 0 0 0 0</pose>
       <collision name="collision">
         <geometry>
@@ -217,12 +215,13 @@ PROJECT SUTRA — MASTER SUBMERGED VILLAGE FLOOD SIMULATION WORLD (SH-DST-05)
 ================================================================================
 Authentic 3D Submerged Indian Village disaster world converted directly from Blender.
 Features:
-  - 30 Submerged village houses, ruins, and stone embankments
-  - 700m Floodwater plane (normalized at Z = 0.0m)
-  - 12 Stranded/drowning survivor models clinging to eaves & floating planks
-  - 5 Rooftop survivors on higher elevation houses
-  - Elevated Swarm Launch Platform (Z = 0.8m) with 5 glowing helipads
-  - 5x Autonomous SUTRA Pegasus UAVs (uav_alpha..uav_epsilon) with 50Hz odometry & velocity control
+  - 30 Submerged village houses, ruins, and stone embankments (Z = 18.7m - 52.8m)
+  - Turbulent Floodwater surface at native Z = 37.80m
+  - 12 Stranded/drowning survivor models struggling in floodwater (Z = 36.5m - 38.3m)
+  - 5 Rooftop survivors on higher elevation houses (Z = 40.4m - 47.8m)
+  - 5x Autonomous SUTRA Pegasus UAVs (uav_alpha..uav_epsilon) spawned at exact Blender
+    starting coordinates (Z = 50.0m - 66.0m) with 50Hz velocity control & odometry
+  - Gazebo GUI camera positioned at Blender Camera_Cinematic_Hero (18, -25, 48.5)
   - Dynamic Wind Effects plugin for turbulent 14 m/s wind shear testing
 ================================================================================
 -->
@@ -235,6 +234,15 @@ Features:
       <real_time_factor>1.0</real_time_factor>
       <real_time_update_rate>500</real_time_update_rate>
     </physics>
+
+    <!-- ── Gazebo GUI Viewport (Exact Blender Cinematic Hero Camera) ────────── -->
+    <gui fullscreen="0">
+      <camera name="user_camera">
+        <!-- Exact Blender Camera_Cinematic_Hero: (18, -25, 48.5) looking down river corridor -->
+        <pose>18.0 -25.0 48.5 0 0.29 1.51</pose>
+        <view_controller>orbit</view_controller>
+      </camera>
+    </gui>
 
     <!-- ── Gazebo Sim 8 Core Plugins ────────────────────────────────────────── -->
     <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics" />
@@ -299,48 +307,101 @@ Features:
       <pose>0 0 0 0 0 0</pose>
     </include>
 
-    <!-- ── Elevated Coastal Helipad Platform (Safe Dry Ground for Swarm Base) ─ -->
-    <model name="coastal_launch_platform">
+    <!-- ── Exact Blender Camera Viewpoints (Multi-Angle Survivor Monitoring) ── -->
+    <!-- Cam 01: Master Submerged Village Hero Overview -->
+    <model name="blender_cam_01_hero">
       <static>true</static>
-      <pose>0 0 0.50 0 0 0</pose>
+      <pose>18.0 -22.0 45.3 0 0.20 1.51</pose>
       <link name="link">
-        <collision name="col"><geometry><box><size>35.0 35.0 0.20</size></box></geometry></collision>
-        <visual name="vis"><geometry><box><size>35.0 35.0 0.20</size></box></geometry>
-          <material><ambient>0.30 0.30 0.32 1</ambient><diffuse>0.45 0.45 0.48 1</diffuse></material>
-        </visual>
+        <sensor name="camera_hero" type="camera">
+          <camera>
+            <horizontal_fov>1.15</horizontal_fov>
+            <image><width>1280</width><height>720</height></image>
+            <clip><near>0.1</near><far>1000</far></clip>
+          </camera>
+          <always_on>1</always_on><update_rate>30</update_rate><topic>/camera/hero_view</topic>
+        </sensor>
       </link>
     </model>
 
-    <!-- 5 Glowing Helipads on Platform -->
-    <model name="helipad_alpha"><static>true</static><pose>15.0 0.0 0.61 0 0 0</pose>
-      <link name="l"><visual name="v"><geometry><cylinder><radius>1.8</radius><length>0.02</length></cylinder></geometry>
-      <material><ambient>0 0.8 1 1</ambient><diffuse>0 0.8 1 1</diffuse><emissive>0 0.4 0.6 1</emissive></material></visual></link>
+    <!-- Cam 02: Close Water Drowning Victims POV -->
+    <model name="blender_cam_02_drowning_pov">
+      <static>true</static>
+      <pose>18.0 -13.0 39.0 0 0.05 1.51</pose>
+      <link name="link">
+        <sensor name="camera_drowning" type="camera">
+          <camera>
+            <horizontal_fov>0.98</horizontal_fov>
+            <image><width>1280</width><height>720</height></image>
+            <clip><near>0.1</near><far>500</far></clip>
+          </camera>
+          <always_on>1</always_on><update_rate>30</update_rate><topic>/camera/drowning_pov</topic>
+        </sensor>
+      </link>
     </model>
-    <model name="helipad_beta"><static>true</static><pose>0.0 15.0 0.61 0 0 0</pose>
-      <link name="l"><visual name="v"><geometry><cylinder><radius>1.8</radius><length>0.02</length></cylinder></geometry>
-      <material><ambient>1 0.4 0 1</ambient><diffuse>1 0.4 0 1</diffuse><emissive>0.6 0.2 0 1</emissive></material></visual></link>
+
+    <!-- Cam 03: Submerged House Clingers POV -->
+    <model name="blender_cam_03_house_clingers">
+      <static>true</static>
+      <pose>35.0 -6.0 41.3 0 0.18 1.95</pose>
+      <link name="link">
+        <sensor name="camera_clingers" type="camera">
+          <camera>
+            <horizontal_fov>0.92</horizontal_fov>
+            <image><width>1280</width><height>720</height></image>
+            <clip><near>0.1</near><far>500</far></clip>
+          </camera>
+          <always_on>1</always_on><update_rate>30</update_rate><topic>/camera/house_clingers</topic>
+        </sensor>
+      </link>
     </model>
-    <model name="helipad_gamma"><static>true</static><pose>-15.0 0.0 0.61 0 0 0</pose>
-      <link name="l"><visual name="v"><geometry><cylinder><radius>1.8</radius><length>0.02</length></cylinder></geometry>
-      <material><ambient>0.2 1 0.2 1</ambient><diffuse>0.2 1 0.2 1</diffuse><emissive>0.1 0.5 0.1 1</emissive></material></visual></link>
+
+    <!-- Cam 04: Rooftop Survivor Lookdown POV -->
+    <model name="blender_cam_04_rooftop_lookdown">
+      <static>true</static>
+      <pose>20.5 19.5 42.0 0 0.45 -1.57</pose>
+      <link name="link">
+        <sensor name="camera_rooftop" type="camera">
+          <camera>
+            <horizontal_fov>1.20</horizontal_fov>
+            <image><width>1280</width><height>720</height></image>
+            <clip><near>0.1</near><far>500</far></clip>
+          </camera>
+          <always_on>1</always_on><update_rate>30</update_rate><topic>/camera/rooftop_lookdown</topic>
+        </sensor>
+      </link>
     </model>
-    <model name="helipad_delta"><static>true</static><pose>0.0 -15.0 0.61 0 0 0</pose>
-      <link name="l"><visual name="v"><geometry><cylinder><radius>1.8</radius><length>0.02</length></cylinder></geometry>
-      <material><ambient>1 0.2 0.8 1</ambient><diffuse>1 0.2 0.8 1</diffuse><emissive>0.5 0.1 0.4 1</emissive></material></visual></link>
-    </model>
-    <model name="helipad_epsilon"><static>true</static><pose>10.0 10.0 0.61 0 0 0</pose>
-      <link name="l"><visual name="v"><geometry><cylinder><radius>1.8</radius><length>0.02</length></cylinder></geometry>
-      <material><ambient>1 1 0 1</ambient><diffuse>1 1 0 1</diffuse><emissive>0.5 0.5 0 1</emissive></material></visual></link>
+
+    <!-- Cam 05: GIS Tactical Nadir Ortho (130m) -->
+    <model name="blender_cam_gis_ortho">
+      <static>true</static>
+      <pose>20.0 16.0 130.0 0 1.5708 0</pose>
+      <link name="link">
+        <sensor name="camera_gis" type="camera">
+          <camera>
+            <horizontal_fov>1.40</horizontal_fov>
+            <image><width>1920</width><height>1080</height></image>
+            <clip><near>1.0</near><far>2000</far></clip>
+          </camera>
+          <always_on>1</always_on><update_rate>10</update_rate><topic>/camera/gis_ortho</topic>
+        </sensor>
+      </link>
     </model>
 
     <!-- ════════════════════════════════════════════════════════════════════
          5x AUTONOMOUS PEGASUS UAVs (uav_alpha .. uav_epsilon)
+         Exact Blender Starting Poses:
+           Alpha   : (16.02, -15.02, 54.02)
+           Beta    : (24.98,  15.01, 57.02)
+           Gamma   : (17.98,   5.01, 66.02)
+           Delta   : (32.01,  11.98, 54.02)
+           Epsilon : ( 5.02,  -4.99, 52.02)
          50Hz Odometry + Velocity Control + NavSat + IMU + Emissive Beacons
     ════════════════════════════════════════════════════════════════════════ -->
 
-    <!-- 🚁 UAV_ALPHA — Cyan Lead Drone -->
+    <!-- 🚁 UAV_ALPHA — Cyan Lead Drone (Southern River Corridor) -->
     <model name="uav_alpha">
-      <pose>15.0 0.0 0.9 0 0 0</pose>
+      <pose>16.02 -15.02 54.02 0 0 1.57</pose>
       <static>false</static>
       <link name="base_link">
         <gravity>false</gravity>
@@ -359,9 +420,9 @@ Features:
       <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
     </model>
 
-    <!-- 🚁 UAV_BETA — Orange Recon Drone -->
+    <!-- 🚁 UAV_BETA — Orange Recon Drone (Eastern Hillside Sector) -->
     <model name="uav_beta">
-      <pose>0.0 15.0 0.9 0 0 0</pose>
+      <pose>24.98 15.01 57.02 0 0 1.57</pose>
       <static>false</static>
       <link name="base_link">
         <gravity>false</gravity>
@@ -380,9 +441,9 @@ Features:
       <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
     </model>
 
-    <!-- 🚁 UAV_GAMMA — Green Flank Drone -->
+    <!-- 🚁 UAV_GAMMA — Green Flank / High Relay Drone (66m Center Overlook) -->
     <model name="uav_gamma">
-      <pose>-15.0 0.0 0.9 0 0 0</pose>
+      <pose>17.98 5.01 66.02 0 0 1.57</pose>
       <static>false</static>
       <link name="base_link">
         <gravity>false</gravity>
@@ -401,9 +462,9 @@ Features:
       <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
     </model>
 
-    <!-- 🚁 UAV_DELTA — Magenta Sweep Drone -->
+    <!-- 🚁 UAV_DELTA — Magenta Sweep Drone (Far East Boundary) -->
     <model name="uav_delta">
-      <pose>0.0 -15.0 0.9 0 0 0</pose>
+      <pose>32.01 11.98 54.02 0 0 1.57</pose>
       <static>false</static>
       <link name="base_link">
         <gravity>false</gravity>
@@ -422,9 +483,9 @@ Features:
       <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
     </model>
 
-    <!-- 🚁 UAV_EPSILON — Yellow Central Pivot Drone -->
+    <!-- 🚁 UAV_EPSILON — Yellow Central Pivot Drone (Western River Bank) -->
     <model name="uav_epsilon">
-      <pose>10.0 10.0 0.9 0 0 0</pose>
+      <pose>5.02 -4.99 52.02 0 0 1.57</pose>
       <static>false</static>
       <link name="base_link">
         <gravity>false</gravity>
