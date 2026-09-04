@@ -57,18 +57,27 @@ pkill -f "swarm_fixed_path_node.py" 2>/dev/null || true
 pkill -f "mavlink_sitl_bridge.py" 2>/dev/null || true
 
 # ── Step 1: Check / Launch Gazebo Sim 8 ──────────────────────────────────────
-WORLD_FILE="$PROJECT_ROOT/sutra_ws/src/sutra_sim/worlds/sandbox_swarm_world.sdf"
+WORLD_NAME="sutra_coastal_flood_world"
+WORLD_FILE="$PROJECT_ROOT/sutra_ws/src/sutra_sim/worlds/sutra_coastal_flood_world.sdf"
 
-if pgrep -f "gz sim.*sandbox_swarm_world" > /dev/null; then
-    echo "🌍 [1/5] Gazebo Sim 8 is already running. Resetting world poses..."
-    gz service -s /world/sandbox_swarm_world/control --reqtype gz.msgs.WorldControl --reptype gz.msgs.Boolean --req "reset: {all: true}" > /dev/null 2>&1 || true
+if [ "$1" == "--sandbox" ]; then
+    WORLD_NAME="sandbox_swarm_world"
+    WORLD_FILE="$PROJECT_ROOT/sutra_ws/src/sutra_sim/worlds/sandbox_swarm_world.sdf"
+    echo "🌍 Mode: Sandbox Arena Selected"
+else
+    echo "🌊 Mode: Authentic Coastal Flood Disaster World (Kuttanad, Kerala) Selected"
+fi
+
+if pgrep -f "gz sim.*${WORLD_NAME}" > /dev/null; then
+    echo "🌍 [1/5] Gazebo Sim 8 is already running (${WORLD_NAME}). Resetting world poses..."
+    gz service -s /world/${WORLD_NAME}/control --reqtype gz.msgs.WorldControl --reptype gz.msgs.Boolean --req "reset: {all: true}" > /dev/null 2>&1 || true
     echo "   ✅ World poses reset to home helipads."
 else
-    echo "🌍 [1/5] Launching Gazebo Sim 8 with 5-UAV Sandbox Arena..."
+    echo "🌍 [1/5] Launching Gazebo Sim 8 with 5-UAV ${WORLD_NAME}..."
     gz sim -r "$WORLD_FILE" > /tmp/sutra_gazebo.log 2>&1 &
     CHILD_PIDS+=($!)
-    echo "   ⏳ Waiting 3.5s for Gazebo physics engine to initialize..."
-    sleep 3.5
+    echo "   ⏳ Waiting 4.0s for Gazebo physics engine to initialize..."
+    sleep 4.0
     echo "   ✅ Gazebo Sim 8 active (PID: ${CHILD_PIDS[-1]})."
 fi
 

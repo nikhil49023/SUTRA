@@ -107,9 +107,13 @@ class DroneTelemetry:
         self.has_physical_telemetry = False
 
     def on_odometry(self, x: float, y: float, z: float, qx: float, qy: float, qz: float, qw: float, vx: float, vy: float, vz: float):
-        self.current_alt_agl = max(0.0, z)
+        # Sanitize physics simulator impulse anomalies
+        vx = 0.0 if (math.isnan(vx) or math.isinf(vx) or abs(vx) > 100.0) else vx
+        vy = 0.0 if (math.isnan(vy) or math.isinf(vy) or abs(vy) > 100.0) else vy
+        vz = 0.0 if (math.isnan(vz) or math.isinf(vz) or abs(vz) > 50.0) else vz
+        self.current_alt_agl = max(0.0, z) if not (math.isnan(z) or math.isinf(z)) else 0.0
         self.roll_deg, self.pitch_deg, self.yaw_deg = quat_to_euler(qx, qy, qz, qw)
-        self.groundspeed = math.sqrt(vx**2 + vy**2)
+        self.groundspeed = min(50.0, math.sqrt(vx**2 + vy**2))
         self.climb_rate = vz
 
         self.current_lat = self.lat_origin + (x * 8.99e-6)
@@ -449,9 +453,10 @@ class SutraMavlinkSITLBridge:
         alt_msl = drone.alt_origin_msl + drone.current_alt_agl
         alt_agl = drone.current_alt_agl
 
-        vx_cm = int(drone.groundspeed * math.cos(math.radians(drone.yaw_deg)) * 100)
-        vy_cm = int(drone.groundspeed * math.sin(math.radians(drone.yaw_deg)) * 100)
-        vz_cm = int(drone.climb_rate * 100)
+        vx_cm = max(-32767, min(32767, int(drone.groundspeed * math.cos(math.radians(drone.yaw_deg)) * 100)))
+        vy_cm = max(-32767, min(32767, int(drone.groundspeed * math.sin(math.radians(drone.yaw_deg)) * 100)))
+        vz_cm = max(-32767, min(32767, int(drone.climb_rate * 100)))
+        hdg_cdeg = max(0, min(65535, int((drone.yaw_deg % 360.0) * 100)))
 
         self.mav.mav.global_position_int_send(
             self.get_boot_time_ms(),
@@ -460,18 +465,18 @@ class SutraMavlinkSITLBridge:
             int(alt_msl * 1000),
             int(alt_agl * 1000),
             vx_cm, vy_cm, vz_cm,
-            int(drone.yaw_deg * 100)
+            hdg_cdeg
         )
 
         # 4. VFR HUD
         throttle = 65 if drone.climb_rate > 0.5 else 54
         self.mav.mav.vfr_hud_send(
-            drone.groundspeed,
-            drone.groundspeed,
-            int(drone.yaw_deg),
+            float(drone.groundspeed),
+            float(drone.groundspeed),
+            int(drone.yaw_deg % 360.0),
             throttle,
-            drone.current_alt_agl,
-            drone.climb_rate
+            float(drone.current_alt_agl),
+            float(drone.climb_rate)
         )
 
         # 5. Slow Telemetry (1 Hz)
@@ -506,8 +511,8 @@ class SutraMavlinkSITLBridge:
                 int(drone.current_lon * 1e7),
                 int((drone.alt_origin_msl + drone.current_alt_agl) * 1000),
                 eph, epv,
-                int(drone.groundspeed * 100),
-                int(drone.yaw_deg * 100),
+                max(0, min(65535, int(drone.groundspeed * 100))),
+                hdg_cdeg,
                 sats
             )
 
@@ -618,10 +623,14 @@ if ROS2_AVAILABLE:
                 self.get_logger().error(f"Failed to process swarm command: {e}")
 
         def _odom_callback(self, msg: Odometry, did: str):
-            p = msg.pose.pose.position
-            q = msg.pose.pose.orientation
-            v = msg.twist.twist.linear
-            self.bridge.on_gazebo_odometry(p.x, p.y, p.z, q.x, q.y, q.z, q.w, v.x, v.y, v.z, drone_id=did)
+            try:
+                p = msg.pose.pose.position
+                q = msg.pose.pose.orientation
+                v = msg.twist.twist.linear
+                self.bridge.on_gazebo_odometry(p.x, p.y, p.z, q.x, q.y, q.z, q.w, v.x, v.y, v.z, drone_id=did)
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
 
 
 def start_ros2_listener(bridge: SutraMavlinkSITLBridge):
@@ -630,7 +639,12 @@ def start_ros2_listener(bridge: SutraMavlinkSITLBridge):
     try:
         rclpy.init(args=None)
         node = GazeboSwarmOdometrySubscriber(bridge)
-        threading.Thread(target=lambda: rclpy.spin(node), daemon=True).start()
+        def spin_worker():
+            try:
+                rclpy.spin(node)
+            except Exception:
+                pass
+        threading.Thread(target=spin_worker, daemon=True).start()
     except Exception as e:
         print(f"ℹ️  Standalone SITL mode active ({e})")
 

@@ -356,6 +356,9 @@ class SwarmFixedPathNode(Node):
         self.vx = msg.twist.twist.linear.x
         self.vy = msg.twist.twist.linear.y
         self.vz = msg.twist.twist.linear.z
+        if not self.has_pose:
+            self.has_pose = True
+            self.initial_z = msg.pose.pose.position.z
         self.has_pose = True
 
         # Broadcast own pose for GCS
@@ -435,9 +438,10 @@ class SwarmFixedPathNode(Node):
                 vx_final, vy_final, vz_final = self._orca_velocity(vx_des, vy_des, vz_des)
                 self._apply_wind_compensated_twist(vx_final, vy_final, vz_final)
             else:
-                # Over home pad -> automated safe descent
-                if self.z > 0.4:
-                    self._send_twist(0.0, 0.0, -0.8)
+                # Over home pad -> automated safe descent to initial touchdown altitude
+                landing_z = getattr(self, "initial_z", 0.3)
+                if self.z > (landing_z + 0.15):
+                    self._send_twist(0.0, 0.0, -0.6)
                 else:
                     self._send_twist(0.0, 0.0, 0.0)
             return
