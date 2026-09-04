@@ -1,0 +1,22 @@
+<?xml version="1.0" ?>
+<sdf version="1.8">
+  <model name="forest_canopy">
+    <static>true</static>
+    <link name="terrain_link">
+      <collision name="collision">
+        <geometry>
+          <mesh>
+            <uri>model://forest_canopy/meshes/forest_canopy_world.obj</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <mesh>
+            <uri>model://forest_canopy/meshes/forest_canopy_world.obj</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+  </model>
+</sdf>

@@ -1,0 +1,118 @@
+<?xml version="1.0" ?>
+<sdf version="1.8">
+  <world name="forest_canopy_sar_world">
+    <!-- DART 500Hz Solver Profile (Gate G1 Compliant) -->
+    <physics name="500hz_physics" type="dart">
+      <max_step_size>0.002</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>500</real_time_update_rate>
+    </physics>
+
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+
+    <!-- WGS84 Georeferenced Coordinates: Western Ghats Forest Reserve -->
+    <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <latitude_deg>11.5248</latitude_deg>
+      <longitude_deg>76.1284</longitude_deg>
+      <elevation>840.0</elevation>
+      <heading_deg>0.0</heading_deg>
+    </spherical_coordinates>
+
+    <!-- Atmospheric & Sun Lighting with Forest Shadowing -->
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>20 40 100 0 0 0</pose>
+      <diffuse>0.85 0.82 0.75 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.25 -0.45 -0.85</direction>
+    </light>
+
+    <!-- Forest Canopy Environment Model -->
+    <include>
+      <uri>model://forest_canopy</uri>
+      <pose>0 0 0 0 0 0</pose>
+    </include>
+
+    <!-- 5 Autonomous Hexacopters in Echelon SAR Formation -->
+    <!-- UAV ALPHA (Lead Scout - Under-Canopy Penetration at 6.0m AGL) -->
+    <model name="uav_alpha">
+      <pose>0.0 -15.0 6.0 0 0 1.57</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <visual name="v"><geometry><cylinder><radius>0.45</radius><length>0.15</length></cylinder></geometry>
+        <material><ambient>0 0.8 1 1</ambient><diffuse>0 0.8 1 1</diffuse><emissive>0 0.4 0.8 1</emissive></material></visual>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <topic>/uav_alpha/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+    </model>
+
+    <!-- UAV BETA (West Ridge Scout at 7.0m AGL) -->
+    <model name="uav_beta">
+      <pose>-20.0 -10.0 7.0 0 0 1.57</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <visual name="v"><geometry><cylinder><radius>0.45</radius><length>0.15</length></cylinder></geometry>
+        <material><ambient>1 0.4 0 1</ambient><diffuse>1 0.4 0 1</diffuse><emissive>0.8 0.3 0 1</emissive></material></visual>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <topic>/uav_beta/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+    </model>
+
+    <!-- UAV GAMMA (East Ravine Scout at 6.5m AGL) -->
+    <model name="uav_gamma">
+      <pose>20.0 -10.0 6.5 0 0 1.57</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <visual name="v"><geometry><cylinder><radius>0.45</radius><length>0.15</length></cylinder></geometry>
+        <material><ambient>0.2 1 0.2 1</ambient><diffuse>0.2 1 0.2 1</diffuse><emissive>0.1 0.6 0.1 1</emissive></material></visual>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <topic>/uav_gamma/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+    </model>
+
+    <!-- UAV DELTA (Perimeter Escort at 8.0m AGL) -->
+    <model name="uav_delta">
+      <pose>35.0 -5.0 8.0 0 0 1.57</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <visual name="v"><geometry><cylinder><radius>0.45</radius><length>0.15</length></cylinder></geometry>
+        <material><ambient>1 0.2 0.8 1</ambient><diffuse>1 0.2 0.8 1</diffuse><emissive>0.7 0.1 0.5 1</emissive></material></visual>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <topic>/uav_delta/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+    </model>
+
+    <!-- UAV EPSILON (Above-Canopy RF Relay at 22.0m AGL) -->
+    <model name="uav_epsilon">
+      <pose>0.0 0.0 22.0 0 0 1.57</pose>
+      <static>false</static>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <visual name="v"><geometry><cylinder><radius>0.50</radius><length>0.18</length></cylinder></geometry>
+        <material><ambient>1 1 0 1</ambient><diffuse>1 1 0 1</diffuse><emissive>0.8 0.8 0 1</emissive></material></visual>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <topic>/uav_epsilon/gazebo/command/twist</topic>
+      </plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+    </model>
+  </world>
+</sdf>
