@@ -29,7 +29,7 @@ By leveraging your **already owned Robu.in inventory** (ESP32-S3 AI CAM, ESP-WRO
 | **Swarm Comms & Consensus** | **ESP32 + LoRa Ra-02 (433MHz)** *(Owned)* | 1 | ESP-NOW 2.4GHz semantic tensor mesh + 433MHz LoRa SwarmRAFT GCS link up to 5km. | **₹0** | **$0** |
 | **GCS Serial Bridge** | **CP2102 USB-to-TTL Converter** *(Owned)* | 1 | Connects GCS receiver node to Mapbox GL JS 3D GCS dashboard over serial. | **₹0** | **$0** |
 | **GPS-Denied Sensors** | **Matek / ThoneFlow 3901U Optical Flow + VL53L1X LiDAR** | 1 | Optical flow position hold + laser altitude hold in GPS-denied forests/indoors. | ₹2,350 | $28 |
-| **Frame** | **F450 Glass Fiber Quadcopter Frame** | 1 | Durable, easy to repair, integrated PCB power distribution board. | ₹850 | $10 |
+| **Frame** | **F450 Frame (Multi-Rotor Prototype) / F550 Hexacopter** | 1 | Durable, easy to repair, integrated PCB power distribution board. | ₹850 | $10 |
 | **Motors & ESCs** | **A2212 1400KV Motors + 30A ESCs (Combo Set of 4)** | 1 | High-thrust brushless motor & ESC combo kit. | ₹2,400 | $29 |
 | **Propellers** | **1045 Nylon Propellers (2 Pairs)** | 1 | 10-inch propellers optimized for 3S 2212 motor setup. | ₹180 | $2 |
 | **Power System** | **3S 2200mAh 35C LiPo Battery + 3A UBEC** | 1 | Provides 12–15 mins flight endurance + 5V regulated power to ESP32. | ₹1,620 | $20 |

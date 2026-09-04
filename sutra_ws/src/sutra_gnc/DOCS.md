@@ -110,6 +110,7 @@ sutra_gnc (ROS 2 Package) & sutra_sim (Simulation Package)
 │   └── phase1_flight.launch.py            # Master 1-click launcher (Gazebo + Bridges + Flight Nodes)
 ├── sutra_gnc/
 │   ├── px4_offboard_controller.py         # Native PX4 MicroXRCE-DDS Offboard Flight Controller (50Hz)
+│   ├── motor_failure_fallback_node.py     # Fault-Tolerant Hexacopter/Octacopter Active Motor Loss Reallocation
 │   ├── single_quadcopter_offboard_node.py # 50Hz Dual-Mode Offboard Pursuit & Teleop Node
 │   ├── moving_target_ring_node.py         # Dynamic Infinite Checkpoint Ring & Marker Generator
 │   ├── laptop_teleop_node.py              # Live Keyboard Teleop & Mode Switcher
@@ -117,7 +118,10 @@ sutra_gnc (ROS 2 Package) & sutra_sim (Simulation Package)
 │   ├── orca_avoidance.py                  # ORCA 3D Reciprocal Collision Avoidance Solver (Gate G5)
 │   └── octomap_generator.py               # 3D Voxel Occupancy Grid Generator (0.10m)
 ├── models/
-│   └── x3_uav/                            # Prebuilt OpenRobotics X3 3D Collada Quadcopter Meshes
+│   ├── sutra_hexacopter/                  # Fault-Tolerant 6-Rotor Multi-Rotor Airframe with Active Fallback
+│   ├── sutra_octacopter/                  # Heavy-Lift 8-Rotor Airframe (Dual-Motor Loss Survivable)
+│   └── x3_uav/                            # Prebuilt OpenRobotics X3 3D Collada Multi-Rotor Meshes
 └── worlds/
-    └── phase1_quadcopter_world.sdf        # High-Fidelity Prebuilt Simulation World Specification
+    ├── phase1_quadcopter_world.sdf        # High-Fidelity Prebuilt Simulation World Specification
+    └── forest_canopy_sar_world.sdf        # Dense Forest Canopy VIO GPS-Denied SAR World
 ```

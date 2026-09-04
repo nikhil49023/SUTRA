@@ -50,7 +50,8 @@
 ### Slide 4: Subsystem A — Flight Control Autonomy & ArduPilot Integration (Nikhil — 55 Seconds)
 > *"In real disaster flight, simple waypoint flying causes deadlocks and crashes. We engineered a full **ArduPilot and PX4 SITL offboard bridge streaming 50Hz setpoints**:
 > • **Dynamic Aerodynamic Disturbance Rejection**: Our neuro-adaptive flight controller detects and cancels **18 m/s turbulent crosswinds** in 0.040 milliseconds, maintaining stable level flight even through narrow mountain corridors.
-> • **Jerk-Free Quintic Splines**: We evaluate $C^2$-continuous quintic polynomial trajectory ribbons that satisfy real quadcopter thrust and tilt limits ($< 4.20\text{ m/s}^3$ jerk), preventing violent motor oscillations.
+> • **Jerk-Free Quintic Splines**: We evaluate $C^2$-continuous quintic polynomial trajectory ribbons that satisfy real fault-tolerant hexacopter and octacopter thrust and tilt limits ($< 4.20\text{ m/s}^3$ jerk), preventing violent motor oscillations.
+> • **Fault-Tolerant Multi-Rotor Redundancy**: Upgraded from fragile quadcopters to hexacopter ($N=6$) and octacopter ($N=8$) airframes with active motor failure fallback (`motor_failure_fallback_node.py`), maintaining stable flight and controlled landing even under 1–2 sudden rotor thrust losses.
 > • **Guaranteed Collision Barrier**: We enforce an active **Control Barrier Function (C3BF)** safety filter that guarantees a strict 2.80-meter clearance barrier between drones at all times.
 > • **GPS-Denied Failover**: When GPS is jammed or lost in ravines, our EKF2 seamlessly falls back to Visual-Inertial Odometry, preventing catastrophic fly-aways."*
 
@@ -90,7 +91,7 @@
 ---
 
 ### Slide 10: Unit Economics, Impact & Conclusion (Harika — 10 Seconds)
-> *"While commercial defense swarms cost upwards of $50,000, SUTRA’s architecture runs on student budgets starting at just **₹12,000 to ₹22,450**. SUTRA directly advances UN SDGs 9, 11, and 3, saving human lives and empowering rescue personnel. Thank you, and we are now ready for your questions!"*
+> *"While commercial defense swarms cost upwards of $50,000 (₹40,00,000), SUTRA’s complete 5-hexacopter swarm costs just **₹42,850 per drone** (₹2,14,250 for the entire 5-drone system in two Pelican 1650 cases). SUTRA directly advances UN SDGs 9, 11, and 3, saving human lives and empowering rescue personnel. Thank you, and we are now ready for your questions!"*
 
 ---
 
@@ -100,7 +101,7 @@
 * **Answer**: *"Traditional codecs (H.264/JPEG) compress images into bitstreams and apply discrete channel coding (like LDPC). If the bit error rate exceeds the error-correcting code's capacity, the entire frame fails to decode (the cliff effect). Deep JSCC trains an end-to-end convolutional autoencoder where the bottleneck layer directly outputs continuous complex-valued analog symbols matched to the physical channel SNR. Under severe noise, the output degrades gracefully like analog TV with slight blur, while preserving human thermal blobs and victim shapes without freezing."*
 
 ### Q2: *"Why use Tesla FSD-style Occupancy and Quintic Splines for drones instead of simple A* or RRT*?"*
-* **Answer**: *"Grid-based A* or sampling-based RRT* produce piecewise linear paths with sharp corner waypoints that violate quadcopter actuator dynamics, causing jerky flight, rotor downwash instability, and high tracking RMSE. SUTRA-FSD evaluates a bundle of candidate quintic polynomial ribbons $p(t) = a_0 + a_1 t + \dots + a_5 t^5$ that have closed-form $\mathcal{C}^2$ continuity, guaranteeing bounded jerk ($< 4.20\text{ m/s}^3$) and optimal tracking over a $32\times 32\times 16$ spatio-temporal voxel grid with temporal decay memory."*
+* **Answer**: *"Grid-based A* or sampling-based RRT* produce piecewise linear paths with sharp corner waypoints that violate multi-rotor (hexacopter/octacopter) actuator dynamics, causing jerky flight, rotor downwash instability, and high tracking RMSE. SUTRA-FSD evaluates a bundle of candidate quintic polynomial ribbons $p(t) = a_0 + a_1 t + \dots + a_5 t^5$ that have closed-form $\mathcal{C}^2$ continuity, guaranteeing bounded jerk ($< 4.20\text{ m/s}^3$) and optimal tracking over a $32\times 32\times 16$ spatio-temporal voxel grid with temporal decay memory."*
 
 ### Q3: *"How do you guarantee that the drones won't crash into each other?"*
 * **Answer**: *"We use a 2-tier defense: First, passive geometric separation via **3D Multi-Layered Echelon altitudes** ($3.6\text{m}$ to $4.4\text{m}$) that eliminates coplanar intersection. Second, active mathematical safety via our **C3BF Control Barrier Function** safety filter, which enforces forward-invariance $h(x) \ge 0$ ($R \ge 2.80\text{m}$) by projecting acceleration commands onto reciprocal collision half-spaces in 0.06 milliseconds."*

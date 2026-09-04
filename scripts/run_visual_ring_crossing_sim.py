@@ -6,10 +6,10 @@ Author: Tech Lead Nikhil (Subsystem A Lead)
 
 Features:
 - Dual-Viewport Real-Time Visualizer:
-  1. 3D Spatial Trajectory View: Isometric quadcopter meshes, 3D safety bubbles, velocity vectors.
+  1. 3D Spatial Trajectory View: Isometric multi-rotor airframe meshes, 3D safety bubbles, velocity vectors.
   2. 2D Radar & Dynamic Clearance Matrix: Inter-drone pairwise distances, Gate G5 safety barrier (>= 2.80m).
 - SORCA (Smooth ORCA) 3D Collision Avoidance Solver (Springer 2025).
-- Acceleration & Jerk Bounding: Guarantees max physical quadcopter acceleration (<= 2.5 m/s^2).
+- Acceleration & Jerk Bounding: Guarantees max physical multi-rotor acceleration (<= 2.5 m/s^2).
 - Zero Bloat: Self-contained, zero-dependency visual loop with matplotlib/numpy.
 - Keyboard Controls: Space (Pause/Resume), R (Restart), O (Toggle Central Obstacle), S (Toggle SORCA).
 """

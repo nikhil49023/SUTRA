@@ -16,7 +16,7 @@
 | **GPS-Denied Sensor** | **Matek / ThoneFlow 3901U (VL53L1X LiDAR + PMW3901 Optical Flow)** | **₹2,350** | ₹2,400 | **IN STOCK ✅** | **₹2,350** |
 | **Flight Controller** | **SpeedyBee F405 V3 / Omnibus F4 V3 FC** | **₹2,500** | ₹5,059 (Stack) | **IN STOCK ✅** | **₹2,500** |
 | **Motors & ESCs** | **A2212 1400KV Motors + 30A ESCs (Combo Set of 4)** | ₹2,672 (Indiv) | **₹2,400** (Set of 4) | **IN STOCK ✅** | **₹2,400** |
-| **Quadcopter Frame** | **F450 Glass Fiber Quadcopter Frame (Integrated PCB)** | **₹726** | ₹690 | **IN STOCK ✅** | **₹726** |
+| **Airframe (Prototype)** | **F450 Frame (Bench Prototype) / F550 Hexacopter Compatible** | **₹726** | ₹690 | **IN STOCK ✅** | **₹726** |
 | **Power System** | **3S 2200mAh 35C LiPo Battery + 3A UBEC 5V Regulator** | **₹1,450** | ₹1,550 | **IN STOCK ✅** | **₹1,450** |
 | **Propellers** | **1045 Nylon Propellers (2 Pairs)** | **₹180** | ₹200 | **IN STOCK ✅** | **₹180** |
 | **Edge AI Compute** | **DFRobot ESP32-S3 AI CAM** | *Owned* | *Owned* | **OWNED ✅** | **₹0** |
@@ -72,7 +72,7 @@
 
 ---
 
-### 🚁 D. Quadcopter Frame: F450 Glass Fiber Frame
+### 🚁 D. Airframe: F450 Multi-Rotor Frame (Bench Prototype) & F550 Hexacopter (Field Deployable)
 * **Wheelbase:** 450 mm diagonal motor-to-motor distance.
 * **Materials:** High-impact Polyamide Nylon arms + Glass Fiber PCB center plates.
 * **Integrated Power Distribution Board (PDB):** Gold-plated PCB bottom plate for soldering 4x ESC power leads directly.

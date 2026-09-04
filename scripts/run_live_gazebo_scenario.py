@@ -80,7 +80,7 @@ class GazeboLiveSwarmSimDirector:
     def run_live_simulation(self):
         print_banner("PROJECT SUTRA — LIVE GAZEBO SIM 8 SCENARIO EXECUTION")
         print("🌍 World: master_swarm_disaster_world.sdf (San Francisco / Kedarnath Disaster Twin)")
-        print(f"🛰️ Origin: ({ORIGIN_LAT}° N, {ORIGIN_LON}° W) | Swarm: 5 X3 Quadcopters")
+        print(f"🛰️ Origin: ({ORIGIN_LAT}° N, {ORIGIN_LON}° W) | Swarm: 5 Autonomous Hexacopters")
         print("--------------------------------------------------------------------------------")
 
         # ── STAGE 1: TAKEOFF & SECTOR SEARCH ──────────────────────────────────

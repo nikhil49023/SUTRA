@@ -642,7 +642,7 @@
             <h3>🚁 ArduPilot & PX4 Offboard Autonomy (50Hz)</h3>
             <ul>
               <li><strong>MAVLink & MicroXRCE-DDS Bridge:</strong> 50Hz closed-loop offboard setpoints with verified $RMSE < 0.042\text{m}$.</li>
-              <li><strong>Jerk-Free Quintic Splines:</strong> Closed-form $\mathcal{C}^2$ polynomials ($< 4.20\text{ m/s}^3$ jerk) respecting quadcopter tilt and actuator dynamics.</li>
+              <li><strong>Jerk-Free Quintic Splines:</strong> Closed-form $\mathcal{C}^2$ polynomials ($< 4.20\text{ m/s}^3$ jerk) respecting hexacopter / octacopter tilt and actuator dynamics.</li>
               <li><strong>GPS-Denied VIO Failover:</strong> Seamless optical-flow odometry fallback prevents canyon fly-aways.</li>
             </ul>
           </div>
@@ -1081,8 +1081,8 @@
         <div class="card highlight">
           <h3>💰 Student-Budget Unit Economics</h3>
           <ul>
-            <li><strong>Option A (Full SITL Digital Twin):</strong> $269 / ₹22,450 — 1 Physical F450 Drone + Gazebo Sim 8 Digital Twin.</li>
-            <li><strong>Option B (Micro Swarm Hardware):</strong> $145 / ₹12,000 — 3 ESP32-S3 Micro Quadcopters with 915MHz LoRa mesh.</li>
+            <li><strong>Autonomous Hexacopter Airframe:</strong> $515 / ₹42,850 per drone (Pixhawk 2.4.8 + RPi 4 Companion + Optical Flow/LiDAR + LoRa).</li>
+            <li><strong>Complete 5-UAV Deployable Swarm:</strong> $2,570 / ₹2,14,250 — Complete 5-hexacopter swarm in 2x Pelican 1650 transit cases with field GCS.</li>
             <li><strong>Commercial Comparison:</strong> Standard defense swarms cost &gt; $50,000; SUTRA delivers 95% capability at &lt; 1% cost.</li>
           </ul>
         </div>

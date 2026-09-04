@@ -21,8 +21,8 @@ Subsystem Sim provides the high-fidelity **Disaster Digital Twin Simulation Envi
    - WGS84 Georeferenced Origin (San Francisco Disaster Twin: `37.774929 N`, `-122.419416 W`).
    - DART Physics Engine running at **500 Hz** solver frequency.
    - Dynamic environment actors (flood ripples, collapsed structures, foliage log-normal RF shadowing obstacles).
-2. **UAV Swarm SITL Models** (`models/uav_alpha_lead.sdf`, `models/uav_beta_relay.sdf`):
-   - Quadrotor dynamics with PX4 Offboard motor plugins.
+2. **UAV Swarm SITL Models** (`models/uav_alpha_lead.sdf`, `models/sutra_hexacopter/`, `models/sutra_octacopter/`):
+   - Multi-rotor dynamics (fault-tolerant Hexacopter / Octacopter) with PX4 Offboard motor plugins and active motor loss reallocation.
    - Dual Camera Rig: RGB Optical ($1920 \times 1080 @ 30\text{ Hz}$) + LWIR Thermal Infrared ($640 \times 480 @ 30\text{ Hz}$) + Depth PointCloud Camera ($15\text{ Hz}$).
    - Visual-Inertial Odometry (VIO) IMU plugin ($200\text{ Hz}$).
 3. **NS-3 C++ 802.11s FANET Simulator** (`ns3/sutra_fanet_swarm_sim.cc`):
@@ -99,9 +99,12 @@ sutra_ws/src/sutra_sim/
 │   ├── master_swarm_disaster_world.sdf   # Gazebo Sim 8 Master Swarm Disaster World (Subsystems A+B+C)
 │   ├── submerged_village_flood_world.sdf # Blender-exported Submerged Indian Village Flood World
 │   ├── real_world_digital_twin_swarm.sdf # Gazebo Sim 8 SITL Digital Twin World
+│   ├── forest_canopy_sar_world.sdf       # Dense Forest Canopy VIO GPS-Denied SAR World
 │   └── high_quality_disaster_swarm_world.sdf # High-Fidelity Disaster World
 ├── models/
-│   ├── submerged_village_flood/           # Blender OBJ village model (meshes/submerged_village.obj)
+│   ├── sutra_hexacopter/                 # Fault-Tolerant 6-Rotor Airframe (Single-Motor Loss Survivable)
+│   ├── sutra_octacopter/                 # Heavy-Lift 8-Rotor Airframe (Dual-Motor Loss Survivable)
+│   ├── submerged_village_flood/          # Blender OBJ village model (meshes/submerged_village.obj)
 │   ├── uav_alpha_lead.sdf                # Swarm Drone Lead Model with Camera/IMU Rigs
 │   └── uav_beta_relay.sdf                # Swarm Drone Relay Model
 ├── launch/

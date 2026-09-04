@@ -337,7 +337,7 @@ set_content_box(prs.slides[6], s7_bullets)
 s8_bullets = [
     {
         "header": "• Gazebo Sim 8 Digital Twin Swarm Execution:",
-        "text": "Spawned and flight-tested a 5-UAV autonomous quadcopter swarm in a 220x220m submerged Kedarnath flood world under 14.5 m/s wind shear and monsoon precipitation with 0 collisions.",
+        "text": "Spawned and flight-tested a 5-UAV autonomous hexacopter swarm in a 220x220m submerged Kedarnath flood world under 14.5 m/s wind shear and monsoon precipitation with 0 collisions.",
         "size": 11, "space_after": 4
     },
     {
@@ -510,7 +510,7 @@ s12_bullets = [
     },
     {
         "header": "• Phase 5 — Physical Swarm DGCA Green-Zone Flight Validation:",
-        "text": "Transitioning from Gazebo Sim 8 digital twin to a fleet of 5 physical Pixhawk 6C carbon-fiber quadcopters with certified field trials conducted alongside NDRF Battalions.",
+        "text": "Transitioning from Gazebo Sim 8 digital twin to a fleet of 5 physical Pixhawk 6C carbon-fiber hexacopters with certified field trials conducted alongside NDRF Battalions.",
         "size": 11, "space_after": 4
     }
 ]
