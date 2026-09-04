@@ -1,6 +1,6 @@
 # 📡 Subsystem B — Comms & Digital Twin Simulation Master Specification
 
-[![PyTest Verification](https://img.shields.io/badge/PyTest-54%2F54%20PASSED-brightgreen.svg)]()
+[![PyTest Verification](https://img.shields.io/badge/PyTest-59%2F59%20PASSED-brightgreen.svg)]()
 [![Hero Feature](https://img.shields.io/badge/Hero_Feature-Deep_JSCC_Neural_Transceiver-cyan.svg)]()
 [![Gate G2 Compliance](https://img.shields.io/badge/Gate_G2-VERIFIED-brightgreen.svg)]()
 [![Dual Launch Ready](https://img.shields.io/badge/Dual_Launch-READY-brightgreen.svg)]()
@@ -80,5 +80,5 @@ sutra_ws/src/sutra_comms/
 │   └── gcs_gateway_bridge.py          # Bi-directional WebSocket Remote GCS Gateway (Port 9090)
 ├── models/
 │   └── universal_deep_jscc.pth        # PyTorch Neural Comms Weights (0dB-20dB Trained)
-└── test/                              # 33 Unit & Stress Tests (Passes in ~7.5s)
+└── test/                              # 59 Unit & Stress Tests (Passes in ~13.7s)
 ```

@@ -36,6 +36,10 @@ try:
 except ImportError:
     RCLPY_AVAILABLE = False
     Node = object
+    Image = object
+    String = object
+    QoSProfile = object
+    ReliabilityPolicy = object
 
 
 class PerceptronSNREstimator(nn_base):

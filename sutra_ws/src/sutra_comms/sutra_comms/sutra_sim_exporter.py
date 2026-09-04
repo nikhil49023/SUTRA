@@ -46,6 +46,11 @@ try:
 except ImportError:
     RCLPY_AVAILABLE = False
     Node = object
+    Image = object
+    Odometry = object
+    String = object
+    QoSProfile = object
+    ReliabilityPolicy = object
 
 try:
     from sutra_comms.perceptron_jscc import PerceptronSemanticCommsPipeline
@@ -91,6 +96,17 @@ class SutraSimExporter(Node if RCLPY_AVAILABLE else object):
 
         self.last_frame_times: Dict[str, float] = {d: 0.0 for d in self.drones}
 
+        # EKF2 VIO state cache — updated from /{did}/vio/odometry ROS2 subscription
+        self.vio_state: Dict[str, dict] = {}
+        for d in self.drones:
+            self.vio_state[d] = {
+                "local_x": 0.0, "local_y": 0.0, "local_z": 0.0,
+                "qw": 1.0, "qx": 0.0, "qy": 0.0, "qz": 0.0,
+                "vx": 0.0, "vy": 0.0, "vz": 0.0,
+                "mode": "GPS_PRIMARY",
+                "timestamp": 0.0
+            }
+
         if self.is_ros_node:
             sensor_qos = QoSProfile(depth=2, reliability=ReliabilityPolicy.BEST_EFFORT)
             
@@ -111,6 +127,19 @@ class SutraSimExporter(Node if RCLPY_AVAILABLE else object):
                     lambda msg, d=did: self._on_camera(msg, d, "THERMAL"),
                     sensor_qos
                 )
+                # EKF2 VIO odometry output (50Hz from vio_localization.py)
+                self.create_subscription(
+                    Odometry, f"/{did}/vio/odometry",
+                    lambda msg, d=did: self._on_vio_odometry(msg, d),
+                    sensor_qos
+                )
+
+            # VIO status subscription (shared /vio/status topic)
+            self.create_subscription(
+                String, "/vio/status",
+                self._on_vio_status_shared,
+                10
+            )
 
             # Uplink command publishers
             self.pub_rtl = self.create_publisher(String, "/sutra/cmd/rtl", 10)
@@ -138,6 +167,70 @@ class SutraSimExporter(Node if RCLPY_AVAILABLE else object):
             "vx": float(v.x), "vy": float(v.y), "vz": float(v.z),
             "local_x": float(p.x), "local_y": float(p.y), "local_z": float(p.z)
         })
+
+    def _on_vio_odometry(self, msg: Odometry, did: str):
+        """Caches EKF2 fused VIO pose from /{did}/vio/odometry (published at 50Hz by vio_localization.py)."""
+        p = msg.pose.pose.position
+        v = msg.twist.twist.linear
+        q = msg.pose.pose.orientation
+        stamp = msg.header.stamp
+        ts = float(stamp.sec) + float(stamp.nanosec) * 1e-9 if (stamp.sec or stamp.nanosec) else time.time()
+        self.vio_state[did].update({
+            "local_x": float(p.x), "local_y": float(p.y), "local_z": float(p.z),
+            "qw": float(q.w), "qx": float(q.x), "qy": float(q.y), "qz": float(q.z),
+            "vx": float(v.x), "vy": float(v.y), "vz": float(v.z),
+            "timestamp": ts
+        })
+
+    def _on_vio_status_shared(self, msg):
+        """Parses /vio/status string and updates mode for the first drone (uav_alpha lead)."""
+        # Status format: "MODE: VIO_FALLBACK_ACTIVE | GPS_HEALTHY: False | POS: (...)"
+        raw = msg.data
+        mode = "GPS_PRIMARY"
+        for token in raw.split("|"):
+            token = token.strip()
+            if token.startswith("MODE:"):
+                mode = token.split(":", 1)[1].strip()
+                break
+        # Update uav_alpha (the primary VIO node drone)
+        self.vio_state["uav_alpha"]["mode"] = mode
+
+    def _broadcast_vio_poses(self):
+        """Broadcasts EKF2 VIO state for all drones as VIO_POSE WebSocket topic.
+
+        WGS84 conversion mirrors _on_odometry(): local ENU (x,y,z) metres →
+        (lat, lon, alt) using origin from SUTRA_ORIGIN_LAT/LON env vars.
+
+        Architecture reference: Merat et al. "Drift-free VSLAM via Digital Twins"
+        (IEEE RA-L 2024, arXiv:2412.08496) — digital twin + VIO tight integration.
+        Swarm multi-agent pattern: Xu et al. "Omni-swarm" (IEEE T-RO 2022, arXiv:2103.04131).
+        """
+        t = time.time()
+        lat_scale = 1.0 / 111319.5
+        lon_scale = 1.0 / (111319.5 * math.cos(math.radians(self.origin_lat)))
+
+        poses = {}
+        for did, vs in self.vio_state.items():
+            poses[did] = {
+                "lat": self.origin_lat + vs["local_x"] * lat_scale,
+                "lon": self.origin_lon + vs["local_y"] * lon_scale,
+                "alt": self.origin_alt + vs["local_z"],
+                "local_x": vs["local_x"],
+                "local_y": vs["local_y"],
+                "local_z": vs["local_z"],
+                "vx": vs["vx"], "vy": vs["vy"], "vz": vs["vz"],
+                "qw": vs["qw"], "qx": vs["qx"], "qy": vs["qy"], "qz": vs["qz"],
+                "mode": vs["mode"],
+                "timestamp": vs["timestamp"] if vs["timestamp"] > 0.0 else t
+            }
+
+        payload = {
+            "topic": "VIO_POSE",
+            "timestamp": t,
+            "origin": {"latitude": self.origin_lat, "longitude": self.origin_lon},
+            "poses": poses
+        }
+        self.broadcast_json(payload)
 
     def _on_camera(self, msg: Image, did: str, stream_type: str):
         now = time.time()
@@ -215,6 +308,9 @@ class SutraSimExporter(Node if RCLPY_AVAILABLE else object):
             "telemetry": self.swarm_telemetry
         }
         self.broadcast_json(payload)
+
+        # Broadcast EKF2 VIO pose state (GPS_PRIMARY / VIO_FALLBACK_ACTIVE / DEAD_RECKONING_IMU_ONLY)
+        self._broadcast_vio_poses()
 
         # Periodically emit synthetic video frame if no clients have seen live frames recently
         for did in self.drones:
