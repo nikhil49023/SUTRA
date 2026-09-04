@@ -33,45 +33,33 @@ for o in bpy.data.objects:
         o.scale = (0.25, 0.25, 0.25)
         o.location = (0, 0, 0)
 
-# 3. Add Multiple Military Soldiers (6-Man Tactical Infantry Squad)
-print("🪖 [2/5] Deploying 6-Man Military Tactical Squad along the forest trail...")
+# 3. Add Multiple Military Soldiers (4-Man Tactical Fireteam)
+print("🪖 [2/5] Deploying 4-Man Military Tactical Fireteam along the forest trail...")
 
 squad_roster = [
     {
         "id": "Soldier_1_Pointman",
         "role": "Forward Scout / Pointman",
-        "pos": (8.20, 7.65, 37.34),
+        "pos": (6.50, 5.50, 37.05),
         "rot_z": math.radians(-38),
     },
     {
         "id": "Soldier_2_SquadLeader",
         "role": "Squad Leader",
-        "pos": (5.77, 4.96, 36.92),
-        "rot_z": math.radians(-42),
+        "pos": (3.50, 3.20, 36.62),
+        "rot_z": math.radians(-35),
     },
     {
-        "id": "Soldier_3_Rifleman_Right",
-        "role": "Rifleman 1 (Flank Right)",
-        "pos": (3.33, 3.12, 36.62),
-        "rot_z": math.radians(-30),
-    },
-    {
-        "id": "Soldier_4_Automatic_Support",
-        "role": "Automatic Rifleman (Flank Left)",
-        "pos": (0.75, 3.33, 36.52),
+        "id": "Soldier_3_Rifleman",
+        "role": "Automatic Rifleman (Flank Support)",
+        "pos": (0.80, 3.40, 36.52),
         "rot_z": math.radians(-50),
     },
     {
-        "id": "Soldier_5_Grenadier",
-        "role": "Grenadier / Mid Guard",
-        "pos": (-1.81, 5.38, 36.28),
-        "rot_z": math.radians(-65),
-    },
-    {
-        "id": "Soldier_6_RearOverwatch",
-        "role": "Rear Guard / Tail Overwatch",
-        "pos": (-4.17, 9.13, 35.79),
-        "rot_z": math.radians(115),  # Facing backward guarding rear approach
+        "id": "Soldier_4_RearOverwatch",
+        "role": "Rear Guard / Vehicle Security",
+        "pos": (-2.20, 6.20, 36.15),
+        "rot_z": math.radians(-70),
     },
 ]
 
@@ -117,8 +105,8 @@ def spawn_soldier(soldier_info):
 for soldier in squad_roster:
     spawn_soldier(soldier)
 
-# 4. Add Tactical Military Insertion Vehicle
-print("🚙 [3/5] Deploying Tactical Military Vehicle at trail insertion point...")
+# 4. Add Tactical Military Insertion Vehicle (Resized to realistic proportions: 3.5m L, 1.55m W, 0.78m tires)
+print("🚙 [3/5] Deploying Resized Tactical Military Vehicle (0.55x) at trail edge...")
 before = set(o.name for o in bpy.data.objects)
 bpy.ops.import_scene.gltf(filepath=str(DOWNLOADS / "military_jeep.glb"))
 new_names = set(o.name for o in bpy.data.objects) - before
@@ -126,9 +114,9 @@ for name in new_names:
     o = bpy.data.objects.get(name)
     if o and o.parent is None:
         o.name = "Tactical_Military_Jeep"
-        o.scale = (1.0, 1.0, 1.0)
-        o.location = (-7.5, 12.0, 35.3)
-        o.rotation_euler = (0, 0, math.radians(45))
+        o.scale = (0.55, 0.55, 0.55)
+        o.location = (-5.0, 9.5, 35.60)
+        o.rotation_euler = (0, 0, math.radians(40))
 
 # 5. SUTRA Hexacopter Airborne Reconnaissance
 print("🚁 [4/5] Positioning SUTRA Hexacopter surveying overhead...")
@@ -144,14 +132,32 @@ for name in new_names:
         o.rotation_euler = (math.radians(-12), math.radians(6), math.radians(45))
 
 # Atmospheric Mountain Lighting
+# Atmospheric Mountain Sunlight & Environmental Sky
 bpy.ops.object.light_add(type="SUN", location=(35, 35, 120))
 sun = bpy.context.active_object
 sun.name = "MountainSun"
-sun.data.energy = 4.5
-sun.rotation_euler = (math.radians(50), math.radians(25), math.radians(65))
+sun.data.energy = 8.0
+sun.rotation_euler = (math.radians(35), math.radians(15), math.radians(45))
 
-# Cinematic Camera framed looking along the dirt road showing squad
-bpy.ops.object.camera_add(location=(14.5, 13.0, 42.0), rotation=(math.radians(68), math.radians(0), math.radians(145)))
+# World ambient background for natural daylight fill
+world = scene.world
+if not world:
+    world = bpy.data.worlds.new("ForestWorld")
+    scene.world = world
+world.use_nodes = True
+bg = world.node_tree.nodes.get("Background")
+if bg:
+    bg.inputs["Color"].default_value = (0.7, 0.85, 1.0, 1.0)
+    bg.inputs["Strength"].default_value = 2.0
+
+# Cinematic Camera framed looking along the dirt road showing squad & resized jeep
+from mathutils import Vector
+target = Vector((2.0, 5.5, 36.6))
+cam_pos = Vector((3.0, -4.0, 43.5))
+direction = target - cam_pos
+rot_quat = direction.to_track_quat("-Z", "Y")
+
+bpy.ops.object.camera_add(location=cam_pos, rotation=rot_quat.to_euler())
 cam = bpy.context.active_object
 cam.name = "Patrol_Trail_Camera"
 scene.camera = cam
