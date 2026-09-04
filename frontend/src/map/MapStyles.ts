@@ -124,19 +124,16 @@ export function getMapStyleSpec(styleKey: MapStyleType): maplibregl.StyleSpecifi
     default:
       return {
         version: 8,
-        name: 'SUTRA Dynamic Tactical Space',
+        name: 'SUTRA Autonomous Dynamic Mapping Space',
         sources: {
           'carto-dark-tiles': {
             type: 'raster',
             tiles: [
               'https://a.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png',
-              'https://b.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png',
-              'https://c.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png',
-              'https://d.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png',
             ],
             tileSize: 256,
             maxzoom: 20,
-            attribution: '&copy; CARTO &copy; OpenStreetMap contributors',
+            attribution: '&copy; SUTRA Dynamic Vector Space',
           },
         },
         layers: [
@@ -145,16 +142,6 @@ export function getMapStyleSpec(styleKey: MapStyleType): maplibregl.StyleSpecifi
             type: 'background',
             paint: {
               'background-color': '#070A0F',
-            },
-          },
-          {
-            id: 'carto-dark-tiles-layer',
-            type: 'raster',
-            source: 'carto-dark-tiles',
-            minzoom: 0,
-            maxzoom: 20,
-            paint: {
-              'raster-opacity': 0.85,
             },
           },
         ],

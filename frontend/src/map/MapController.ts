@@ -17,6 +17,7 @@ import { GisLayer } from './GisLayer';
 import { AiTargetLayer } from './AiTargetLayer';
 import { DynamicGridLayer } from './DynamicGridLayer';
 import { Autonomous2DMappingLayer } from './Autonomous2DMappingLayer';
+import { VideoFeedMappingLayer } from './VideoFeedMappingLayer';
 import { commandManager } from '../communication/CommandManager';
 import { useMapStore } from '../stores/mapStore';
 import { useGeofenceStore } from '../stores/geofenceStore';
@@ -33,6 +34,7 @@ export class MapController {
   public aiTargetLayer = new AiTargetLayer();
   public dynamicGridLayer = new DynamicGridLayer();
   public autonomous2DMappingLayer = new Autonomous2DMappingLayer();
+  public videoFeedMappingLayer = new VideoFeedMappingLayer();
   private map: maplibregl.Map | null = null;
 
   // RAF-throttled geofence preview update — at most 1 Zustand write per frame
@@ -51,6 +53,7 @@ export class MapController {
     this.aiTargetLayer.setMap(map);
     this.dynamicGridLayer.setMap(map);
     this.autonomous2DMappingLayer.setMap(map);
+    this.videoFeedMappingLayer.setMap(map);
 
     this.setupInteractions();
   }

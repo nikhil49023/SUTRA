@@ -21,6 +21,7 @@ import { useSelectionStore } from '../stores/selectionStore';
 import { useMapStore } from '../stores/mapStore';
 import { useAppStore } from '../stores/appStore';
 import { useMappingStore } from '../stores/mappingStore';
+import { useCameraStore } from '../stores/cameraStore';
 import { MapInteractionToolbox } from './MapInteractionToolbox';
 import { GeofenceToolbar } from '../geofence/GeofenceToolbar';
 import { GeofenceDebugPanel } from '../geofence/GeofenceDebugPanel';
@@ -170,7 +171,7 @@ export const MapView: React.FC = () => {
     return unsub;
   }, []);
 
-  // ── Fleet + Formation + Dynamic Drone Mapping layer (telemetry driven) ──
+  // ── Fleet + Formation + Dynamic Drone Mapping layer + Video Frustum (telemetry driven) ──
   useEffect(() => {
     const unsub = useFleetStore.subscribe((fs) => {
       const sel = useSelectionStore.getState();
@@ -180,6 +181,27 @@ export const MapView: React.FC = () => {
       );
       mapController.formationLayer.updateFormation(fs);
       mapController.dynamicGridLayer.updateFleetResources(fs);
+      mapController.videoFeedMappingLayer.updateFleetVideoProjections(fs);
+    });
+    return unsub;
+  }, []);
+
+  // ── Real-Time Drone Video Feed Ground Projection (Camera Frames driven) ─────
+  useEffect(() => {
+    const unsub = useCameraStore.subscribe((cs) => {
+      const fs = useFleetStore.getState();
+      Object.values(cs.frames || {}).forEach((frame) => {
+        const drone = fs.drones[frame.drone_id] || Object.values(fs.drones)[0];
+        if (drone && typeof drone.latitude === 'number' && typeof drone.longitude === 'number') {
+          mapController.videoFeedMappingLayer.projectVideoFrame(
+            frame,
+            drone.latitude,
+            drone.longitude,
+            drone.altitude || 25.0,
+            drone.heading || 0.0
+          );
+        }
+      });
     });
     return unsub;
   }, []);
@@ -381,7 +403,7 @@ const MapStatusBar = React.memo(
     const home = useMissionStore.getState();
     return (
       <div className="absolute bottom-2 left-2 z-10 px-2.5 py-1 rounded bg-[#11171E]/90 border border-[#2B3743] backdrop-blur text-[11px] font-mono text-[#707C88] flex items-center space-x-3">
-        <span className="text-[#10B981] font-bold">● DYNAMIC DRONE RESOURCE MAPPING</span>
+        <span className="text-[#10B981] font-bold">● AUTONOMOUS VIDEO-FEED 2D MAPPING</span>
         <span>•</span>
         <span className="text-[#5B8FB9] font-bold uppercase">
           {MAP_STYLE_LABELS[mapStyle]?.badge || mapStyle}
@@ -415,6 +437,7 @@ function syncAll(ms: any, fs: any, gs: any, gis: any, ai: any, sel: any, mapping
   );
   mapController.formationLayer.updateFormation(fs);
   mapController.dynamicGridLayer.updateFleetResources(fs);
+  mapController.videoFeedMappingLayer.updateFleetVideoProjections(fs);
   mapController.gisLayer.updateGis(gis);
   mapController.aiTargetLayer.updateTargets(
     ai?.tracked_targets || [],

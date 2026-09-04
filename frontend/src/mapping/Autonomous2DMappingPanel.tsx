@@ -7,6 +7,9 @@ import React from 'react';
 import { useMappingStore } from '../stores/mappingStore';
 import { useFleetStore } from '../stores/fleetStore';
 import { useAppStore } from '../stores/appStore';
+import { useMissionStore } from '../stores/missionStore';
+import { useCameraStore } from '../stores/cameraStore';
+import { commandManager } from '../communication/CommandManager';
 import { mapController } from '../map/MapController';
 import {
   Grid,
@@ -24,6 +27,9 @@ import {
   ShieldCheck,
   Waves,
   X,
+  Play,
+  Pause,
+  Video,
 } from 'lucide-react';
 
 const SEMANTIC_STYLES: Record<string, { label: string; color: string; bg: string; icon: any }> = {
@@ -56,6 +62,7 @@ export const Autonomous2DMappingPanel: React.FC = () => {
 
   const fleet = useFleetStore((s) => s.drones);
   const droneCount = Object.keys(fleet || {}).length;
+  const missionState = useMissionStore((s) => s.state);
 
   const handleFlyToSurvivor = (lat: number, lon: number) => {
     mapController.centerOnCoordinates(lat, lon, 18);
@@ -129,6 +136,50 @@ export const Autonomous2DMappingPanel: React.FC = () => {
       </div>
 
       <div className="p-4 space-y-4">
+        {/* ── Real-Time Video-to-Map Execution Bar ──────────────────────────── */}
+        <div className="p-3.5 rounded-lg bg-[#11171E] border border-[#2B3743] flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 rounded-lg bg-[#10B981]/15 border border-[#10B981]/40 flex items-center justify-center text-[#10B981]">
+              <Video className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-[#E7EBEF] flex items-center space-x-2">
+                <span>VIDEO-FEED 2D MAP GENERATOR</span>
+                <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                  missionState === 'MISSION' ? 'bg-[#10B981]/20 text-[#10B981]' : 'bg-[#707C88]/20 text-[#707C88]'
+                }`}>
+                  {missionState === 'MISSION' ? '● DRAWING FROM VIDEO FEED' : '○ STANDBY'}
+                </span>
+              </div>
+              <div className="text-[10px] text-[#707C88] mt-0.5">
+                Dynamic 70° HFOV Camera Ground Projection • Starts Empty, Drawn by Drones
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            {missionState === 'MISSION' ? (
+              <button
+                onClick={() => commandManager.sendCommand('mission.pause', {})}
+                className="px-3 py-1.5 rounded text-xs font-bold bg-[#F59E0B]/20 hover:bg-[#F59E0B]/30 border border-[#F59E0B]/50 text-[#F59E0B] transition flex items-center space-x-1.5"
+                title="Pause Swarm Flight"
+              >
+                <Pause className="w-3.5 h-3.5" />
+                <span>PAUSE FLIGHT</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => commandManager.sendCommand('mission.start', {})}
+                className="px-3.5 py-1.5 rounded text-xs font-bold bg-[#10B981] hover:bg-[#059669] text-black shadow-[0_0_14px_rgba(16,185,129,0.4)] transition flex items-center space-x-1.5 cursor-pointer font-sans"
+                title="Start Swarm Traversal and Draw 2D Map"
+              >
+                <Play className="w-3.5 h-3.5 fill-black" />
+                <span>START SCAN & DRAW</span>
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* ── Real-Time Metrics Grid ────────────────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="p-3 rounded-lg bg-[#11171E] border border-[#2B3743]">
