@@ -44,6 +44,8 @@ yarn-error.log*
 out/
 .nuxt/
 dist/
+!sutra_ws/src/sutra_gcs/dist/
+!sutra_ws/src/sutra_gcs/dist/**
 .cache/
 
 # Gazebo & Sim logs

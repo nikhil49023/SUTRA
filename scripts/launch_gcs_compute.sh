@@ -58,11 +58,11 @@ echo "   ✅ Compute worker active."
 
 # Step 3: Serve & Launch GCS Web UI
 echo "🌐 [3/3] Serving GCS Frontend Dashboard..."
-cd "$PROJECT_ROOT/frontend"
+GCS_DIST="$PROJECT_ROOT/sutra_ws/src/sutra_gcs/dist"
 
-# Launch lightweight static HTTP server if built or vite
-if [ -d "$PROJECT_ROOT/frontend/dist" ]; then
-    python3 -m http.server 5173 --directory "$PROJECT_ROOT/frontend/dist" > /tmp/sutra_shiva_web.log 2>&1 &
+# Launch lightweight static HTTP server for pre-built GCS bundle
+if [ -d "$GCS_DIST" ]; then
+    python3 -m http.server 5173 --directory "$GCS_DIST" > /tmp/sutra_shiva_web.log 2>&1 &
     CHILD_PIDS+=($!)
 else
     python3 -m http.server 5173 --directory "$PROJECT_ROOT/frontend" > /tmp/sutra_shiva_web.log 2>&1 &
@@ -71,8 +71,8 @@ fi
 
 echo "   ✅ GCS Web Dashboard active at http://127.0.0.1:5173"
 
-# Automatically open browser on Shiva's laptop
-URL="http://127.0.0.1:5173/?remote=127.0.0.1"
+# Automatically open browser on Shiva's laptop pointing to host simulation
+URL="http://127.0.0.1:5173/?remote=${HOST_IP}"
 if command -v xdg-open > /dev/null 2>&1; then
     xdg-open "$URL" 2>/dev/null &
 elif command -v open > /dev/null 2>&1; then
@@ -82,6 +82,9 @@ fi
 echo ""
 echo "=============================================================================="
 echo "🎉 GCS COMPUTE POST IS LIVE & PAIRED WITH SIMULATION HOST!"
+echo "=============================================================================="
+echo "👉 OPEN IN BROWSER: http://127.0.0.1:5173/?remote=${HOST_IP}"
+echo "👉 OR DIRECT HOST : http://${HOST_IP}:5173"
 echo "=============================================================================="
 echo "📋 JURY DEMO CHECKLIST:"
 echo "   1. Browser: View 360° live feeds with YOLO detection boxes in HUD."

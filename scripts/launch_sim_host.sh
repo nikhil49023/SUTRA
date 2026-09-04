@@ -135,19 +135,27 @@ CHILD_PIDS+=($!)
 echo "   ✅ Simulation Exporter active."
 
 # Step 6: Launch Kaggle GPU Perception Streamer (Survivor Detections & 3D Raycasting)
-echo "🎯 [6/6] Starting Perception Target Streamer (YOLOv8-TRT + 3D Raycasting)..."
+echo "🎯 [6/7] Starting Perception Target Streamer (YOLOv8-TRT + 3D Raycasting)..."
 python3 "$PROJECT_ROOT/scripts/stream_perception_targets_to_swarm.py" > /tmp/sutra_perception_streamer.log 2>&1 &
 CHILD_PIDS+=($!)
 echo "   ✅ Perception Streamer active."
+
+# Step 7: Launch GCS Web Dashboard Server (Port 5173 across LAN)
+echo "🌐 [7/7] Starting GCS Web Dashboard Server on http://0.0.0.0:5173..."
+fuser -k 5173/tcp 2>/dev/null || true
+python3 -m http.server 5173 --directory "$PROJECT_ROOT/sutra_ws/src/sutra_gcs/dist" > /tmp/sutra_web.log 2>&1 &
+CHILD_PIDS+=($!)
+echo "   ✅ GCS Web Dashboard active at http://${HOST_IP}:5173"
 
 echo ""
 echo "=============================================================================="
 echo "🎉 SIMULATION HOST IS FULLY ARMED & STREAMING ACROSS LAN!"
 echo "=============================================================================="
-echo "👉 INSTRUCTION FOR SHIVA'S LAPTOP (RUN THIS COMMAND IN TERMINAL):"
+echo "👉 OPTION 1 (INSTANT ACCESS): OPEN THIS LINK IN BROWSER ON SHIVA'S LAPTOP:"
+echo "   http://${HOST_IP}:5173"
 echo ""
+echo "👉 OPTION 2 (DISTRIBUTED COMPUTE): RUN IN TERMINAL ON SHIVA'S LAPTOP:"
 echo "   bash scripts/launch_gcs_compute.sh $HOST_IP"
-echo ""
 echo "=============================================================================="
 
 while true; do
