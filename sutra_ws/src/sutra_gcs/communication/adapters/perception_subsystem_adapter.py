@@ -188,6 +188,7 @@ class PerceptionSubsystemAdapter:
         self.event_bus = event_bus or get_event_bus()
         self.alert_cooldown_sec = alert_cooldown_sec
         self.target_timeout_sec = target_timeout_sec
+        self.notifications_enabled = True
 
         # Telemetry & Status Metrics
         self.connected = False
@@ -596,7 +597,9 @@ class PerceptionSubsystemAdapter:
         return updated_target
 
     def _trigger_survivor_alert_if_eligible(self, target: TrackedTarget, now: float) -> None:
-        """Emits a high-priority survivor alert if outside the cooldown window."""
+        """Emits a high-priority survivor alert if notifications are enabled and outside cooldown."""
+        if not getattr(self, "notifications_enabled", False):
+            return
         with self._lock:
             last_alert = self._alert_cooldowns.get(target.target_id, 0.0)
             if (now - last_alert) < self.alert_cooldown_sec:

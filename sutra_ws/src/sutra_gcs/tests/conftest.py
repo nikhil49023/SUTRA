@@ -7,7 +7,15 @@ import pytest
 try:
     from PySide6.QtWidgets import QApplication
 except ImportError:
-    from PyQt5.QtWidgets import QApplication
+    try:
+        from PyQt5.QtWidgets import QApplication
+    except ImportError:
+        class QApplication:  # type: ignore
+            @staticmethod
+            def instance():
+                return None
+            def __init__(self, *args, **kwargs):
+                pass
 
 # Force offscreen headless Qt platform plugin for automated CI test execution
 os.environ["QT_QPA_PLATFORM"] = "offscreen"

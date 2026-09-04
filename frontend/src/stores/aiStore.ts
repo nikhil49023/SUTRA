@@ -209,6 +209,8 @@ export const useAIStore = create<AIStoreState>((set) => ({
           history: target.history || [],
           first_seen: target.first_seen || Date.now(),
           last_seen: target.last_seen || Date.now(),
+          bbox: target.bbox || payload.bbox,
+          norm_bbox: target.norm_bbox || payload.norm_bbox,
         };
 
         set((s) => {
