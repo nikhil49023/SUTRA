@@ -25,6 +25,8 @@ import {
   Layers,
   Brain,
   Activity,
+  Play,
+  Pause,
 } from 'lucide-react';
 
 export const TopBar: React.FC = memo(() => {
@@ -126,6 +128,25 @@ export const TopBar: React.FC = memo(() => {
             <span className="w-1.5 h-1.5 rounded-full bg-[#4F9A72] animate-pulse" />
             <span>{missionState}</span>
           </span>
+          {missionState !== 'MISSION' && missionState !== 'IN_PROGRESS' ? (
+            <button
+              onClick={() => useMissionStore.getState().startMission()}
+              className="px-2 py-0.5 rounded bg-[#10B981] hover:bg-[#059669] text-white font-extrabold text-[10px] flex items-center space-x-1 shadow-[0_0_8px_rgba(16,185,129,0.4)] transition cursor-pointer"
+              title="Start Autonomous Swarm Flight"
+            >
+              <Play className="w-2.5 h-2.5 fill-current" />
+              <span>START SWARM</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => useMissionStore.getState().pauseMission()}
+              className="px-2 py-0.5 rounded bg-[#F59E0B] hover:bg-[#D97706] text-white font-extrabold text-[10px] flex items-center space-x-1 shadow-[0_0_8px_rgba(245,158,11,0.4)] transition cursor-pointer"
+              title="Hold / Pause Swarm Flight"
+            >
+              <Pause className="w-2.5 h-2.5 fill-current" />
+              <span>HOLD</span>
+            </button>
+          )}
         </div>
       </div>
 
