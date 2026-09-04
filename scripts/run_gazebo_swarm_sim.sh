@@ -7,6 +7,12 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+# Clean Snap GTK environment variables (prevents glibc/libpthread symbol lookup error)
+unset GTK_PATH
+unset GTK_IM_MODULE
+unset LOCPATH
+unset GIO_MODULE_DIR
+
 # Export Gazebo Sim Resource Path for x3_uav and disaster models
 export GZ_SIM_RESOURCE_PATH="$PROJECT_ROOT/sutra_ws/src/sutra_sim/models:$PROJECT_ROOT/sutra_ws/src/sutra_sim:$GZ_SIM_RESOURCE_PATH"
 export IGN_GAZEBO_RESOURCE_PATH="$GZ_SIM_RESOURCE_PATH"
