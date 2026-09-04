@@ -386,306 +386,232 @@
     </model>
 
 
-    <!-- 👤 Mansion Rooftop (Lead Waver - Full 3D Humanoid Mesh) -->
-    <model name="survivor_mansion">
+    <!-- ================================================================ -->
+    <!-- 👥 SUTRA DISASTER SURVIVORS & VICTIMS (STANDING MAN & SWIMMING GIRL) -->
+    <!-- ================================================================ -->
+
+    <!-- 👤 1. STANDING MAN - Mansion Rooftop Command Sector (Pacing / Waving) -->
+    <model name="standing_man_mansion">
       <pose>20.5 19.5 4.50 0 0 0</pose>
-      <static>true</static>
+      <static>false</static>
       <link name="link">
-        <visual name="human_mesh">
-          <geometry>
-            <mesh>
-              <uri>model://human_waving_victim/meshes/human_waving.obj</uri>
-              <scale>1.0 1.0 1.0</scale>
-            </mesh>
-          </geometry>
-          <material>
-            <ambient>1.0 0.35 0.05 1</ambient>
-            <diffuse>1.0 0.35 0.05 1</diffuse>
-            <emissive>0.30 0.10 0.00 1</emissive>
-          </material>
+        <gravity>false</gravity>
+        <inertial><mass>75.0</mass><inertia><ixx>1.5</ixx><iyy>1.5</iyy><izz>1.5</izz></inertia></inertial>
+        <collision name="c"><pose>0 0 0.85 0 0 0</pose><geometry><cylinder><radius>0.3</radius><length>1.7</length></cylinder></geometry></collision>
+        <visual name="mesh">
+          <geometry><mesh><uri>model://standing_man/meshes/standing_man.glb</uri><scale>1.0 1.0 1.0</scale></mesh></geometry>
         </visual>
         <visual name="beacon">
-          <pose>0 0 2.8 0 0 0</pose>
+          <pose>0 0 2.2 0 0 0</pose>
           <geometry><sphere><radius>0.15</radius></sphere></geometry>
-          <material>
-            <ambient>0.0 1.0 0.3 1</ambient>
-            <diffuse>0.0 1.0 0.3 1</diffuse>
-            <emissive>0.00 1.00 0.45 1</emissive>
-          </material>
-        </visual>
-      </link>
-    </model>
-
-    <!-- 👤 Mid Ridge (Moving High Ground) -->
-    <model name="survivor_mid_ridge">
-      <pose>25.0 32.0 4.65 0 0 0</pose>
-      <static>true</static>
-      <link name="link">
-        <visual name="beacon">
-          <geometry><cylinder><radius>0.25</radius><length>0.6</length></cylinder></geometry>
-          <material>
-            <ambient>1.0 0.5 0.0 1</ambient>
-            <diffuse>1.0 0.5 0.0 1</diffuse>
-            <emissive>1.00 0.75 0.00 1</emissive>
-          </material>
-        </visual>
-      </link>
-    </model>
-
-    <!-- 👤 East Slope (Injured) -->
-    <model name="survivor_east_slope">
-      <pose>35.0 25.0 1.05 0 0 0</pose>
-      <static>true</static>
-      <link name="link">
-        <visual name="beacon">
-          <geometry><cylinder><radius>0.25</radius><length>0.6</length></cylinder></geometry>
-          <material>
-            <ambient>1.0 0.3 0.0 1</ambient>
-            <diffuse>1.0 0.3 0.0 1</diffuse>
-            <emissive>1.00 0.45 0.00 1</emissive>
-          </material>
-        </visual>
-      </link>
-    </model>
-
-    <!-- 👤 Upper Terrace (Signaling Flag) -->
-    <model name="survivor_upper_terrace">
-      <pose>15.0 35.0 8.2 0 0 0</pose>
-      <static>true</static>
-      <link name="link">
-        <visual name="beacon">
-          <geometry><cylinder><radius>0.25</radius><length>0.6</length></cylinder></geometry>
-          <material>
-            <ambient>1.0 0.8 0.0 1</ambient>
-            <diffuse>1.0 0.8 0.0 1</diffuse>
-            <emissive>1.00 1.00 0.00 1</emissive>
-          </material>
-        </visual>
-      </link>
-    </model>
-
-    <!-- 👤 West House (SOS Tarp) -->
-    <model name="survivor_west_house">
-      <pose>2.0 12.0 4.70 0 0 0</pose>
-      <static>true</static>
-      <link name="link">
-        <visual name="beacon">
-          <geometry><cylinder><radius>0.25</radius><length>0.6</length></cylinder></geometry>
-          <material>
-            <ambient>1.0 0.4 0.0 1</ambient>
-            <diffuse>1.0 0.4 0.0 1</diffuse>
-            <emissive>1.00 0.60 0.00 1</emissive>
-          </material>
-        </visual>
-      </link>
-    </model>
-
-    <!-- 👤 Water Victim 1 (Foreground Swept Away - 3D Life-Vested Survivor) -->
-    <model name="victim_water_1">
-      <pose>14.0 -10.0 3.00 0 0 0</pose>
-      <static>false</static>
-      <link name="link">
-        <gravity>false</gravity>
-        <inertial><mass>75.0</mass><inertia><ixx>1.0</ixx><iyy>1.0</iyy><izz>1.0</izz></inertia></inertial>
-        <visual name="human_mesh">
-          <geometry>
-            <mesh>
-              <uri>model://human_water_survivor/meshes/human_water_survivor.obj</uri>
-              <scale>1.0 1.0 1.0</scale>
-            </mesh>
-          </geometry>
-          <material>
-            <ambient>1.0 0.25 0.0 1</ambient>
-            <diffuse>1.0 0.25 0.0 1</diffuse>
-            <emissive>0.35 0.10 0.00 1</emissive>
-          </material>
-        </visual>
-        <visual name="beacon">
-          <pose>0 0 1.2 0 0 0</pose>
-          <geometry><sphere><radius>0.12</radius></sphere></geometry>
-          <material>
-            <ambient>1.0 0.05 0.05 1</ambient>
-            <diffuse>1.0 0.05 0.05 1</diffuse>
-            <emissive>1.00 0.08 0.08 1</emissive>
-          </material>
+          <material><ambient>1.0 0.5 0.0 1</ambient><diffuse>1.0 0.5 0.0 1</diffuse><emissive>1.00 0.60 0.00 1</emissive></material>
         </visual>
       </link>
       <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
         <link_name>link</link_name>
-        <topic>/victim_water_1/gazebo/command/twist</topic>
+        <topic>/standing_man_mansion/gazebo/command/twist</topic>
       </plugin>
     </model>
 
-    <!-- 👤 Water Victim 2 (Civilian Drifting - 3D Life-Vested Survivor) -->
-    <model name="victim_water_2">
-      <pose>22.0 -8.0 3.00 0 0 0</pose>
+    <!-- 👤 2. STANDING MAN - Mountain Upper Terrace (Guiding Evacuees) -->
+    <model name="standing_man_terrace">
+      <pose>15.0 35.0 8.20 0 0 0.5</pose>
       <static>false</static>
       <link name="link">
         <gravity>false</gravity>
-        <inertial><mass>75.0</mass><inertia><ixx>1.0</ixx><iyy>1.0</iyy><izz>1.0</izz></inertia></inertial>
-        <visual name="human_mesh">
-          <geometry>
-            <mesh>
-              <uri>model://human_water_survivor/meshes/human_water_survivor.obj</uri>
-              <scale>1.0 1.0 1.0</scale>
-            </mesh>
-          </geometry>
-          <material>
-            <ambient>1.0 0.25 0.0 1</ambient>
-            <diffuse>1.0 0.25 0.0 1</diffuse>
-            <emissive>0.35 0.10 0.00 1</emissive>
-          </material>
+        <inertial><mass>75.0</mass><inertia><ixx>1.5</ixx><iyy>1.5</iyy><izz>1.5</izz></inertia></inertial>
+        <collision name="c"><pose>0 0 0.85 0 0 0</pose><geometry><cylinder><radius>0.3</radius><length>1.7</length></cylinder></geometry></collision>
+        <visual name="mesh">
+          <geometry><mesh><uri>model://standing_man/meshes/standing_man.glb</uri><scale>1.0 1.0 1.0</scale></mesh></geometry>
         </visual>
         <visual name="beacon">
-          <pose>0 0 1.2 0 0 0</pose>
-          <geometry><sphere><radius>0.12</radius></sphere></geometry>
-          <material>
-            <ambient>1.0 0.05 0.05 1</ambient>
-            <diffuse>1.0 0.05 0.05 1</diffuse>
-            <emissive>1.00 0.08 0.08 1</emissive>
-          </material>
+          <pose>0 0 2.2 0 0 0</pose>
+          <geometry><sphere><radius>0.15</radius></sphere></geometry>
+          <material><ambient>0.2 0.8 1.0 1</ambient><diffuse>0.2 0.8 1.0 1</diffuse><emissive>0.20 0.80 1.00 1</emissive></material>
         </visual>
       </link>
       <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
         <link_name>link</link_name>
-        <topic>/victim_water_2/gazebo/command/twist</topic>
+        <topic>/standing_man_terrace/gazebo/command/twist</topic>
       </plugin>
     </model>
 
-    <!-- 👤 Water Victim 3 (Floating Debris Clinger - 3D Life-Vested Survivor) -->
-    <model name="victim_water_3">
-      <pose>9.0 -9.0 3.00 0 0 0</pose>
+    <!-- 👤 3. STANDING MAN - East Mid Ridge High Ground -->
+    <model name="standing_man_ridge">
+      <pose>26.0 32.0 4.65 0 0 -0.3</pose>
       <static>false</static>
       <link name="link">
         <gravity>false</gravity>
-        <inertial><mass>75.0</mass><inertia><ixx>1.0</ixx><iyy>1.0</iyy><izz>1.0</izz></inertia></inertial>
-        <visual name="human_mesh">
-          <geometry>
-            <mesh>
-              <uri>model://human_water_survivor/meshes/human_water_survivor.obj</uri>
-              <scale>1.0 1.0 1.0</scale>
-            </mesh>
-          </geometry>
-          <material>
-            <ambient>1.0 0.25 0.0 1</ambient>
-            <diffuse>1.0 0.25 0.0 1</diffuse>
-            <emissive>0.35 0.10 0.00 1</emissive>
-          </material>
+        <inertial><mass>75.0</mass><inertia><ixx>1.5</ixx><iyy>1.5</iyy><izz>1.5</izz></inertia></inertial>
+        <collision name="c"><pose>0 0 0.85 0 0 0</pose><geometry><cylinder><radius>0.3</radius><length>1.7</length></cylinder></geometry></collision>
+        <visual name="mesh">
+          <geometry><mesh><uri>model://standing_man/meshes/standing_man.glb</uri><scale>1.0 1.0 1.0</scale></mesh></geometry>
         </visual>
         <visual name="beacon">
-          <pose>0 0 1.2 0 0 0</pose>
-          <geometry><sphere><radius>0.12</radius></sphere></geometry>
-          <material>
-            <ambient>1.0 0.05 0.05 1</ambient>
-            <diffuse>1.0 0.05 0.05 1</diffuse>
-            <emissive>1.00 0.08 0.08 1</emissive>
-          </material>
+          <pose>0 0 2.2 0 0 0</pose>
+          <geometry><sphere><radius>0.15</radius></sphere></geometry>
+          <material><ambient>1.0 0.8 0.0 1</ambient><diffuse>1.0 0.8 0.0 1</diffuse><emissive>1.00 0.80 0.00 1</emissive></material>
         </visual>
       </link>
       <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
         <link_name>link</link_name>
-        <topic>/victim_water_3/gazebo/command/twist</topic>
+        <topic>/standing_man_ridge/gazebo/command/twist</topic>
       </plugin>
     </model>
 
-    <!-- 👤 Water Victim 4 (Gasping Eddy Current - 3D Life-Vested Survivor) -->
-    <model name="victim_water_4">
-      <pose>28.0 -6.0 3.00 0 0 0</pose>
+    <!-- 👤 4. STANDING MAN - Villa Balcony Calling to Rescue Boat -->
+    <model name="standing_man_balcony">
+      <pose>17.5 8.0 3.70 0 0 0.1</pose>
       <static>false</static>
       <link name="link">
         <gravity>false</gravity>
-        <inertial><mass>75.0</mass><inertia><ixx>1.0</ixx><iyy>1.0</iyy><izz>1.0</izz></inertia></inertial>
-        <visual name="human_mesh">
-          <geometry>
-            <mesh>
-              <uri>model://human_water_survivor/meshes/human_water_survivor.obj</uri>
-              <scale>1.0 1.0 1.0</scale>
-            </mesh>
-          </geometry>
-          <material>
-            <ambient>1.0 0.25 0.0 1</ambient>
-            <diffuse>1.0 0.25 0.0 1</diffuse>
-            <emissive>0.35 0.10 0.00 1</emissive>
-          </material>
+        <inertial><mass>75.0</mass><inertia><ixx>1.5</ixx><iyy>1.5</iyy><izz>1.5</izz></inertia></inertial>
+        <collision name="c"><pose>0 0 0.85 0 0 0</pose><geometry><cylinder><radius>0.3</radius><length>1.7</length></cylinder></geometry></collision>
+        <visual name="mesh">
+          <geometry><mesh><uri>model://standing_man/meshes/standing_man.glb</uri><scale>1.0 1.0 1.0</scale></mesh></geometry>
         </visual>
         <visual name="beacon">
-          <pose>0 0 1.2 0 0 0</pose>
-          <geometry><sphere><radius>0.12</radius></sphere></geometry>
-          <material>
-            <ambient>1.0 0.05 0.05 1</ambient>
-            <diffuse>1.0 0.05 0.05 1</diffuse>
-            <emissive>1.00 0.08 0.08 1</emissive>
-          </material>
+          <pose>0 0 2.2 0 0 0</pose>
+          <geometry><sphere><radius>0.15</radius></sphere></geometry>
+          <material><ambient>1.0 0.2 0.1 1</ambient><diffuse>1.0 0.2 0.1 1</diffuse><emissive>1.00 0.20 0.10 1</emissive></material>
         </visual>
       </link>
       <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
         <link_name>link</link_name>
-        <topic>/victim_water_4/gazebo/command/twist</topic>
+        <topic>/standing_man_balcony/gazebo/command/twist</topic>
       </plugin>
     </model>
 
-    <!-- 👤 Water Victim (Mid River Corridor) -->
-    <model name="victim_water_5">
-      <pose>17.0 -1.0 3.00 0 0 0</pose>
+    <!-- 👤 5. STANDING MAN - West House Rooftop Waving -->
+    <model name="standing_man_west">
+      <pose>2.0 12.0 4.70 0 0 -0.8</pose>
       <static>true</static>
       <link name="link">
+        <collision name="c"><pose>0 0 0.85 0 0 0</pose><geometry><cylinder><radius>0.3</radius><length>1.7</length></cylinder></geometry></collision>
+        <visual name="mesh">
+          <geometry><mesh><uri>model://standing_man/meshes/standing_man.glb</uri><scale>1.0 1.0 1.0</scale></mesh></geometry>
+        </visual>
         <visual name="beacon">
-          <geometry><cylinder><radius>0.25</radius><length>0.6</length></cylinder></geometry>
-          <material>
-            <ambient>1.0 0.05 0.05 1</ambient>
-            <diffuse>1.0 0.05 0.05 1</diffuse>
-            <emissive>1.00 0.08 0.08 1</emissive>
-          </material>
+          <pose>0 0 2.2 0 0 0</pose>
+          <geometry><sphere><radius>0.15</radius></sphere></geometry>
+          <material><ambient>1.0 0.4 0.0 1</ambient><diffuse>1.0 0.4 0.0 1</diffuse><emissive>1.00 0.40 0.00 1</emissive></material>
         </visual>
       </link>
     </model>
 
-    <!-- 👤 Water Victim (Submerged Road Crosser) -->
-    <model name="victim_water_6">
-      <pose>24.0 2.0 3.00 0 0 0</pose>
-      <static>true</static>
+    <!-- 🏊‍♀️ 6. SWIMMING GIRL 1 - River Channel Downstream Drift (Drowning Survivor) -->
+    <model name="swimming_girl_1">
+      <pose>15.0 -10.0 2.95 0 0 0.2</pose>
+      <static>false</static>
       <link name="link">
+        <gravity>false</gravity>
+        <inertial><mass>60.0</mass><inertia><ixx>1.2</ixx><iyy>1.2</iyy><izz>1.2</izz></inertia></inertial>
+        <collision name="c"><pose>0 0 0.2 0 0 0</pose><geometry><cylinder><radius>0.4</radius><length>0.8</length></cylinder></geometry></collision>
+        <visual name="mesh">
+          <geometry><mesh><uri>model://swimming_girl/meshes/swimming_girl.glb</uri><scale>1.0 1.0 1.0</scale></mesh></geometry>
+        </visual>
         <visual name="beacon">
-          <geometry><cylinder><radius>0.25</radius><length>0.6</length></cylinder></geometry>
-          <material>
-            <ambient>1.0 0.05 0.05 1</ambient>
-            <diffuse>1.0 0.05 0.05 1</diffuse>
-            <emissive>1.00 0.08 0.08 1</emissive>
-          </material>
+          <pose>0 0 1.0 0 0 0</pose>
+          <geometry><sphere><radius>0.12</radius></sphere></geometry>
+          <material><ambient>1.0 0.1 0.1 1</ambient><diffuse>1.0 0.1 0.1 1</diffuse><emissive>1.00 0.10 0.10 1</emissive></material>
         </visual>
       </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>link</link_name>
+        <topic>/swimming_girl_1/gazebo/command/twist</topic>
+      </plugin>
     </model>
 
-    <!-- 👤 Water Victim (Waist Deep Wader) -->
-    <model name="victim_water_7">
-      <pose>6.0 -3.0 3.00 0 0 0</pose>
-      <static>true</static>
+    <!-- 🏊‍♀️ 7. SWIMMING GIRL 2 - Flooded Intersection Crossing (Treading Water) -->
+    <model name="swimming_girl_2">
+      <pose>22.0 -8.0 2.95 0 0 -0.4</pose>
+      <static>false</static>
       <link name="link">
+        <gravity>false</gravity>
+        <inertial><mass>60.0</mass><inertia><ixx>1.2</ixx><iyy>1.2</iyy><izz>1.2</izz></inertia></inertial>
+        <collision name="c"><pose>0 0 0.2 0 0 0</pose><geometry><cylinder><radius>0.4</radius><length>0.8</length></cylinder></geometry></collision>
+        <visual name="mesh">
+          <geometry><mesh><uri>model://swimming_girl/meshes/swimming_girl.glb</uri><scale>1.0 1.0 1.0</scale></mesh></geometry>
+        </visual>
         <visual name="beacon">
-          <geometry><cylinder><radius>0.25</radius><length>0.6</length></cylinder></geometry>
-          <material>
-            <ambient>1.0 0.05 0.05 1</ambient>
-            <diffuse>1.0 0.05 0.05 1</diffuse>
-            <emissive>1.00 0.08 0.08 1</emissive>
-          </material>
+          <pose>0 0 1.0 0 0 0</pose>
+          <geometry><sphere><radius>0.12</radius></sphere></geometry>
+          <material><ambient>1.0 0.1 0.1 1</ambient><diffuse>1.0 0.1 0.1 1</diffuse><emissive>1.00 0.10 0.10 1</emissive></material>
         </visual>
       </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>link</link_name>
+        <topic>/swimming_girl_2/gazebo/command/twist</topic>
+      </plugin>
     </model>
 
-    <!-- 👤 Water Victim (East Bank Clinger) -->
-    <model name="victim_water_8">
-      <pose>31.0 0.0 3.00 0 0 0</pose>
-      <static>true</static>
+    <!-- 🏊‍♀️ 8. SWIMMING GIRL 3 - Floating Debris Corridor (Clinging & Swimming) -->
+    <model name="swimming_girl_3">
+      <pose>10.0 -4.0 2.95 0 0 0.8</pose>
+      <static>false</static>
       <link name="link">
+        <gravity>false</gravity>
+        <inertial><mass>60.0</mass><inertia><ixx>1.2</ixx><iyy>1.2</iyy><izz>1.2</izz></inertia></inertial>
+        <collision name="c"><pose>0 0 0.2 0 0 0</pose><geometry><cylinder><radius>0.4</radius><length>0.8</length></cylinder></geometry></collision>
+        <visual name="mesh">
+          <geometry><mesh><uri>model://swimming_girl/meshes/swimming_girl.glb</uri><scale>1.0 1.0 1.0</scale></mesh></geometry>
+        </visual>
         <visual name="beacon">
-          <geometry><cylinder><radius>0.25</radius><length>0.6</length></cylinder></geometry>
-          <material>
-            <ambient>1.0 0.05 0.05 1</ambient>
-            <diffuse>1.0 0.05 0.05 1</diffuse>
-            <emissive>1.00 0.08 0.08 1</emissive>
-          </material>
+          <pose>0 0 1.0 0 0 0</pose>
+          <geometry><sphere><radius>0.12</radius></sphere></geometry>
+          <material><ambient>1.0 0.1 0.1 1</ambient><diffuse>1.0 0.1 0.1 1</diffuse><emissive>1.00 0.10 0.10 1</emissive></material>
         </visual>
       </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>link</link_name>
+        <topic>/swimming_girl_3/gazebo/command/twist</topic>
+      </plugin>
+    </model>
+
+    <!-- 🏊‍♀️ 9. SWIMMING GIRL 4 - Eddy Current / Whirlpool Zone -->
+    <model name="swimming_girl_4">
+      <pose>27.0 -12.0 2.95 0 0 1.57</pose>
+      <static>false</static>
+      <link name="link">
+        <gravity>false</gravity>
+        <inertial><mass>60.0</mass><inertia><ixx>1.2</ixx><iyy>1.2</iyy><izz>1.2</izz></inertia></inertial>
+        <collision name="c"><pose>0 0 0.2 0 0 0</pose><geometry><cylinder><radius>0.4</radius><length>0.8</length></cylinder></geometry></collision>
+        <visual name="mesh">
+          <geometry><mesh><uri>model://swimming_girl/meshes/swimming_girl.glb</uri><scale>1.0 1.0 1.0</scale></mesh></geometry>
+        </visual>
+        <visual name="beacon">
+          <pose>0 0 1.0 0 0 0</pose>
+          <geometry><sphere><radius>0.12</radius></sphere></geometry>
+          <material><ambient>1.0 0.1 0.1 1</ambient><diffuse>1.0 0.1 0.1 1</diffuse><emissive>1.00 0.10 0.10 1</emissive></material>
+        </visual>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>link</link_name>
+        <topic>/swimming_girl_4/gazebo/command/twist</topic>
+      </plugin>
+    </model>
+
+    <!-- 🏊‍♀️ 10. SWIMMING GIRL 5 - Submerged Bridge Approach -->
+    <model name="swimming_girl_5">
+      <pose>18.0 4.0 2.95 0 0 -1.2</pose>
+      <static>false</static>
+      <link name="link">
+        <gravity>false</gravity>
+        <inertial><mass>60.0</mass><inertia><ixx>1.2</ixx><iyy>1.2</iyy><izz>1.2</izz></inertia></inertial>
+        <collision name="c"><pose>0 0 0.2 0 0 0</pose><geometry><cylinder><radius>0.4</radius><length>0.8</length></cylinder></geometry></collision>
+        <visual name="mesh">
+          <geometry><mesh><uri>model://swimming_girl/meshes/swimming_girl.glb</uri><scale>1.0 1.0 1.0</scale></mesh></geometry>
+        </visual>
+        <visual name="beacon">
+          <pose>0 0 1.0 0 0 0</pose>
+          <geometry><sphere><radius>0.12</radius></sphere></geometry>
+          <material><ambient>1.0 0.1 0.1 1</ambient><diffuse>1.0 0.1 0.1 1</diffuse><emissive>1.00 0.10 0.10 1</emissive></material>
+        </visual>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <link_name>link</link_name>
+        <topic>/swimming_girl_5/gazebo/command/twist</topic>
+      </plugin>
     </model>
 
     <!-- ⚠️ NFZ West (Tilted Power Pole) -->
@@ -756,163 +682,6 @@
           </material>
         </visual>
       </link>
-    </model>
-
-  
-    <!-- 👤 Survivor Mansion Flag Signaler (3D Humanoid Mesh with Distress Flag) -->
-    <model name="survivor_mansion_flag">
-      <pose>19.4 20.2 4.50 0 0 0</pose>
-      <static>false</static>
-      <link name="link">
-        <gravity>false</gravity>
-        <inertial><mass>75.0</mass><inertia><ixx>1.0</ixx><iyy>1.0</iyy><izz>1.0</izz></inertia></inertial>
-        <visual name="human_mesh">
-          <geometry>
-            <mesh>
-              <uri>model://human_flag_signaler/meshes/human_flag.obj</uri>
-              <scale>1.0 1.0 1.0</scale>
-            </mesh>
-          </geometry>
-          <material>
-            <ambient>0.95 0.95 0.10 1</ambient>
-            <diffuse>0.95 0.95 0.10 1</diffuse>
-            <emissive>0.30 0.30 0.05 1</emissive>
-          </material>
-        </visual>
-        <visual name="beacon">
-          <pose>0 0 2.8 0 0 0</pose>
-          <geometry><sphere><radius>0.15</radius></sphere></geometry>
-          <material>
-            <ambient>0.9 0.95 0.1 1</ambient>
-            <diffuse>0.9 0.95 0.1 1</diffuse>
-            <emissive>0.90 0.95 0.10 1</emissive>
-          </material>
-        </visual>
-      </link>
-      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>link</link_name>
-        <topic>/survivor_mansion_flag/gazebo/command/twist</topic>
-      </plugin>
-    </model>
-
-    <!-- 👤 Survivor Mansion Injured Sitting (Thermal Gold Beacon) -->
-    <model name="survivor_mansion_injured">
-      <pose>21.5 19.1 4.35 0 0 0</pose>
-      <static>true</static>
-      <link name="link">
-        <visual name="beacon">
-          <geometry><cylinder><radius>0.25</radius><length>0.6</length></cylinder></geometry>
-          <material>
-            <ambient>0.95 0.75 0.15 1</ambient>
-            <diffuse>0.95 0.75 0.15 1</diffuse>
-            <emissive>0.95 0.75 0.15 1</emissive>
-          </material>
-        </visual>
-      </link>
-    </model>
-
-    <!-- 👤 Survivor West Marine Flare Holder (Crimson Flare Beacon) -->
-    <model name="survivor_west_flare">
-      <pose>3.2 12.4 4.70 0 0 0</pose>
-      <static>true</static>
-      <link name="link">
-        <visual name="beacon">
-          <geometry><sphere><radius>0.35</radius></sphere></geometry>
-          <material>
-            <ambient>1.0 0.1 0.02 1</ambient>
-            <diffuse>1.0 0.1 0.02 1</diffuse>
-            <emissive>1.00 0.15 0.05 1</emissive>
-          </material>
-        </visual>
-      </link>
-    </model>
-
-    <!-- 👤 Survivor East Evacuation Guide (3D Humanoid Pointing Evac Route) -->
-    <model name="survivor_east_guide">
-      <pose>34.2 24.2 5.10 0 0 0</pose>
-      <static>false</static>
-      <link name="link">
-        <gravity>false</gravity>
-        <inertial><mass>75.0</mass><inertia><ixx>1.0</ixx><iyy>1.0</iyy><izz>1.0</izz></inertia></inertial>
-        <visual name="human_mesh">
-          <geometry>
-            <mesh>
-              <uri>model://human_east_guide/meshes/human_east_guide.obj</uri>
-              <scale>1.0 1.0 1.0</scale>
-            </mesh>
-          </geometry>
-          <material>
-            <ambient>0.15 0.50 0.95 1</ambient>
-            <diffuse>0.15 0.50 0.95 1</diffuse>
-            <emissive>0.10 0.25 0.50 1</emissive>
-          </material>
-        </visual>
-        <visual name="beacon">
-          <pose>0 0 2.8 0 0 0</pose>
-          <geometry><sphere><radius>0.15</radius></sphere></geometry>
-          <material>
-            <ambient>0.1 0.4 0.9 1</ambient>
-            <diffuse>0.1 0.4 0.9 1</diffuse>
-            <emissive>0.10 0.40 0.90 1</emissive>
-          </material>
-        </visual>
-      </link>
-      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>link</link_name>
-        <topic>/survivor_east_guide/gazebo/command/twist</topic>
-      </plugin>
-    </model>
-
-    <!-- 👤 Survivor East Strobe Signaler (White Strobe Beacon) -->
-    <model name="survivor_east_strobe">
-      <pose>33.2 23.5 5.30 0 0 0</pose>
-      <static>true</static>
-      <link name="link">
-        <visual name="beacon">
-          <geometry><sphere><radius>0.25</radius></sphere></geometry>
-          <material>
-            <ambient>0.9 0.95 1.0 1</ambient>
-            <diffuse>0.9 0.95 1.0 1</diffuse>
-            <emissive>1.00 1.00 1.00 1</emissive>
-          </material>
-        </visual>
-      </link>
-    </model>
-
-    <!-- 👤 Survivor Balcony Calling to Boat (3D Humanoid Leaning Over Balcony Railing) -->
-    <model name="survivor_balcony_boat">
-      <pose>17.5 8.0 3.70 0 0 0</pose>
-      <static>false</static>
-      <link name="link">
-        <gravity>false</gravity>
-        <inertial><mass>75.0</mass><inertia><ixx>1.0</ixx><iyy>1.0</iyy><izz>1.0</izz></inertia></inertial>
-        <visual name="human_mesh">
-          <geometry>
-            <mesh>
-              <uri>model://human_balcony_caller/meshes/human_balcony_caller.obj</uri>
-              <scale>1.0 1.0 1.0</scale>
-            </mesh>
-          </geometry>
-          <material>
-            <ambient>0.95 0.20 0.10 1</ambient>
-            <diffuse>0.95 0.20 0.10 1</diffuse>
-            <emissive>0.25 0.05 0.05 1</emissive>
-          </material>
-        </visual>
-        <visual name="beacon">
-          <pose>0 0 2.8 0 0 0</pose>
-          <geometry><sphere><radius>0.15</radius></sphere></geometry>
-          <material>
-            <ambient>1.0 0.5 0.0 1</ambient>
-            <diffuse>1.0 0.5 0.0 1</diffuse>
-            <emissive>1.00 0.50 0.00 1</emissive>
-          </material>
-        </visual>
-      </link>
-      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <link_name>link</link_name>
-        <topic>/survivor_balcony_boat/gazebo/command/twist</topic>
-      </plugin>
     </model>
 
   </world>

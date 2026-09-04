@@ -96,61 +96,78 @@ def get_velocities(t):
         0.12 * math.sin(0.3 * t)
     )
     
-    # --- 👤 DYNAMIC WATER & ROOFTOP SURVIVORS ---
-    # Water Victim 1: Swept downriver with current + treading water bobbing
-    vels["victim_water_1"] = (
-        0.20 * math.cos(0.4 * t),
-        -0.45 + 0.1 * math.sin(0.3 * t),
-        0.06 * math.sin(2.0 * t),
-        0.08
+    # --- 👤 STANDING MEN (Rooftops & High Ground Evacuation Sectors) ---
+    # Standing Man 1: Mansion Rooftop (pacing and waving to UAV 1 & 5)
+    vels["standing_man_mansion"] = (
+        0.25 * math.sin(0.35 * t),
+        0.15 * math.cos(0.35 * t),
+        0.0,
+        0.20
     )
     
-    # Water Victim 2: Drifting toward rescue boat corridor with wave heave
-    vels["victim_water_2"] = (
-        -0.15 * math.sin(0.35 * t),
-        -0.35 + 0.08 * math.cos(0.25 * t),
-        0.05 * math.cos(1.8 * t),
-        0.05
+    # Standing Man 2: Upper Mountain Terrace (walking along safe ledge)
+    vels["standing_man_terrace"] = (
+        0.30 * math.cos(0.25 * t),
+        0.20 * math.sin(0.25 * t),
+        0.0,
+        0.15
     )
     
-    # Water Victim 3: Floating debris clinger bobbing on flood current
-    vels["victim_water_3"] = (
-        0.18 * math.sin(0.2 * t),
-        -0.40,
-        0.07 * math.sin(1.5 * t),
-        0.04
-    )
-    
-    # Water Victim 4: Trapped in eddy whirlpool, rotational drift
-    vels["victim_water_4"] = (
-        0.30 * math.cos(0.5 * t),
-        0.30 * math.sin(0.5 * t),
-        0.05 * math.cos(2.2 * t),
-        0.45
-    )
-    
-    # Survivor East Guide: Walking/pacing along terrace ridge guiding evacuees
-    vels["survivor_east_guide"] = (
-        0.35 * math.cos(0.25 * t),
-        0.25 * math.sin(0.25 * t),
+    # Standing Man 3: East Mid Ridge (pacing high ground)
+    vels["standing_man_ridge"] = (
+        0.20 * math.sin(0.3 * t),
+        0.18 * math.cos(0.3 * t),
         0.0,
         0.18
     )
     
-    # Survivor Mansion Flag: Pacing on rooftop back and forth waving distress flag
-    vels["survivor_mansion_flag"] = (
-        0.25 * math.sin(0.3 * t),
-        0.15 * math.cos(0.3 * t),
-        0.0,
-        0.22
-    )
-    
-    # Survivor Balcony Calling Boat: Leaning over balcony railing signaling rescue boat
-    vels["survivor_balcony_boat"] = (
+    # Standing Man 4: Villa Balcony (calling and gesturing to rescue boat)
+    vels["standing_man_balcony"] = (
         0.12 * math.cos(0.4 * t),
         0.08 * math.sin(0.4 * t),
         0.01 * math.sin(1.2 * t),
         0.15
+    )
+    
+    # --- 🏊‍♀️ SWIMMING GIRLS (Floodwaters Drowning / Swimming / Treading Water) ---
+    # Swimming Girl 1: River Channel Downstream Drift + Wave Bobbing
+    vels["swimming_girl_1"] = (
+        0.20 * math.cos(0.4 * t),
+        -0.45 + 0.1 * math.sin(0.3 * t),
+        0.06 * math.sin(2.0 * t),
+        0.10
+    )
+    
+    # Swimming Girl 2: Flooded Intersection Crossing (Treading Water)
+    vels["swimming_girl_2"] = (
+        -0.18 * math.sin(0.35 * t),
+        -0.35 + 0.08 * math.cos(0.25 * t),
+        0.05 * math.cos(1.8 * t),
+        0.08
+    )
+    
+    # Swimming Girl 3: Floating Debris Corridor (Swimming & Clinging)
+    vels["swimming_girl_3"] = (
+        0.15 * math.sin(0.25 * t),
+        -0.38,
+        0.06 * math.sin(1.6 * t),
+        0.05
+    )
+    
+    # Swimming Girl 4: Eddy Current Whirlpool (Rotational Swimming)
+    vels["swimming_girl_4"] = (
+        0.28 * math.cos(0.5 * t),
+        0.28 * math.sin(0.5 * t),
+        0.05 * math.cos(2.2 * t),
+        0.45
+    )
+    
+    # Swimming Girl 5: Submerged Bridge Approach
+    vels["swimming_girl_5"] = (
+        0.15 * math.cos(0.3 * t),
+        -0.25 + 0.05 * math.sin(0.4 * t),
+        0.04 * math.sin(1.5 * t),
+        0.12
     )
     
     return vels
@@ -166,8 +183,8 @@ def main():
         "uav_1", "uav_2", "uav_3", "uav_4",
         "uav_5", "uav_6", "uav_7", "uav_8",
         "rescue_boat_alpha",
-        "victim_water_1", "victim_water_2", "victim_water_3", "victim_water_4",
-        "survivor_east_guide", "survivor_mansion_flag", "survivor_balcony_boat"
+        "standing_man_mansion", "standing_man_terrace", "standing_man_ridge", "standing_man_balcony",
+        "swimming_girl_1", "swimming_girl_2", "swimming_girl_3", "swimming_girl_4", "swimming_girl_5"
     ]
     
     publishers = {}
@@ -209,7 +226,7 @@ def main():
                 pub.publish(msg)
         
         if t - last_print >= 5.0:
-            print(f"[T+{t:05.1f}s] Swarm & Victims Active: 8 UAVs flying | Boat cruising | 7 Victims moving | Latency: <0.1ms")
+            print(f"[T+{t:05.1f}s] SAR Active: 8 UAVs flying | Boat cruising | 4 Men pacing | 5 Girls swimming | Latency: <0.1ms")
             sys.stdout.flush()
             last_print = t
             
