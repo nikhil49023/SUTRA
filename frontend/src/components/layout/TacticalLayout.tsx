@@ -183,91 +183,100 @@ export const TacticalLayout: React.FC = () => {
 
         {/* Central Map & Overlaid Context Panels */}
         <div className="flex-1 flex flex-col relative overflow-hidden">
-          {/* Persistent MapLibre Instance (always in DOM) */}
-          <div className="absolute inset-0 z-0">
+          {/* Dynamic MapLibre GIS Engine (Available for GIS & Tactical Navigation) */}
+          <div 
+            className="absolute inset-0 z-0"
+            style={{ display: activeSection === 'CAMERA' ? 'none' : 'block' }}
+          >
             <ErrorBoundary fallbackTitle="MAP ENGINE">
               <MapView />
             </ErrorBoundary>
           </div>
 
-          {/* Floating Tactical Card (3D Map remains live & visible in the background) */}
-          <div
-            className={`absolute left-3 top-3 bottom-3 ${activeSection === 'CAMERA' ? 'w-[780px]' : 'w-[560px]'} max-w-[calc(100vw-5rem)] z-20 overflow-hidden flex flex-col bg-[#0B0F14]/94 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.85)] transition-all duration-300 animate-in fade-in slide-in-from-left-4`}
-            style={{ display: showOverlay ? 'flex' : 'none' }}
-          >
-            {/* Overlay Header Ribbon */}
-            {activeMeta && (
-              <div className="h-11 bg-[#11171E] border-b border-[#2B3743] px-4 flex items-center justify-between font-mono text-xs flex-shrink-0 z-10">
-                <div className="flex items-center space-x-2.5">
-                  <div className="w-6 h-6 rounded bg-[#1B2530] border border-[#5B8FB9]/50 flex items-center justify-center text-[#5B8FB9]">
-                    <SectionIcon className="w-3.5 h-3.5" />
-                  </div>
-                  <div>
-                    <span className="font-bold text-[#E7EBEF] tracking-wide">{activeMeta.title}</span>
-                    <span className="hidden md:inline text-[10px] text-[#707C88] ml-2 font-normal">
-                      // {activeMeta.subtitle}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => setActiveSection('COMMAND')}
-                    className="px-2.5 py-1 rounded-lg bg-[#151D26] hover:bg-[#1B2530] border border-[#2B3743] hover:border-[#5B8FB9] text-[#A9B3BD] hover:text-[#E7EBEF] text-[11px] font-bold flex items-center space-x-1.5 transition cursor-pointer"
-                    title="Close card and return to full map (Esc)"
-                  >
-                    <span>CLOSE</span>
-                    <kbd className="px-1 py-0.2 rounded bg-[#0B0F14] border border-[#2B3743] text-[9px] text-[#707C88]">ESC</kbd>
-                    <X className="w-3.5 h-3.5 ml-0.5" />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Overlay Body */}
-            <div className="flex-1 w-full overflow-hidden">
-              <ErrorBoundary fallbackTitle="MISSION SUBSYSTEM">
-                <div style={{ display: activeSection === 'MISSION' ? 'block' : 'none', width: '100%', height: '100%' }}>
-                  <MissionPlannerPanel />
-                </div>
-              </ErrorBoundary>
+          {/* Full-view Camera Section (No static/placeholder map underneath) */}
+          {activeSection === 'CAMERA' && (
+            <div className="absolute inset-0 z-20 flex flex-col bg-[#0B0F14] overflow-hidden">
               <ErrorBoundary fallbackTitle="CAMERA RECEIVER SUBSYSTEM">
-                <div style={{ display: activeSection === 'CAMERA' ? 'block' : 'none', width: '100%', height: '100%' }}>
-                  <LiveCameraFeedPanelMemo />
-                </div>
-              </ErrorBoundary>
-              <ErrorBoundary fallbackTitle="GEOFENCE SUBSYSTEM">
-                <div style={{ display: activeSection === 'GEOFENCE' ? 'block' : 'none', width: '100%', height: '100%' }}>
-                  <GeofencePanelMemo />
-                </div>
-              </ErrorBoundary>
-              <ErrorBoundary fallbackTitle="FLEET SUBSYSTEM">
-                <div style={{ display: activeSection === 'FLEET' ? 'block' : 'none', width: '100%', height: '100%' }}>
-                  <FleetPanelMemo />
-                </div>
-              </ErrorBoundary>
-              <ErrorBoundary fallbackTitle="GIS SUBSYSTEM">
-                <div style={{ display: activeSection === 'GIS' ? 'block' : 'none', width: '100%', height: '100%' }}>
-                  <GisPanelMemo />
-                </div>
-              </ErrorBoundary>
-              <ErrorBoundary fallbackTitle="AI SUBSYSTEM">
-                <div style={{ display: activeSection === 'AI' ? 'block' : 'none', width: '100%', height: '100%' }}>
-                  <AiPanelMemo />
-                </div>
-              </ErrorBoundary>
-              <ErrorBoundary fallbackTitle="DISASTER RISK INTELLIGENCE">
-                <div style={{ display: (activeSection === 'DISASTER_INTEL' || activeSection === 'RISK') ? 'block' : 'none', width: '100%', height: '100%' }}>
-                  <DisasterIntelPanelMemo />
-                </div>
-              </ErrorBoundary>
-              <ErrorBoundary fallbackTitle="SETTINGS SUBSYSTEM">
-                <div style={{ display: activeSection === 'SETTINGS' ? 'block' : 'none', width: '100%', height: '100%' }}>
-                  <SettingsPanelMemo />
-                </div>
+                <LiveCameraFeedPanelMemo />
               </ErrorBoundary>
             </div>
-          </div>
+          )}
+
+          {/* Floating Tactical Cards for Subsystem Overlays */}
+          {activeSection !== 'CAMERA' && (
+            <div
+              className="absolute left-3 top-3 bottom-3 w-[560px] max-w-[calc(100vw-5rem)] z-20 overflow-hidden flex flex-col bg-[#0B0F14]/94 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.85)] transition-all duration-300 animate-in fade-in slide-in-from-left-4"
+              style={{ display: showOverlay ? 'flex' : 'none' }}
+            >
+              {/* Overlay Header Ribbon */}
+              {activeMeta && (
+                <div className="h-11 bg-[#11171E] border-b border-[#2B3743] px-4 flex items-center justify-between font-mono text-xs flex-shrink-0 z-10">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-6 h-6 rounded bg-[#1B2530] border border-[#5B8FB9]/50 flex items-center justify-center text-[#5B8FB9]">
+                      <SectionIcon className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <span className="font-bold text-[#E7EBEF] tracking-wide">{activeMeta.title}</span>
+                      <span className="hidden md:inline text-[10px] text-[#707C88] ml-2 font-normal">
+                        // {activeMeta.subtitle}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setActiveSection('COMMAND')}
+                      className="px-2.5 py-1 rounded-lg bg-[#151D26] hover:bg-[#1B2530] border border-[#2B3743] hover:border-[#5B8FB9] text-[#A9B3BD] hover:text-[#E7EBEF] text-[11px] font-bold flex items-center space-x-1.5 transition cursor-pointer"
+                      title="Close card and return to full map (Esc)"
+                    >
+                      <span>CLOSE</span>
+                      <kbd className="px-1 py-0.2 rounded bg-[#0B0F14] border border-[#2B3743] text-[9px] text-[#707C88]">ESC</kbd>
+                      <X className="w-3.5 h-3.5 ml-0.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Overlay Body */}
+              <div className="flex-1 w-full overflow-hidden">
+                <ErrorBoundary fallbackTitle="MISSION SUBSYSTEM">
+                  <div style={{ display: activeSection === 'MISSION' ? 'block' : 'none', width: '100%', height: '100%' }}>
+                    <MissionPlannerPanel />
+                  </div>
+                </ErrorBoundary>
+                <ErrorBoundary fallbackTitle="GEOFENCE SUBSYSTEM">
+                  <div style={{ display: activeSection === 'GEOFENCE' ? 'block' : 'none', width: '100%', height: '100%' }}>
+                    <GeofencePanelMemo />
+                  </div>
+                </ErrorBoundary>
+                <ErrorBoundary fallbackTitle="FLEET SUBSYSTEM">
+                  <div style={{ display: activeSection === 'FLEET' ? 'block' : 'none', width: '100%', height: '100%' }}>
+                    <FleetPanelMemo />
+                  </div>
+                </ErrorBoundary>
+                <ErrorBoundary fallbackTitle="GIS SUBSYSTEM">
+                  <div style={{ display: activeSection === 'GIS' ? 'block' : 'none', width: '100%', height: '100%' }}>
+                    <GisPanelMemo />
+                  </div>
+                </ErrorBoundary>
+                <ErrorBoundary fallbackTitle="AI SUBSYSTEM">
+                  <div style={{ display: activeSection === 'AI' ? 'block' : 'none', width: '100%', height: '100%' }}>
+                    <AiPanelMemo />
+                  </div>
+                </ErrorBoundary>
+                <ErrorBoundary fallbackTitle="DISASTER RISK INTELLIGENCE">
+                  <div style={{ display: (activeSection === 'DISASTER_INTEL' || activeSection === 'RISK') ? 'block' : 'none', width: '100%', height: '100%' }}>
+                    <DisasterIntelPanelMemo />
+                  </div>
+                </ErrorBoundary>
+                <ErrorBoundary fallbackTitle="SETTINGS SUBSYSTEM">
+                  <div style={{ display: activeSection === 'SETTINGS' ? 'block' : 'none', width: '100%', height: '100%' }}>
+                    <SettingsPanelMemo />
+                  </div>
+                </ErrorBoundary>
+              </div>
+            </div>
+          )}
 
           {/* Multi-Drone Diagnostic HUD */}
           <ErrorBoundary fallbackTitle="DIAGNOSTIC HUD">
