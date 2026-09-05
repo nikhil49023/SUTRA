@@ -1,3 +1,11 @@
+<div align="center">
+
+### 📑 Official Repository Navigation & Hackathon Compliance
+**[📖 README](README.md)** &nbsp;&nbsp;•&nbsp;&nbsp; **[📝 DECLARATION (AI & Tool Usage)](DECLARATION.md)** &nbsp;&nbsp;•&nbsp;&nbsp; **[📜 Code of Conduct](CODE_OF_CONDUCT.md)** &nbsp;&nbsp;•&nbsp;&nbsp; **[🤝 Contributing](CONTRIBUTING.md)** &nbsp;&nbsp;•&nbsp;&nbsp; **[⚖️ MIT License](LICENSE)** &nbsp;&nbsp;•&nbsp;&nbsp; **[🛡️ Security Policy](SECURITY.md)**
+
+---
+</div>
+
 # 🚁 PROJECT SUTRA — Swarm Unified Tactical Reconnaissance Architecture
 
 [![ROS 2 Humble/Jazzy](https://img.shields.io/badge/ROS_2-Humble%20%2F%20Jazzy-blue.svg)](https://docs.ros.org/)
@@ -7,6 +15,7 @@
 [![GCS Vite Build](https://img.shields.io/badge/GCS-React%2018%20%2B%20WebGPU%20(226kB)-purple.svg)]()
 [![Hardware BOM](https://img.shields.io/badge/Unit%20Cost-₹42%2C850%20%2F%20UAV-emerald.svg)]()
 [![NVIDIA Sionna 6G](https://img.shields.io/badge/RF%20Sim-NVIDIA%20Sionna%206G%20Workbench-76B900.svg)]()
+[![NHCE Declaration](https://img.shields.io/badge/NHCE_Declaration-AI_%26_Tool_Usage_(Rule_6.4.1)-8A2BE2.svg)](DECLARATION.md)
 [![NHCE Hackathon Compliant](https://img.shields.io/badge/NHCE_Hackathon-Rules_6.1%2C_6.2%2C_6.4%2C_7.1_Compliant-gold.svg)]()
 
 > **Smart Horizon: 48-Hour International Hackathon Grand Finale (Sept 3–5, 2026)**  
