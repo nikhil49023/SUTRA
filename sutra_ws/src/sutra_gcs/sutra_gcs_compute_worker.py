@@ -55,7 +55,19 @@ class GcsComputeWorker:
 
         self.local_clients: Set[object] = set()
         self.host_ws = None
+        self.host_connected = False
         self.running = True
+
+    def is_host_connected(self) -> bool:
+        """Returns True if WebSocket connection to simulation host is open and active."""
+        if not getattr(self, "host_connected", False) or self.host_ws is None:
+            return False
+        try:
+            if hasattr(self.host_ws, "state"):
+                return str(self.host_ws.state.name).upper() == "OPEN"
+            return not getattr(self.host_ws, "closed", True)
+        except Exception:
+            return False
 
         # Edge perception state
         self.detected_survivors = []
@@ -149,7 +161,7 @@ class GcsComputeWorker:
 
         while self.running:
             # If host_ws is connected and healthy, don't generate fallback frames
-            if self.host_ws is not None and not self.host_ws.closed:
+            if self.is_host_connected():
                 time.sleep(1.0)
                 continue
 
@@ -498,7 +510,7 @@ class GcsComputeWorker:
                 # Uplink commands from Shiva's browser (e.g. 1-Click RTL) -> Forward to Nikhil's host
                 try:
                     cmd = json.loads(msg)
-                    if self.host_ws and not self.host_ws.closed:
+                    if self.is_host_connected() and self.host_ws:
                         await self.host_ws.send(json.dumps(cmd))
                         print(f"🚀 [Uplink Forwarded to Host] {cmd.get('command')}")
                 except Exception:
@@ -521,35 +533,42 @@ class GcsComputeWorker:
                 print(f"⏳ Connecting to Simulation Host at {self.host_url}...")
                 async with websockets.connect(self.host_url, ping_interval=5) as ws:
                     self.host_ws = ws
+                    self.host_connected = True
                     print(f"✅ CONNECTED TO SIMULATION HOST ({self.host_url})!")
-                    async for raw in ws:
-                        if not self.running:
-                            break
-                        try:
-                            packet = json.loads(raw)
-                            topic = packet.get("topic")
+                    try:
+                        async for raw in ws:
+                            if not self.running:
+                                break
+                            try:
+                                packet = json.loads(raw)
+                                topic = packet.get("topic")
 
-                            if topic == "CAMERA_FRAME":
-                                if "world_id" not in packet:
-                                    packet["world_id"] = "WORLD_1"
-                                processed = self._process_video_and_perception(packet)
-                                raw_out = json.dumps(processed)
-                            elif topic == "ai.target_detected" and "target" in packet:
-                                if "world_id" not in packet["target"]:
-                                    packet["target"]["world_id"] = "WORLD_1"
-                                raw_out = json.dumps(packet)
-                            else:
-                                raw_out = raw
+                                if topic == "CAMERA_FRAME":
+                                    if "world_id" not in packet:
+                                        packet["world_id"] = "WORLD_1"
+                                    processed = self._process_video_and_perception(packet)
+                                    raw_out = json.dumps(processed)
+                                elif topic == "ai.target_detected" and "target" in packet:
+                                    if "world_id" not in packet["target"]:
+                                        packet["target"]["world_id"] = "WORLD_1"
+                                    raw_out = json.dumps(packet)
+                                else:
+                                    raw_out = raw
 
-                            # Broadcast to Shiva's local GCS browser
-                            for client in list(self.local_clients):
-                                try:
-                                    await client.send(raw_out)
-                                except Exception:
-                                    pass
-                        except Exception:
-                            pass
+                                # Broadcast to Shiva's local GCS browser
+                                for client in list(self.local_clients):
+                                    try:
+                                        await client.send(raw_out)
+                                    except Exception:
+                                        pass
+                            except Exception:
+                                pass
+                    finally:
+                        self.host_connected = False
+                        self.host_ws = None
             except Exception as e:
+                self.host_connected = False
+                self.host_ws = None
                 if not self.running:
                     break
                 print(f"⚠️  Host connection lost ({e}). Retrying in 2.0s...")
@@ -594,7 +613,7 @@ class GcsComputeWorker:
                 pass
             self.loop.call_soon_threadsafe(self.loop.stop)
 
-        if self.host_ws and not self.host_ws.closed and hasattr(self, "client_loop_obj") and self.client_loop_obj.is_running():
+        if self.is_host_connected() and hasattr(self, "client_loop_obj") and self.client_loop_obj.is_running():
             try:
                 future = asyncio.run_coroutine_threadsafe(self.host_ws.close(), self.client_loop_obj)
                 future.result(timeout=1.0)
