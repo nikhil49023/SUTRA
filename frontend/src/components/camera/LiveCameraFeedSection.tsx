@@ -72,10 +72,12 @@ export const LiveCameraFeedSection: React.FC = () => {
   const worldStatus1 = getWorldStatus('WORLD_1');
   const worldStatus2 = getWorldStatus('WORLD_2');
 
-  // Check if WebSocket frame is available as fallback/supplement
+  // Check if WebSocket frame is available for this active world and UAV
   const wsFrameKey = `${activeWorld}_${activeUav}_${modality}`;
   const wsFrameLegacyKey = `${activeUav}_${modality}`;
-  const wsFrame = frames[wsFrameKey] || frames[wsFrameLegacyKey];
+  // Strict world separation: never fall back to legacy key on WORLD_2, and verify world_id matches
+  const candidateFrame = frames[wsFrameKey] || (activeWorld === 'WORLD_1' ? frames[wsFrameLegacyKey] : undefined);
+  const wsFrame = (candidateFrame && (candidateFrame.world_id || 'WORLD_1') === activeWorld) ? candidateFrame : undefined;
 
   // Inactive feed cleanup on switch
   useEffect(() => {
@@ -182,7 +184,8 @@ export const LiveCameraFeedSection: React.FC = () => {
   const activeSurvivors = trackedTargets.filter((t) => {
     if (t.tracking_status === 'LOST') return false;
     if (!isPersonOrSurvivor(t.label)) return false;
-    if (t.world_id && t.world_id !== activeWorld) return false;
+    const tWorld = t.world_id || 'WORLD_1';
+    if (tWorld !== activeWorld) return false;
 
     // Filter strictly to the currently selected drone
     if (t.drone_id) {
@@ -541,7 +544,7 @@ export const LiveCameraFeedSection: React.FC = () => {
           {/* Priority 1: Direct WebSocket base64 stream from simulation / compute worker */}
           {wsFrame?.image_b64 ? (
             <img
-              key={`ws-stream-${activeWorld}-${activeUav}`}
+              key={`ws-stream-${activeWorld}-${activeUav}-${modality}`}
               src={wsFrame.image_b64}
               alt={`WebSocket live stream for ${activeWorld} ${activeUav}`}
               className="w-full h-full object-contain pointer-events-none"
@@ -550,6 +553,7 @@ export const LiveCameraFeedSection: React.FC = () => {
           ) : (
             /* Priority 2: Direct MJPEG HTTP stream from Gazebo or proxy */
             <img
+              key={`http-stream-${activeWorld}-${activeUav}-${modality}`}
               ref={imgRef}
               src={currentStreamUrl}
               alt={`Live stream from ${activeWorld} ${activeUav}`}

@@ -84,6 +84,10 @@ class GcsComputeWorker:
         self.local_server_thread = threading.Thread(target=self._run_local_server, daemon=True)
         self.local_server_thread.start()
 
+        # Start Flood Basin SAR Video Stream Thread for WORLD 1 (runs when simulation host is offline)
+        self.world1_stream_thread = threading.Thread(target=self._run_world1_video_stream, daemon=True)
+        self.world1_stream_thread.start()
+
         # Start Nikhil Live Video Stream Thread for WORLD 2
         self.nikhil_stream_thread = threading.Thread(target=self._run_nikhil_video_stream, daemon=True)
         self.nikhil_stream_thread.start()
@@ -104,6 +108,143 @@ class GcsComputeWorker:
                 asyncio.run_coroutine_threadsafe(client.send(raw_msg), self.loop)
             except Exception:
                 pass
+
+    def _run_world1_video_stream(self):
+        """Streams Flood Basin SAR Aerial Reconnaissance frames to WORLD_1 when host is offline."""
+        bg_candidates = [
+            str(PROJECT_ROOT / "docs" / "assets" / "kaggle_renders" / "uav1_rgb_recon.png"),
+            "/home/siva/Documents/DRONE_CONTROL/docs/assets/kaggle_renders/uav1_rgb_recon.png"
+        ]
+        surv_candidates = [
+            str(PROJECT_ROOT / "kaggle_pipeline" / "input_images" / "03_sar_survivor.jpg"),
+            "/home/siva/Documents/DRONE_CONTROL/kaggle_pipeline/input_images/03_sar_survivor.jpg"
+        ]
+        bg_path = next((p for p in bg_candidates if os.path.exists(p)), None)
+        surv_path = next((p for p in surv_candidates if os.path.exists(p)), None)
+
+        if not bg_path:
+            print("⚠️ World 1 background image not found, skipping fallback thread.")
+            return
+
+        bg = cv2.imread(bg_path)
+        if bg is None:
+            return
+
+        canvas = bg.copy()
+        if surv_path and os.path.exists(surv_path):
+            surv = cv2.imread(surv_path)
+            if surv is not None:
+                crop_person = cv2.resize(surv[200:800, 300:700], (160, 240))
+                # Place survivor in disaster terrain
+                canvas[350:590, 500:660] = crop_person
+
+        ch, cw = canvas.shape[:2]
+        crop_w, crop_h = 640, 360
+        max_x = max(0, cw - crop_w)
+        max_y = max(0, ch - crop_h)
+
+        step = 0
+        print(f"🎬 SUTRA Flood Basin SAR Video Stream Active for WORLD_1: {bg_path}")
+        time.sleep(1.0)
+
+        while self.running:
+            # If host_ws is connected and healthy, don't generate fallback frames
+            if self.host_ws is not None and not self.host_ws.closed:
+                time.sleep(1.0)
+                continue
+
+            if not self.local_clients:
+                time.sleep(0.5)
+                continue
+
+            # Smooth patrolling motion across disaster terrain
+            step += 1
+            pan_x = int((math.sin(step * 0.04) * 0.5 + 0.5) * max_x)
+            pan_y = int((math.cos(step * 0.02) * 0.5 + 0.5) * max_y)
+
+            sub_frame = canvas[pan_y:pan_y + crop_h, pan_x:pan_x + crop_w]
+            if sub_frame.shape[0] != crop_h or sub_frame.shape[1] != crop_w:
+                sub_frame = cv2.resize(sub_frame, (crop_w, crop_h))
+
+            now_ms = int(time.time() * 1000)
+            survivor_targets = []
+            uh, uw = sub_frame.shape[:2]
+
+            if self.yolo_model is not None:
+                try:
+                    results = self.yolo_model.predict(sub_frame, conf=0.18, verbose=False)[0]
+                    for idx, b in enumerate(results.boxes):
+                        cls_id = int(b.cls[0])
+                        cname = str(self.yolo_model.names.get(cls_id, '')).lower().strip()
+                        cconf = float(b.conf[0])
+                        bx1, by1, bx2, by2 = [float(v) for v in b.xyxy[0]]
+                        is_surv = cname in ('person', 'pedestrian', 'people', 'human', 'survivor', 'victim') or cls_id == 0
+
+                        if is_surv:
+                            s_lat = round(11.524871 + (((by1 + by2) / 2.0 - uh / 2.0) / (uh / 2.0)) * 0.0003, 6)
+                            s_lon = round(76.128456 + (((bx1 + bx2) / 2.0 - uw / 2.0) / (uw / 2.0)) * 0.0003, 6)
+                            target_obj = {
+                                "id": idx + 1,
+                                "label": "SURVIVOR",
+                                "conf": cconf,
+                                "norm_bbox": [bx1 / uw, by1 / uh, bx2 / uw, by2 / uh],
+                                "bbox": [bx1, by1, bx2, by2],
+                                "lat": s_lat,
+                                "lon": s_lon,
+                            }
+                            survivor_targets.append(target_obj)
+                except Exception:
+                    pass
+
+            _, buf = cv2.imencode('.jpg', sub_frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
+            b64_img = f"data:image/jpeg;base64,{base64.b64encode(buf).decode('utf-8')}"
+
+            packet = {
+                "topic": "CAMERA_FRAME",
+                "world_id": "WORLD_1",
+                "drone_id": "uav_1",
+                "stream_type": "RGB",
+                "image_b64": b64_img,
+                "timestamp": now_ms,
+                "width": uw,
+                "height": uh,
+                "pose": {
+                    "latitude": 11.524871,
+                    "longitude": 76.128456,
+                    "altitude": 45.0,
+                    "heading": 90.0,
+                },
+                "perception": {
+                    "detected": len(survivor_targets) > 0,
+                    "label": "SURVIVOR",
+                    "confidence": survivor_targets[0]["conf"] if survivor_targets else 0.0,
+                    "targets": survivor_targets,
+                }
+            }
+            self._broadcast_to_clients(json.dumps(packet))
+
+            for st in survivor_targets:
+                target_evt = {
+                    "topic": "ai.target_detected",
+                    "target": {
+                        "target_id": f"W1_uav_1_{st['id']}",
+                        "label": "SURVIVOR",
+                        "confidence": st["conf"],
+                        "world_id": "WORLD_1",
+                        "drone_id": "uav_1",
+                        "norm_bbox": st["norm_bbox"],
+                        "bbox": st["bbox"],
+                        "latitude": st["lat"],
+                        "longitude": st["lon"],
+                        "altitude_m": 45.0,
+                        "tracking_status": "TRACKED",
+                        "modalities": ["visual"],
+                        "last_seen": now_ms,
+                    }
+                }
+                self._broadcast_to_clients(json.dumps(target_evt))
+
+            time.sleep(0.066)
 
     def _run_nikhil_video_stream(self):
         """Streams Nikhil's live screen feed from WhatsApp video to WORLD_2."""
@@ -389,8 +530,14 @@ class GcsComputeWorker:
                             topic = packet.get("topic")
 
                             if topic == "CAMERA_FRAME":
+                                if "world_id" not in packet:
+                                    packet["world_id"] = "WORLD_1"
                                 processed = self._process_video_and_perception(packet)
                                 raw_out = json.dumps(processed)
+                            elif topic == "ai.target_detected" and "target" in packet:
+                                if "world_id" not in packet["target"]:
+                                    packet["target"]["world_id"] = "WORLD_1"
+                                raw_out = json.dumps(packet)
                             else:
                                 raw_out = raw
 

@@ -172,4 +172,60 @@ describe('SUTRA Remote Camera Receiver & Telemetry Store', () => {
       'http://192.168.1.100:8080/stream/uav_1'
     );
   });
+
+  it('strictly isolates WORLD_1 and WORLD_2 camera frames without cross-contamination', () => {
+    const store = useCameraStore.getState();
+
+    // Ingest frame for WORLD_2
+    const world2Packet = {
+      type: 'CAMERA_FRAME',
+      world_id: 'WORLD_2',
+      drone_id: 'uav_1',
+      stream_type: 'RGB',
+      image_b64: 'data:image/jpeg;base64,WORLD_2_IMAGE_PAYLOAD',
+      timestamp: Date.now(),
+      width: 960,
+      height: 540,
+    };
+    messageRouter.routeMessage(world2Packet);
+
+    const afterW2 = useCameraStore.getState();
+    // WORLD_2 frame is strictly in WORLD_2 slot
+    expect(afterW2.frames['WORLD_2_uav_1_RGB']).toBeDefined();
+    expect(afterW2.frames['WORLD_2_uav_1_RGB'].image_b64).toContain('WORLD_2_IMAGE_PAYLOAD');
+
+    // WORLD_1 must NOT have received WORLD_2 frame
+    expect(afterW2.frames['WORLD_1_uav_1_RGB']).toBeUndefined();
+    // Legacy slot must NOT be polluted with WORLD_2 frame
+    expect(afterW2.frames['uav_1_RGB']).toBeUndefined();
+
+    // Signal status: WORLD_2 is LIVE, WORLD_1 is NO_SIGNAL
+    expect(afterW2.getSignalStatus('uav_1', 'RGB', 'WORLD_2')).toBe('LIVE');
+    expect(afterW2.getSignalStatus('uav_1', 'RGB', 'WORLD_1')).toBe('NO_SIGNAL');
+
+    // Ingest frame for WORLD_1
+    const world1Packet = {
+      type: 'CAMERA_FRAME',
+      world_id: 'WORLD_1',
+      drone_id: 'uav_1',
+      stream_type: 'RGB',
+      image_b64: 'data:image/jpeg;base64,WORLD_1_IMAGE_PAYLOAD',
+      timestamp: Date.now(),
+      width: 640,
+      height: 360,
+    };
+    messageRouter.routeMessage(world1Packet);
+
+    const afterW1 = useCameraStore.getState();
+    // WORLD_1 frame is in WORLD_1 slot and legacy alias
+    expect(afterW1.frames['WORLD_1_uav_1_RGB']?.image_b64).toContain('WORLD_1_IMAGE_PAYLOAD');
+    expect(afterW1.frames['uav_1_RGB']?.image_b64).toContain('WORLD_1_IMAGE_PAYLOAD');
+
+    // WORLD_2 frame is completely untouched
+    expect(afterW1.frames['WORLD_2_uav_1_RGB']?.image_b64).toContain('WORLD_2_IMAGE_PAYLOAD');
+
+    // Both worlds report LIVE for their own feeds
+    expect(afterW1.getSignalStatus('uav_1', 'RGB', 'WORLD_1')).toBe('LIVE');
+    expect(afterW1.getSignalStatus('uav_1', 'RGB', 'WORLD_2')).toBe('LIVE');
+  });
 });

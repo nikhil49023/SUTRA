@@ -427,8 +427,8 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
     const explicit = get().feedStatuses[key] || get().feedStatuses[`${w}_${u}`];
     if (explicit) return explicit;
 
-    // Check frame timestamp strictly for this world and uav
-    const lastTime = get().lastFrameTimes[key] || 0;
+    // Check frame timestamp strictly for this world and uav (legacy only fallback for WORLD_1)
+    const lastTime = get().lastFrameTimes[key] || (w === 'WORLD_1' ? get().lastFrameTimes[`${u}_${m}`] : 0) || 0;
     if (lastTime > 0 && Date.now() - lastTime < SIGNAL_TIMEOUT_MS) {
       return 'CONNECTED';
     }
@@ -465,7 +465,8 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
     const key = `${targetWorld}_${targetUav}_${targetMod}`;
     const legacyKey = `${targetUav}_${targetMod}`;
 
-    const lastTime = get().lastFrameTimes[key] || get().lastFrameTimes[legacyKey] || 0;
+    // Strict world separation: WORLD_2 never inspects WORLD_1 legacy keys
+    const lastTime = get().lastFrameTimes[key] || (targetWorld === 'WORLD_1' ? get().lastFrameTimes[legacyKey] : 0) || 0;
     const isLive = Date.now() - lastTime < SIGNAL_TIMEOUT_MS;
     return isLive ? 'LIVE' : 'NO_SIGNAL';
   },
@@ -501,20 +502,21 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
     const streamType = (data.stream_type || 'RGB').toUpperCase() as Modality;
     const key = `${worldId}_${droneId}_${streamType}`;
     const legacyKey = `${droneId}_${streamType}`;
+    const isWorld1 = worldId === 'WORLD_1';
     const now = Date.now();
 
     const currentTimes = get().lastFrameTimes;
-    const lastTime = currentTimes[key] || currentTimes[legacyKey] || 0;
+    const lastTime = currentTimes[key] || (isWorld1 ? currentTimes[legacyKey] : 0) || 0;
     const dt = (now - lastTime) / 1000;
 
     // Smooth FPS computation
     let fps = 0;
     if (dt > 0 && dt < 2.0) {
       const instantFps = 1.0 / dt;
-      const prevFps = get().measuredFps[key] || get().measuredFps[legacyKey] || instantFps;
+      const prevFps = get().measuredFps[key] || (isWorld1 ? get().measuredFps[legacyKey] : 0) || instantFps;
       fps = Math.round((prevFps * 0.7 + instantFps * 0.3) * 10) / 10;
     } else if (dt <= 0) {
-      fps = get().measuredFps[key] || get().measuredFps[legacyKey] || 0;
+      fps = get().measuredFps[key] || (isWorld1 ? get().measuredFps[legacyKey] : 0) || 0;
     }
 
     const frameData: CameraFrameData = {
@@ -543,30 +545,29 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
       frames: {
         ...state.frames,
         [key]: frameData,
-        [legacyKey]: frameData, // Alias for backward compatibility
-        [droneId]: frameData,   // Direct drone_id key for multi-drone components
+        // Only set legacy/drone un-namespaced alias for WORLD_1 so WORLD_2 never overwrites or pollutes WORLD_1
+        ...(isWorld1 ? { [legacyKey]: frameData, [droneId]: frameData } : {}),
       },
       feedStatuses: {
         ...state.feedStatuses,
         [key]: 'CONNECTED',
         [`${worldId}_${droneId}`]: 'CONNECTED',
+        ...(isWorld1 ? { [legacyKey]: 'CONNECTED' } : {}),
       },
       lastFrameTimes: {
         ...state.lastFrameTimes,
         [key]: now,
-        [legacyKey]: now,
+        ...(isWorld1 ? { [legacyKey]: now } : {}),
       },
       frameCounts: {
         ...state.frameCounts,
         [key]: (state.frameCounts[key] || 0) + 1,
-        [legacyKey]: (state.frameCounts[legacyKey] || 0) + 1,
-        [droneId]: (state.frameCounts[droneId] || 0) + 1,
+        ...(isWorld1 ? { [legacyKey]: (state.frameCounts[legacyKey] || 0) + 1, [droneId]: (state.frameCounts[droneId] || 0) + 1 } : {}),
       },
       measuredFps: {
         ...state.measuredFps,
         [key]: fps,
-        [legacyKey]: fps,
-        [droneId]: fps,
+        ...(isWorld1 ? { [legacyKey]: fps, [droneId]: fps } : {}),
       },
     }));
   },
