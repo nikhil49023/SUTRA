@@ -84,6 +84,8 @@ runs/
 quarantine/
 .wwebjs_cache/
 .system_generated/
+*.mbtiles
+sutra_ws/src/sutra_gcs/data/
 
 # Heavy ML Model Weights — NEVER commit these (violates AGENTS.md Rule 1 — No Bloat)
 *.pt
