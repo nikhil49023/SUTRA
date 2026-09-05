@@ -579,7 +579,140 @@ export const LiveCameraFeedSection: React.FC = () => {
             </button>
           </div>
 
-          {/* Clean Live Feed View — Bounding Boxes Removed */}
+          {/* ── SUBSYSTEM C: REAL-TIME SURVIVOR DETECTION BOUNDING BOXES ── */}
+          {activeSurvivors.length > 0 && (
+            <div className="absolute inset-0 z-10 pointer-events-none">
+              {activeSurvivors.map((target) => {
+                // Use norm_bbox [x1, y1, x2, y2] in 0-1 range, or fall back to bbox with assumed 640x360
+                let left = 0, top = 0, width = 0, height = 0;
+                if (target.norm_bbox && target.norm_bbox.length >= 4) {
+                  left = target.norm_bbox[0] * 100;
+                  top = target.norm_bbox[1] * 100;
+                  width = (target.norm_bbox[2] - target.norm_bbox[0]) * 100;
+                  height = (target.norm_bbox[3] - target.norm_bbox[1]) * 100;
+                } else if (target.bbox && target.bbox.length >= 4) {
+                  // Pixel coords — normalize against assumed 640x360
+                  const fw = imgRef.current?.naturalWidth || 640;
+                  const fh = imgRef.current?.naturalHeight || 360;
+                  left = (target.bbox[0] / fw) * 100;
+                  top = (target.bbox[1] / fh) * 100;
+                  width = ((target.bbox[2] - target.bbox[0]) / fw) * 100;
+                  height = ((target.bbox[3] - target.bbox[1]) / fh) * 100;
+                }
+
+                // Clamp to viewport
+                left = Math.max(0, Math.min(left, 100));
+                top = Math.max(0, Math.min(top, 100));
+                width = Math.max(0, Math.min(width, 100 - left));
+                height = Math.max(0, Math.min(height, 100 - top));
+
+                const targetId = String(target.target_id || target.id);
+                const conf = ((target.confidence || 0) * 100).toFixed(0);
+                const status = target.tracking_status || 'DETECTED';
+
+                // Color by tracking status
+                const borderColor =
+                  status === 'TRACKED' ? '#10B981'   // green
+                  : status === 'DETECTED' ? '#F59E0B' // amber
+                  : '#EF4444';                         // red for LOST
+                const statusBg =
+                  status === 'TRACKED' ? 'rgba(16,185,129,0.85)'
+                  : status === 'DETECTED' ? 'rgba(245,158,11,0.85)'
+                  : 'rgba(239,68,68,0.85)';
+
+                return (
+                  <div
+                    key={`surv-bbox-${targetId}`}
+                    className="absolute"
+                    style={{
+                      left: `${left}%`,
+                      top: `${top}%`,
+                      width: `${width}%`,
+                      height: `${height}%`,
+                      border: `2px solid ${borderColor}`,
+                      boxShadow: `0 0 8px ${borderColor}40, inset 0 0 4px ${borderColor}20`,
+                      borderRadius: '2px',
+                    }}
+                  >
+                    {/* Target Label — top-left corner */}
+                    <div
+                      className="absolute flex items-center space-x-1"
+                      style={{
+                        top: '-1px',
+                        left: '-1px',
+                        transform: 'translateY(-100%)',
+                        background: 'rgba(11,15,20,0.92)',
+                        borderRadius: '3px 3px 0 0',
+                        padding: '1px 5px',
+                        borderTop: `2px solid ${borderColor}`,
+                        borderLeft: `2px solid ${borderColor}`,
+                        borderRight: `2px solid ${borderColor}`,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <Crosshair className="w-2.5 h-2.5" style={{ color: borderColor }} />
+                      <span className="text-[9px] font-extrabold text-[#E7EBEF] tracking-wide">
+                        SURVIVOR #{targetId}
+                      </span>
+                      <span className="text-[8px] font-bold" style={{ color: borderColor }}>
+                        {conf}%
+                      </span>
+                    </div>
+
+                    {/* Tracking Status Badge — top-right corner */}
+                    <div
+                      className="absolute flex items-center"
+                      style={{
+                        top: '-1px',
+                        right: '-1px',
+                        transform: 'translateY(-100%)',
+                        background: statusBg,
+                        borderRadius: '3px 3px 0 0',
+                        padding: '1px 4px',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <span className="text-[7px] font-extrabold text-white tracking-widest uppercase">
+                        {status}
+                      </span>
+                    </div>
+
+                    {/* Corner markers for tactical look */}
+                    <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2" style={{ borderColor }} />
+                    <div className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2" style={{ borderColor }} />
+                    <div className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2" style={{ borderColor }} />
+                    <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2" style={{ borderColor }} />
+                  </div>
+                );
+              })}
+
+              {/* Bottom-left survivor quick-list chips */}
+              <div className="absolute bottom-3 left-3 flex flex-wrap gap-1 max-w-[60%]">
+                {activeSurvivors.slice(0, 8).map((t) => {
+                  const tid = String(t.target_id || t.id);
+                  const statusColor =
+                    t.tracking_status === 'TRACKED' ? '#10B981'
+                    : t.tracking_status === 'DETECTED' ? '#F59E0B'
+                    : '#EF4444';
+                  return (
+                    <div
+                      key={`chip-${tid}`}
+                      className="flex items-center space-x-1 px-1.5 py-0.5 rounded text-[8px] font-bold backdrop-blur-sm"
+                      style={{
+                        background: 'rgba(11,15,20,0.88)',
+                        border: `1px solid ${statusColor}60`,
+                        color: statusColor,
+                      }}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: statusColor }} />
+                      <span className="text-[#E7EBEF]">#{tid}</span>
+                      <span>{((t.confidence || 0) * 100).toFixed(0)}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* NO SIGNAL / CONNECTING OVERLAY */}
           {currentStatus !== 'CONNECTED' && !wsFrame?.image_b64 && (
