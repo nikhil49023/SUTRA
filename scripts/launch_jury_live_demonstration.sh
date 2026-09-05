@@ -58,6 +58,9 @@ pkill -f "ros_gz_bridge parameter_bridge" 2>/dev/null || true
 pkill -f "swarm_fixed_path_node.py" 2>/dev/null || true
 pkill -f "mavlink_sitl_bridge.py" 2>/dev/null || true
 pkill -f "stream_perception_targets_to_swarm.py" 2>/dev/null || true
+pkill -f "gcs_gateway_bridge.py" 2>/dev/null || true
+pkill -f "sutra_tile_server.py" 2>/dev/null || true
+pkill -f "detector_node.py" 2>/dev/null || true
 
 # ── Step 1: Check / Launch Gazebo Sim 8 ──────────────────────────────────────
 WORLD_NAME="submerged_village_flood_world"
@@ -100,14 +103,34 @@ ros2 run ros_gz_bridge parameter_bridge \
   /clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock \
   /model/uav_alpha/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry \
   /uav_alpha/gazebo/command/twist@geometry_msgs/msg/TwistStamped]gz.msgs.Twist \
+  /uav_alpha/camera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image \
+  /uav_alpha/thermal_camera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image \
+  /uav_alpha/imu@sensor_msgs/msg/Imu[gz.msgs.IMU \
+  /uav_alpha/navsat@sensor_msgs/msg/NavSatFix[gz.msgs.NavSat \
   /model/uav_beta/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry \
   /uav_beta/gazebo/command/twist@geometry_msgs/msg/TwistStamped]gz.msgs.Twist \
+  /uav_beta/camera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image \
+  /uav_beta/thermal_camera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image \
+  /uav_beta/imu@sensor_msgs/msg/Imu[gz.msgs.IMU \
+  /uav_beta/navsat@sensor_msgs/msg/NavSatFix[gz.msgs.NavSat \
   /model/uav_gamma/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry \
   /uav_gamma/gazebo/command/twist@geometry_msgs/msg/TwistStamped]gz.msgs.Twist \
+  /uav_gamma/camera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image \
+  /uav_gamma/thermal_camera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image \
+  /uav_gamma/imu@sensor_msgs/msg/Imu[gz.msgs.IMU \
+  /uav_gamma/navsat@sensor_msgs/msg/NavSatFix[gz.msgs.NavSat \
   /model/uav_delta/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry \
   /uav_delta/gazebo/command/twist@geometry_msgs/msg/TwistStamped]gz.msgs.Twist \
+  /uav_delta/camera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image \
+  /uav_delta/thermal_camera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image \
+  /uav_delta/imu@sensor_msgs/msg/Imu[gz.msgs.IMU \
+  /uav_delta/navsat@sensor_msgs/msg/NavSatFix[gz.msgs.NavSat \
   /model/uav_epsilon/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry \
   /uav_epsilon/gazebo/command/twist@geometry_msgs/msg/TwistStamped]gz.msgs.Twist \
+  /uav_epsilon/camera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image \
+  /uav_epsilon/thermal_camera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image \
+  /uav_epsilon/imu@sensor_msgs/msg/Imu[gz.msgs.IMU \
+  /uav_epsilon/navsat@sensor_msgs/msg/NavSatFix[gz.msgs.NavSat \
   --ros-args -p use_sim_time:=true > /tmp/sutra_ros_gz_bridge.log 2>&1 &
 CHILD_PIDS+=($!)
 echo "   ✅ ROS-GZ Bridge active (PID: ${CHILD_PIDS[-1]})."
@@ -163,6 +186,18 @@ echo "👁️  [4b/5] Starting Kaggle GPU Perception Streamer (/sutra/perception
 python3 "$PROJECT_ROOT/scripts/stream_perception_targets_to_swarm.py" > /tmp/sutra_target_streamer.log 2>&1 &
 CHILD_PIDS+=($!)
 echo "   ✅ Kaggle GPU Perception Streamer active (PID: ${CHILD_PIDS[-1]})."
+
+# ── Step 4c: Launch GCS Gateway Bridge & Video Server ──────────────────────
+echo "🌐 [4c/5] Starting GCS Gateway Bridge (ws://0.0.0.0:9090 & http://0.0.0.0:8080)..."
+python3 "$PROJECT_ROOT/sutra_ws/src/sutra_comms/sutra_comms/gcs_gateway_bridge.py" > /tmp/sutra_gcs_bridge.log 2>&1 &
+CHILD_PIDS+=($!)
+echo "   ✅ GCS Gateway Bridge active (PID: ${CHILD_PIDS[-1]})."
+
+# ── Step 4d: Launch 2D Dynamic Mapping Engine (Tile Server) ────────────────
+echo "🗺️  [4d/5] Starting 2D Mapping Engine (Tile Server on port 8088)..."
+python3 "$PROJECT_ROOT/sutra_ws/src/sutra_gcs/sutra_tile_server.py" > /tmp/sutra_tile_server.log 2>&1 &
+CHILD_PIDS+=($!)
+echo "   ✅ SUTRA 2D Mapping Engine active (PID: ${CHILD_PIDS[-1]})."
 
 # ── Step 5: Check / Launch Mission Planner ──────────────────────────────────
 MP_EXE="/home/nikhil/MissionPlanner/MissionPlanner.exe"
