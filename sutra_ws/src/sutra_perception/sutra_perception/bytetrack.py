@@ -106,6 +106,7 @@ class TrackedTarget:
     age:         int   = 0             # Total frames this track has existed
     time_since_update: int = 0         # Frames since last successful match
     timestamp:   float = field(default_factory=time.time)
+    drone_id:    str   = "uav_alpha"
 
     # Velocity estimate for position prediction (pixels/frame)
     _vx: float = 0.0
@@ -165,6 +166,7 @@ class TrackedTarget:
         gps: Tuple[float, float, float],
         modalities: List[str],
         label: str,
+        drone_id: Optional[str] = None,
     ) -> None:
         """
         Update track with a new matched detection.
@@ -197,6 +199,8 @@ class TrackedTarget:
         self.gps               = gps
         self.modalities        = modalities
         self.label             = label
+        if drone_id:
+            self.drone_id      = drone_id
         self.time_since_update = 0               # Reset FIRST so predict() sees 0
         self.hit_streak       += 1               # Then increment consecutive-match counter
         self.timestamp         = time.time()
@@ -221,6 +225,7 @@ class TrackedTarget:
             "hit_streak": self.hit_streak,
             "state":      self.state,
             "ts":         round(self.timestamp, 3),
+            "drone_id":   getattr(self, "drone_id", "uav_alpha"),
         }
 
 
@@ -429,6 +434,7 @@ class SutraByteTracker:
                 gps=d["gps"],
                 modalities=d["modalities"],
                 label=d["label"],
+                drone_id=d.get("drone_id"),
             )
 
         # ── Step 4: Pass 2 — match LOW-confidence dets to UNMATCHED tracks ─────
@@ -449,6 +455,7 @@ class SutraByteTracker:
                     gps=d["gps"],
                     modalities=d["modalities"],
                     label=d["label"],
+                    drone_id=d.get("drone_id"),
                 )
 
         # ── Step 5: Start new tracks for unmatched HIGH-confidence detections ───
@@ -464,6 +471,7 @@ class SutraByteTracker:
                 state=TrackState.NEW,
                 hit_streak=1,          # First match counts — needs 1 more for MIN_HITS=2
                 time_since_update=0,   # Just matched this frame
+                drone_id=d.get("drone_id", "uav_alpha"),
             )
             new_track._prev_cx = (d["bbox"][0] + d["bbox"][2]) / 2.0
             new_track._prev_cy = (d["bbox"][1] + d["bbox"][3]) / 2.0

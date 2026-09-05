@@ -4,6 +4,7 @@ import { useSelectionStore } from '../stores/selectionStore';
 import { wsClient } from '../communication/WebSocketClient';
 import { Radio, ShieldAlert, Star } from 'lucide-react';
 import { formatCoordinates } from '../utils/formatting';
+import { DroneCameraFeed } from './DroneCameraFeed';
 
 export const DroneInspector: React.FC = memo(() => {
   const selectedId = useSelectionStore((s) => s.selected_id);
@@ -47,6 +48,9 @@ export const DroneInspector: React.FC = memo(() => {
           </button>
         )}
       </div>
+
+      {/* Live Drone Camera Feed with Deep JSCC telemetry */}
+      <DroneCameraFeed droneId={drone.drone_id} callsign={drone.callsign} />
 
       <div className="grid grid-cols-2 gap-2 text-[11px]">
         <div className="bg-[#151D26] p-2 rounded border border-[#2B3743]">

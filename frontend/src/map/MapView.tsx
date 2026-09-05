@@ -33,11 +33,18 @@ import {
   MapPin,
   Layers,
   RefreshCw,
+  Video,
 } from 'lucide-react';
+import { MultiDroneCameraGrid } from '../fleet/MultiDroneCameraGrid';
+import { useCameraStore } from '../stores/cameraStore';
 
 export const MapView: React.FC = () => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [styleMenuOpen, setStyleMenuOpen] = useState(false);
+
+  // ── Multi-UAV Video Grid Store ──
+  const isMultiGridOpen = useCameraStore((s) => s.isMultiGridOpen);
+  const toggleMultiGrid = useCameraStore((s) => s.toggleMultiGrid);
 
   // ── Only subscribe to what MapView itself renders (not fleet/mission details) ──
   const interactionMode = useMapStore((s) => s.interactionMode);
@@ -346,6 +353,21 @@ export const MapView: React.FC = () => {
               </div>
             )}
           </div>
+
+          <div className="h-px bg-[#2B3743]" />
+
+          {/* Multi-UAV Tactical Video Stream Grid Toggle */}
+          <button
+            onClick={toggleMultiGrid}
+            className={`p-2 transition flex items-center justify-center ${
+              isMultiGridOpen
+                ? 'text-[#38BDF8] bg-[#1B2530]'
+                : 'text-[#A9B3BD] hover:text-[#E7EBEF] hover:bg-[#151D26]'
+            }`}
+            title="Toggle 5-UAV Tactical Video Stream Grid (Deep JSCC)"
+          >
+            <Video className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
@@ -354,6 +376,9 @@ export const MapView: React.FC = () => {
 
       {/* Geofence Debug Panel */}
       <GeofenceDebugPanel />
+
+      {/* 5-UAV Tactical Video Stream Grid */}
+      <MultiDroneCameraGrid />
     </div>
   );
 };

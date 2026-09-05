@@ -33,6 +33,7 @@ import { useAlertStore } from '../stores/alertStore';
 import { useDefensiveUpgradesStore } from '../stores/defensiveUpgradesStore';
 import { useCommunicationStore } from '../stores/communicationStore';
 import { useAuthStore } from '../security/authStore';
+import { useCameraStore } from '../stores/cameraStore';
 import { commandManager } from './CommandManager';
 import { wsClient } from './WebSocketClient';
 import { CommandAck, EventEnvelope } from '../types/communication';
@@ -114,6 +115,45 @@ class MessageRouter {
     }
     if (msgType === 'TELEMETRY_SNAPSHOT') {
       useTelemetryStore.getState().hydrateFromSnapshot(message.payload || message);
+      return;
+    }
+
+    // 4b. CAMERA FRAMES (Fast-path routing to cameraStore)
+    if (msgType === 'CAMERA_FRAME' || msgType === 'camera.frame' || message.topic === 'CAMERA_FRAME') {
+      useCameraStore.getState().updateFrame(message.payload || message);
+      return;
+    }
+
+    // 4c. SWARM TELEMETRY BATCH (All 5 UAVs in one tick)
+    if (msgType === 'SWARM_TELEMETRY' || msgType === 'swarm.telemetry' || message.topic === 'SWARM_TELEMETRY') {
+      const telem = (message.payload || message).telemetry;
+      if (telem && typeof telem === 'object') {
+        Object.entries(telem).forEach(([dId, dData]: [string, any]) => {
+          useFleetStore.getState().updateDroneState(dId, {
+            latitude: dData.lat,
+            longitude: dData.lon,
+            altitude: dData.alt,
+            heading: dData.heading,
+            speed: dData.speed,
+            battery: dData.battery,
+            flight_mode: dData.status || 'MISSION',
+          });
+        });
+      }
+      return;
+    }
+
+    // 4d. SURVIVOR ALERTS
+    if (msgType === 'SURVIVOR_ALERT' || message.topic === 'SURVIVOR_ALERT') {
+      const alertData = message.data || message.payload || message;
+      useAlertStore.getState().addAlert({
+        alert_id: alertData.id ? String(alertData.id) : `alert_${Date.now()}`,
+        severity: 'CRITICAL',
+        title: `Survivor Detected: ${alertData.drone_id || alertData.drone || 'Swarm'}`,
+        message: `High confidence survivor (${Math.round((alertData.confidence || 0.9) * 100)}%) at (${alertData.lat?.toFixed(5)}, ${alertData.lon?.toFixed(5)})`,
+        source: 'perception',
+        drone_id: alertData.drone_id || alertData.drone,
+      });
       return;
     }
 

@@ -39,6 +39,20 @@ export const MAP_STYLE_LABELS: Record<MapStyleType, { label: string; description
   },
 };
 
+const getTileServerHost = (): string => {
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    const hostParam = params.get('tile_host') || params.get('sim_host');
+    if (hostParam) return hostParam;
+    const stored = localStorage.getItem('sutra_sim_host');
+    if (stored) return stored;
+    if (window.location.hostname && window.location.hostname !== 'localhost') {
+      return window.location.hostname;
+    }
+  }
+  return 'localhost';
+};
+
 export function getMapStyleSpec(styleKey: MapStyleType): maplibregl.StyleSpecification {
   switch (styleKey) {
     case 'swarm-live-ortho':
@@ -49,7 +63,7 @@ export function getMapStyleSpec(styleKey: MapStyleType): maplibregl.StyleSpecifi
           'swarm-live-tiles': {
             type: 'raster',
             tiles: [
-              'http://localhost:8088/tiles/{z}/{x}/{y}.png',
+              `http://${getTileServerHost()}:8088/tiles/{z}/{x}/{y}.png`,
             ],
             tileSize: 256,
             maxzoom: 22,

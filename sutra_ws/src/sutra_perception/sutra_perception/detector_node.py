@@ -39,6 +39,7 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import Image, LaserScan
 from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped
+from nav_msgs.msg import Odometry
 
 # ByteTrack multi-object tracker (pure Python, no extra deps)
 from sutra_perception.bytetrack import SutraByteTracker, TrackedTarget, TrackState
@@ -323,6 +324,7 @@ class VisualDetection:
     class_id: int
     label: str
     gps: Optional[Tuple[float, float, float]] = None
+    drone_id: str = "uav_alpha"
 
 
 @dataclass
@@ -330,6 +332,7 @@ class ThermalBlob:
     """Hot-spot detected in thermal image."""
     bbox: BBox
     mean_intensity: float           # 0–255 normalised
+    drone_id: str = "uav_alpha"
 
 
 @dataclass
@@ -339,6 +342,7 @@ class RadarTarget:
     angle_rad: float
     east_m: float
     north_m: float
+    drone_id: str = "uav_alpha"
 
 
 @dataclass
@@ -350,6 +354,7 @@ class FusedTarget:
     gps: Tuple[float, float, float]
     modalities: List[str] = field(default_factory=list)
     timestamp: float = field(default_factory=time.time)
+    drone_id: str = "uav_alpha"
 
     def to_dict(self) -> dict:
         lat, lon, alt = self.gps
@@ -362,6 +367,7 @@ class FusedTarget:
             "alt":        alt,
             "modalities": self.modalities,
             "ts":         round(self.timestamp, 3),
+            "drone_id":   getattr(self, "drone_id", "uav_alpha"),
         }
 
 
@@ -394,11 +400,26 @@ class SutraDetectorNode(Node):
         self.declare_parameter("drone_alt_m",      30.0)   # fallback altitude
         self.declare_parameter("fusion_hz",        10.0)
         self.declare_parameter("sim_mode",         True)   # use mock data in sim
+        self.declare_parameter("drone_id",         "all")
 
         self._yolo_model_path  = self.get_parameter("yolo_model").value
         self._camera_hfov_deg  = self.get_parameter("camera_hfov_deg").value
         self._drone_alt_m      = self.get_parameter("drone_alt_m").value
         self._sim_mode         = self.get_parameter("sim_mode").value
+        self._drone_filter     = str(self.get_parameter("drone_id").value)
+
+        # ── Multi-UAV State Tracking ──────────────────────────────────────────
+        self._drones = ["uav_alpha", "uav_beta", "uav_gamma", "uav_delta", "uav_epsilon"]
+        self._drone_states: Dict[str, dict] = {}
+        for did in self._drones:
+            self._drone_states[did] = {
+                "lat": ORIGIN_LAT,
+                "lon": ORIGIN_LON,
+                "alt": self._drone_alt_m,
+                "roll": 0.0,
+                "pitch": 0.0,
+                "yaw": 0.0,
+            }
 
         # ── State ─────────────────────────────────────────────────────────────
         self._drone_lat: float = ORIGIN_LAT
@@ -503,6 +524,26 @@ class SutraDetectorNode(Node):
             PoseStamped, "/sutra/gnc/pose_stamped", self._pose_stamped_callback, 10
         )
 
+        # ── Multi-UAV Subscribers ─────────────────────────────────────────────
+        for did in self._drones:
+            if self._drone_filter not in ("all", did):
+                continue
+            self.create_subscription(
+                Image, f"/{did}/camera/image_raw",
+                lambda msg, d=did: self._rgb_multi_callback(msg, d),
+                sensor_qos
+            )
+            self.create_subscription(
+                Image, f"/{did}/thermal_camera/image_raw",
+                lambda msg, d=did: self._thermal_multi_callback(msg, d),
+                sensor_qos
+            )
+            self.create_subscription(
+                Odometry, f"/model/{did}/odometry",
+                lambda msg, d=did: self._odometry_multi_callback(msg, d),
+                sensor_qos
+            )
+
 
         # ── Publishers ────────────────────────────────────────────────────────
         self._pub_detections = self.create_publisher(
@@ -595,6 +636,97 @@ class SutraDetectorNode(Node):
             self._drone_pitch = pitch
             self._drone_yaw = yaw
 
+    def _odometry_multi_callback(self, msg: Odometry, drone_id: str) -> None:
+        """Receive 50Hz Gazebo/PX4 odometry for drone_id and update geodetic pose."""
+        p = msg.pose.pose.position
+        o = msg.pose.pose.orientation
+        lat = ORIGIN_LAT + (p.y * 8.99e-6)
+        lon = ORIGIN_LON + (p.x * 8.99e-6 / math.cos(math.radians(ORIGIN_LAT)))
+        alt = max(1.0, float(p.z))
+
+        sinr_cosp = 2.0 * (o.w * o.x + o.y * o.z)
+        cosr_cosp = 1.0 - 2.0 * (o.x * o.x + o.y * o.y)
+        roll = math.atan2(sinr_cosp, cosr_cosp)
+
+        sinp = 2.0 * (o.w * o.y - o.z * o.x)
+        pitch = math.copysign(math.pi / 2.0, sinp) if abs(sinp) >= 1.0 else math.asin(sinp)
+
+        siny_cosp = 2.0 * (o.w * o.z + o.x * o.y)
+        cosy_cosp = 1.0 - 2.0 * (o.y * o.y + o.z * o.z)
+        yaw = math.atan2(siny_cosp, cosy_cosp)
+
+        with self._state_lock:
+            if drone_id in self._drone_states:
+                self._drone_states[drone_id].update({
+                    "lat": lat, "lon": lon, "alt": alt,
+                    "roll": roll, "pitch": pitch, "yaw": yaw,
+                })
+            if drone_id == "uav_alpha" or self._drone_filter == drone_id:
+                self._drone_lat = lat
+                self._drone_lon = lon
+                self._drone_alt = alt
+                self._drone_roll = roll
+                self._drone_pitch = pitch
+                self._drone_yaw = yaw
+
+    def _rgb_multi_callback(self, msg: Image, drone_id: str) -> None:
+        """Process RGB camera frame for specific drone_id."""
+        if self._bridge is None:
+            return
+        if self._low_bandwidth_mode:
+            self._frame_counter += 1
+            if self._frame_counter % 2 != 0:
+                return
+
+        try:
+            frame = self._bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+        except Exception:
+            return
+
+        h, w = frame.shape[:2]
+        with self._state_lock:
+            st = self._drone_states.get(drone_id, {
+                "lat": self._drone_lat, "lon": self._drone_lon, "alt": self._drone_alt,
+                "roll": self._drone_roll, "pitch": self._drone_pitch, "yaw": self._drone_yaw,
+            })
+            drone_alt = st["alt"]
+            drone_lat = st["lat"]
+            drone_lon = st["lon"]
+            drone_roll = st["roll"]
+            drone_pitch = st["pitch"]
+            drone_yaw = st["yaw"]
+
+        detections = self._run_yolo(
+            frame,
+            drone_id=drone_id,
+            drone_lat=drone_lat,
+            drone_lon=drone_lon,
+            drone_alt=drone_alt,
+            drone_roll=drone_roll,
+            drone_pitch=drone_pitch,
+            drone_yaw=drone_yaw,
+        )
+        with self._state_lock:
+            self._img_h, self._img_w = h, w
+            self._visual_detections = [
+                d for d in self._visual_detections if getattr(d, "drone_id", "uav_alpha") != drone_id
+            ] + detections
+
+    def _thermal_multi_callback(self, msg: Image, drone_id: str) -> None:
+        """Process thermal camera frame for specific drone_id."""
+        if self._bridge is None:
+            return
+        try:
+            raw = self._bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
+        except Exception:
+            return
+
+        blobs = self._detect_thermal_blobs(raw, drone_id=drone_id)
+        with self._state_lock:
+            self._thermal_blobs = [
+                b for b in self._thermal_blobs if getattr(b, "drone_id", "uav_alpha") != drone_id
+            ] + blobs
+
     def _rgb_callback(self, msg: Image) -> None:
         """Process RGB camera frame — run YOLOv8-Nano detection."""
         if self._bridge is None:
@@ -641,12 +773,29 @@ class SutraDetectorNode(Node):
     # Sensor processing helpers
     # ──────────────────────────────────────────────────────────────────────────
 
-    def _run_yolo(self, frame: np.ndarray) -> List[VisualDetection]:
+    def _run_yolo(
+        self,
+        frame: np.ndarray,
+        drone_id: str = "uav_alpha",
+        drone_lat: Optional[float] = None,
+        drone_lon: Optional[float] = None,
+        drone_alt: Optional[float] = None,
+        drone_roll: Optional[float] = None,
+        drone_pitch: Optional[float] = None,
+        drone_yaw: Optional[float] = None,
+    ) -> List[VisualDetection]:
         """Run YOLOv8-Nano on frame and return filtered detections."""
         detections: List[VisualDetection] = []
 
         if self._yolo is None:
             return detections
+
+        lat_val = self._drone_lat if drone_lat is None else drone_lat
+        lon_val = self._drone_lon if drone_lon is None else drone_lon
+        alt_val = self._drone_alt if drone_alt is None else drone_alt
+        roll_val = self._drone_roll if drone_roll is None else drone_roll
+        pitch_val = self._drone_pitch if drone_pitch is None else drone_pitch
+        yaw_val = self._drone_yaw if drone_yaw is None else drone_yaw
 
         try:
             results = self._yolo(
@@ -674,23 +823,24 @@ class SutraDetectorNode(Node):
                 ex, ny = pixel_to_ned(
                     bbox.cx, bbox.cy,
                     self._img_w, self._img_h,
-                    self._drone_alt,
+                    alt_val,
                     self._camera_hfov_deg,
-                    self._drone_roll,
-                    self._drone_pitch,
-                    self._drone_yaw,
+                    roll_val,
+                    pitch_val,
+                    yaw_val,
                 )
-                gps = to_gps(ex, ny, 0.0, self._drone_lat, self._drone_lon, 0.0)
+                gps = to_gps(ex, ny, 0.0, lat_val, lon_val, 0.0)
                 detections.append(VisualDetection(
                     bbox=bbox,
                     confidence=conf,
                     class_id=cls_id,
                     label=SAR_CLASS_IDS[cls_id],
                     gps=gps,
+                    drone_id=drone_id,
                 ))
         return detections
 
-    def _detect_thermal_blobs(self, raw: np.ndarray) -> List[ThermalBlob]:
+    def _detect_thermal_blobs(self, raw: np.ndarray, drone_id: str = "uav_alpha") -> List[ThermalBlob]:
         """Detect human-temperature hot-spots (35C - 42C) in thermal image.
 
         Strategy:
@@ -733,6 +883,7 @@ class SutraDetectorNode(Node):
             blobs.append(ThermalBlob(
                 bbox=BBox(rx, ry, rx + rw, ry + rh),
                 mean_intensity=mean_intensity,
+                drone_id=drone_id,
             ))
         return blobs
 
@@ -833,12 +984,14 @@ class SutraDetectorNode(Node):
 
             score = min(score, 1.0)
             label = self._classify(vdet.label, score)
+            did = getattr(vdet, "drone_id", "uav_alpha")
             fused_dets.append({
                 "bbox":       [vdet.bbox.x1, vdet.bbox.y1, vdet.bbox.x2, vdet.bbox.y2],
                 "confidence": score,
                 "gps":        vdet.gps,
                 "modalities": modalities,
                 "label":      label,
+                "drone_id":   did,
             })
 
         # ── Step 4: thermal-only detections (smoke / rubble scenarios) ────────
@@ -860,12 +1013,14 @@ class SutraDetectorNode(Node):
                 drone_alt, self._camera_hfov_deg,
             )
             gps = to_gps(ex, ny, 0.0, drone_lat, drone_lon, 0.0)
+            did = getattr(tblob, "drone_id", "uav_alpha")
             fused_dets.append({
                 "bbox":       [tblob.bbox.x1, tblob.bbox.y1, tblob.bbox.x2, tblob.bbox.y2],
                 "confidence": score,
                 "gps":        gps,
                 "modalities": ["thermal"],
                 "label":      "POSSIBLE_SURVIVOR",
+                "drone_id":   did,
             })
 
         # ── Step 5: ByteTrack — assign persistent IDs ─────────────────────────
