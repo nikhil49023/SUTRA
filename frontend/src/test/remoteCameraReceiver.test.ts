@@ -112,9 +112,17 @@ describe('SUTRA Remote Camera Receiver & Telemetry Store', () => {
     const world2Url = updated.getStreamUrl('WORLD_2', 'uav_2', 'RGB');
     expect(world2Url).toBe('http://10.152.0.192:8080/stream/uav_2');
 
-    // Switching worlds immediately switches available UAV feeds
-    expect(updated.worlds.WORLD_2.uavs).toHaveLength(8);
+    // Switching worlds immediately switches available UAV feeds with authentic counts
+    expect(updated.worlds.WORLD_1.uavs).toHaveLength(5);
+    expect(updated.worlds.WORLD_2.uavs).toHaveLength(4);
     expect(updated.worlds.WORLD_2.uavs[0].name).toBe('Vector-1 Alpha');
+
+    // When active UAV is uav_5 (only in World 1) and user switches to World 2, it clamps to uav_1
+    store.setActiveWorld('WORLD_1');
+    store.setActiveUav('uav_5');
+    expect(useCameraStore.getState().activeUav).toBe('uav_5');
+    store.setActiveWorld('WORLD_2');
+    expect(useCameraStore.getState().activeUav).toBe('uav_1');
   });
 
   it('identifies each feed by world_id, drone_id, timestamp, and stream_url/topic', () => {
@@ -171,5 +179,61 @@ describe('SUTRA Remote Camera Receiver & Telemetry Store', () => {
     expect(useCameraStore.getState().getStreamUrl('WORLD_1', 'uav_1', 'RGB')).toBe(
       'http://192.168.1.100:8080/stream/uav_1'
     );
+  });
+
+  it('strictly isolates WORLD_1 and WORLD_2 camera frames without cross-contamination', () => {
+    const store = useCameraStore.getState();
+
+    // Ingest frame for WORLD_2
+    const world2Packet = {
+      type: 'CAMERA_FRAME',
+      world_id: 'WORLD_2',
+      drone_id: 'uav_1',
+      stream_type: 'RGB',
+      image_b64: 'data:image/jpeg;base64,WORLD_2_IMAGE_PAYLOAD',
+      timestamp: Date.now(),
+      width: 960,
+      height: 540,
+    };
+    messageRouter.routeMessage(world2Packet);
+
+    const afterW2 = useCameraStore.getState();
+    // WORLD_2 frame is strictly in WORLD_2 slot
+    expect(afterW2.frames['WORLD_2_uav_1_RGB']).toBeDefined();
+    expect(afterW2.frames['WORLD_2_uav_1_RGB'].image_b64).toContain('WORLD_2_IMAGE_PAYLOAD');
+
+    // WORLD_1 must NOT have received WORLD_2 frame
+    expect(afterW2.frames['WORLD_1_uav_1_RGB']).toBeUndefined();
+    // Legacy slot must NOT be polluted with WORLD_2 frame
+    expect(afterW2.frames['uav_1_RGB']).toBeUndefined();
+
+    // Signal status: WORLD_2 is LIVE, WORLD_1 is NO_SIGNAL
+    expect(afterW2.getSignalStatus('uav_1', 'RGB', 'WORLD_2')).toBe('LIVE');
+    expect(afterW2.getSignalStatus('uav_1', 'RGB', 'WORLD_1')).toBe('NO_SIGNAL');
+
+    // Ingest frame for WORLD_1
+    const world1Packet = {
+      type: 'CAMERA_FRAME',
+      world_id: 'WORLD_1',
+      drone_id: 'uav_1',
+      stream_type: 'RGB',
+      image_b64: 'data:image/jpeg;base64,WORLD_1_IMAGE_PAYLOAD',
+      timestamp: Date.now(),
+      width: 640,
+      height: 360,
+    };
+    messageRouter.routeMessage(world1Packet);
+
+    const afterW1 = useCameraStore.getState();
+    // WORLD_1 frame is in WORLD_1 slot and legacy alias
+    expect(afterW1.frames['WORLD_1_uav_1_RGB']?.image_b64).toContain('WORLD_1_IMAGE_PAYLOAD');
+    expect(afterW1.frames['uav_1_RGB']?.image_b64).toContain('WORLD_1_IMAGE_PAYLOAD');
+
+    // WORLD_2 frame is completely untouched
+    expect(afterW1.frames['WORLD_2_uav_1_RGB']?.image_b64).toContain('WORLD_2_IMAGE_PAYLOAD');
+
+    // Both worlds report LIVE for their own feeds
+    expect(afterW1.getSignalStatus('uav_1', 'RGB', 'WORLD_1')).toBe('LIVE');
+    expect(afterW1.getSignalStatus('uav_1', 'RGB', 'WORLD_2')).toBe('LIVE');
   });
 });

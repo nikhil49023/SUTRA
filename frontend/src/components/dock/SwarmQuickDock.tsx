@@ -1,7 +1,8 @@
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { useFleetStore } from '../../stores/fleetStore';
 import { useMissionStore } from '../../stores/missionStore';
 import { useAIStore } from '../../stores/aiStore';
+import { useCameraStore } from '../../stores/cameraStore';
 import { useAppStore } from '../../stores/appStore';
 import { commandManager } from '../../communication/CommandManager';
 import {
@@ -25,6 +26,7 @@ export const SwarmQuickDock: React.FC = memo(() => {
   const pauseMission = useMissionStore((s) => s.pauseMission);
   const abortMission = useMissionStore((s) => s.abortMission);
   const trackedTargets = useAIStore((s) => s.tracked_targets);
+  const activeWorld = useCameraStore((s) => s.activeWorld);
   const toggleConsole = useAppStore((s) => s.toggleConsole);
   const isConsoleOpen = useAppStore((s) => s.isConsoleOpen);
   const isHudOpen = useAppStore((s) => s.isHudOpen);
@@ -33,7 +35,10 @@ export const SwarmQuickDock: React.FC = memo(() => {
   const setActiveSection = useAppStore((s) => s.setActiveSection);
 
   const droneCount = Object.keys(drones).length;
-  const latestTarget = trackedTargets && trackedTargets.length > 0 ? trackedTargets[0] : null;
+  const latestTarget = useMemo(() => {
+    const worldTargets = (trackedTargets || []).filter((t) => (t.world_id || 'WORLD_1') === activeWorld);
+    return worldTargets.length > 0 ? worldTargets[0] : null;
+  }, [trackedTargets, activeWorld]);
 
   const handleFormationSelect = (f: FormationType) => {
     updateFormation(f);

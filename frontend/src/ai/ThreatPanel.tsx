@@ -1,13 +1,20 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useAIStore } from '../stores/aiStore';
+import { useCameraStore } from '../stores/cameraStore';
 import { useSelectionStore } from '../stores/selectionStore';
 import { ShieldAlert, AlertTriangle, Crosshair, Eye } from 'lucide-react';
 import { formatDistance } from '../utils/formatting';
 
 export const ThreatPanel: React.FC = () => {
   const { threats, tracked_targets, perception_status } = useAIStore();
+  const activeWorld = useCameraStore((s) => s.activeWorld);
   const selectTarget = useSelectionStore((s) => s.selectTarget);
   const selectedId = useSelectionStore((s) => s.selected_id);
+
+  // Scope SAR targets strictly to current active world
+  const worldTargets = useMemo(() => {
+    return tracked_targets.filter((t) => (t.world_id || 'WORLD_1') === activeWorld);
+  }, [tracked_targets, activeWorld]);
 
   const statusStr = perception_status?.status || 'OFFLINE';
   const isConnected = statusStr === 'CONNECTED';
@@ -50,20 +57,20 @@ export const ThreatPanel: React.FC = () => {
         <div className="flex items-center justify-between text-[11px] font-bold text-[#E7EBEF]">
           <div className="flex items-center space-x-1.5">
             <Crosshair className="w-3.5 h-3.5 text-[#C49A4A]" />
-            <span>ACTIVE SAR TARGETS ({tracked_targets.length})</span>
+            <span>ACTIVE SAR TARGETS ({worldTargets.length})</span>
           </div>
-          {tracked_targets.length > 0 && (
+          {worldTargets.length > 0 && (
             <span className="text-[10px] text-[#707C88]">YOLOv8 + ByteTrack</span>
           )}
         </div>
 
-        {tracked_targets.length === 0 ? (
+        {worldTargets.length === 0 ? (
           <div className="text-center py-4 text-[#707C88] text-[11px] bg-[#151D26] rounded-lg border border-[#2B3743]">
             NO ACTIVE TARGET DETECTIONS
           </div>
         ) : (
           <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-0.5">
-            {tracked_targets.map((t) => {
+            {worldTargets.map((t) => {
               const targetId = String(t.target_id || t.id);
               const isSelected = String(selectedId) === targetId;
               const isSurvivor = t.label?.toUpperCase().includes('SURVIVOR') ?? true;

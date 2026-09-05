@@ -142,8 +142,12 @@ export const MapView: React.FC = () => {
         gs.geofences,
         sel.selected_type === 'GEOFENCE' ? sel.selected_id : null
       );
+      const activeWorld = useCameraStore.getState().activeWorld;
+      const worldTargets = (ai.tracked_targets || []).filter(
+        (t) => (t.world_id || 'WORLD_1') === activeWorld
+      );
       mapController.aiTargetLayer.updateTargets(
-        ai.tracked_targets,
+        worldTargets,
         sel.selected_type === 'TARGET' ? sel.selected_id : null
       );
     });
@@ -194,9 +198,13 @@ export const MapView: React.FC = () => {
 
   // ── Real-Time Drone Video Feed Ground Projection (Camera Frames driven) ─────
   useEffect(() => {
-    const unsub = useCameraStore.subscribe((cs) => {
+    const unsub = useCameraStore.subscribe((cs, prev) => {
       const fs = useFleetStore.getState();
-      Object.values(cs.frames || {}).forEach((frame) => {
+      const activeWorld = cs.activeWorld;
+      const activeFrames = Object.values(cs.frames || {}).filter(
+        (f) => (f.world_id || 'WORLD_1') === activeWorld
+      );
+      activeFrames.forEach((frame) => {
         const drone = fs.drones[frame.drone_id] || Object.values(fs.drones)[0];
         if (drone && typeof drone.latitude === 'number' && typeof drone.longitude === 'number') {
           mapController.videoFeedMappingLayer.projectVideoFrame(
@@ -208,6 +216,18 @@ export const MapView: React.FC = () => {
           );
         }
       });
+      // When switching worlds, refresh AI target layer for the new active world
+      if (prev && prev.activeWorld !== activeWorld) {
+        const ai = useAIStore.getState();
+        const sel = useSelectionStore.getState();
+        const worldTargets = (ai.tracked_targets || []).filter(
+          (t) => (t.world_id || 'WORLD_1') === activeWorld
+        );
+        mapController.aiTargetLayer.updateTargets(
+          worldTargets,
+          sel.selected_type === 'TARGET' ? sel.selected_id : null
+        );
+      }
     });
     return unsub;
   }, []);
@@ -224,8 +244,12 @@ export const MapView: React.FC = () => {
   useEffect(() => {
     const unsub = useAIStore.subscribe((ai) => {
       const sel = useSelectionStore.getState();
+      const activeWorld = useCameraStore.getState().activeWorld;
+      const worldTargets = (ai.tracked_targets || []).filter(
+        (t) => (t.world_id || 'WORLD_1') === activeWorld
+      );
       mapController.aiTargetLayer.updateTargets(
-        ai.tracked_targets,
+        worldTargets,
         sel.selected_type === 'TARGET' ? sel.selected_id : null
       );
     });
@@ -464,8 +488,12 @@ function syncAll(ms: any, fs: any, gs: any, gis: any, ai: any, sel: any, mapping
   mapController.dynamicGridLayer.updateFleetResources(fs);
   mapController.videoFeedMappingLayer.updateFleetVideoProjections(fs);
   mapController.gisLayer.updateGis(gis);
+  const activeWorld = useCameraStore.getState().activeWorld;
+  const worldTargets = (ai?.tracked_targets || []).filter(
+    (t: any) => (t.world_id || 'WORLD_1') === activeWorld
+  );
   mapController.aiTargetLayer.updateTargets(
-    ai?.tracked_targets || [],
+    worldTargets,
     sel.selected_type === 'TARGET' ? sel.selected_id : null
   );
   if (mapping && mapping.isMappingActive && mapping.gridGeoJson) {

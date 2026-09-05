@@ -5,6 +5,7 @@ import { useCommunicationStore } from '../../stores/communicationStore';
 import { useMissionStore } from '../../stores/missionStore';
 import { useFleetStore } from '../../stores/fleetStore';
 import { useAIStore } from '../../stores/aiStore';
+import { useCameraStore } from '../../stores/cameraStore';
 import { useGeofenceNotificationStore } from '../../geofence/GeofenceNotificationStore';
 import { formatTimestamp } from '../../utils/formatting';
 import { NavigationSection } from '../../types/app';
@@ -68,7 +69,12 @@ export const BottomConsole: React.FC = () => {
   const missionProgress = useMissionStore((s) => s.mission_progress);
   const drones = useFleetStore((s) => s.drones);
   const trackedTargets = useAIStore((s) => s.tracked_targets);
+  const activeWorld = useCameraStore((s) => s.activeWorld);
   const gfAlerts = useGeofenceNotificationStore((s) => s.notifications);
+
+  const worldTargets = useMemo(() => {
+    return (trackedTargets || []).filter((t) => (t.world_id || 'WORLD_1') === activeWorld);
+  }, [trackedTargets, activeWorld]);
 
   const [isPaused, setIsPaused] = useState(false);
   const [logs, setLogs] = useState<ConsoleLogItem[]>([
@@ -121,8 +127,8 @@ export const BottomConsole: React.FC = () => {
 
   // Append AI target perception alerts
   useEffect(() => {
-    if (trackedTargets && trackedTargets.length > 0 && !isPaused) {
-      const latest = trackedTargets[0];
+    if (worldTargets && worldTargets.length > 0 && !isPaused) {
+      const latest = worldTargets[0];
       setLogs((prev) => [
         {
           id: `target-${latest.target_id}-${Date.now()}`,
@@ -134,7 +140,7 @@ export const BottomConsole: React.FC = () => {
         ...prev.slice(0, 99),
       ]);
     }
-  }, [trackedTargets, isPaused]);
+  }, [worldTargets, isPaused]);
 
   // Filter logs by active tab
   const filteredLogs = useMemo(() => {
@@ -251,7 +257,7 @@ export const BottomConsole: React.FC = () => {
             <span>MSGS: <strong className="text-[#4F9A72]">Rx: {messages_received} | Tx: {messages_sent} ({latency_ms}ms)</strong></span>
           )}
           {activeConsoleTab === 'AI' && (
-            <span>DETECTIONS: <strong className="text-[#5B8FB9]">{trackedTargets?.length || 0} Fused Targets</strong></span>
+            <span>DETECTIONS: <strong className="text-[#5B8FB9]">{worldTargets.length} Fused Targets</strong></span>
           )}
         </div>
         <div className="text-[9px] text-[#707C88]">

@@ -72,10 +72,12 @@ export const LiveCameraFeedSection: React.FC = () => {
   const worldStatus1 = getWorldStatus('WORLD_1');
   const worldStatus2 = getWorldStatus('WORLD_2');
 
-  // Check if WebSocket frame is available as fallback/supplement
+  // Check if WebSocket frame is available for this active world and UAV
   const wsFrameKey = `${activeWorld}_${activeUav}_${modality}`;
   const wsFrameLegacyKey = `${activeUav}_${modality}`;
-  const wsFrame = frames[wsFrameKey] || frames[wsFrameLegacyKey];
+  // Strict world separation: never fall back to legacy key on WORLD_2, and verify world_id matches
+  const candidateFrame = frames[wsFrameKey] || (activeWorld === 'WORLD_1' ? frames[wsFrameLegacyKey] : undefined);
+  const wsFrame = (candidateFrame && (candidateFrame.world_id || 'WORLD_1') === activeWorld) ? candidateFrame : undefined;
 
   // Inactive feed cleanup on switch
   useEffect(() => {
@@ -182,7 +184,8 @@ export const LiveCameraFeedSection: React.FC = () => {
   const activeSurvivors = trackedTargets.filter((t) => {
     if (t.tracking_status === 'LOST') return false;
     if (!isPersonOrSurvivor(t.label)) return false;
-    if (t.world_id && t.world_id !== activeWorld) return false;
+    const tWorld = t.world_id || 'WORLD_1';
+    if (tWorld !== activeWorld) return false;
 
     // Filter strictly to the currently selected drone
     if (t.drone_id) {
@@ -257,6 +260,9 @@ export const LiveCameraFeedSection: React.FC = () => {
               >
                 <div className="flex items-center space-x-1.5">
                   <span className="font-extrabold tracking-wider">WORLD 1</span>
+                  <span className="px-1.5 py-0.5 text-[9px] font-mono font-bold rounded bg-[#0B0F14] border border-[#2B3743] text-[#5B8FB9]">
+                    {worlds.WORLD_1.uavs.length} UAVs
+                  </span>
                   <span className="text-[10px] text-[#707C88] hidden sm:inline">(Friend 1)</span>
                 </div>
                 <div className="pl-1 border-l border-[#2B3743]">
@@ -276,6 +282,9 @@ export const LiveCameraFeedSection: React.FC = () => {
               >
                 <div className="flex items-center space-x-1.5">
                   <span className="font-extrabold tracking-wider">WORLD 2</span>
+                  <span className="px-1.5 py-0.5 text-[9px] font-mono font-bold rounded bg-[#0B0F14] border border-[#2B3743] text-[#5B8FB9]">
+                    {worlds.WORLD_2.uavs.length} UAVs
+                  </span>
                   <span className="text-[10px] text-[#707C88] hidden sm:inline">(Friend 2)</span>
                 </div>
                 <div className="pl-1 border-l border-[#2B3743]">
@@ -343,7 +352,7 @@ export const LiveCameraFeedSection: React.FC = () => {
             <div className="flex items-center space-x-2">
               <Radio className="w-3.5 h-3.5 text-[#5B8FB9]" />
               <span className="font-bold uppercase tracking-wider">
-                {currentWorldConfig.label} TACTICAL UAV FEEDS ({currentWorldConfig.name}):
+                {currentWorldConfig.label} TACTICAL UAV FEEDS ({currentWorldConfig.uavs.length} UAVs — {currentWorldConfig.name}):
               </span>
             </div>
             <span className="text-[10px] text-[#707C88]">
@@ -351,7 +360,13 @@ export const LiveCameraFeedSection: React.FC = () => {
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1.5">
+          <div className={`grid gap-1.5 ${
+            currentWorldConfig.uavs.length === 5
+              ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'
+              : currentWorldConfig.uavs.length === 4
+              ? 'grid-cols-2 sm:grid-cols-4'
+              : 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-8'
+          }`}>
             {currentWorldConfig.uavs.map((uav) => {
               const isSelected = activeUav === uav.id;
               const uavStatus = getFeedStatus(activeWorld, uav.id, modality);
@@ -541,7 +556,7 @@ export const LiveCameraFeedSection: React.FC = () => {
           {/* Priority 1: Direct WebSocket base64 stream from simulation / compute worker */}
           {wsFrame?.image_b64 ? (
             <img
-              key={`ws-stream-${activeWorld}-${activeUav}`}
+              key={`ws-stream-${activeWorld}-${activeUav}-${modality}`}
               src={wsFrame.image_b64}
               alt={`WebSocket live stream for ${activeWorld} ${activeUav}`}
               className="w-full h-full object-contain pointer-events-none"
@@ -550,6 +565,7 @@ export const LiveCameraFeedSection: React.FC = () => {
           ) : (
             /* Priority 2: Direct MJPEG HTTP stream from Gazebo or proxy */
             <img
+              key={`http-stream-${activeWorld}-${activeUav}-${modality}`}
               ref={imgRef}
               src={currentStreamUrl}
               alt={`Live stream from ${activeWorld} ${activeUav}`}
@@ -558,7 +574,14 @@ export const LiveCameraFeedSection: React.FC = () => {
               onLoad={() => markFeedConnected(activeWorld, activeUav, modality)}
               onError={() => {
                 if (!wsFrame?.image_b64) {
-                  markFeedOffline(activeWorld, activeUav, modality);
+                  if (activeWorld === 'WORLD_2' && currentStreamUrl.includes('10.152.0.192')) {
+                    const fallbackHost = (typeof window !== 'undefined' && window.location.hostname) ? window.location.hostname : 'localhost';
+                    const localBase = `http://${fallbackHost}:8080`;
+                    setWorldBaseUrl('WORLD_2', localBase);
+                    setWorld2UrlInput(localBase);
+                  } else {
+                    markFeedOffline(activeWorld, activeUav, modality);
+                  }
                 }
               }}
             />
