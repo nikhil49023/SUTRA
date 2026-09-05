@@ -79,6 +79,20 @@ def quat_to_euler(qx: float, qy: float, qz: float, qw: float):
     return math.degrees(roll), math.degrees(pitch), (math.degrees(yaw) % 360.0)
 
 
+DRONE_ALIASES: Dict[str, str] = {
+    "uav_1": "uav_alpha",
+    "uav_2": "uav_beta",
+    "uav_3": "uav_gamma",
+    "uav_4": "uav_delta",
+    "uav_5": "uav_epsilon",
+    "uav_alpha": "uav_1",
+    "uav_beta": "uav_2",
+    "uav_gamma": "uav_3",
+    "uav_delta": "uav_4",
+    "uav_epsilon": "uav_5",
+}
+
+
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     daemon_threads = True
 
@@ -97,8 +111,10 @@ class MJPEGStreamHandler(BaseHTTPRequestHandler):
             if self.bridge_ref:
                 for d in self.bridge_ref.drones:
                     st = self.bridge_ref.drone_states.get(d, {})
+                    alias = DRONE_ALIASES.get(d, d)
                     streams_info.append({
                         "drone_id": d,
+                        "alias": alias,
                         "stream_url_mjpeg": f"/stream/{d}",
                         "snapshot_url": f"/snapshot/{d}",
                         "status": st.get("status", "ACTIVE"),
@@ -121,12 +137,23 @@ class MJPEGStreamHandler(BaseHTTPRequestHandler):
             return
 
         elif path.startswith("/snapshot/"):
-            drone_id = path.split("/snapshot/")[1].strip("/")
+            snap_part = path.split("/snapshot/")[1].strip("/")
+            subparts = snap_part.split("/")
+            raw_drone = subparts[0].lower()
+            if len(subparts) > 1 and subparts[1].upper() == "THERMAL":
+                modality = "THERMAL"
+            actual_drone = DRONE_ALIASES.get(raw_drone, raw_drone)
+
             frame_bytes = None
             if self.bridge_ref:
-                frame_bytes = self.bridge_ref.latest_frames.get(f"{drone_id}_{modality}") or self.bridge_ref.latest_frames.get(drone_id)
+                frame_bytes = (
+                    self.bridge_ref.latest_frames.get(f"{actual_drone}_{modality}")
+                    or self.bridge_ref.latest_frames.get(f"{raw_drone}_{modality}")
+                    or self.bridge_ref.latest_frames.get(actual_drone)
+                    or self.bridge_ref.latest_frames.get(raw_drone)
+                )
                 if not frame_bytes:
-                    synthetic = self.bridge_ref._generate_synthetic_hud_frame(drone_id, modality, time.time())
+                    synthetic = self.bridge_ref._generate_synthetic_hud_frame(actual_drone, modality, time.time())
                     b64_img = synthetic["image_b64"].split(",")[1]
                     frame_bytes = base64.b64decode(b64_img)
 
@@ -143,7 +170,13 @@ class MJPEGStreamHandler(BaseHTTPRequestHandler):
             return
 
         elif path.startswith("/stream/"):
-            drone_id = path.split("/stream/")[1].strip("/")
+            stream_part = path.split("/stream/")[1].strip("/")
+            subparts = stream_part.split("/")
+            raw_drone = subparts[0].lower()
+            if len(subparts) > 1 and subparts[1].upper() == "THERMAL":
+                modality = "THERMAL"
+            actual_drone = DRONE_ALIASES.get(raw_drone, raw_drone)
+
             self.send_response(200)
             self.send_header("Content-Type", "multipart/x-mixed-replace; boundary=frame")
             self.send_header("Cache-Control", "no-cache, private")
@@ -155,9 +188,14 @@ class MJPEGStreamHandler(BaseHTTPRequestHandler):
                 while True:
                     frame_bytes = None
                     if self.bridge_ref:
-                        frame_bytes = self.bridge_ref.latest_frames.get(f"{drone_id}_{modality}") or self.bridge_ref.latest_frames.get(drone_id)
+                        frame_bytes = (
+                            self.bridge_ref.latest_frames.get(f"{actual_drone}_{modality}")
+                            or self.bridge_ref.latest_frames.get(f"{raw_drone}_{modality}")
+                            or self.bridge_ref.latest_frames.get(actual_drone)
+                            or self.bridge_ref.latest_frames.get(raw_drone)
+                        )
                         if not frame_bytes:
-                            synthetic = self.bridge_ref._generate_synthetic_hud_frame(drone_id, modality, time.time())
+                            synthetic = self.bridge_ref._generate_synthetic_hud_frame(actual_drone, modality, time.time())
                             b64_img = synthetic["image_b64"].split(",")[1]
                             frame_bytes = base64.b64decode(b64_img)
 
@@ -200,6 +238,11 @@ class SutraGcsGatewayBridge(Node):
         self.port = self.get_parameter("ws_port").get_parameter_value().integer_value or port
         self.http_port = self.get_parameter("http_port").get_parameter_value().integer_value or http_port
         self.ws_clients: Set[object] = set()
+
+        # Upstream GCS WebSocket Gateway (:8765) & World ID
+        self.world_id = os.getenv("SUTRA_WORLD_ID", "WORLD_2")
+        self.gcs_ws_url = os.getenv("SUTRA_GCS_WS_URL", "ws://127.0.0.1:8765")
+        self.upstream_ws = None
 
         # Initialize Perceptron Deep JSCC Neural Semantic Pipeline (NVIDIA RTX 3050 CUDA GPU)
         self.jscc_pipeline = PerceptronSemanticCommsPipeline()
@@ -631,9 +674,14 @@ class SutraGcsGatewayBridge(Node):
             jpeg_bytes = buf.tobytes()
             b64_img = base64.b64encode(buf).decode('utf-8')
 
+            alias = DRONE_ALIASES.get(drone_id, drone_id)
+
             # Cache for HTTP MJPEG streaming
             self.latest_frames[drone_id] = jpeg_bytes
             self.latest_frames[f"{drone_id}_{stream_type}"] = jpeg_bytes
+            if alias != drone_id:
+                self.latest_frames[alias] = jpeg_bytes
+                self.latest_frames[f"{alias}_{stream_type}"] = jpeg_bytes
 
             # Synchronized pose from real-time physics cache
             st = self.drone_states.get(drone_id, {})
@@ -650,8 +698,12 @@ class SutraGcsGatewayBridge(Node):
             }
 
             packet = {
+                "type": "CAMERA_FRAME",
                 "topic": "CAMERA_FRAME",
-                "drone_id": drone_id,
+                "world_id": self.world_id,
+                "drone_id": alias,
+                "uav_id": alias,
+                "raw_drone_id": drone_id,
                 "stream_type": stream_type,
                 "image_b64": f"data:image/jpeg;base64,{b64_img}",
                 "pose": pose_sync,
@@ -692,7 +744,13 @@ class SutraGcsGatewayBridge(Node):
         w, h = 640, 360
         img = np.zeros((h, w, 3), dtype=np.uint8)
 
-        d_idx = self.drones.index(drone_id) if drone_id in self.drones else 0
+        # Resolve raw drone and alias
+        actual_drone = DRONE_ALIASES.get(drone_id, drone_id)
+        if actual_drone not in self.drones:
+            actual_drone = drone_id if drone_id in self.drones else "uav_alpha"
+        alias = DRONE_ALIASES.get(actual_drone, actual_drone)
+
+        d_idx = self.drones.index(actual_drone) if actual_drone in self.drones else 0
         roll_angle = math.sin(t * 0.5 + d_idx) * 0.15
         pitch_offset = math.cos(t * 0.3 + d_idx) * 20
 
@@ -730,14 +788,14 @@ class SutraGcsGatewayBridge(Node):
         cv2.line(img, (cx, cy + 8), (cx, cy + 24), (0, 255, 200), 1)
         cv2.circle(img, (cx, cy), 4, (0, 255, 200), 1)
 
-        st = self.drone_states.get(drone_id, {})
+        st = self.drone_states.get(actual_drone, {})
         alt = st.get("altitude", 15.0)
         bat = st.get("battery", 98.0)
 
         dist_m = 400.0 + d_idx * 150.0
         jscc_res = self.jscc_pipeline.process_semantic_transmission(image_size_kb=512.0, distance_m=dist_m)
 
-        cv2.putText(img, f"SUTRA DEEP JSCC | {drone_id.upper()} ({stream_type})", (16, 26), cv2.FONT_HERSHEY_SIMPLEX, 0.60, (56, 189, 248), 2)
+        cv2.putText(img, f"SUTRA DEEP JSCC | {actual_drone.upper()} [{alias.upper()}] ({stream_type})", (16, 26), cv2.FONT_HERSHEY_SIMPLEX, 0.60, (56, 189, 248), 2)
         cv2.putText(img, f"ALT: {alt:.1f}m | BAT: {bat:.1f}% | ROLL: {roll_angle*57.3:.1f} DEG", (16, 48), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (220, 220, 220), 1)
 
         cv2.rectangle(img, (0, h - 30), (w, h), (10, 15, 26), -1)
@@ -749,8 +807,11 @@ class SutraGcsGatewayBridge(Node):
         b64_img = base64.b64encode(buf).decode('utf-8')
 
         # Cache for HTTP MJPEG
-        self.latest_frames[drone_id] = jpeg_bytes
-        self.latest_frames[f"{drone_id}_{stream_type}"] = jpeg_bytes
+        self.latest_frames[actual_drone] = jpeg_bytes
+        self.latest_frames[f"{actual_drone}_{stream_type}"] = jpeg_bytes
+        if alias != actual_drone:
+            self.latest_frames[alias] = jpeg_bytes
+            self.latest_frames[f"{alias}_{stream_type}"] = jpeg_bytes
 
         pose_sync = {
             "latitude": st.get("latitude", self.origin_lat),
@@ -765,8 +826,12 @@ class SutraGcsGatewayBridge(Node):
         }
 
         return {
+            "type": "CAMERA_FRAME",
             "topic": "CAMERA_FRAME",
-            "drone_id": drone_id,
+            "world_id": self.world_id,
+            "drone_id": alias,
+            "uav_id": alias,
+            "raw_drone_id": actual_drone,
             "stream_type": stream_type,
             "image_b64": f"data:image/jpeg;base64,{b64_img}",
             "pose": pose_sync,
@@ -796,12 +861,11 @@ class SutraGcsGatewayBridge(Node):
                 stream_type=self.active_modality,
                 t=now
             )
-            if self.ws_clients:
-                self._broadcast_json(frame_packet)
+            self._broadcast_json(frame_packet)
 
     def _broadcast_json(self, data: dict):
-        """Send JSON packet to all connected WebSockets clients."""
-        if not self.ws_clients:
+        """Send JSON packet to all connected WebSockets clients and upstream GCS."""
+        if not self.ws_clients and not (self.upstream_ws and self.upstream_ws.open):
             return
         message = json.dumps(data)
         asyncio.run_coroutine_threadsafe(self._async_broadcast(message), self.loop)
@@ -809,10 +873,44 @@ class SutraGcsGatewayBridge(Node):
     async def _async_broadcast(self, message: str):
         if self.ws_clients:
             await asyncio.gather(*[client.send(message) for client in self.ws_clients if client.open], return_exceptions=True)
+        if self.upstream_ws and self.upstream_ws.open:
+            try:
+                await self.upstream_ws.send(message)
+            except Exception:
+                pass
+
+    async def _upstream_gcs_loop(self):
+        """Maintains persistent connection to the GCS WebSocket Gateway (:8765)."""
+        if not WEBSOCKETS_AVAILABLE:
+            return
+        while True:
+            try:
+                async with websockets.connect(self.gcs_ws_url) as ws:
+                    self.upstream_ws = ws
+                    self.get_logger().info(f"🔗 Connected upstream to GCS Gateway at {self.gcs_ws_url}")
+                    async for msg in ws:
+                        try:
+                            data = json.loads(msg)
+                            cmd = data.get("command") or data.get("type")
+                            if cmd == "RTL":
+                                self.dispatch_emergency_rtl(data.get("drone_id", "ALL"))
+                            elif cmd in ("SELECT_STREAM", "camera.select_stream"):
+                                raw_drone = data.get("drone_id", "uav_1")
+                                actual_drone = DRONE_ALIASES.get(raw_drone, raw_drone)
+                                self.active_stream_drone = actual_drone
+                                self.active_modality = data.get("modality", "RGB").upper()
+                        except Exception:
+                            pass
+            except Exception:
+                self.upstream_ws = None
+                await asyncio.sleep(2.0)
 
     def _run_async_server(self):
         asyncio.set_event_loop(self.loop)
         async def _async_main():
+            # Launch upstream background connection
+            self.loop.create_task(self._upstream_gcs_loop())
+
             if WEBSOCKETS_AVAILABLE:
                 try:
                     async with websockets.serve(self._ws_handler, self.host, self.port):
