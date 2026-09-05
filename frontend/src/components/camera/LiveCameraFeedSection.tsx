@@ -123,9 +123,18 @@ export const LiveCameraFeedSection: React.FC = () => {
 
   // Snapshot capture
   const captureSnapshot = useCallback(() => {
-    const img = imgRef.current;
-    if (!img) return;
     try {
+      if (wsFrame?.image_b64) {
+        const link = document.createElement('a');
+        link.href = wsFrame.image_b64;
+        link.download = `SUTRA_${activeWorld}_${activeUav.toUpperCase()}_${modality}_${Date.now()}.jpg`;
+        link.click();
+        setSnapshotSuccess(true);
+        setTimeout(() => setSnapshotSuccess(false), 2000);
+        return;
+      }
+      const img = imgRef.current;
+      if (!img) return;
       const canvas = document.createElement('canvas');
       canvas.width = img.naturalWidth || img.width || 640;
       canvas.height = img.naturalHeight || img.height || 360;
@@ -141,7 +150,7 @@ export const LiveCameraFeedSection: React.FC = () => {
     } catch {
       // ignore
     }
-  }, [activeWorld, activeUav, modality]);
+  }, [activeWorld, activeUav, modality, wsFrame]);
 
   const handleTriggerScan = () => {
     try {
@@ -529,29 +538,29 @@ export const LiveCameraFeedSection: React.FC = () => {
           </div>
 
           {/* ── LIVE VIDEO DISPLAY ── */}
-          {/* Supports direct MJPEG feed natively via <img> */}
-          <img
-            ref={imgRef}
-            src={currentStreamUrl}
-            alt={`Live stream from ${activeWorld} ${activeUav}`}
-            className="w-full h-full object-contain pointer-events-none"
-            crossOrigin="anonymous"
-            onLoad={() => markFeedConnected(activeWorld, activeUav, modality)}
-            onError={() => {
-              // If image fails to load and no WebSocket frame is available, mark offline
-              if (!wsFrame?.image_b64) {
-                markFeedOffline(activeWorld, activeUav, modality);
-              }
-            }}
-          />
-
-          {/* Fallback to WebSocket Base64 Frame if available and MJPEG is not live */}
-          {currentStatus !== 'CONNECTED' && wsFrame?.image_b64 && (
+          {/* Priority 1: Direct WebSocket base64 stream from simulation / compute worker */}
+          {wsFrame?.image_b64 ? (
             <img
+              key={`ws-stream-${activeWorld}-${activeUav}`}
               src={wsFrame.image_b64}
-              alt={`WebSocket frame for ${activeWorld} ${activeUav}`}
-              className="w-full h-full object-contain pointer-events-none absolute inset-0"
+              alt={`WebSocket live stream for ${activeWorld} ${activeUav}`}
+              className="w-full h-full object-contain pointer-events-none"
               onLoad={() => markFeedConnected(activeWorld, activeUav, modality)}
+            />
+          ) : (
+            /* Priority 2: Direct MJPEG HTTP stream from Gazebo or proxy */
+            <img
+              ref={imgRef}
+              src={currentStreamUrl}
+              alt={`Live stream from ${activeWorld} ${activeUav}`}
+              className="w-full h-full object-contain pointer-events-none"
+              crossOrigin="anonymous"
+              onLoad={() => markFeedConnected(activeWorld, activeUav, modality)}
+              onError={() => {
+                if (!wsFrame?.image_b64) {
+                  markFeedOffline(activeWorld, activeUav, modality);
+                }
+              }}
             />
           )}
 

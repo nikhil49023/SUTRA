@@ -42,16 +42,26 @@ trap cleanup EXIT SIGINT SIGTERM
 pkill -f "sutra_tile_server.py" 2>/dev/null || true
 pkill -f "sutra_gcs_compute_worker.py" 2>/dev/null || true
 
+# Determine Python binary with PyTorch and Ultralytics
+if [ -f "/home/siva/rescue-env/bin/python3" ]; then
+    PYTHON_BIN="/home/siva/rescue-env/bin/python3"
+elif command -v python3 > /dev/null 2>&1; then
+    PYTHON_BIN="python3"
+else
+    echo "❌ Python 3 not found!"
+    exit 1
+fi
+
 # Step 1: Start Local SQLite / MBTiles Tile Server
 echo "🗺️  [1/3] Starting Local MBTiles Dynamic Orthomosaic Server (Port 8088)..."
-python3 "$PROJECT_ROOT/sutra_ws/src/sutra_gcs/sutra_tile_server.py" > /tmp/sutra_shiva_tiles.log 2>&1 &
+"$PYTHON_BIN" "$PROJECT_ROOT/sutra_ws/src/sutra_gcs/sutra_tile_server.py" > /tmp/sutra_shiva_tiles.log 2>&1 &
 CHILD_PIDS+=($!)
 sleep 1.0
 echo "   ✅ MBTiles server active."
 
 # Step 2: Start GCS Compute Worker (Perception, Raycasting, Deep JSCC)
 echo "🧠 [2/3] Starting SUTRA Compute & Perception Worker (Connecting to $HOST_IP)..."
-python3 "$PROJECT_ROOT/sutra_ws/src/sutra_gcs/sutra_gcs_compute_worker.py" "$HOST_IP" > /tmp/sutra_shiva_compute.log 2>&1 &
+"$PYTHON_BIN" "$PROJECT_ROOT/sutra_ws/src/sutra_gcs/sutra_gcs_compute_worker.py" "$HOST_IP" > /tmp/sutra_shiva_compute.log 2>&1 &
 CHILD_PIDS+=($!)
 sleep 1.0
 echo "   ✅ Compute worker active."

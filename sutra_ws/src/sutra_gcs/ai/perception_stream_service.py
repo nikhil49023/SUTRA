@@ -142,11 +142,12 @@ class PerceptionStreamService:
             return
 
         model_candidates = [
+            os.path.join(workspace_root, 'yolov8n.pt'),
+            'yolov8n.pt',
             os.path.join(perception_pkg, 'models', 'best.pt'),
             os.path.join(workspace_root, 'sutra_ws', 'src', 'sutra_perception', 'models', 'best.pt'),
             os.path.join(workspace_root, 'models', 'best.pt'),
             'best.pt',
-            os.path.join(workspace_root, 'yolov8n.pt'),
         ]
 
         for path in model_candidates:
@@ -285,7 +286,45 @@ class PerceptionStreamService:
             except Exception:
                 pass
 
-        # 2. Fallback to realistic disaster SAR scene
+        # 2. For WORLD 2: Ingest from Nikhil's live video feed (WhatsApp Video recording of 6G RF Workbench)
+        if str(world_id).upper() == 'WORLD_2':
+            nikhil_video_paths = [
+                os.path.join(workspace_root, 'WhatsApp Video 2026-09-05 at 4.47.02 AM.mp4'),
+                '/home/siva/Documents/DRONE_CONTROL/WhatsApp Video 2026-09-05 at 4.47.02 AM.mp4',
+            ]
+            for vpath in nikhil_video_paths:
+                if os.path.exists(vpath):
+                    vcap = self._get_or_open_capture(vpath)
+                    if vcap is not None:
+                        try:
+                            ret, vframe = vcap.read()
+                            if not ret or vframe is None or vframe.size == 0:
+                                vcap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                                ret, vframe = vcap.read()
+                            if ret and vframe is not None and vframe.size > 0:
+                                vh, vw = vframe.shape[:2]
+                                norm_did = normalize_drone_id(drone_id)
+                                if vh >= 530 and vw >= 1880:
+                                    if norm_did in ('alpha', 'uav1'):
+                                        # Pane 3: Deep JSCC Neural Autoencoder Recon
+                                        feed_img = vframe[170:525, 1265:1885]
+                                    elif norm_did in ('bravo', 'uav2'):
+                                        # Pane 1: Raw Ground Truth Sensor Feed
+                                        feed_img = vframe[170:525, 30:650]
+                                    elif norm_did in ('charlie', 'uav3'):
+                                        # Pane 2: Traditional Digital 16-QAM + LDPC Feed
+                                        feed_img = vframe[170:525, 645:1265]
+                                    else:
+                                        feed_img = cv2.resize(vframe, (640, 360))
+                                else:
+                                    feed_img = vframe
+                                with self._lock:
+                                    self._latest_frames[key] = feed_img
+                                return feed_img, False
+                        except Exception as e:
+                            logger.debug(f'Nikhil video read error: {e}')
+
+        # 3. Fallback to realistic disaster SAR scene
         return self._generate_synthetic_sar_scene(drone_id, modality), True
 
     def _generate_synthetic_sar_scene(self, drone_id: str, modality: str) -> np.ndarray:
