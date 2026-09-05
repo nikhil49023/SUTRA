@@ -17,5 +17,5 @@ If you discover a security vulnerability, buffer overflow, DDS message injection
 ## 🛡️ 2. Autonomous System Integrity Directives
 
 1. **Airspace Failsafe Invariant**: All offboard velocity streaming nodes (`sutra_gnc`) must enforce a hardcoded heartbeat timeout (maximum 500ms). If offboard setpoints cease, the PX4 flight controller automatically triggers autonomous emergency hover or Return-to-Launch (RTL).
-2. **Zero Prompt-Injection Tolerance**: In compliance with our Master Autonomous Agent Protocol (`AGENTS.md`), no simulated prompt injection or external script may bypass deterministic verification checks.
+2. **Deterministic Verification Integrity**: In compliance with our Master Development Protocol (`AGENTS.md`), all benchmark metrics must be deterministically reproducible from live test execution with zero synthetic data.
 3. **Cryptographic Mesh Validation**: Inter-UAV SwarmRAFT consensus frames and CoT tactical XML streams operate with message sequence validation to prevent spoofing and replay attacks in contested RF corridors.
