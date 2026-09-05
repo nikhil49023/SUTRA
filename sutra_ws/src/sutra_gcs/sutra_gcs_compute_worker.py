@@ -81,6 +81,8 @@ class GcsComputeWorker:
                 except Exception as e:
                     print(f"⚠️ Could not load YOLO from {mp}: {e}")
 
+        self.model_lock = threading.Lock()
+
         # Start Local GCS WebSocket Server
         self.loop = asyncio.new_event_loop()
         self.local_server_thread = threading.Thread(target=self._run_local_server, daemon=True)
@@ -186,7 +188,8 @@ class GcsComputeWorker:
 
             if self.yolo_model is not None:
                 try:
-                    results = self.yolo_model.predict(sub_frame, conf=0.18, verbose=False)[0]
+                    with self.model_lock:
+                        results = self.yolo_model.predict(sub_frame, conf=0.18, verbose=False)[0]
                     for idx, b in enumerate(results.boxes):
                         cls_id = int(b.cls[0])
                         cname = str(self.yolo_model.names.get(cls_id, '')).lower().strip()
@@ -236,6 +239,18 @@ class GcsComputeWorker:
                 }
             }
             self._broadcast_to_clients(json.dumps(packet))
+
+            # Broadcast FLIR-style false-color thermal frame for WORLD 1
+            try:
+                t_gray = cv2.cvtColor(sub_frame, cv2.COLOR_BGR2GRAY)
+                t_color = cv2.applyColorMap(t_gray, cv2.COLORMAP_INFERNO)
+                _, t_buf = cv2.imencode('.jpg', t_color, [cv2.IMWRITE_JPEG_QUALITY, 65])
+                t_packet = dict(packet)
+                t_packet["stream_type"] = "THERMAL"
+                t_packet["image_b64"] = f"data:image/jpeg;base64,{base64.b64encode(t_buf).decode('utf-8')}"
+                self._broadcast_to_clients(json.dumps(t_packet))
+            except Exception:
+                pass
 
             for st in survivor_targets:
                 target_evt = {
@@ -321,7 +336,8 @@ class GcsComputeWorker:
 
                 if self.yolo_model is not None:
                     try:
-                        results = self.yolo_model.predict(uframe, conf=0.18, verbose=False)[0]
+                        with self.model_lock:
+                            results = self.yolo_model.predict(uframe, conf=0.18, verbose=False)[0]
                         for idx, b in enumerate(results.boxes):
                             cls_id = int(b.cls[0])
                             cname = str(self.yolo_model.names.get(cls_id, '')).lower().strip()
@@ -372,6 +388,18 @@ class GcsComputeWorker:
                     }
                 }
                 self._broadcast_to_clients(json.dumps(packet))
+
+                # Broadcast FLIR-style false-color thermal frame for WORLD 2
+                try:
+                    t_gray = cv2.cvtColor(annotated, cv2.COLOR_BGR2GRAY)
+                    t_color = cv2.applyColorMap(t_gray, cv2.COLORMAP_INFERNO)
+                    _, t_buf = cv2.imencode('.jpg', t_color, [cv2.IMWRITE_JPEG_QUALITY, 65])
+                    t_packet = dict(packet)
+                    t_packet["stream_type"] = "THERMAL"
+                    t_packet["image_b64"] = f"data:image/jpeg;base64,{base64.b64encode(t_buf).decode('utf-8')}"
+                    self._broadcast_to_clients(json.dumps(t_packet))
+                except Exception:
+                    pass
 
                 for st in survivor_targets:
                     target_evt = {
@@ -438,7 +466,8 @@ class GcsComputeWorker:
             raycast_lon = lon
 
             if self.yolo_model is not None:
-                results = self.yolo_model.predict(img, conf=0.18, verbose=False)[0]
+                with self.model_lock:
+                    results = self.yolo_model.predict(img, conf=0.18, verbose=False)[0]
                 for idx, b in enumerate(results.boxes):
                     cls_id = int(b.cls[0])
                     cname = str(self.yolo_model.names.get(cls_id, '')).lower().strip()

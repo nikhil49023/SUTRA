@@ -84,7 +84,7 @@ fi
 echo "   ✅ GCS Web Dashboard active at http://127.0.0.1:5173"
 
 # Automatically open browser on Shiva's laptop pointing to host simulation
-URL="http://127.0.0.1:5173/?remote=${HOST_IP}"
+URL="http://127.0.0.1:5173/?sim_host=${HOST_IP}"
 if command -v xdg-open > /dev/null 2>&1; then
     xdg-open "$URL" 2>/dev/null &
 elif command -v open > /dev/null 2>&1; then
@@ -95,7 +95,7 @@ echo ""
 echo "=============================================================================="
 echo "🎉 GCS COMPUTE POST IS LIVE & PAIRED WITH SIMULATION HOST!"
 echo "=============================================================================="
-echo "👉 OPEN IN BROWSER: http://127.0.0.1:5173/?remote=${HOST_IP}"
+echo "👉 OPEN IN BROWSER: http://127.0.0.1:5173/?sim_host=${HOST_IP}"
 echo "👉 OR DIRECT HOST : http://${HOST_IP}:5173"
 echo "=============================================================================="
 echo "📋 JURY DEMO CHECKLIST:"

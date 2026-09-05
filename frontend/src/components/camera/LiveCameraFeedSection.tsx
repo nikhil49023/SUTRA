@@ -75,8 +75,15 @@ export const LiveCameraFeedSection: React.FC = () => {
   // Check if WebSocket frame is available for this active world and UAV
   const wsFrameKey = `${activeWorld}_${activeUav}_${modality}`;
   const wsFrameLegacyKey = `${activeUav}_${modality}`;
-  // Strict world separation: never fall back to legacy key on WORLD_2, and verify world_id matches
-  const candidateFrame = frames[wsFrameKey] || (activeWorld === 'WORLD_1' ? frames[wsFrameLegacyKey] : undefined);
+  const wsFrameRgbKey = `${activeWorld}_${activeUav}_RGB`;
+  const wsFrameRgbLegacyKey = `${activeUav}_RGB`;
+
+  // Strict world separation: verify world_id matches, and fallback gracefully to RGB if thermal is pending
+  const candidateFrame =
+    frames[wsFrameKey] ||
+    (activeWorld === 'WORLD_1' ? frames[wsFrameLegacyKey] : undefined) ||
+    frames[wsFrameRgbKey] ||
+    (activeWorld === 'WORLD_1' ? frames[wsFrameRgbLegacyKey] : undefined);
   const wsFrame = (candidateFrame && (candidateFrame.world_id || 'WORLD_1') === activeWorld) ? candidateFrame : undefined;
 
   // Inactive feed cleanup on switch
@@ -560,6 +567,11 @@ export const LiveCameraFeedSection: React.FC = () => {
               src={wsFrame.image_b64}
               alt={`WebSocket live stream for ${activeWorld} ${activeUav}`}
               className="w-full h-full object-contain pointer-events-none"
+              style={
+                modality === 'THERMAL' && wsFrame.stream_type === 'RGB'
+                  ? { filter: 'hue-rotate(180deg) saturate(250%) contrast(140%) brightness(110%)' }
+                  : undefined
+              }
               onLoad={() => markFeedConnected(activeWorld, activeUav, modality)}
             />
           ) : (

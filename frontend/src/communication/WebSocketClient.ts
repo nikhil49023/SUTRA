@@ -17,16 +17,32 @@ const generateUUID = (): string => {
 const getInitialWsUrl = (): string => {
   if (typeof window !== 'undefined') {
     const params = new URLSearchParams(window.location.search);
-    const remote = params.get('remote') || params.get('ws') || params.get('host');
-    if (remote) {
+    const wsParam = params.get('ws');
+    if (wsParam) {
+      const formatted = wsParam.startsWith('ws://') || wsParam.startsWith('wss://')
+        ? wsParam
+        : `ws://${wsParam}:8765`;
+      localStorage.setItem('sutra_gcs_ws_url', formatted);
+      return formatted;
+    }
+
+    const isLocalhost = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
+
+    const remote = params.get('remote') || params.get('host');
+    // If the user explicitly provided remote host and is NOT running on localhost
+    if (remote && !isLocalhost) {
       const formatted = remote.startsWith('ws://') || remote.startsWith('wss://') 
         ? remote 
         : `ws://${remote}:8765`;
       localStorage.setItem('sutra_gcs_ws_url', formatted);
       return formatted;
     }
+
     const saved = localStorage.getItem('sutra_gcs_ws_url');
-    if (saved) return saved;
+    // If on localhost and saved points to a non-local address, default to local compute worker
+    if (saved && (!isLocalhost || saved.includes('127.0.0.1') || saved.includes('localhost'))) {
+      return saved;
+    }
 
     const envUrl = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_WS_URL);
     if (envUrl) return envUrl;
@@ -48,6 +64,7 @@ class WebSocketClient {
   private reconnectIntervalMs = 2000;
   private isExplicitlyClosed = false;
   private pingInterval: any = null;
+  private connectTimeout: any = null;
 
   public getUrl(): string {
     return this.url;
@@ -78,10 +95,37 @@ class WebSocketClient {
 
     useCommunicationStore.getState().setConnectionState('RECONNECTING');
 
+    if (this.connectTimeout) {
+      clearTimeout(this.connectTimeout);
+      this.connectTimeout = null;
+    }
+
+    // If connecting to an external remote endpoint, set a 3.5s timeout to auto-fallback to local compute worker
+    if (this.url !== 'ws://127.0.0.1:8765' && !this.url.includes('localhost')) {
+      this.connectTimeout = setTimeout(() => {
+        if (this.ws && this.ws.readyState !== WebSocket.OPEN) {
+          console.warn(`[WebSocketClient] Remote endpoint ${this.url} timed out. Auto-falling back to local compute worker ws://127.0.0.1:8765`);
+          try {
+            this.ws.close();
+          } catch {}
+          this.ws = null;
+          this.url = 'ws://127.0.0.1:8765';
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('sutra_gcs_ws_url', 'ws://127.0.0.1:8765');
+          }
+          this.connect('ws://127.0.0.1:8765');
+        }
+      }, 3500);
+    }
+
     try {
       this.ws = new WebSocket(this.url);
 
       this.ws.onopen = () => {
+        if (this.connectTimeout) {
+          clearTimeout(this.connectTimeout);
+          this.connectTimeout = null;
+        }
         this.reconnectAttempts = 0;
         useCommunicationStore.getState().setConnectionState('CONNECTED');
         useCommunicationStore.getState().setError(null);
@@ -108,6 +152,10 @@ class WebSocketClient {
       };
 
       this.ws.onclose = () => {
+        if (this.connectTimeout) {
+          clearTimeout(this.connectTimeout);
+          this.connectTimeout = null;
+        }
         this.stopHeartbeat();
         useCommunicationStore.getState().setConnectionState('OFFLINE');
         if (!this.isExplicitlyClosed) {
@@ -116,9 +164,17 @@ class WebSocketClient {
       };
 
       this.ws.onerror = (error) => {
+        if (this.connectTimeout) {
+          clearTimeout(this.connectTimeout);
+          this.connectTimeout = null;
+        }
         useCommunicationStore.getState().setError('WebSocket connection encountered an error');
       };
     } catch (err: any) {
+      if (this.connectTimeout) {
+        clearTimeout(this.connectTimeout);
+        this.connectTimeout = null;
+      }
       useCommunicationStore.getState().setError(err?.message || 'WebSocket initialization failed');
       this.scheduleReconnect();
     }
@@ -179,6 +235,19 @@ class WebSocketClient {
   }
 
   private scheduleReconnect(): void {
+    if (this.reconnectAttempts >= 2 && this.url !== 'ws://127.0.0.1:8765' && !this.url.includes('localhost')) {
+      console.warn(`[WebSocketClient] Remote endpoint ${this.url} unreachable after retries. Auto-falling back to local compute worker ws://127.0.0.1:8765`);
+      this.url = 'ws://127.0.0.1:8765';
+      this.reconnectAttempts = 0;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('sutra_gcs_ws_url', 'ws://127.0.0.1:8765');
+      }
+      setTimeout(() => {
+        this.connect('ws://127.0.0.1:8765');
+      }, 500);
+      return;
+    }
+
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       useCommunicationStore.getState().setError('Maximum reconnection attempts exceeded.');
       return;
