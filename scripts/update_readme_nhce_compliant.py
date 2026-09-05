@@ -1,4 +1,6 @@
-# 🚁 PROJECT SUTRA — Swarm Unified Tactical Reconnaissance Architecture
+import os
+
+readme_content = """# 🚁 PROJECT SUTRA — Swarm Unified Tactical Reconnaissance Architecture
 
 [![ROS 2 Humble/Jazzy](https://img.shields.io/badge/ROS_2-Humble%20%2F%20Jazzy-blue.svg)](https://docs.ros.org/)
 [![PX4 Autopilot v1.14](https://img.shields.io/badge/PX4-v1.14%2B%20Offboard-orange.svg)](https://px4.io/)
@@ -37,9 +39,9 @@
 In natural catastrophes (such as the **2013 Kedarnath flash floods and debris flows**, catastrophic Himalayan landslides, or collapsed multi-story Reinforced Concrete structures) and hostile electronic warfare (EW) corridors, rapid search and rescue (SAR) is governed by the **UN OCHA INSARAG Golden 24-Hour window**. Survivor survival probability drops precipitously after 24 hours of entrapment.
 
 Traditional single-drone and centralized swarm systems fail catastrophically due to **three fundamental bottlenecks**:
-1. **Single-Point-of-Failure & Narrow Sweep**: A single commercial quadcopter lacks the spatial sweep rate and flight endurance to cover wide disaster corridors ($>10	ext{ km}^2$) in time. Foot reconnaissance takes 18 to 24 hours. A single motor or battery cutoff aborts the entire rescue mission.
+1. **Single-Point-of-Failure & Narrow Sweep**: A single commercial quadcopter lacks the spatial sweep rate and flight endurance to cover wide disaster corridors ($>10\text{ km}^2$) in time. Foot reconnaissance takes 18 to 24 hours. A single motor or battery cutoff aborts the entire rescue mission.
 2. **GPS-Denied Drift & Mid-Air Collisions**: In mountain gorges, dense forest canopies, or GPS-jammed sectors, satellite signals are denied. Standalone IMU dead reckoning quickly drifts, resulting in **Velocity Obstacle singularities and catastrophic mid-air collisions** among friendly UAVs.
-3. **The Digital Cliff Effect Under Jamming**: Standard digital video protocols (H.264 / RTSP + 16-QAM/LDPC) suffer from a rigid Shannon cutoff: when RF Signal-to-Noise Ratio (SNR) drops below **$4.8	ext{ dB}$**, packet loss triggers an immediate, total video blackout (0 kbps). **Edge AI survivor detection drops to 0%, and WGS84 GPS target tracking is completely lost.**
+3. **The Digital Cliff Effect Under Jamming**: Standard digital video protocols (H.264 / RTSP + 16-QAM/LDPC) suffer from a rigid Shannon cutoff: when RF Signal-to-Noise Ratio (SNR) drops below **$4.8\text{ dB}$**, packet loss triggers an immediate, total video blackout (0 kbps). **Edge AI survivor detection drops to 0%, and WGS84 GPS target tracking is completely lost.**
 
 **Project SUTRA** (Swarm Unified Tactical Reconnaissance Architecture) is an **Autonomous 5-UAV Drone Swarm System** engineered from first principles for collaborative search, rescue, survivor discovery, and tactical reconnaissance in GPS-denied and RF-jammed environments. SUTRA operates **100% decentralized**: each drone runs its own guidance, navigation, perception, and consensus stack, achieving robust multi-agent coordination without relying on cloud servers, external GPS, or unjammed radio links.
 
@@ -132,28 +134,27 @@ It runs live on the companion **NVIDIA GeForce RTX 3050 Laptop GPU (`DISPLAY=:1`
 ![SUTRA NVIDIA Sionna 6G RF Simulation Workbench](docs/presentation/sionna_deep_jscc_disaster_stock_preview.png)
 
 ### The 4 Core Takeaways of Deep JSCC in Project SUTRA:
-1. **Zero Digital Cliff Breakdown**: While traditional digital transmission (H.264 / 16-QAM + LDPC) collapses into blackouts below $4.8	ext{ dB}$ SNR, SUTRA Deep JSCC operates continuously down to **$-8.0	ext{ dB}$ SNR** via smooth analog semantic degradation.
-2. **+92% AI Survivor Retention Under Jamming**: During severe $-18	ext{ dB}$ electronic barrage jamming, traditional digital video drops to $0\%$ detections (feed frozen). Deep JSCC retains **$>88-95\%$ survivor and vehicle detections**, keeping search operations alive.
-3. **96.9% Bandwidth Reduction**: Compresses raw 1080p frames from $1,536	ext{ KB}$ down to **$16.0	ext{ KB}$ continuous complex latent symbols**, allowing all 5 swarm drones to stream concurrently over narrow 802.11s mesh links without channel saturation.
-4. **Continuous Sub-0.32m WGS84 Geolocation Fix**: Direct 6-DOF camera raycasting projects 2D survivor bounding boxes to terrain-corrected GPS coordinates ($30.7346^\circ	ext{ N}, 79.0669^\circ	ext{ E}$), maintaining continuous Cursor-on-Target (CoT) telemetry to ground rescue teams.
+1. **Zero Digital Cliff Breakdown**: While traditional digital transmission (H.264 / 16-QAM + LDPC) collapses into blackouts below $4.8\text{ dB}$ SNR, SUTRA Deep JSCC operates continuously down to **$-8.0\text{ dB}$ SNR** via smooth analog semantic degradation.
+2. **+92% AI Survivor Retention Under Jamming**: During severe $-18\text{ dB}$ electronic barrage jamming, traditional digital video drops to $0\%$ detections (feed frozen). Deep JSCC retains **$>88-95\%$ survivor and vehicle detections**, keeping search operations alive.
+3. **96.9% Bandwidth Reduction**: Compresses raw 1080p frames from $1,536\text{ KB}$ down to **$16.0\text{ KB}$ continuous complex latent symbols**, allowing all 5 swarm drones to stream concurrently over narrow 802.11s mesh links without channel saturation.
+4. **Continuous Sub-0.32m WGS84 Geolocation Fix**: Direct 6-DOF camera raycasting projects 2D survivor bounding boxes to terrain-corrected GPS coordinates ($30.7346^\circ\text{ N}, 79.0669^\circ\text{ E}$), maintaining continuous Cursor-on-Target (CoT) telemetry to ground rescue teams.
 
 ---
 
 ## 📐 4. Core Mathematical Formulations
 
 ### 1. Optimal Reciprocal Collision Avoidance (ORCA 3D):
-$$\mathbf{u} = \left(rg\min_{\mathbf{w} \in \partial VO_{A|B}^	au} \|\mathbf{w} - (\mathbf{v}_A - \mathbf{v}_B)\|ight) - (\mathbf{v}_A - \mathbf{v}_B)$$
-$$ORCA_{A|B}^	au = \left\{ \mathbf{v} \in \mathbb{R}^3 \;\middle|\; \left(\mathbf{v} - \left(\mathbf{v}_A + rac{1}{2}\mathbf{u}ight)ight) \cdot \mathbf{n} \ge 0 ight\}$$
-$$\mathbf{v}_A^{opt} = rg\min_{\mathbf{v} \in igcap_{B 
-e A} ORCA_{A|B}^	au} \|\mathbf{v} - \mathbf{v}_A^{pref}\|$$
+$$\mathbf{u} = \left(\arg\min_{\mathbf{w} \in \partial VO_{A|B}^\tau} \|\mathbf{w} - (\mathbf{v}_A - \mathbf{v}_B)\|\right) - (\mathbf{v}_A - \mathbf{v}_B)$$
+$$ORCA_{A|B}^\tau = \left\{ \mathbf{v} \in \mathbb{R}^3 \;\middle|\; \left(\mathbf{v} - \left(\mathbf{v}_A + \frac{1}{2}\mathbf{u}\right)\right) \cdot \mathbf{n} \ge 0 \right\}$$
+$$\mathbf{v}_A^{opt} = \arg\min_{\mathbf{v} \in \bigcap_{B \ne A} ORCA_{A|B}^\tau} \|\mathbf{v} - \mathbf{v}_A^{pref}\|$$
 
 ### 2. Deep JSCC End-to-End Rate-Distortion Channel Formulation:
-$$\mathbf{s} = \sqrt{K} rac{f_	heta(\mathbf{x})}{\|f_	heta(\mathbf{x})\|_2}, \quad \mathbf{y} = h \cdot \mathbf{s} + \mathbf{n}, \quad \hat{\mathbf{x}} = g_\phi(\mathbf{y})$$
-$$\mathcal{L}(	heta, \phi) = \mathbb{E}_{\mathbf{x}, h, \mathbf{n}} \left[ \|\mathbf{x} - g_\phi(h \cdot f_	heta(\mathbf{x}) + \mathbf{n})\|_2^2 + \lambda \left(1 - 	ext{MS-SSIM}(\mathbf{x}, \hat{\mathbf{x}})ight) ight]$$
+$$\mathbf{s} = \sqrt{K} \frac{f_\theta(\mathbf{x})}{\|f_\theta(\mathbf{x})\|_2}, \quad \mathbf{y} = h \cdot \mathbf{s} + \mathbf{n}, \quad \hat{\mathbf{x}} = g_\phi(\mathbf{y})$$
+$$\mathcal{L}(\theta, \phi) = \mathbb{E}_{\mathbf{x}, h, \mathbf{n}} \left[ \|\mathbf{x} - g_\phi(h \cdot f_\theta(\mathbf{x}) + \mathbf{n})\|_2^2 + \lambda \left(1 - \text{MS-SSIM}(\mathbf{x}, \hat{\mathbf{x}})\right) \right]$$
 
 ### 3. Closed-Form 6-DOF WGS84 DEM Raycasting Geolocation:
-$$\mathbf{r}_{NED} = \mathbf{R}_B^{NED} \cdot \mathbf{R}_C^B \cdot rac{\mathbf{K}^{-1} [u_c, v_c, 1]^T}{\|\mathbf{K}^{-1} [u_c, v_c, 1]^T\|_2}$$
-$$\mathbf{p}_{target} = \mathbf{p}_{UAV} + d^* \cdot \mathbf{r}_{NED}, \quad 	ext{where } \mathbf{p}_{target}^{(z)} = h_{DEM}\left(\mathbf{p}_{target}^{(x)}, \mathbf{p}_{target}^{(y)}ight)$$
+$$\mathbf{r}_{NED} = \mathbf{R}_B^{NED} \cdot \mathbf{R}_C^B \cdot \frac{\mathbf{K}^{-1} [u_c, v_c, 1]^T}{\|\mathbf{K}^{-1} [u_c, v_c, 1]^T\|_2}$$
+$$\mathbf{p}_{target} = \mathbf{p}_{UAV} + d^* \cdot \mathbf{r}_{NED}, \quad \text{where } \mathbf{p}_{target}^{(z)} = h_{DEM}\left(\mathbf{p}_{target}^{(x)}, \mathbf{p}_{target}^{(y)}\right)$$
 
 ---
 
@@ -285,3 +286,10 @@ python3 -m http.server 8000
 *Project SUTRA — Swarm Unified Tactical Reconnaissance Architecture*  
 *Smart Horizon 48-Hour International Hackathon Grand Finale (Sept 3–5, 2026)*  
 *New Horizon College of Engineering, Bengaluru — Team ID: SHIH26-TID-361*
+"""
+
+target_readme = "/home/nikhil/Desktop/Project SUTRA/README.md"
+with open(target_readme, "w", encoding="utf-8") as f:
+    f.write(readme_content)
+
+print(f"✅ Successfully wrote updated, fully NHCE-compliant README.md to: {target_readme}")
