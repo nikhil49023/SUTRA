@@ -58,20 +58,10 @@ class GcsComputeWorker:
         self.host_connected = False
         self.running = True
 
-    def is_host_connected(self) -> bool:
-        """Returns True if WebSocket connection to simulation host is open and active."""
-        if not getattr(self, "host_connected", False) or self.host_ws is None:
-            return False
-        try:
-            if hasattr(self.host_ws, "state"):
-                return str(self.host_ws.state.name).upper() == "OPEN"
-            return not getattr(self.host_ws, "closed", True)
-        except Exception:
-            return False
-
         # Edge perception state
         self.detected_survivors = []
         self.last_tile_stamp_time = 0.0
+        self.last_host_frame_time = 0.0
 
         # Load authoritative YOLO model (identical to Nikhil's setup: yolov8n.pt)
         self.yolo_model = None
@@ -110,6 +100,17 @@ class GcsComputeWorker:
         print(f"💻 Serving GCS Frontend on  : ws://127.0.0.1:{self.local_ws_port}")
         print(f"🗺️  Dynamic MBTiles Engine    : {TILE_SERVER_URL}")
         print("==================================================================")
+
+    def is_host_connected(self) -> bool:
+        """Returns True if WebSocket connection to simulation host is open and active."""
+        if not getattr(self, "host_connected", False) or self.host_ws is None:
+            return False
+        try:
+            if hasattr(self.host_ws, "state"):
+                return str(self.host_ws.state.name).upper() == "OPEN"
+            return not getattr(self.host_ws, "closed", True)
+        except Exception:
+            return False
 
     def _broadcast_to_clients(self, raw_msg: str):
         """Thread-safely forwards message to all connected local GCS browser clients."""
@@ -160,9 +161,10 @@ class GcsComputeWorker:
         time.sleep(1.0)
 
         while self.running:
-            # If host_ws is connected and healthy, don't generate fallback frames
-            if self.is_host_connected():
-                time.sleep(1.0)
+            # If host_ws is connected and actively streaming frames, yield to host
+            now = time.time()
+            if self.is_host_connected() and (now - getattr(self, "last_host_frame_time", 0.0)) < 2.0:
+                time.sleep(0.5)
                 continue
 
             if not self.local_clients:
@@ -544,6 +546,7 @@ class GcsComputeWorker:
                                 topic = packet.get("topic")
 
                                 if topic == "CAMERA_FRAME":
+                                    self.last_host_frame_time = time.time()
                                     if "world_id" not in packet:
                                         packet["world_id"] = "WORLD_1"
                                     processed = self._process_video_and_perception(packet)
