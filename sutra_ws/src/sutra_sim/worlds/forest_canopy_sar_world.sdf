@@ -1,11 +1,9 @@
 <?xml version="1.0" ?>
 <sdf version="1.8">
   <world name="forest_canopy_sar_world">
-    <!-- DART 500Hz Solver Profile (Gate G1 Compliant) -->
-    <physics name="500hz_physics" type="dart">
-      <max_step_size>0.002</max_step_size>
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.003</max_step_size>
       <real_time_factor>1.0</real_time_factor>
-      <real_time_update_rate>500</real_time_update_rate>
     </physics>
 
     <!-- ── Gazebo Sim 8 GUI Viewport Configuration (MinimalScene + Calibrated Camera) -->
@@ -143,7 +141,12 @@
       <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
         <link_name>base_link</link_name><topic>/uav_alpha/gazebo/command/twist</topic>
       </plugin>
-      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+        <odom_publish_frequency>50</odom_publish_frequency>
+        <odom_frame>world</odom_frame>
+        <robot_base_frame>base_link</robot_base_frame>
+        <dimensions>3</dimensions>
+      </plugin>
     </model>
 
     <!-- 🚁 UAV_BETA — Orange Ridge Recon (54.0m / 17.5m AGL) -->
@@ -167,7 +170,12 @@
       <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
         <link_name>base_link</link_name><topic>/uav_beta/gazebo/command/twist</topic>
       </plugin>
-      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+        <odom_publish_frequency>50</odom_publish_frequency>
+        <odom_frame>world</odom_frame>
+        <robot_base_frame>base_link</robot_base_frame>
+        <dimensions>3</dimensions>
+      </plugin>
     </model>
 
     <!-- 🚁 UAV_GAMMA — Green Central Relay & Tactical Sentry (64.0m / 27.5m AGL) -->
@@ -191,7 +199,12 @@
       <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
         <link_name>base_link</link_name><topic>/uav_gamma/gazebo/command/twist</topic>
       </plugin>
-      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+        <odom_publish_frequency>50</odom_publish_frequency>
+        <odom_frame>world</odom_frame>
+        <robot_base_frame>base_link</robot_base_frame>
+        <dimensions>3</dimensions>
+      </plugin>
     </model>
 
     <!-- 🚁 UAV_DELTA — Magenta Flank Survey (52.0m / 15.5m AGL) -->
@@ -215,7 +228,12 @@
       <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
         <link_name>base_link</link_name><topic>/uav_delta/gazebo/command/twist</topic>
       </plugin>
-      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+        <odom_publish_frequency>50</odom_publish_frequency>
+        <odom_frame>world</odom_frame>
+        <robot_base_frame>base_link</robot_base_frame>
+        <dimensions>3</dimensions>
+      </plugin>
     </model>
 
     <!-- 🚁 UAV_EPSILON — Yellow Vehicle & Perimeter Escort (49.0m / 12.5m AGL) -->
@@ -239,7 +257,12 @@
       <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
         <link_name>base_link</link_name><topic>/uav_epsilon/gazebo/command/twist</topic>
       </plugin>
-      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+        <odom_publish_frequency>50</odom_publish_frequency>
+        <odom_frame>world</odom_frame>
+        <robot_base_frame>base_link</robot_base_frame>
+        <dimensions>3</dimensions>
+      </plugin>
     </model>
   </world>
 </sdf>

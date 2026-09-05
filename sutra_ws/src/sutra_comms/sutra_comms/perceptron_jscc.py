@@ -237,10 +237,14 @@ class PerceptronSemanticCommsPipeline:
     End-to-End Perceptron Semantic Communication Engine for Swarm Telemetry & Thermal Media.
     """
     def __init__(self):
+        self.device = torch.device("cpu") if TORCH_AVAILABLE else None
         if TORCH_AVAILABLE and torch.cuda.is_available():
-            self.device = torch.device("cuda:0")
-        else:
-            self.device = torch.device("cpu") if TORCH_AVAILABLE else None
+            try:
+                _t = torch.zeros((1, 1), device="cuda:0")
+                del _t
+                self.device = torch.device("cuda:0")
+            except Exception:
+                self.device = torch.device("cpu")
 
         self.snr_estimator = PerceptronSNREstimator()
         self.encoder = PerceptronJSCCEncoder(in_features=512, bottleneck_dim=16)
@@ -256,12 +260,21 @@ class PerceptronSemanticCommsPipeline:
                 except Exception:
                     pass
 
-            self.encoder.to(self.device)
-            self.decoder.to(self.device)
-            self.encoder.eval()
-            self.decoder.eval()
-            self._cached_raw_features = torch.randn(1, 512, device=self.device)
-            self._cached_noise_buffer = torch.empty((1, 16), device=self.device)
+            try:
+                self.encoder.to(self.device)
+                self.decoder.to(self.device)
+                self.encoder.eval()
+                self.decoder.eval()
+                self._cached_raw_features = torch.randn(1, 512, device=self.device)
+                self._cached_noise_buffer = torch.empty((1, 16), device=self.device)
+            except Exception:
+                self.device = torch.device("cpu")
+                self.encoder.to(self.device)
+                self.decoder.to(self.device)
+                self.encoder.eval()
+                self.decoder.eval()
+                self._cached_raw_features = torch.randn(1, 512, device=self.device)
+                self._cached_noise_buffer = torch.empty((1, 16), device=self.device)
             self._mse_cache = {}
 
     def process_semantic_transmission(self, image_size_kb: float, distance_m: float) -> Dict[str, float]:

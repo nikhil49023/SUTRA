@@ -371,7 +371,7 @@ class SwarmFixedPathNode(Node):
         self.x = 0.0; self.y = 0.0; self.z = 0.0
         self.vx = 0.0; self.vy = 0.0; self.vz = 0.0
         self.has_pose = False
-        self.is_airborne = False
+        self.is_airborne = self.route_mode in ["canopy_forest", "forest", "disaster_flood"]
         self.loop_count = 0
 
         # Flight mode & resilience states
@@ -549,9 +549,19 @@ class SwarmFixedPathNode(Node):
         self.x = msg.pose.pose.position.x
         self.y = msg.pose.pose.position.y
         self.z = msg.pose.pose.position.z
-        self.vx = msg.twist.twist.linear.x
-        self.vy = msg.twist.twist.linear.y
-        self.vz = msg.twist.twist.linear.z
+        # Reject bogus numerical differentiation spikes from Gazebo OdometryPublisher startup
+        raw_vx = msg.twist.twist.linear.x
+        raw_vy = msg.twist.twist.linear.y
+        raw_vz = msg.twist.twist.linear.z
+        if math.hypot(raw_vx, raw_vy) < 15.0 and abs(raw_vz) < 15.0:
+            self.vx = raw_vx
+            self.vy = raw_vy
+            self.vz = raw_vz
+        else:
+            self.vx = 0.0
+            self.vy = 0.0
+            self.vz = 0.0
+
         if not self.has_pose:
             self.has_pose = True
             self.initial_z = msg.pose.pose.position.z
@@ -565,13 +575,19 @@ class SwarmFixedPathNode(Node):
         self.pub_pose.publish(ps)
 
     def _peer_odom_cb(self, msg: Odometry, peer_id: str):
+        raw_vx = msg.twist.twist.linear.x
+        raw_vy = msg.twist.twist.linear.y
+        raw_vz = msg.twist.twist.linear.z
+        if math.hypot(raw_vx, raw_vy) >= 15.0 or abs(raw_vz) >= 15.0:
+            raw_vx, raw_vy, raw_vz = 0.0, 0.0, 0.0
+
         self.peer_states[peer_id] = (
             msg.pose.pose.position.x,
             msg.pose.pose.position.y,
             msg.pose.pose.position.z,
-            msg.twist.twist.linear.x,
-            msg.twist.twist.linear.y,
-            msg.twist.twist.linear.z,
+            raw_vx,
+            raw_vy,
+            raw_vz,
         )
 
     # ── ORCA 3D Avoidance (Powered by Orca3DSolver) ───────────────────────────
@@ -587,7 +603,7 @@ class SwarmFixedPathNode(Node):
                 neighbors.append(((px, py, pz), (pvx, pvy, pvz)))
 
         safe_vx, safe_vy, safe_vz = self.solver.compute_avoidance_velocity(
-            pos_i, vel_i, pref_vel_i, neighbors
+            pos_i, vel_i, pref_vel_i, neighbors, dt=0.02
         )
         return safe_vx, safe_vy, safe_vz
 
@@ -715,8 +731,8 @@ class SwarmFixedPathNode(Node):
         else:
             vx_des, vy_des, vz_des = 0.0, 0.0, 0.0
 
-        # Slow down when approaching waypoint
-        approach_factor = min(1.0, dist_xy / (self.wp_radius * 3.0))
+        # Slow down smoothly when approaching waypoint, maintaining minimum cruise floor
+        approach_factor = min(1.0, max(0.35, dist_xy / (self.wp_radius * 2.0)))
         vx_des *= approach_factor
         vy_des *= approach_factor
 
@@ -732,6 +748,12 @@ class SwarmFixedPathNode(Node):
         err_y = vy - self.vy
         err_z = vz - self.vz
 
+        # Reset integral error if sudden state discontinuity / huge error detected
+        if math.hypot(err_x, err_y) > 10.0 or abs(err_z) > 10.0:
+            self.int_err_x = 0.0
+            self.int_err_y = 0.0
+            self.int_err_z = 0.0
+
         self.int_err_x += err_x * dt
         self.int_err_y += err_y * dt
         self.int_err_z += err_z * dt
@@ -746,6 +768,16 @@ class SwarmFixedPathNode(Node):
         self._send_twist(vx + int_x, vy + int_y, vz + int_z)
 
     def _send_twist(self, vx: float, vy: float, vz: float):
+        # Strict physical flight velocity envelope (bounds max speed, prevents simulation blow-up)
+        max_h = self.cruise_speed * 1.5
+        max_v = 2.5
+        h_spd = math.hypot(vx, vy)
+        if h_spd > max_h:
+            scale = max_h / h_spd
+            vx *= scale
+            vy *= scale
+        vz = max(-max_v, min(max_v, vz))
+
         msg = TwistStamped()
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.header.frame_id = "world"

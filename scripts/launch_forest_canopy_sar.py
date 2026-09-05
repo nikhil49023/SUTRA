@@ -60,10 +60,10 @@ def main():
     print("=" * 78)
 
     env = os.environ.copy()
-    env.pop("GTK_PATH", None)
-    env.pop("GTK_IM_MODULE", None)
-    env.pop("LOCPATH", None)
-    env.pop("GIO_MODULE_DIR", None)
+    for k in list(env.keys()):
+        if "SNAP" in k or "VSCODE" in k or k.startswith("GTK_") or k.startswith("GIO_") or k in ("LOCPATH", "GSETTINGS_SCHEMA_DIR"):
+            env.pop(k, None)
+    env["XDG_DATA_DIRS"] = "/usr/share/ubuntu:/usr/share/gnome:/usr/local/share/:/usr/share/"
 
     env["DISPLAY"] = args.display
     env["GZ_PARTITION"] = "sutra_sim"
@@ -73,10 +73,12 @@ def main():
     env["SUTRA_WORLD_ID"] = "WORLD_2"
     env["SUTRA_GCS_WS_URL"] = "ws://127.0.0.1:8765"
 
-    # Add workspace and comms to PYTHONPATH
+    # Add workspace, comms, and gnc to PYTHONPATH
     sys_path_dirs = [
         os.path.join(SUTRA_COMMS_DIR, "sutra_comms"),
         SUTRA_COMMS_DIR,
+        os.path.join(PROJECT_ROOT, "sutra_ws", "src", "sutra_gnc"),
+        os.path.join(PROJECT_ROOT, "sutra_ws", "src", "sutra_gnc", "sutra_gnc"),
         os.path.join(PROJECT_ROOT, "sutra_ws", "src"),
     ]
     env["PYTHONPATH"] = ":".join(sys_path_dirs) + ":" + env.get("PYTHONPATH", "")
@@ -87,7 +89,7 @@ def main():
         gz_cmd.append("-s")
     gz_cmd.append(WORLD_SDF)
 
-    print("\n▶️  [1/4] Starting Gazebo Sim 8 Engine...")
+    print("\n▶️  [1/5] Starting Gazebo Sim 8 Engine...")
     gz_proc = subprocess.Popen(gz_cmd, env=env)
     procs.append(gz_proc)
 
@@ -103,35 +105,75 @@ def main():
         img_topics.append(f"/{d}/camera/image_raw")
         img_topics.append(f"/{d}/thermal_camera/image_raw")
 
-    print("▶️  [2/4] Starting ros_gz_image bridge (10x camera channels)...")
+    print("▶️  [2/5] Starting ros_gz_image bridge (10x camera channels)...")
     img_bridge_cmd = ["ros2", "run", "ros_gz_image", "image_bridge"] + img_topics
     img_proc = subprocess.Popen(img_bridge_cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     procs.append(img_proc)
 
-    # 3. Launch ROS 2 <-> Gazebo parameter_bridge for odometry
-    odom_args = []
+    # 3. Launch ROS 2 <-> Gazebo parameter_bridge for odometry, command/twist, IMU & clock
+    bridge_args = ["/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock"]
     for d in drones:
-        odom_args.append(f"/model/{d}/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry")
-        odom_args.append(f"/{d}/imu@sensor_msgs/msg/Imu[gz.msgs.IMU")
-        odom_args.append(f"/{d}/rangefinder/distance@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan")
+        bridge_args.append(f"/{d}/gazebo/command/twist@geometry_msgs/msg/TwistStamped]gz.msgs.Twist")
+        bridge_args.append(f"/model/{d}/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry")
+        bridge_args.append(f"/{d}/imu@sensor_msgs/msg/Imu[gz.msgs.IMU")
+        bridge_args.append(f"/{d}/rangefinder/distance@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan")
 
-    print("▶️  [3/4] Starting ros_gz_bridge parameter bridge (odometry, IMU, depth)...")
-    odom_bridge_cmd = ["ros2", "run", "ros_gz_bridge", "parameter_bridge"] + odom_args
+    print("▶️  [3/5] Starting ros_gz_bridge parameter bridge (odometry, 50Hz twist, IMU, depth)...")
+    odom_bridge_cmd = ["ros2", "run", "ros_gz_bridge", "parameter_bridge"] + bridge_args
     odom_proc = subprocess.Popen(odom_bridge_cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     procs.append(odom_proc)
 
-    # 4. Launch SUTRA GCS Gateway Bridge
-    print("▶️  [4/4] Starting SUTRA GCS Gateway Bridge (WORLD_2 -> ws://127.0.0.1:8765 & http://0.0.0.0:8080)...")
+    # 4. Launch 5x Autonomous Flight Controllers (Subsystem A: ORCA 3D Swarm Flight)
+    print("▶️  [4/5] Starting 5x Autonomous Flight Controllers (ORCA 3D, Canopy Routes)...")
+    flight_node_path = os.path.join(PROJECT_ROOT, "sutra_ws", "src", "sutra_gnc", "sutra_gnc", "swarm_fixed_path_node.py")
+    for d in drones:
+        cmd = [
+            sys.executable, flight_node_path,
+            "--ros-args",
+            "-r", f"__node:=sutra_swarm_fixed_path_{d}",
+            "-p", f"drone_id:={d}",
+            "-p", "route_mode:=canopy_forest",
+            "-p", "cruise_speed:=3.5",
+            "-p", "waypoint_radius:=3.0",
+            "-p", "orca_radius:=2.0",
+            "-p", "use_sim_time:=true",
+        ]
+        f_proc = subprocess.Popen(cmd, env=env)
+        procs.append(f_proc)
+
+    # 5. Launch SUTRA GCS Gateway Bridge
+    print("▶️  [5/5] Starting SUTRA GCS Gateway Bridge (WORLD_2 -> ws://127.0.0.1:8765 & http://0.0.0.0:8080)...")
     gateway_bridge_path = os.path.join(SUTRA_COMMS_DIR, "sutra_comms", "gcs_gateway_bridge.py")
     gw_proc = subprocess.Popen([sys.executable, gateway_bridge_path], env=env)
     procs.append(gw_proc)
 
+    # Background camera alignment in Gazebo GUI
+    def align_camera():
+        time.sleep(2.0)
+        align_cmd = [
+            "gz", "service", "-s", "/gui/move_to/pose",
+            "--reqtype", "gz.msgs.GUICamera",
+            "--reptype", "gz.msgs.Boolean",
+            "--timeout", "1500",
+            "--req", "pose: { position: { x: 16.0, y: -16.0, z: 62.0 }, orientation: { x: -0.2809, y: 0.1590, z: 0.8236, w: 0.4663 } }"
+        ]
+        try:
+            subprocess.run(align_cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception:
+            pass
+
+    import threading
+    threading.Thread(target=align_camera, daemon=True).start()
+
     print("\n" + "=" * 78)
-    print("✅ GAZEBO FOREST CANOPY WORLD & GCS WORLD 2 PIPELINE IS FULLY ACTIVE!")
-    print("   - Gazebo Sim 8: Running photorealistic canopy disaster world")
-    print("   - Camera Feeds: 5x RGB + 5x FLIR Thermal streaming via ROS 2")
-    print("   - Deep JSCC   : Compressing frames and forwarding to GCS on ws://127.0.0.1:8765")
-    print("   - GCS UI      : Open http://localhost:5173/?world=WORLD_2")
+    print("🚀 SUTRA 5-UAV 3D SWARM FLIGHT IS ACTIVE IN FOREST CANOPY SAR DIGITAL TWIN!")
+    print("   - uav_alpha   : Lead Penetration Scout (Dirt trail & squad search at 46m)")
+    print("   - uav_beta    : North-East Ridge Reconnaissance (Clockwise search loop at 54m)")
+    print("   - uav_gamma   : High-Altitude Tactical RF Mesh Relay (Figure-8 sentry at 64m)")
+    print("   - uav_delta   : Ravine & Flank Search (Contour exploration loop at 52m)")
+    print("   - uav_epsilon : West Trail Insertion Overwatch (Perimeter patrol at 49m)")
+    print("   - Physics     : 50Hz VelocityControl + ORCA 3D reciprocal collision avoidance")
+    print("   - Live Video  : View streaming cameras in GCS at http://localhost:5173/?world=WORLD_2")
     print("=" * 78 + "\n")
 
     try:

@@ -374,6 +374,14 @@ class Orca3DSolver:
                     vy = vy_i + ay * scale_a * dt
                     vz = vz_i + az * scale_a * dt
 
+        # Enforce hard upper speed bound on output velocity
+        post_speed = math.sqrt(vx * vx + vy * vy + vz * vz)
+        if post_speed > self.max_speed:
+            scale_p = self.max_speed / post_speed
+            vx *= scale_p
+            vy *= scale_p
+            vz *= scale_p
+
         return (vx, vy, vz)
 
 
