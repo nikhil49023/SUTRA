@@ -1,4 +1,7 @@
-<!DOCTYPE html>
+import os
+import subprocess
+
+html_content = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -817,3 +820,37 @@
 
 </body>
 </html>
+"""
+
+base_dir = "/home/nikhil/Desktop/Project SUTRA"
+html_path = os.path.join(base_dir, "docs/presentation/SUTRA_PPT_Context_Document.html")
+pdf_path = os.path.join(base_dir, "docs/presentation/SUTRA_PPT_Context_Document.pdf")
+desktop_pdf_path = "/home/nikhil/Desktop/SUTRA_PPT_Context_Document.pdf"
+
+with open(html_path, "w", encoding="utf-8") as f:
+    f.write(html_content)
+
+print(f"✅ Generated updated master HTML at: {html_path}")
+
+chrome_cmd = [
+    "google-chrome",
+    "--headless=new",
+    "--disable-gpu",
+    "--no-sandbox",
+    "--no-pdf-header-footer",
+    "--run-all-compositor-stages-before-draw",
+    f"--print-to-pdf={pdf_path}",
+    html_path
+]
+
+print("🖨️ Compiling expanded master PDF with Google Chrome Headless...")
+res = subprocess.run(chrome_cmd, capture_output=True, text=True)
+if res.returncode == 0 and os.path.exists(pdf_path):
+    size_kb = os.path.getsize(pdf_path) / 1024
+    print(f"🎉 PDF successfully generated at: {pdf_path} ({size_kb:.1f} KB)")
+    # Copy to Desktop as requested
+    subprocess.run(["cp", pdf_path, desktop_pdf_path], check=True)
+    print(f"✅ Copied fresh PDF to Desktop: {desktop_pdf_path}")
+else:
+    print(f"❌ Error during PDF rendering: {res.stderr}")
+
