@@ -180,6 +180,20 @@ export interface CameraStoreState {
   updateFrame: (frame: any) => void;
 }
 
+
+const DRONE_ALIASES: Record<string, string> = {
+  uav_alpha: 'uav_1',
+  uav_beta: 'uav_2',
+  uav_gamma: 'uav_3',
+  uav_delta: 'uav_4',
+  uav_epsilon: 'uav_5',
+  uav_1: 'uav_alpha',
+  uav_2: 'uav_beta',
+  uav_3: 'uav_gamma',
+  uav_4: 'uav_delta',
+  uav_5: 'uav_epsilon',
+};
+
 const SIGNAL_TIMEOUT_MS = 1800; // If no frame received within 1.8s, signal is considered lost
 
 const getInitialSimHost = (): string => {
@@ -194,28 +208,39 @@ const getInitialSimHost = (): string => {
 };
 
 const getSavedWorldUrls = (): Record<WorldId, string> => {
-  if (typeof window !== 'undefined') {
+  if (typeof window === 'undefined') {
     return {
       WORLD_1: DEFAULT_WORLDS.WORLD_1.baseUrl,
       WORLD_2: DEFAULT_WORLDS.WORLD_2.baseUrl,
     };
   }
   try {
+    const params = new URLSearchParams(window.location.search);
+    const w1Param = params.get('world1_url') || params.get('world1_base');
+    const w2Param = params.get('world2_url') || params.get('world2_base');
     const raw = localStorage.getItem('sutra_world_base_urls');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return {
-        WORLD_1: parsed.WORLD_1 || DEFAULT_WORLDS.WORLD_1.baseUrl,
-        WORLD_2: parsed.WORLD_2 || DEFAULT_WORLDS.WORLD_2.baseUrl,
-      };
-    }
+    const parsed = raw ? JSON.parse(raw) : {};
+    return {
+      WORLD_1: w1Param || parsed.WORLD_1 || DEFAULT_WORLDS.WORLD_1.baseUrl,
+      WORLD_2: w2Param || parsed.WORLD_2 || DEFAULT_WORLDS.WORLD_2.baseUrl,
+    };
   } catch {
-    // ignore
+    return {
+      WORLD_1: DEFAULT_WORLDS.WORLD_1.baseUrl,
+      WORLD_2: DEFAULT_WORLDS.WORLD_2.baseUrl,
+    };
   }
-  return {
-    WORLD_1: DEFAULT_WORLDS.WORLD_1.baseUrl,
-    WORLD_2: DEFAULT_WORLDS.WORLD_2.baseUrl,
-  };
+};
+
+const getInitialActiveWorld = (): WorldId => {
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    const w = params.get('world');
+    if (w === 'WORLD_2' || w === 'WORLD_1') return w;
+    const saved = localStorage.getItem('sutra_active_world');
+    if (saved === 'WORLD_2' || saved === 'WORLD_1') return saved as WorldId;
+  }
+  return 'WORLD_1';
 };
 
 const savedUrls = getSavedWorldUrls();
@@ -225,7 +250,7 @@ const initialWorlds: Record<WorldId, WorldConfig> = {
 };
 
 export const useCameraStore = create<CameraStoreState>((set, get) => ({
-  activeWorld: 'WORLD_1',
+  activeWorld: getInitialActiveWorld(),
   activeUav: 'uav_1',
   activeStreamDrone: 'uav_1',
   modality: 'RGB',
@@ -242,6 +267,13 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
   measuredFps: {},
 
   setActiveWorld: (world: WorldId) => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('sutra_active_world', world);
+      } catch {
+        // ignore
+      }
+    }
     const prevWorld = get().activeWorld;
     if (prevWorld === world) return;
 
@@ -542,33 +574,72 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
       jscc: data.jscc,
     };
 
+    const alias = DRONE_ALIASES[droneId];
+
     set((state) => ({
       frames: {
         ...state.frames,
         [key]: frameData,
+        ...(alias ? { [`${worldId}_${alias}_${streamType}`]: frameData } : {}),
         // Only set legacy/drone un-namespaced alias for WORLD_1 so WORLD_2 never overwrites or pollutes WORLD_1
-        ...(isWorld1 ? { [legacyKey]: frameData, [droneId]: frameData } : {}),
+        ...(isWorld1 ? {
+          [legacyKey]: frameData,
+          [droneId]: frameData,
+          ...(alias ? {
+            [`${alias}_${streamType}`]: frameData,
+            [alias]: frameData,
+          } : {}),
+        } : {}),
       },
       feedStatuses: {
         ...state.feedStatuses,
         [key]: 'CONNECTED',
         [`${worldId}_${droneId}`]: 'CONNECTED',
-        ...(isWorld1 ? { [legacyKey]: 'CONNECTED' } : {}),
+        ...(alias ? {
+          [`${worldId}_${alias}_${streamType}`]: 'CONNECTED',
+          [`${worldId}_${alias}`]: 'CONNECTED',
+        } : {}),
+        ...(isWorld1 ? {
+          [legacyKey]: 'CONNECTED',
+          ...(alias ? { [`${alias}_${streamType}`]: 'CONNECTED' } : {}),
+        } : {}),
       },
       lastFrameTimes: {
         ...state.lastFrameTimes,
         [key]: now,
-        ...(isWorld1 ? { [legacyKey]: now } : {}),
+        ...(alias ? { [`${worldId}_${alias}_${streamType}`]: now } : {}),
+        ...(isWorld1 ? {
+          [legacyKey]: now,
+          ...(alias ? { [`${alias}_${streamType}`]: now } : {}),
+        } : {}),
       },
       frameCounts: {
         ...state.frameCounts,
         [key]: (state.frameCounts[key] || 0) + 1,
-        ...(isWorld1 ? { [legacyKey]: (state.frameCounts[legacyKey] || 0) + 1, [droneId]: (state.frameCounts[droneId] || 0) + 1 } : {}),
+        ...(alias ? {
+          [`${worldId}_${alias}_${streamType}`]: (state.frameCounts[`${worldId}_${alias}_${streamType}`] || 0) + 1,
+        } : {}),
+        ...(isWorld1 ? {
+          [legacyKey]: (state.frameCounts[legacyKey] || 0) + 1,
+          [droneId]: (state.frameCounts[droneId] || 0) + 1,
+          ...(alias ? {
+            [`${alias}_${streamType}`]: (state.frameCounts[`${alias}_${streamType}`] || 0) + 1,
+            [alias]: (state.frameCounts[alias] || 0) + 1,
+          } : {}),
+        } : {}),
       },
       measuredFps: {
         ...state.measuredFps,
         [key]: fps,
-        ...(isWorld1 ? { [legacyKey]: fps, [droneId]: fps } : {}),
+        ...(alias ? { [`${worldId}_${alias}_${streamType}`]: fps } : {}),
+        ...(isWorld1 ? {
+          [legacyKey]: fps,
+          [droneId]: fps,
+          ...(alias ? {
+            [`${alias}_${streamType}`]: fps,
+            [alias]: fps,
+          } : {}),
+        } : {}),
       },
     }));
   },

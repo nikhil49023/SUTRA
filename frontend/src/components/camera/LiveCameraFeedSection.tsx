@@ -586,7 +586,14 @@ export const LiveCameraFeedSection: React.FC = () => {
               onLoad={() => markFeedConnected(activeWorld, activeUav, modality)}
               onError={() => {
                 if (!wsFrame?.image_b64) {
-                  markFeedOffline(activeWorld, activeUav, modality);
+                  if (activeWorld === 'WORLD_2' && currentStreamUrl.includes('10.152.0.192')) {
+                    const fallbackHost = (typeof window !== 'undefined' && window.location.hostname) ? window.location.hostname : 'localhost';
+                    const localBase = `http://${fallbackHost}:8080`;
+                    setWorldBaseUrl('WORLD_2', localBase);
+                    setWorld2UrlInput(localBase);
+                  } else {
+                    markFeedOffline(activeWorld, activeUav, modality);
+                  }
                 }
               }}
             />
