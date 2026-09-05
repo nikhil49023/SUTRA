@@ -112,9 +112,17 @@ describe('SUTRA Remote Camera Receiver & Telemetry Store', () => {
     const world2Url = updated.getStreamUrl('WORLD_2', 'uav_2', 'RGB');
     expect(world2Url).toBe('http://10.152.0.192:8080/stream/uav_2');
 
-    // Switching worlds immediately switches available UAV feeds
-    expect(updated.worlds.WORLD_2.uavs).toHaveLength(8);
+    // Switching worlds immediately switches available UAV feeds with authentic counts
+    expect(updated.worlds.WORLD_1.uavs).toHaveLength(5);
+    expect(updated.worlds.WORLD_2.uavs).toHaveLength(4);
     expect(updated.worlds.WORLD_2.uavs[0].name).toBe('Vector-1 Alpha');
+
+    // When active UAV is uav_5 (only in World 1) and user switches to World 2, it clamps to uav_1
+    store.setActiveWorld('WORLD_1');
+    store.setActiveUav('uav_5');
+    expect(useCameraStore.getState().activeUav).toBe('uav_5');
+    store.setActiveWorld('WORLD_2');
+    expect(useCameraStore.getState().activeUav).toBe('uav_1');
   });
 
   it('identifies each feed by world_id, drone_id, timestamp, and stream_url/topic', () => {

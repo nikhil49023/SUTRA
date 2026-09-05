@@ -260,6 +260,9 @@ export const LiveCameraFeedSection: React.FC = () => {
               >
                 <div className="flex items-center space-x-1.5">
                   <span className="font-extrabold tracking-wider">WORLD 1</span>
+                  <span className="px-1.5 py-0.5 text-[9px] font-mono font-bold rounded bg-[#0B0F14] border border-[#2B3743] text-[#5B8FB9]">
+                    {worlds.WORLD_1.uavs.length} UAVs
+                  </span>
                   <span className="text-[10px] text-[#707C88] hidden sm:inline">(Friend 1)</span>
                 </div>
                 <div className="pl-1 border-l border-[#2B3743]">
@@ -279,6 +282,9 @@ export const LiveCameraFeedSection: React.FC = () => {
               >
                 <div className="flex items-center space-x-1.5">
                   <span className="font-extrabold tracking-wider">WORLD 2</span>
+                  <span className="px-1.5 py-0.5 text-[9px] font-mono font-bold rounded bg-[#0B0F14] border border-[#2B3743] text-[#5B8FB9]">
+                    {worlds.WORLD_2.uavs.length} UAVs
+                  </span>
                   <span className="text-[10px] text-[#707C88] hidden sm:inline">(Friend 2)</span>
                 </div>
                 <div className="pl-1 border-l border-[#2B3743]">
@@ -346,7 +352,7 @@ export const LiveCameraFeedSection: React.FC = () => {
             <div className="flex items-center space-x-2">
               <Radio className="w-3.5 h-3.5 text-[#5B8FB9]" />
               <span className="font-bold uppercase tracking-wider">
-                {currentWorldConfig.label} TACTICAL UAV FEEDS ({currentWorldConfig.name}):
+                {currentWorldConfig.label} TACTICAL UAV FEEDS ({currentWorldConfig.uavs.length} UAVs — {currentWorldConfig.name}):
               </span>
             </div>
             <span className="text-[10px] text-[#707C88]">
@@ -354,7 +360,13 @@ export const LiveCameraFeedSection: React.FC = () => {
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1.5">
+          <div className={`grid gap-1.5 ${
+            currentWorldConfig.uavs.length === 5
+              ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'
+              : currentWorldConfig.uavs.length === 4
+              ? 'grid-cols-2 sm:grid-cols-4'
+              : 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-8'
+          }`}>
             {currentWorldConfig.uavs.map((uav) => {
               const isSelected = activeUav === uav.id;
               const uavStatus = getFeedStatus(activeWorld, uav.id, modality);

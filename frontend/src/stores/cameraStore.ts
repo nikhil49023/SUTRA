@@ -102,9 +102,6 @@ export const DEFAULT_WORLDS: Record<WorldId, WorldConfig> = {
       { id: 'uav_3', label: 'UAV-3', name: 'Charlie Relay' },
       { id: 'uav_4', label: 'UAV-4', name: 'Delta SAR' },
       { id: 'uav_5', label: 'UAV-5', name: 'Echo Patrol' },
-      { id: 'uav_6', label: 'UAV-6', name: 'Foxtrot Flank' },
-      { id: 'uav_7', label: 'UAV-7', name: 'Golf Perimeter' },
-      { id: 'uav_8', label: 'UAV-8', name: 'Hotel Rear' },
     ],
   },
   WORLD_2: {
@@ -119,10 +116,6 @@ export const DEFAULT_WORLDS: Record<WorldId, WorldConfig> = {
       { id: 'uav_2', label: 'UAV-2', name: 'Vector-2 Bravo' },
       { id: 'uav_3', label: 'UAV-3', name: 'Vector-3 Charlie' },
       { id: 'uav_4', label: 'UAV-4', name: 'Vector-4 Delta' },
-      { id: 'uav_5', label: 'UAV-5', name: 'Vector-5 Echo' },
-      { id: 'uav_6', label: 'UAV-6', name: 'Vector-6 Foxtrot' },
-      { id: 'uav_7', label: 'UAV-7', name: 'Vector-7 Golf' },
-      { id: 'uav_8', label: 'UAV-8', name: 'Vector-8 Hotel' },
     ],
   },
 };
@@ -130,7 +123,7 @@ export const DEFAULT_WORLDS: Record<WorldId, WorldConfig> = {
 export interface CameraStoreState {
   // Active Navigation & Viewport State
   activeWorld: WorldId;
-  activeUav: string; // 'uav_1' through 'uav_8'
+  activeUav: string; // 'uav_1' through 'uav_5' depending on world
   activeStreamDrone: string; // Alias for activeUav
   modality: Modality;
   activeModality: Modality; // Alias for modality
@@ -252,10 +245,18 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
     const prevWorld = get().activeWorld;
     if (prevWorld === world) return;
 
-    set({ activeWorld: world });
-    const currentUav = get().activeUav;
+    const targetWorldConfig = get().worlds[world];
+    let nextUav = get().activeUav;
+    if (targetWorldConfig && targetWorldConfig.uavs.length > 0) {
+      const uavExists = targetWorldConfig.uavs.some((u) => u.id === nextUav);
+      if (!uavExists) {
+        nextUav = targetWorldConfig.uavs[0].id;
+      }
+    }
+
+    set({ activeWorld: world, activeUav: nextUav, activeStreamDrone: nextUav });
     const currentMod = get().modality;
-    get().selectFeed(world, currentUav, currentMod);
+    get().selectFeed(world, nextUav, currentMod);
   },
 
   setActiveUav: (uav: string) => {
