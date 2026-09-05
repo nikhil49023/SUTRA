@@ -3,7 +3,31 @@ Smart Horizon GCS — Tactical HUD Color Palette & Styling Theme
 Subsystem: HUD / PFD Subsystem (Phase 9)
 """
 
-from PySide6.QtGui import QColor, QFont
+try:
+    from PySide6.QtGui import QColor, QFont
+except ImportError:
+    class QColor:  # type: ignore
+        def __init__(self, r=0, g=0, b=0, a=255):
+            self.r, self.g, self.b, self.a = r, g, b, a
+
+        def isValid(self) -> bool:
+            return True
+
+        def name(self) -> str:
+            return f"rgba({self.r},{self.g},{self.b},{self.a/255})"
+
+    class QFont:  # type: ignore
+        Weight = type("Weight", (), {"Bold": 75, "Normal": 50})
+        StyleHint = type("StyleHint", (), {"Monospace": 1, "SansSerif": 2})
+
+        def __init__(self, family="Monospace", size=10, weight=50):
+            self.family, self.size, self.weight = family, size, weight
+
+        def setStyleHint(self, hint):
+            pass
+
+        def bold(self) -> bool:
+            return self.weight >= 75
 
 
 class HUDTheme:

@@ -44,13 +44,15 @@ yarn-error.log*
 out/
 .nuxt/
 dist/
+!frontend/dist/
+!frontend/dist/**
 .cache/
 
 # Gazebo & Sim logs
 *.log
 .gazebo/
 *.sdf.bak
-development_audit_logs/*.jsonl
+development_audit_logs/
 
 # IDE & OS specific files
 .DS_Store

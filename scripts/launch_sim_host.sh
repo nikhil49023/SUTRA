@@ -59,14 +59,29 @@ pkill -f "sutra_sim_exporter.py" 2>/dev/null || true
 
 # Step 1: Launch Gazebo Sim 8
 WORLD_FILE="$PROJECT_ROOT/sutra_ws/src/sutra_sim/worlds/forest_canopy_sar_world.sdf"
-echo "🌍 [1/5] Launching Gazebo Sim 8 Forest Canopy World..."
+echo "🌍 [1/6] Launching Gazebo Sim 8 Forest Canopy World..."
 gz sim -r "$WORLD_FILE" > /tmp/sutra_gazebo.log 2>&1 &
 CHILD_PIDS+=($!)
 sleep 4.0
 echo "   ✅ Gazebo Sim 8 active (PID: ${CHILD_PIDS[-1]})."
 
+# Automatic camera viewpoint alignment (snaps GUI camera to calibrated overhead hero view)
+(
+    for i in {1..8}; do
+        sleep 1.0
+        if gz service -s /gui/move_to/pose \
+            --reqtype gz.msgs.GUICamera \
+            --reptype gz.msgs.Boolean \
+            --timeout 1500 \
+            --req 'pose: { position: { x: 16.0, y: -16.0, z: 62.0 }, orientation: { x: -0.2809, y: 0.1590, z: 0.8236, w: 0.4663 } }' \
+            >/dev/null 2>&1; then
+            break
+        fi
+    done
+) &
+
 # Step 2: Launch ROS 2 <-> Gazebo Bridge
-echo "🔗 [2/5] Starting ROS 2 <-> Gazebo Bridge for 5 UAVs..."
+echo "🔗 [2/6] Starting ROS 2 <-> Gazebo Bridge for 5 UAVs..."
 ros2 run ros_gz_bridge parameter_bridge \
   /clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock \
   /model/uav_alpha/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry \
@@ -85,7 +100,7 @@ sleep 1.5
 echo "   ✅ ROS-GZ Bridge active (PID: ${CHILD_PIDS[-1]})."
 
 # Step 3: Launch MAVLink SITL Bridge
-echo "📡 [3/5] Starting MAVLink SITL Bridge (UDP 14550)..."
+echo "📡 [3/6] Starting MAVLink SITL Bridge (UDP 14550)..."
 python3 "$PROJECT_ROOT/sutra_ws/src/sutra_gnc/sutra_gnc/mavlink_sitl_bridge.py" \
   --ip 0.0.0.0 --port 14550 --autopilot ardupilot > /tmp/sutra_mavlink_bridge.log 2>&1 &
 CHILD_PIDS+=($!)
@@ -93,7 +108,7 @@ sleep 1.0
 echo "   ✅ MAVLink SITL Bridge active."
 
 # Step 4: Launch 5x GNC Controllers
-echo "🚀 [4/5] Launching 5x Autonomous Flight Controllers (ORCA 3D Avoidance)..."
+echo "🚀 [4/6] Launching 5x Autonomous Flight Controllers (ORCA 3D Avoidance)..."
 DRONES=("uav_alpha" "uav_beta" "uav_gamma" "uav_delta" "uav_epsilon")
 ALTS=("46.0" "54.0" "64.0" "52.0" "49.0")
 SPEEDS=("3.2" "3.8" "2.5" "3.5" "3.0")
@@ -120,19 +135,27 @@ CHILD_PIDS+=($!)
 echo "   ✅ Simulation Exporter active."
 
 # Step 6: Launch Kaggle GPU Perception Streamer (Survivor Detections & 3D Raycasting)
-echo "🎯 [6/6] Starting Perception Target Streamer (YOLOv8-TRT + 3D Raycasting)..."
+echo "🎯 [6/7] Starting Perception Target Streamer (YOLOv8-TRT + 3D Raycasting)..."
 python3 "$PROJECT_ROOT/scripts/stream_perception_targets_to_swarm.py" > /tmp/sutra_perception_streamer.log 2>&1 &
 CHILD_PIDS+=($!)
 echo "   ✅ Perception Streamer active."
+
+# Step 7: Launch GCS Web Dashboard Server (Port 5173 across LAN)
+echo "🌐 [7/7] Starting GCS Web Dashboard Server on http://0.0.0.0:5173..."
+fuser -k 5173/tcp 2>/dev/null || true
+python3 -m http.server 5173 --directory "$PROJECT_ROOT/frontend/dist" > /tmp/sutra_web.log 2>&1 &
+CHILD_PIDS+=($!)
+echo "   ✅ GCS Web Dashboard active at http://${HOST_IP}:5173"
 
 echo ""
 echo "=============================================================================="
 echo "🎉 SIMULATION HOST IS FULLY ARMED & STREAMING ACROSS LAN!"
 echo "=============================================================================="
-echo "👉 INSTRUCTION FOR SHIVA'S LAPTOP (RUN THIS COMMAND IN TERMINAL):"
+echo "👉 OPTION 1 (INSTANT ACCESS): OPEN THIS LINK IN BROWSER ON SHIVA'S LAPTOP:"
+echo "   http://${HOST_IP}:5173"
 echo ""
+echo "👉 OPTION 2 (DISTRIBUTED COMPUTE): RUN IN TERMINAL ON SHIVA'S LAPTOP:"
 echo "   bash scripts/launch_gcs_compute.sh $HOST_IP"
-echo ""
 echo "=============================================================================="
 
 while true; do

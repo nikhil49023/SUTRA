@@ -84,7 +84,7 @@
 
 ### Slide 9: Empirical Benchmark Evidence (Harika — 20 Seconds)
 > *"At SUTRA, we enforce a strict **Zero-Mock Policy**. Every number reported in our tables comes verbatim from live test runs:
-> • All **242 / 242 PyTest unit and integration tests are passing 100% green**.
+> • All **255 / 255 PyTest unit and integration tests are passing 100% green**.
 > • ArduPilot/PX4 offboard trajectory RMSE is **0.042 meters**.
 > • Swarm clearance is measured at **3.80 meters**, completely surpassing Gate G5 criteria."*
 

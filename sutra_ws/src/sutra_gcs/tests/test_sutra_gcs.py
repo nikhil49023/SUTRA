@@ -39,10 +39,10 @@ from fleet.drone import DroneModel
 from fleet.formation_calculator import formation_calc
 from fleet.collision_avoidance import collision_avoidance
 from fleet.fleet_manager import fleet_manager
-from ui.hud.artificial_horizon import artificial_horizon
-from ui.hud.compass import compass_tape
-from ui.hud.battery_gauge import battery_gauge
-from ui.hud.warning_strip import warning_strip
+from hud.artificial_horizon import artificial_horizon
+from hud.compass import compass_tape
+from hud.battery_gauge import battery_gauge
+from hud.warning_strip import warning_strip
 
 
 def test_settings_and_origin():
