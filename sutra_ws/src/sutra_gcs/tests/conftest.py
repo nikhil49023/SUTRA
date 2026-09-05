@@ -15,8 +15,8 @@ except ImportError:
         import PyQt5.QtCore as _qc
         import PyQt5.QtGui as _qg
         import PyQt5.QtWidgets as _qw
-        _qc.Signal = _qc.pyqtSignal
-        _qc.Slot = _qc.pyqtSlot
+        _qc.Signal = getattr(_qc, "pyqtSignal", None)
+        _qc.Slot = getattr(_qc, "pyqtSlot", None)
         class _QKeyCombination:
             def __init__(self, *args):
                 self.args = args
@@ -32,7 +32,12 @@ except ImportError:
         sys.modules["PySide6.QtWidgets"] = _qw
         from PyQt5.QtWidgets import QApplication
     except ImportError:
-        QApplication = None
+        class QApplication:  # type: ignore
+            @staticmethod
+            def instance():
+                return None
+            def __init__(self, *args, **kwargs):
+                pass
 
 # Force offscreen headless Qt platform plugin for automated CI test execution
 os.environ["QT_QPA_PLATFORM"] = "offscreen"

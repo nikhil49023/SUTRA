@@ -8,6 +8,12 @@ import { useGeofenceNotificationStore } from './geofence/GeofenceNotificationSto
 import { useMissionStore } from './stores/missionStore';
 import { useTelemetryStore } from './stores/telemetryStore';
 import { useAppStore } from './stores/appStore';
+import { useRiskStore } from './stores/riskStore';
+import { useAIStore } from './stores/aiStore';
+import { useGISStore } from './stores/gisStore';
+import { useDefensiveUpgradesStore } from './stores/defensiveUpgradesStore';
+import { useCommunicationStore } from './stores/communicationStore';
+import { useAlertStore } from './stores/alertStore';
 
 if (typeof window !== 'undefined') {
   (window as any).__useFleetStore = useFleetStore;
@@ -16,6 +22,12 @@ if (typeof window !== 'undefined') {
   (window as any).__useMissionStore = useMissionStore;
   (window as any).__useTelemetryStore = useTelemetryStore;
   (window as any).__useAppStore = useAppStore;
+  (window as any).__useRiskStore = useRiskStore;
+  (window as any).__useAIStore = useAIStore;
+  (window as any).__useGISStore = useGISStore;
+  (window as any).__useDefensiveUpgradesStore = useDefensiveUpgradesStore;
+  (window as any).__useCommunicationStore = useCommunicationStore;
+  (window as any).__useAlertStore = useAlertStore;
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

@@ -224,8 +224,8 @@ class TrackedTarget:
             "track_age":  self.age,
             "hit_streak": self.hit_streak,
             "state":      self.state,
-            "ts":         round(self.timestamp, 3),
             "drone_id":   getattr(self, "drone_id", "uav_alpha"),
+            "bbox":       [round(float(x), 1) for x in self.bbox] if self.bbox else None,
         }
 
 

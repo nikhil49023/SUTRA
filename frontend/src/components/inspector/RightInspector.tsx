@@ -32,7 +32,7 @@ export const RightInspector: React.FC = memo(() => {
   }
 
   return (
-    <aside className="w-80 h-full bg-[#0B0F14]/98 border-l border-[#2B3743] flex flex-col p-3 font-mono text-xs z-30 select-none overflow-y-auto space-y-3 custom-scrollbar flex-shrink-0">
+    <aside className="absolute right-3 top-3 bottom-20 w-80 max-w-[90vw] bg-[#0B0F14]/94 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_16px_40px_rgba(0,0,0,0.7)] flex flex-col p-3.5 font-mono text-xs z-30 select-none overflow-y-auto space-y-3 custom-scrollbar transition-all duration-300 animate-in fade-in slide-in-from-right-4">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[#2B3743] pb-2">
         <div className="flex items-center space-x-2 font-bold text-[#E7EBEF]">

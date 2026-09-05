@@ -34,6 +34,7 @@ import { useDefensiveUpgradesStore } from '../stores/defensiveUpgradesStore';
 import { useCommunicationStore } from '../stores/communicationStore';
 import { useAuthStore } from '../security/authStore';
 import { useCameraStore } from '../stores/cameraStore';
+import { useMappingStore } from '../stores/mappingStore';
 import { commandManager } from './CommandManager';
 import { wsClient } from './WebSocketClient';
 import { CommandAck, EventEnvelope } from '../types/communication';
@@ -60,7 +61,13 @@ class MessageRouter {
   public routeMessage(message: any): void {
     if (!message || typeof message !== 'object') return;
 
-    const msgType = message.type || message.event_type;
+    const msgType = message.type || message.event_type || message.topic;
+
+    // 0. LIVE CAMERA FRAME ROUTING (Direct high-frequency feed from ROS 2 Gazebo)
+    if (msgType === 'CAMERA_FRAME' || message.topic === 'CAMERA_FRAME') {
+      useCameraStore.getState().handleCameraFrame(message.data || message);
+      return;
+    }
 
     // 1. AUTHENTICATION RESPONSES
     if (msgType === 'AUTH_RESPONSE') {
@@ -117,10 +124,18 @@ class MessageRouter {
       useTelemetryStore.getState().hydrateFromSnapshot(message.payload || message);
       return;
     }
+    if (msgType === 'MAPPING_SNAPSHOT' || msgType === 'mapping.snapshot' || msgType === 'DYNAMIC_2D_MAP_SNAPSHOT') {
+      useMappingStore.getState().handleSnapshot(
+        message.payload?.snapshot || message.snapshot || message.payload || message,
+        message.payload?.metrics || message.metrics
+      );
+      return;
+    }
 
     // 4b. CAMERA FRAMES (Fast-path routing to cameraStore)
     if (msgType === 'CAMERA_FRAME' || msgType === 'camera.frame' || message.topic === 'CAMERA_FRAME') {
-      useCameraStore.getState().updateFrame(message.payload || message);
+      const frameData = message.payload || message;
+      useCameraStore.getState().handleCameraFrame(frameData);
       return;
     }
 
@@ -323,6 +338,15 @@ class MessageRouter {
     } else if (topic === 'alert.acknowledged' && payload.alert_id) {
       useAlertStore.getState().acknowledgeAlert(payload.alert_id);
     }
+
+    // Real-Time 2D Autonomous Mapping Events
+    else if (topic === 'mapping.grid_delta' || topic === 'DYNAMIC_2D_MAP_UPDATE' || topic === 'DYNAMIC_2D_MAP_DELTA') {
+      useMappingStore.getState().handleGridDelta(payload.delta || payload, payload.metrics);
+    } else if (topic === 'mapping.snapshot' || topic === 'DYNAMIC_2D_MAP_SNAPSHOT') {
+      useMappingStore.getState().handleSnapshot(payload.snapshot || payload, payload.metrics);
+    } else if (topic === 'mapping.reset') {
+      useMappingStore.getState().resetLocalMap();
+    }
   }
 
   private hydrateFullSnapshot(snapshot: any): void {
@@ -345,6 +369,9 @@ class MessageRouter {
     }
     if (snapshot.ai) {
       useAIStore.getState().hydrateFromSnapshot(snapshot.ai);
+    }
+    if (snapshot.mapping) {
+      useMappingStore.getState().handleSnapshot(snapshot.mapping.snapshot || snapshot.mapping, snapshot.mapping.metrics);
     }
     if (Array.isArray(snapshot.alerts)) {
       useAlertStore.getState().hydrateFromSnapshot(snapshot.alerts);

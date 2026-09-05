@@ -42,11 +42,35 @@ DRONE_ID_MAP: Dict[str, str] = {
     "drone_charlie": "charlie",
     "drone_delta": "delta",
     "drone_epsilon": "epsilon",
+    "uav_1": "alpha",
+    "uav_2": "bravo",
+    "uav_3": "charlie",
+    "uav_4": "delta",
+    "uav_5": "epsilon",
+    "uav_6": "foxtrot",
+    "uav_7": "golf",
+    "uav_8": "hotel",
+    "uav1": "alpha",
+    "uav2": "bravo",
+    "uav3": "charlie",
+    "uav4": "delta",
+    "uav5": "epsilon",
+    "uav6": "foxtrot",
+    "uav7": "golf",
+    "uav8": "hotel",
+    "drone_1": "alpha",
+    "drone_2": "bravo",
+    "drone_3": "charlie",
+    "drone_4": "delta",
+    "drone_5": "epsilon",
     "alpha": "alpha",
     "bravo": "bravo",
     "charlie": "charlie",
     "delta": "delta",
     "epsilon": "epsilon",
+    "foxtrot": "foxtrot",
+    "golf": "golf",
+    "hotel": "hotel",
 }
 
 
@@ -69,20 +93,40 @@ def normalize_drone_id(raw_id: Any) -> str:
 def validate_target_payload(target_data: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
     """
     Validates incoming detection payload for numerical integrity and realistic bounds.
+    Supports direct lat/lon, gps: [lat, lon, alt], and relative offsets.
     Returns (is_valid, error_reason).
     """
     if not isinstance(target_data, dict):
         return False, "Target payload must be a dictionary"
 
     # 1. Target ID Check
-    t_id = target_data.get("id") if "id" in target_data else target_data.get("target_id")
-    if t_id is None or (isinstance(t_id, str) and not t_id.strip()):
+    t_id = target_data.get("id") if "id" in target_data else target_data.get("target_id", target_data.get("track_id"))
+    if t_id is None or (isinstance(t_id, str) and not str(t_id).strip()):
         return False, "Missing or empty target ID"
 
-    # 2. Latitude Validation (-90.0 to +90.0)
+    # 2. Extract Latitude & Longitude (Direct or via GPS tuple/array or relative offsets)
     raw_lat = target_data.get("lat") if "lat" in target_data else target_data.get("latitude")
-    if raw_lat is None:
-        return False, "Missing latitude coordinate"
+    raw_lon = target_data.get("lon") if "lon" in target_data else target_data.get("longitude")
+    raw_alt = target_data.get("alt") if "alt" in target_data else target_data.get("altitude", target_data.get("altitude_m", 15.0))
+
+    if (raw_lat is None or raw_lon is None) and "gps" in target_data:
+        gps = target_data["gps"]
+        if isinstance(gps, (list, tuple)) and len(gps) >= 2:
+            raw_lat = gps[0]
+            raw_lon = gps[1]
+            if len(gps) >= 3 and (target_data.get("alt") is None and target_data.get("altitude") is None):
+                raw_alt = gps[2]
+
+    # Support relative offsets if lat/lon not explicitly provided
+    if raw_lat is None or raw_lon is None:
+        if "rel_x" in target_data or "rel_y" in target_data or "offset_east_m" in target_data or "offset_north_m" in target_data:
+            # Relative coordinates are accepted and will be transformed using drone pose
+            raw_lat = 12.934444
+            raw_lon = 77.691722
+        else:
+            return False, "Missing latitude/longitude coordinates or relative offset"
+
+    # Latitude Validation (-90.0 to +90.0)
     try:
         lat = float(raw_lat)
         if math.isnan(lat) or math.isinf(lat) or not (-90.0 <= lat <= 90.0):
@@ -90,10 +134,7 @@ def validate_target_payload(target_data: Dict[str, Any]) -> Tuple[bool, Optional
     except (ValueError, TypeError):
         return False, f"Invalid latitude format: {raw_lat}"
 
-    # 3. Longitude Validation (-180.0 to +180.0)
-    raw_lon = target_data.get("lon") if "lon" in target_data else target_data.get("longitude")
-    if raw_lon is None:
-        return False, "Missing longitude coordinate"
+    # Longitude Validation (-180.0 to +180.0)
     try:
         lon = float(raw_lon)
         if math.isnan(lon) or math.isinf(lon) or not (-180.0 <= lon <= 180.0):
@@ -101,8 +142,7 @@ def validate_target_payload(target_data: Dict[str, Any]) -> Tuple[bool, Optional
     except (ValueError, TypeError):
         return False, f"Invalid longitude format: {raw_lon}"
 
-    # 4. Altitude Validation
-    raw_alt = target_data.get("alt") if "alt" in target_data else target_data.get("altitude", target_data.get("altitude_m", 0.0))
+    # Altitude Validation
     try:
         alt = float(raw_alt)
         if math.isnan(alt) or math.isinf(alt) or not (-500.0 <= alt <= 50000.0):
@@ -110,7 +150,7 @@ def validate_target_payload(target_data: Dict[str, Any]) -> Tuple[bool, Optional
     except (ValueError, TypeError):
         return False, f"Invalid altitude format: {raw_alt}"
 
-    # 5. Confidence Validation (0.0 to 1.0)
+    # 3. Confidence Validation (0.0 to 1.0)
     raw_conf = target_data.get("confidence", 1.0)
     try:
         conf = float(raw_conf)
@@ -119,7 +159,7 @@ def validate_target_payload(target_data: Dict[str, Any]) -> Tuple[bool, Optional
     except (ValueError, TypeError):
         return False, f"Invalid confidence format: {raw_conf}"
 
-    # 6. Timestamp Validation
+    # 4. Timestamp Validation
     raw_ts = target_data.get("ts") if "ts" in target_data else target_data.get("timestamp", time.time())
     try:
         ts = float(raw_ts)
@@ -148,6 +188,7 @@ class PerceptionSubsystemAdapter:
         self.event_bus = event_bus or get_event_bus()
         self.alert_cooldown_sec = alert_cooldown_sec
         self.target_timeout_sec = target_timeout_sec
+        self.notifications_enabled = False
 
         # Telemetry & Status Metrics
         self.connected = False
@@ -163,11 +204,34 @@ class PerceptionSubsystemAdapter:
         self._alert_cooldowns: Dict[str, float] = {}
         self._lock = threading.Lock()
 
+        # Active Multi-World Gazebo & Camera Feed Tracking
+        self.active_world_id: str = "WORLD_1"
+        self.active_drone_id: str = "alpha"
+
         # ROS 2 Handle
         self._ros_node = None
         self._ros_sub = None
         self._is_running = False
         self._pruning_thread: Optional[threading.Thread] = None
+
+    def set_active_feed(self, world_id: str, drone_id: str) -> None:
+        """
+        Synchronizes active Gazebo world and UAV camera feed selection with Subsystem C perception.
+        Ensures detections from the incoming stream are associated with the correct world and drone.
+        """
+        with self._lock:
+            self.active_world_id = str(world_id).strip().upper() if world_id else "WORLD_1"
+            self.active_drone_id = normalize_drone_id(drone_id) if drone_id else "alpha"
+        logger.info(f"🎯 Perception Subsystem C active feed synchronized: {self.active_world_id} + {self.active_drone_id}")
+        self.event_bus.emit(
+            "ai.active_feed_updated",
+            payload={
+                "world_id": self.active_world_id,
+                "drone_id": self.active_drone_id,
+                "timestamp": time.time(),
+            },
+            source="perception_adapter",
+        )
 
     def start(self, try_ros: bool = True) -> None:
         """Starts adapter background maintenance and attempts ROS 2 initialization."""
@@ -311,18 +375,66 @@ class PerceptionSubsystemAdapter:
         now: float,
     ) -> Optional[TrackedTarget]:
         """Normalizes and updates a single validated target record."""
-        target_id_raw = raw.get("id") if "id" in raw else raw.get("target_id")
+        target_id_raw = raw.get("id") if "id" in raw else raw.get("target_id", raw.get("track_id"))
         target_id = str(target_id_raw)
-        label = str(raw.get("label", "SURVIVOR")).upper()
+        
+        # Label Normalization
+        raw_label = str(raw.get("label", "SURVIVOR")).strip()
+        label_upper = raw_label.upper()
+        if any(k in label_upper for k in ("SURVIVOR", "PERSON", "VICTIM", "HUMAN")):
+            if "POSSIBLE" in label_upper:
+                label = "POSSIBLE_SURVIVOR"
+            else:
+                label = "SURVIVOR"
+        elif any(k in label_upper for k in ("THREAT", "HAZARD", "ENEMY", "HOSTILE")):
+            label = "THREAT"
+        elif any(k in label_upper for k in ("DEBRIS", "RUBBLE", "WRECK")):
+            label = "DEBRIS"
+        else:
+            label = label_upper or "SURVIVOR"
+
         confidence = float(raw.get("confidence", 1.0))
-        lat = float(raw.get("lat") if "lat" in raw else raw.get("latitude"))
-        lon = float(raw.get("lon") if "lon" in raw else raw.get("longitude"))
-        alt = float(raw.get("alt") if "alt" in raw else raw.get("altitude", raw.get("altitude_m", 15.0)))
-        drone_id = normalize_drone_id(raw.get("drone") or raw.get("drone_id"))
+        raw_world = raw.get("world_id") or raw.get("world") or self.active_world_id
+        world_id = str(raw_world).strip().upper()
+        raw_drone = raw.get("drone") or raw.get("drone_id") or self.active_drone_id
+        drone_id = normalize_drone_id(raw_drone)
+        
+        # Resolve Coordinates: direct lat/lon, gps array/tuple, or relative offsets
+        lat = raw.get("lat") if "lat" in raw else raw.get("latitude")
+        lon = raw.get("lon") if "lon" in raw else raw.get("longitude")
+        alt = raw.get("alt") if "alt" in raw else raw.get("altitude", raw.get("altitude_m", 15.0))
+
+        if (lat is None or lon is None) and "gps" in raw:
+            gps = raw["gps"]
+            if isinstance(gps, (list, tuple)) and len(gps) >= 2:
+                lat = gps[0]
+                lon = gps[1]
+                if len(gps) >= 3 and (raw.get("alt") is None and raw.get("altitude") is None):
+                    alt = gps[2]
+
+        state = self.state_store.get_state()
+        if (lat is None or lon is None) and ("rel_x" in raw or "rel_y" in raw or "offset_east_m" in raw or "offset_north_m" in raw):
+            rel_e = float(raw.get("offset_east_m", raw.get("rel_x", 0.0)))
+            rel_n = float(raw.get("offset_north_m", raw.get("rel_y", 0.0)))
+            drone = state.fleet_state.drones.get(drone_id)
+            origin_lat = drone.latitude if drone else 12.934444
+            origin_lon = drone.longitude if drone else 77.691722
+            origin_alt = drone.altitude if drone else 15.0
+
+            earth_radius_m = 6378137.0
+            d_lat = rel_n / earth_radius_m
+            d_lon = rel_e / (earth_radius_m * math.cos(math.radians(origin_lat)))
+            lat = round(origin_lat + math.degrees(d_lat), 6)
+            lon = round(origin_lon + math.degrees(d_lon), 6)
+            alt = round(origin_alt + float(raw.get("offset_up_m", raw.get("rel_z", 0.0))), 2)
+
+        lat = float(lat if lat is not None else 12.934444)
+        lon = float(lon if lon is not None else 77.691722)
+        alt = float(alt if alt is not None else 15.0)
+
         modalities = list(raw.get("modalities") or ["visual"])
         ts = float(raw.get("ts") if "ts" in raw else raw.get("timestamp", now))
 
-        state = self.state_store.get_state()
         existing_targets = list(state.ai_state.tracked_targets)
         existing = next((t for t in existing_targets if t.target_id == target_id), None)
 
@@ -330,6 +442,32 @@ class PerceptionSubsystemAdapter:
         heading_deg = 0.0
         history: List[Dict[str, Any]] = []
         first_seen = ts
+
+        # Resolve Bounding Box (pixel and normalized 0..1 coordinates)
+        raw_bbox = raw.get("bbox")
+        raw_norm_bbox = raw.get("norm_bbox")
+        img_w = float(raw.get("img_w", 640.0))
+        img_h = float(raw.get("img_h", 480.0))
+
+        bbox: Optional[List[float]] = None
+        norm_bbox: Optional[List[float]] = None
+
+        if raw_bbox and isinstance(raw_bbox, (list, tuple)) and len(raw_bbox) >= 4:
+            bbox = [round(float(c), 1) for c in raw_bbox[:4]]
+            norm_bbox = [
+                round(bbox[0] / max(1.0, img_w), 4),
+                round(bbox[1] / max(1.0, img_h), 4),
+                round(bbox[2] / max(1.0, img_w), 4),
+                round(bbox[3] / max(1.0, img_h), 4),
+            ]
+        elif raw_norm_bbox and isinstance(raw_norm_bbox, (list, tuple)) and len(raw_norm_bbox) >= 4:
+            norm_bbox = [round(float(c), 4) for c in raw_norm_bbox[:4]]
+            bbox = [
+                round(norm_bbox[0] * img_w, 1),
+                round(norm_bbox[1] * img_h, 1),
+                round(norm_bbox[2] * img_w, 1),
+                round(norm_bbox[3] * img_h, 1),
+            ]
 
         if existing:
             first_seen = existing.first_seen
@@ -355,6 +493,9 @@ class PerceptionSubsystemAdapter:
             else:
                 heading_deg = existing.heading_deg
 
+            final_bbox = bbox or existing.bbox
+            final_norm_bbox = norm_bbox or existing.norm_bbox
+
             updated_target = replace(
                 existing,
                 label=label,
@@ -366,10 +507,13 @@ class PerceptionSubsystemAdapter:
                 heading_deg=heading_deg,
                 source=source,
                 drone_id=drone_id,
+                world_id=world_id,
                 modalities=modalities,
                 tracking_status="TRACKED",
                 history=history,
                 last_seen=ts,
+                bbox=final_bbox,
+                norm_bbox=final_norm_bbox,
             )
             event_type = "ai.target_updated"
         else:
@@ -385,11 +529,14 @@ class PerceptionSubsystemAdapter:
                 confidence=confidence,
                 source=source,
                 drone_id=drone_id,
+                world_id=world_id,
                 modalities=modalities,
                 tracking_status="DETECTED",
                 history=history,
                 first_seen=first_seen,
                 last_seen=ts,
+                bbox=bbox,
+                norm_bbox=norm_bbox,
             )
             event_type = "ai.target_detected"
 
@@ -406,6 +553,29 @@ class PerceptionSubsystemAdapter:
             )
         )
 
+        # Forward observation to 2D Autonomous Mapping Engine
+        try:
+            from mapping.autonomous_2d_mapping_engine import get_mapping_engine
+            mapping_eng = get_mapping_engine()
+            mapping_eng.ingest_semantic_observation(
+                drone_id=drone_id,
+                latitude=lat,
+                longitude=lon,
+                semantic_type_str=label,
+                confidence=confidence,
+                metadata={
+                    "target_id": target_id,
+                    "drone_id": drone_id,
+                    "world_id": world_id,
+                    "label": label,
+                    "confidence": confidence,
+                    "tracking_status": updated_target.tracking_status,
+                    "timestamp": ts,
+                },
+            )
+        except Exception as map_err:
+            logger.debug(f"Perception target could not be added to 2D mapping engine: {map_err}")
+
         # Emit Canonical EventBus Event
         self.event_bus.emit(
             event_type,
@@ -413,6 +583,7 @@ class PerceptionSubsystemAdapter:
                 "target": self._serialize_target(updated_target),
                 "target_id": target_id,
                 "drone_id": drone_id,
+                "world_id": world_id,
                 "label": label,
                 "confidence": confidence,
             },
@@ -426,7 +597,9 @@ class PerceptionSubsystemAdapter:
         return updated_target
 
     def _trigger_survivor_alert_if_eligible(self, target: TrackedTarget, now: float) -> None:
-        """Emits a high-priority survivor alert if outside the cooldown window."""
+        """Emits a high-priority survivor alert if notifications are enabled and outside cooldown."""
+        if not getattr(self, "notifications_enabled", False):
+            return
         with self._lock:
             last_alert = self._alert_cooldowns.get(target.target_id, 0.0)
             if (now - last_alert) < self.alert_cooldown_sec:
@@ -471,6 +644,7 @@ class PerceptionSubsystemAdapter:
                 "alert_id": alert.alert_id,
                 "target_id": target.target_id,
                 "drone_id": target.drone_id,
+                "world_id": getattr(target, "world_id", "WORLD_1"),
                 "label": target.label,
                 "confidence": target.confidence,
                 "latitude": target.latitude,

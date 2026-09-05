@@ -124,6 +124,7 @@ export const useAIStore = create<AIStoreState>((set) => ({
         ...target,
         target_id: targetId,
         id: targetId,
+        world_id: target.world_id || 'WORLD_1',
         last_seen: target.last_seen || Date.now(),
       };
       const exists = s.tracked_targets.some((t) => String(t.target_id || t.id) === targetId);
@@ -164,6 +165,7 @@ export const useAIStore = create<AIStoreState>((set) => ({
           ...t,
           target_id: String(t.target_id || t.id),
           id: String(t.target_id || t.id),
+          world_id: t.world_id || 'WORLD_1',
         }));
       }
       return hydrated;
@@ -201,11 +203,14 @@ export const useAIStore = create<AIStoreState>((set) => ({
           confidence: target.confidence !== undefined ? target.confidence : 1.0,
           source: target.source || 'sutra_perception',
           drone_id: target.drone_id || 'alpha',
+          world_id: target.world_id || payload.world_id || 'WORLD_1',
           modalities: target.modalities || ['visual'],
           tracking_status: target.tracking_status || 'TRACKED',
           history: target.history || [],
           first_seen: target.first_seen || Date.now(),
           last_seen: target.last_seen || Date.now(),
+          bbox: target.bbox || payload.bbox,
+          norm_bbox: target.norm_bbox || payload.norm_bbox,
         };
 
         set((s) => {

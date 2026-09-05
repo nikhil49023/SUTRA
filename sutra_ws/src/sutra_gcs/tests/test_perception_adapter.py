@@ -184,6 +184,7 @@ def test_duplicate_target_and_tracking_update(test_setup):
 def test_survivor_alert_and_cooldown(test_setup):
     """Verifies high-confidence survivor detection triggers alert with cooldown."""
     state_store, event_bus, adapter = test_setup
+    adapter.notifications_enabled = True
 
     alerts_created = []
     event_bus.subscribe("alert.created", lambda e: alerts_created.append(e))
@@ -264,3 +265,128 @@ def test_ros_unavailable_graceful_handling(test_setup):
     })
     assert len(processed) == 1
     assert adapter.status == "CONNECTED"
+
+
+def test_gps_array_and_label_normalization(test_setup):
+    """Verifies GPS tuple/array parsing and automatic label normalization to canonical SURVIVOR."""
+    state_store, event_bus, adapter = test_setup
+
+    # 1. Test GPS array with "person" label
+    payload_person = {
+        "track_id": 201,
+        "label": "person",
+        "confidence": 0.93,
+        "gps": [12.934444, 77.691722, 18.5],
+        "drone": "uav_alpha",
+    }
+    valid, err = validate_target_payload(payload_person)
+    assert valid is True
+    assert err is None
+
+    res = adapter.inject_fused_target(payload_person)
+    assert len(res) == 1
+    assert res[0].target_id == "201"
+    assert res[0].label == "SURVIVOR"
+    assert res[0].latitude == 12.934444
+    assert res[0].longitude == 77.691722
+    assert res[0].altitude_m == 18.5
+    assert res[0].drone_id == "alpha"
+
+    # 2. Test "human" / "victim" labels
+    payload_victim = {
+        "id": 202,
+        "label": "victim_critical",
+        "confidence": 0.89,
+        "lat": 12.935000,
+        "lon": 77.692000,
+        "alt": 15.0,
+        "drone_id": "uav_beta",
+    }
+    res_victim = adapter.inject_fused_target(payload_victim)
+    assert len(res_victim) == 1
+    assert res_victim[0].label == "SURVIVOR"
+    assert res_victim[0].drone_id == "bravo"
+
+
+def test_2d_mapping_engine_forwarding(test_setup):
+    """Verifies that perception detections are automatically projected to 2D Autonomous Mapping Engine."""
+    state_store, event_bus, adapter = test_setup
+    from mapping.autonomous_2d_mapping_engine import get_mapping_engine, SemanticCellType
+
+    mapping_eng = get_mapping_engine()
+    mapping_eng.reset()
+
+    # Inject confirmed survivor
+    adapter.inject_fused_target({
+        "id": 301,
+        "label": "SURVIVOR",
+        "confidence": 0.96,
+        "lat": 12.934500,
+        "lon": 77.691800,
+        "alt": 16.0,
+        "drone_id": "uav_alpha",
+    })
+
+    # Verify cell exists and is registered as SURVIVOR in 2D world model
+    gx, gy = mapping_eng.latlon_to_grid(12.934500, 77.691800)
+    cell = mapping_eng.get_cell(gx, gy)
+    assert cell is not None
+    assert cell.semantic_type == SemanticCellType.SURVIVOR
+    assert cell.confidence >= 0.90
+    assert "alpha" in cell.observed_by
+
+
+def test_multi_world_active_feed_synchronization(test_setup):
+    """Verifies that selecting feeds across WORLD 1 and WORLD 2 correctly associates targets."""
+    state_store, event_bus, adapter = test_setup
+
+    active_feed_events = []
+    event_bus.subscribe("ai.active_feed_updated", lambda e: active_feed_events.append(e.payload))
+
+    # 1. Switch active feed to WORLD 2 + UAV 2 (bravo)
+    adapter.set_active_feed("WORLD_2", "uav_2")
+    assert adapter.active_world_id == "WORLD_2"
+    assert adapter.active_drone_id == "bravo"
+    assert len(active_feed_events) == 1
+    assert active_feed_events[0]["world_id"] == "WORLD_2"
+    assert active_feed_events[0]["drone_id"] == "bravo"
+
+    # 2. Ingest detection from incoming feed
+    res = adapter.inject_fused_target({
+        "id": 401,
+        "label": "SURVIVOR",
+        "confidence": 0.93,
+        "lat": 12.935100,
+        "lon": 77.692200,
+        "alt": 14.0,
+    })
+    assert len(res) == 1
+    assert res[0].world_id == "WORLD_2"
+    assert res[0].drone_id == "bravo"
+
+    # 3. Switch active feed back to WORLD 1 + UAV 1 (alpha)
+    adapter.set_active_feed("WORLD_1", "uav_1")
+    assert adapter.active_world_id == "WORLD_1"
+    assert adapter.active_drone_id == "alpha"
+
+    res_w1 = adapter.inject_fused_target({
+        "id": 402,
+        "label": "SURVIVOR",
+        "confidence": 0.97,
+        "lat": 12.934600,
+        "lon": 77.691900,
+        "alt": 15.5,
+    })
+    assert len(res_w1) == 1
+    assert res_w1[0].world_id == "WORLD_1"
+    assert res_w1[0].drone_id == "alpha"
+
+    # 4. Verify both targets coexist in state
+    all_targets = state_store.get_state().ai_state.tracked_targets
+    assert len(all_targets) == 2
+    w1_target = next(t for t in all_targets if t.target_id == "402")
+    w2_target = next(t for t in all_targets if t.target_id == "401")
+    assert w1_target.world_id == "WORLD_1"
+    assert w2_target.world_id == "WORLD_2"
+
+

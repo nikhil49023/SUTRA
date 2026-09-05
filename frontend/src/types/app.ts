@@ -2,6 +2,7 @@ import { AlertSeverity } from './alerts';
 
 export type NavigationSection =
   | 'COMMAND'
+  | 'MAPPING'
   | 'MISSION'
   | 'GEOFENCE'
   | 'GIS'
@@ -10,6 +11,7 @@ export type NavigationSection =
   | 'DISASTER_INTEL'
   | 'RISK'
   | 'LIVEOPS'
+  | 'CAMERA'
   | 'SETTINGS';
 
 export type MapStyleType = 'tactical-dark' | 'satellite' | 'terrain' | 'streets' | 'swarm-live-ortho';

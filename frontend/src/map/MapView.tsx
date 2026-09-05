@@ -20,6 +20,8 @@ import { useAIStore } from '../stores/aiStore';
 import { useSelectionStore } from '../stores/selectionStore';
 import { useMapStore } from '../stores/mapStore';
 import { useAppStore } from '../stores/appStore';
+import { useMappingStore } from '../stores/mappingStore';
+import { useCameraStore } from '../stores/cameraStore';
 import { MapInteractionToolbox } from './MapInteractionToolbox';
 import { GeofenceToolbar } from '../geofence/GeofenceToolbar';
 import { GeofenceDebugPanel } from '../geofence/GeofenceDebugPanel';
@@ -36,7 +38,6 @@ import {
   Video,
 } from 'lucide-react';
 import { MultiDroneCameraGrid } from '../fleet/MultiDroneCameraGrid';
-import { useCameraStore } from '../stores/cameraStore';
 
 export const MapView: React.FC = () => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -60,7 +61,8 @@ export const MapView: React.FC = () => {
     const gis = useGISStore.getState();
     const ai = useAIStore.getState();
     const sel = useSelectionStore.getState();
-    return { ms, fs, gs, gis, ai, sel };
+    const mapping = useMappingStore.getState();
+    return { ms, fs, gs, gis, ai, sel, mapping };
   }, []);
 
 
@@ -87,14 +89,14 @@ export const MapView: React.FC = () => {
     mapController.attachMap(mapInstance);
 
     if (mapInstance.isStyleLoaded()) {
-      const { ms, fs, gs, gis, ai, sel } = getLayerState();
-      syncAll(ms, fs, gs, gis, ai, sel);
+      const { ms, fs, gs, gis, ai, sel, mapping } = getLayerState();
+      syncAll(ms, fs, gs, gis, ai, sel, mapping);
     }
 
     // Fired after map style switch — re-add all layers
     const unsubStyle = mapPersistence.onStyleLoaded(() => {
-      const { ms, fs, gs, gis, ai, sel } = getLayerState();
-      syncAll(ms, fs, gs, gis, ai, sel);
+      const { ms, fs, gs, gis, ai, sel, mapping } = getLayerState();
+      syncAll(ms, fs, gs, gis, ai, sel, mapping);
     });
 
 
@@ -175,8 +177,7 @@ export const MapView: React.FC = () => {
     return unsub;
   }, []);
 
-  // ── Fleet + Formation layer (telemetry driven) ────────────────────────────────
-  // Uses zustand subscribe with selector to only trigger when drones object ref changes
+  // ── Fleet + Formation + Dynamic Drone Mapping layer + Video Frustum (telemetry driven) ──
   useEffect(() => {
     const unsub = useFleetStore.subscribe((fs) => {
       const sel = useSelectionStore.getState();
@@ -185,6 +186,28 @@ export const MapView: React.FC = () => {
         sel.selected_type === 'DRONE' ? sel.selected_id : null
       );
       mapController.formationLayer.updateFormation(fs);
+      mapController.dynamicGridLayer.updateFleetResources(fs);
+      mapController.videoFeedMappingLayer.updateFleetVideoProjections(fs);
+    });
+    return unsub;
+  }, []);
+
+  // ── Real-Time Drone Video Feed Ground Projection (Camera Frames driven) ─────
+  useEffect(() => {
+    const unsub = useCameraStore.subscribe((cs) => {
+      const fs = useFleetStore.getState();
+      Object.values(cs.frames || {}).forEach((frame) => {
+        const drone = fs.drones[frame.drone_id] || Object.values(fs.drones)[0];
+        if (drone && typeof drone.latitude === 'number' && typeof drone.longitude === 'number') {
+          mapController.videoFeedMappingLayer.projectVideoFrame(
+            frame,
+            drone.latitude,
+            drone.longitude,
+            drone.altitude || 25.0,
+            drone.heading || 0.0
+          );
+        }
+      });
     });
     return unsub;
   }, []);
@@ -206,6 +229,21 @@ export const MapView: React.FC = () => {
         sel.selected_type === 'TARGET' ? sel.selected_id : null
       );
     });
+    return unsub;
+  }, []);
+
+  // ── 2D Autonomous Mapping Layer (Incremental SLAM & Semantic Fusion) ────────
+  useEffect(() => {
+    const unsub = useMappingStore.subscribe((state) => {
+      if (state.isMappingActive) {
+        mapController.autonomous2DMappingLayer.updateGrid(state.gridGeoJson, state.visibleSemantics);
+        mapController.autonomous2DMappingLayer.updateSurvivors(state.survivorPins);
+      } else {
+        mapController.autonomous2DMappingLayer.clear();
+      }
+    });
+    // Request initial snapshot on mount
+    useMappingStore.getState().fetchSnapshot();
     return unsub;
   }, []);
 
@@ -390,7 +428,7 @@ const MapStatusBar = React.memo(
     const home = useMissionStore.getState();
     return (
       <div className="absolute bottom-2 left-2 z-10 px-2.5 py-1 rounded bg-[#11171E]/90 border border-[#2B3743] backdrop-blur text-[11px] font-mono text-[#707C88] flex items-center space-x-3">
-        <span>MAPLIBRE GL PERSISTENT</span>
+        <span className="text-[#10B981] font-bold">● AUTONOMOUS VIDEO-FEED 2D MAPPING</span>
         <span>•</span>
         <span className="text-[#5B8FB9] font-bold uppercase">
           {MAP_STYLE_LABELS[mapStyle]?.badge || mapStyle}
@@ -407,7 +445,7 @@ const MapStatusBar = React.memo(
 );
 
 // ── Helper used by onStyleLoaded ────────────────────────────────────────────────
-function syncAll(ms: any, fs: any, gs: any, gis: any, ai: any, sel: any) {
+function syncAll(ms: any, fs: any, gs: any, gis: any, ai: any, sel: any, mapping?: any) {
   mapController.routeLayer.updateRoute(ms.waypoints, ms.home_latitude, ms.home_longitude);
   mapController.waypointLayer.renderWaypoints(
     ms.waypoints,
@@ -423,10 +461,16 @@ function syncAll(ms: any, fs: any, gs: any, gis: any, ai: any, sel: any) {
     sel.selected_type === 'DRONE' ? sel.selected_id : null
   );
   mapController.formationLayer.updateFormation(fs);
+  mapController.dynamicGridLayer.updateFleetResources(fs);
+  mapController.videoFeedMappingLayer.updateFleetVideoProjections(fs);
   mapController.gisLayer.updateGis(gis);
   mapController.aiTargetLayer.updateTargets(
     ai?.tracked_targets || [],
     sel.selected_type === 'TARGET' ? sel.selected_id : null
   );
+  if (mapping && mapping.isMappingActive && mapping.gridGeoJson) {
+    mapController.autonomous2DMappingLayer.updateGrid(mapping.gridGeoJson, mapping.visibleSemantics);
+    mapController.autonomous2DMappingLayer.updateSurvivors(mapping.survivorPins || []);
+  }
 }
 

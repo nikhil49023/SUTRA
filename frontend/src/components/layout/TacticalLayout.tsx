@@ -21,7 +21,7 @@ import { AlertManager } from '../alerts/AlertManager';
 import { EmergencyModal } from '../common/EmergencyModal';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { DebugPanel } from '../debug/DebugPanel';
-import { MapView } from '../../map/MapView';
+import { SwarmQuickDock } from '../dock/SwarmQuickDock';
 import { PrimaryFlightDisplay } from '../../hud/PrimaryFlightDisplay';
 import { useSelectionStore } from '../../stores/selectionStore';
 import { mapController } from '../../map/MapController';
@@ -37,7 +37,10 @@ import { DisasterIntelPanel } from '../../risk/DisasterIntelPanel';
 import { GlobalGeofenceBreachMonitor } from '../../geofence/GlobalGeofenceBreachMonitor';
 import { wsClient } from '../../communication/WebSocketClient';
 import { NavigationSection } from '../../types/app';
-import { Route, Users, Mountain, Brain, Settings, Compass, Shield, ShieldAlert, X } from 'lucide-react';
+import { Route, Users, Mountain, Brain, Settings, Compass, Shield, ShieldAlert, X, Video, Grid } from 'lucide-react';
+import { LiveCameraFeedSection } from '../camera/LiveCameraFeedSection';
+import { Autonomous2DMappingPanel } from '../../mapping/Autonomous2DMappingPanel';
+import { MapView } from '../../map/MapView';
 
 // SUTRA 7 Defensive Upgrades Modals
 import { FailureLabModal } from '../failure/FailureLabModal';
@@ -52,6 +55,8 @@ import { MissionSafetyGateModal } from '../mission/MissionSafetyGateModal';
 
 // ── Memoized panels — mount once, stay mounted, toggled via CSS visibility ─────
 const MissionPlannerPanel = memo(() => <MissionPlanner />);
+const LiveCameraFeedPanelMemo = memo(() => <LiveCameraFeedSection />);
+const Autonomous2DMappingPanelMemo = memo(() => <Autonomous2DMappingPanel />);
 const GeofencePanelMemo = memo(() => <GeofencePanel />);
 const FleetPanelMemo = memo(() => <FleetPanel />);
 const GisPanelMemo = memo(() => <GisPanel />);
@@ -59,13 +64,23 @@ const AiPanelMemo = memo(() => <AiPanel />);
 const DisasterIntelPanelMemo = memo(() => <DisasterIntelPanel />);
 const SettingsPanelMemo = memo(() => <SettingsPanel />);
 
-const OVERLAY_SECTIONS: NavigationSection[] = ['MISSION', 'GEOFENCE', 'FLEET', 'GIS', 'AI', 'DISASTER_INTEL', 'RISK', 'SETTINGS'];
+const OVERLAY_SECTIONS: NavigationSection[] = ['MAPPING', 'MISSION', 'CAMERA', 'GEOFENCE', 'FLEET', 'GIS', 'AI', 'DISASTER_INTEL', 'RISK', 'SETTINGS'];
 
 const SECTION_METADATA: Record<string, { title: string; subtitle: string; icon: any }> = {
+  MAPPING: {
+    title: '2D AUTONOMOUS SPATIAL MAPPING ENGINE',
+    subtitle: 'Real-Time Multi-Drone Bayesian Occupancy Grid & Semantic SLAM',
+    icon: Grid,
+  },
   MISSION: {
     title: 'TACTICAL MISSION PLANNER',
     subtitle: 'Autonomous Waypoint Corridor & Pre-Flight Validation Engine',
     icon: Route,
+  },
+  CAMERA: {
+    title: 'REMOTE GAZEBO CAMERA RECEIVER',
+    subtitle: 'Multi-UAV Low-Latency Wi-Fi Video Feed & Sensor Diagnostics',
+    icon: Video,
   },
   GEOFENCE: {
     title: 'TACTICAL GEOFENCE OPERATIONS CENTER',
@@ -107,6 +122,7 @@ const SECTION_METADATA: Record<string, { title: string; subtitle: string; icon: 
 export const TacticalLayout: React.FC = () => {
   const activeSection = useAppStore((s) => s.activeSection);
   const isHudOpen = useAppStore((s) => s.isHudOpen);
+  const isConsoleOpen = useAppStore((s) => s.isConsoleOpen);
   const setActiveSection = useAppStore((s) => s.setActiveSection);
   const setEmergencyModalOpen = useAppStore((s) => s.setEmergencyModalOpen);
 
@@ -124,7 +140,9 @@ export const TacticalLayout: React.FC = () => {
       if (['INPUT', 'SELECT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
 
       switch (e.key.toUpperCase()) {
+        case '2': setActiveSection('MAPPING'); break;
         case 'M': setActiveSection('MISSION'); break;
+        case 'C': setActiveSection('CAMERA'); break;
         case 'G': setActiveSection('GEOFENCE'); break;
         case 'F': setActiveSection('FLEET'); break;
         case 'I': setActiveSection('GIS'); break;
@@ -171,99 +189,141 @@ export const TacticalLayout: React.FC = () => {
           </ErrorBoundary>
         )}
 
-        {/* Central Map & Overlaid Context Panels */}
-        <div className="flex-1 flex flex-col relative overflow-hidden">
-          {/* Persistent MapLibre Instance (always in DOM) */}
-          <div className="absolute inset-0 z-0">
-            <ErrorBoundary fallbackTitle="MAP ENGINE">
-              <MapView />
-            </ErrorBoundary>
-          </div>
+        {/* Central Tactical Workspaces & Context Panels (Zero Static Map Section) */}
+        <div className="flex-1 flex flex-col relative overflow-hidden bg-[#0B0F14]">
+          {/* Default / Camera View: Full-screen Live Drone Camera Receiver (No Static Map) */}
+          {(activeSection === 'CAMERA' || activeSection === 'COMMAND') && (
+            <div className="absolute inset-0 z-10 flex flex-col bg-[#0B0F14] overflow-hidden">
+              <ErrorBoundary fallbackTitle="CAMERA RECEIVER SUBSYSTEM">
+                <LiveCameraFeedPanelMemo />
+              </ErrorBoundary>
+            </div>
+          )}
 
-          {/* Contextual Overlay Container with Tactical Header Ribbon */}
-          <div
-            className="absolute inset-0 z-20 overflow-hidden flex flex-col bg-[#0B0F14]/95 backdrop-blur-[2px]"
-            style={{ display: showOverlay ? 'flex' : 'none' }}
-          >
-            {/* Overlay Header Ribbon */}
-            {activeMeta && (
+          {/* 2D Autonomous Mapping Intelligence Workspace */}
+          {activeSection === 'MAPPING' && (
+            <div className="absolute inset-0 z-20 flex flex-col bg-[#0B0F14] overflow-hidden">
               <div className="h-11 bg-[#11171E] border-b border-[#2B3743] px-4 flex items-center justify-between font-mono text-xs flex-shrink-0 z-10">
                 <div className="flex items-center space-x-2.5">
                   <div className="w-6 h-6 rounded bg-[#1B2530] border border-[#5B8FB9]/50 flex items-center justify-center text-[#5B8FB9]">
-                    <SectionIcon className="w-3.5 h-3.5" />
+                    <Grid className="w-3.5 h-3.5" />
                   </div>
                   <div>
-                    <span className="font-bold text-[#E7EBEF] tracking-wide">{activeMeta.title}</span>
+                    <span className="font-bold text-[#E7EBEF] tracking-wide">2D AUTONOMOUS SPATIAL MAPPING ENGINE</span>
                     <span className="hidden md:inline text-[10px] text-[#707C88] ml-2 font-normal">
-                      // {activeMeta.subtitle}
+                      // Real-Time Multi-Drone Bayesian Occupancy Grid & Semantic SLAM
                     </span>
                   </div>
                 </div>
+                <button
+                  onClick={() => setActiveSection('CAMERA')}
+                  className="px-2.5 py-1 rounded-lg bg-[#151D26] hover:bg-[#1B2530] border border-[#2B3743] hover:border-[#5B8FB9] text-[#A9B3BD] hover:text-[#E7EBEF] text-[11px] font-bold flex items-center space-x-1.5 transition cursor-pointer"
+                  title="Return to Camera Feed (Esc)"
+                >
+                  <span>CLOSE</span>
+                  <kbd className="px-1 py-0.2 rounded bg-[#0B0F14] border border-[#2B3743] text-[9px] text-[#707C88]">ESC</kbd>
+                  <X className="w-3.5 h-3.5 ml-0.5" />
+                </button>
+              </div>
+              <div className="flex-1 w-full overflow-hidden">
+                <ErrorBoundary fallbackTitle="2D AUTONOMOUS MAPPING">
+                  <Autonomous2DMappingPanelMemo />
+                </ErrorBoundary>
+              </div>
+            </div>
+          )}
 
-                <div className="flex items-center space-x-2">
+          {/* Subsystem Workspaces (Full Screen Overlay with Close Button) */}
+          {activeSection !== 'CAMERA' && activeSection !== 'COMMAND' && activeSection !== 'MAPPING' && (
+            <div className="absolute inset-0 z-20 flex flex-col bg-[#0B0F14] overflow-hidden">
+              {/* Header ribbon */}
+              {activeMeta && (
+                <div className="h-11 bg-[#11171E] border-b border-[#2B3743] px-4 flex items-center justify-between font-mono text-xs flex-shrink-0 z-10">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-6 h-6 rounded bg-[#1B2530] border border-[#5B8FB9]/50 flex items-center justify-center text-[#5B8FB9]">
+                      <SectionIcon className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <span className="font-bold text-[#E7EBEF] tracking-wide">{activeMeta.title}</span>
+                      <span className="hidden md:inline text-[10px] text-[#707C88] ml-2 font-normal">
+                        // {activeMeta.subtitle}
+                      </span>
+                    </div>
+                  </div>
                   <button
-                    onClick={() => setActiveSection('COMMAND')}
-                    className="px-2.5 py-1 rounded bg-[#151D26] hover:bg-[#1B2530] border border-[#2B3743] hover:border-[#5B8FB9] text-[#A9B3BD] hover:text-[#E7EBEF] text-[11px] font-bold flex items-center space-x-1.5 transition"
-                    title="Close overlay and return to map (Esc)"
+                    onClick={() => setActiveSection('CAMERA')}
+                    className="px-2.5 py-1 rounded-lg bg-[#151D26] hover:bg-[#1B2530] border border-[#2B3743] hover:border-[#5B8FB9] text-[#A9B3BD] hover:text-[#E7EBEF] text-[11px] font-bold flex items-center space-x-1.5 transition cursor-pointer"
+                    title="Return to Camera Feed (Esc)"
                   >
                     <span>CLOSE</span>
                     <kbd className="px-1 py-0.2 rounded bg-[#0B0F14] border border-[#2B3743] text-[9px] text-[#707C88]">ESC</kbd>
                     <X className="w-3.5 h-3.5 ml-0.5" />
                   </button>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Overlay Body */}
-            <div className="flex-1 w-full overflow-hidden">
-              <ErrorBoundary fallbackTitle="MISSION SUBSYSTEM">
-                <div style={{ display: activeSection === 'MISSION' ? 'block' : 'none', width: '100%', height: '100%' }}>
-                  <MissionPlannerPanel />
-                </div>
-              </ErrorBoundary>
-              <ErrorBoundary fallbackTitle="GEOFENCE SUBSYSTEM">
-                <div style={{ display: activeSection === 'GEOFENCE' ? 'block' : 'none', width: '100%', height: '100%' }}>
-                  <GeofencePanelMemo />
-                </div>
-              </ErrorBoundary>
-              <ErrorBoundary fallbackTitle="FLEET SUBSYSTEM">
-                <div style={{ display: activeSection === 'FLEET' ? 'block' : 'none', width: '100%', height: '100%' }}>
-                  <FleetPanelMemo />
-                </div>
-              </ErrorBoundary>
-              <ErrorBoundary fallbackTitle="GIS SUBSYSTEM">
-                <div style={{ display: activeSection === 'GIS' ? 'block' : 'none', width: '100%', height: '100%' }}>
-                  <GisPanelMemo />
-                </div>
-              </ErrorBoundary>
-              <ErrorBoundary fallbackTitle="AI SUBSYSTEM">
-                <div style={{ display: activeSection === 'AI' ? 'block' : 'none', width: '100%', height: '100%' }}>
-                  <AiPanelMemo />
-                </div>
-              </ErrorBoundary>
-              <ErrorBoundary fallbackTitle="DISASTER RISK INTELLIGENCE">
-                <div style={{ display: (activeSection === 'DISASTER_INTEL' || activeSection === 'RISK') ? 'block' : 'none', width: '100%', height: '100%' }}>
-                  <DisasterIntelPanelMemo />
-                </div>
-              </ErrorBoundary>
-              <ErrorBoundary fallbackTitle="SETTINGS SUBSYSTEM">
-                <div style={{ display: activeSection === 'SETTINGS' ? 'block' : 'none', width: '100%', height: '100%' }}>
-                  <SettingsPanelMemo />
-                </div>
-              </ErrorBoundary>
+              {/* Panel Content Body */}
+              <div className="flex-1 w-full overflow-hidden">
+                <ErrorBoundary fallbackTitle="MISSION SUBSYSTEM">
+                  <div style={{ display: activeSection === 'MISSION' ? 'block' : 'none', width: '100%', height: '100%' }}>
+                    <MissionPlannerPanel />
+                  </div>
+                </ErrorBoundary>
+                <ErrorBoundary fallbackTitle="GEOFENCE SUBSYSTEM">
+                  <div style={{ display: activeSection === 'GEOFENCE' ? 'block' : 'none', width: '100%', height: '100%' }}>
+                    <GeofencePanelMemo />
+                  </div>
+                </ErrorBoundary>
+                <ErrorBoundary fallbackTitle="FLEET SUBSYSTEM">
+                  <div style={{ display: activeSection === 'FLEET' ? 'block' : 'none', width: '100%', height: '100%' }}>
+                    <FleetPanelMemo />
+                  </div>
+                </ErrorBoundary>
+                {/* Real Dynamic MapLibre GIS Map: strictly active when in GIS view */}
+                <ErrorBoundary fallbackTitle="GIS SUBSYSTEM">
+                  <div style={{ display: activeSection === 'GIS' ? 'block' : 'none', width: '100%', height: '100%', position: 'relative' }}>
+                    <div className="absolute inset-0 z-0 overflow-hidden">
+                      <MapView />
+                    </div>
+                    <div className="absolute top-3 left-3 bottom-3 w-96 max-w-[calc(100vw-5rem)] z-10 pointer-events-auto flex flex-col animate-in fade-in slide-in-from-left-2 duration-200">
+                      <div className="h-full rounded-2xl border border-[#2B3743] bg-[#0B0F14]/95 backdrop-blur-md overflow-hidden flex flex-col shadow-2xl">
+                        <GisPanelMemo />
+                      </div>
+                    </div>
+                  </div>
+                </ErrorBoundary>
+                <ErrorBoundary fallbackTitle="AI SUBSYSTEM">
+                  <div style={{ display: activeSection === 'AI' ? 'block' : 'none', width: '100%', height: '100%' }}>
+                    <AiPanelMemo />
+                  </div>
+                </ErrorBoundary>
+                <ErrorBoundary fallbackTitle="DISASTER RISK INTELLIGENCE">
+                  <div style={{ display: (activeSection === 'DISASTER_INTEL' || activeSection === 'RISK') ? 'block' : 'none', width: '100%', height: '100%' }}>
+                    <DisasterIntelPanelMemo />
+                  </div>
+                </ErrorBoundary>
+                <ErrorBoundary fallbackTitle="SETTINGS SUBSYSTEM">
+                  <div style={{ display: activeSection === 'SETTINGS' ? 'block' : 'none', width: '100%', height: '100%' }}>
+                    <SettingsPanelMemo />
+                  </div>
+                </ErrorBoundary>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Multi-Drone Diagnostic HUD */}
           <ErrorBoundary fallbackTitle="DIAGNOSTIC HUD">
             <MultiDroneDebugPanel />
           </ErrorBoundary>
-        </div>
 
-        {/* Right Inspector */}
-        <ErrorBoundary fallbackTitle="INSPECTOR">
-          <RightInspector />
-        </ErrorBoundary>
+          {/* Floating Swarm Quick Action Dock (Visible when console is collapsed) */}
+          {!isConsoleOpen && <SwarmQuickDock />}
+
+          {/* Floating Tactical Contextual Inspector */}
+          <ErrorBoundary fallbackTitle="INSPECTOR">
+            <RightInspector />
+          </ErrorBoundary>
+        </div>
       </div>
 
       {/* 3. PRIMARY FLIGHT DISPLAY (HUD) */}
@@ -274,9 +334,11 @@ export const TacticalLayout: React.FC = () => {
       )}
 
       {/* 4. BOTTOM CONSOLE */}
-      <ErrorBoundary fallbackTitle="STREAM CONSOLE">
-        <BottomConsole />
-      </ErrorBoundary>
+      {isConsoleOpen && (
+        <ErrorBoundary fallbackTitle="STREAM CONSOLE">
+          <BottomConsole />
+        </ErrorBoundary>
+      )}
 
       {/* Global Alerts, Emergency Modal & Debug Panel */}
       <AlertManager />

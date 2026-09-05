@@ -95,11 +95,14 @@ export interface TrackedTarget {
   confidence: number;
   source: string;
   drone_id?: string;
+  world_id?: string;
   modalities?: string[];
   tracking_status: 'DETECTED' | 'TRACKED' | 'LOST' | string;
   history?: { lat: number; lon: number; alt: number; ts: number }[];
   first_seen?: number;
   last_seen: number;
+  bbox?: [number, number, number, number];
+  norm_bbox?: [number, number, number, number];
 }
 
 export interface PerceptionStatus {

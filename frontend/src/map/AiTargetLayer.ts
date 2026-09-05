@@ -110,14 +110,38 @@ export class AiTargetLayer {
         badgeEl.appendChild(droneEl);
         el.appendChild(badgeEl);
 
+        const timeStr = new Date(
+          (target.last_seen || Date.now()) > 1e11
+            ? (target.last_seen || Date.now())
+            : (target.last_seen || Date.now()) * 1000
+        ).toLocaleTimeString();
+
+        const popupHtml = `
+          <div style="background:#11171E; border:1px solid #2B3743; padding:8px 10px; border-radius:6px; font-family:monospace; font-size:11px; color:#E7EBEF; min-width:180px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; border-bottom:1px solid #2B3743; padding-bottom:3px;">
+              <span style="font-weight:bold; color:${isSurvivor ? '#FBBF24' : '#EC4899'};">⌖ ${target.label || 'SURVIVOR'} #${targetId}</span>
+              <span style="background:#0B0F14; border:1px solid #2B3743; padding:1px 4px; border-radius:3px; font-weight:bold; color:${confPct >= 70 ? '#34D399' : '#FBBF24'};">${confPct}%</span>
+            </div>
+            <div style="color:#707C88; margin-top:2px;">DRONE: <strong style="color:#5B8FB9;">UAV ${(target.drone_id || 'ALPHA').toUpperCase()}</strong></div>
+            <div style="color:#707C88; margin-top:2px;">POS: <strong style="color:#E7EBEF;">${target.latitude.toFixed(6)}° N, ${target.longitude.toFixed(6)}° E</strong></div>
+            <div style="color:#707C88; margin-top:2px;">ALT: <strong style="color:#E7EBEF;">${(target.altitude_m || 15).toFixed(1)}m</strong></div>
+            <div style="color:#707C88; margin-top:2px;">TIME: <strong style="color:#E7EBEF;">${timeStr}</strong></div>
+            <div style="color:#707C88; margin-top:2px;">STATUS: <strong style="color:#10B981;">${target.tracking_status || 'TRACKED'}</strong></div>
+          </div>
+        `;
+
+        const popup = new maplibregl.Popup({ offset: 25, closeButton: false }).setHTML(popupHtml);
+
         // Click Handler -> Select Target in GCS
         el.addEventListener('click', (e) => {
           e.stopPropagation();
           useSelectionStore.getState().selectTarget(targetId);
+          popup.addTo(this.map!);
         });
 
         const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
           .setLngLat([target.longitude, target.latitude])
+          .setPopup(popup)
           .addTo(this.map);
 
         entry = { marker, el, badgeEl, labelEl, confEl, droneEl, pulseEl };
@@ -129,6 +153,27 @@ export class AiTargetLayer {
         entry.confEl.textContent = `${confPct}%`;
         entry.confEl.style.color = confPct >= 70 ? '#34D399' : '#FBBF24';
         entry.droneEl.textContent = `UAV:${(target.drone_id || 'ALPHA').toUpperCase()}`;
+
+        const timeStr = new Date(
+          (target.last_seen || Date.now()) > 1e11
+            ? (target.last_seen || Date.now())
+            : (target.last_seen || Date.now()) * 1000
+        ).toLocaleTimeString();
+
+        const popupHtml = `
+          <div style="background:#11171E; border:1px solid #2B3743; padding:8px 10px; border-radius:6px; font-family:monospace; font-size:11px; color:#E7EBEF; min-width:180px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; border-bottom:1px solid #2B3743; padding-bottom:3px;">
+              <span style="font-weight:bold; color:${isSurvivor ? '#FBBF24' : '#EC4899'};">⌖ ${target.label || 'SURVIVOR'} #${targetId}</span>
+              <span style="background:#0B0F14; border:1px solid #2B3743; padding:1px 4px; border-radius:3px; font-weight:bold; color:${confPct >= 70 ? '#34D399' : '#FBBF24'};">${confPct}%</span>
+            </div>
+            <div style="color:#707C88; margin-top:2px;">DRONE: <strong style="color:#5B8FB9;">UAV ${(target.drone_id || 'ALPHA').toUpperCase()}</strong></div>
+            <div style="color:#707C88; margin-top:2px;">POS: <strong style="color:#E7EBEF;">${target.latitude.toFixed(6)}° N, ${target.longitude.toFixed(6)}° E</strong></div>
+            <div style="color:#707C88; margin-top:2px;">ALT: <strong style="color:#E7EBEF;">${(target.altitude_m || 15).toFixed(1)}m</strong></div>
+            <div style="color:#707C88; margin-top:2px;">TIME: <strong style="color:#E7EBEF;">${timeStr}</strong></div>
+            <div style="color:#707C88; margin-top:2px;">STATUS: <strong style="color:#10B981;">${target.tracking_status || 'TRACKED'}</strong></div>
+          </div>
+        `;
+        entry.marker.getPopup()?.setHTML(popupHtml);
       }
 
       // Selection state styling

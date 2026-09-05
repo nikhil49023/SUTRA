@@ -14,13 +14,23 @@ except ImportError:
     try:
         from PyQt5.QtCore import QObject, QTimer, pyqtSignal as Signal  # type: ignore
     except ImportError:
-        # Headless stub for environments without Qt (e.g., pytest on CI without display)
         class QObject:  # type: ignore
-            pass
+            def __init__(self, *args, **kwargs):
+                pass
+        class Signal:  # type: ignore
+            def __init__(self, *args, **kwargs):
+                pass
+            def emit(self, *args, **kwargs):
+                pass
         class QTimer:  # type: ignore
-            pass
-        def Signal(*args, **kwargs):  # type: ignore
-            return None
+            def __init__(self, *args, **kwargs):
+                self.timeout = self
+            def connect(self, *args, **kwargs):
+                pass
+            def start(self, *args, **kwargs):
+                pass
+            def stop(self, *args, **kwargs):
+                pass
 
 from services.event_bus import EventBus, get_event_bus
 from services.logging_service import get_logger

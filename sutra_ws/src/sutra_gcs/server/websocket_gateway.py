@@ -48,6 +48,8 @@ from geofence.models import GeometryType, ZoneType
 from gis.gis_controller import GISController, get_gis_controller
 from ai.ai_manager import AIManager, ai_manager
 from communication.adapters.perception_subsystem_adapter import perception_adapter
+from ai.perception_stream_service import get_perception_stream_service
+from mapping.autonomous_2d_mapping_engine import get_mapping_engine, SemanticCellType
 from forecast import get_forecast_service, get_disaster_feed_service
 from prepositioning import get_prepositioning_optimizer
 from risk import get_risk_engine, get_dynamic_mapping_bridge, RiskModelWeights
@@ -132,6 +134,7 @@ class WebSocketGatewayServer:
         self.prepositioning_opt = get_prepositioning_optimizer()
         self.dynamic_map_bridge = get_dynamic_mapping_bridge()
         self.disaster_feed = get_disaster_feed_service()
+        self.mapping_engine = get_mapping_engine()
 
         self.ws_clients: Set[Any] = set()
         self.client_sessions: Dict[Any, str] = {}  # websocket -> session_id
@@ -154,8 +157,9 @@ class WebSocketGatewayServer:
         self._geofence_alert_dedup: Dict[str, float] = {}
         self._geofence_alert_lock = threading.Lock()
 
-        # Subsystem C AI Perception Ingestion Adapter
+        # Subsystem C AI Perception Ingestion Adapter & Real-Time Stream Processor
         self.perception_adapter = perception_adapter
+        self.perception_stream_service = get_perception_stream_service()
 
         # Seed initial mission and geofences if empty
         self._seed_initial_mission()
@@ -239,8 +243,10 @@ class WebSocketGatewayServer:
         self.server_thread = threading.Thread(target=self._run_async_server, daemon=True)
         self.server_thread.start()
 
-        # Start Subsystem C perception adapter
+        # Start Subsystem C perception adapter and stream processor
         self.perception_adapter.start(try_ros=True)
+        if self.perception_stream_service:
+            self.perception_stream_service.start()
 
         # Start background 10Hz multi-drone simulation loop
         self.sim_thread = threading.Thread(target=self._run_simulation_loop, daemon=True)
@@ -252,6 +258,8 @@ class WebSocketGatewayServer:
         self.is_running = False
         if self.perception_adapter:
             self.perception_adapter.stop()
+        if self.perception_stream_service:
+            self.perception_stream_service.stop()
 
     def _run_async_server(self):
         self.loop = asyncio.new_event_loop()
@@ -369,6 +377,61 @@ class WebSocketGatewayServer:
         session_id = data.get("session_id") or self.client_sessions.get(websocket)
         auth_token = data.get("token") or data.get("auth_token")
         timestamp = data.get("timestamp") or time.time()
+
+        # ==========================================================
+        # 0. LIVE CAMERA STREAM & SELECTOR (Pass-Through Broadcast)
+        # ==========================================================
+        if cmd_type in ("CAMERA_FRAME", "camera.frame", "camera.ingest_frame"):
+            frame_payload = payload if payload else data.get("payload", data)
+            world_id = str(frame_payload.get("world_id", "WORLD_1")).strip().upper()
+            drone_id = str(frame_payload.get("drone_id", "uav_1")).strip()
+            modality = str(frame_payload.get("modality", "RGB")).strip().upper()
+            image_b64 = frame_payload.get("image_b64") or frame_payload.get("data")
+            if image_b64 and hasattr(self, "perception_stream_service") and self.perception_stream_service:
+                self.perception_stream_service.ingest_frame_b64(world_id, drone_id, modality, image_b64)
+            await self._async_broadcast(json.dumps(data))
+            return
+
+        if cmd_type in ("SELECT_STREAM", "camera.select_stream", "camera.select_feed"):
+            stream_payload = payload if payload else data.get("payload", data)
+            world_id = str(stream_payload.get("world_id", "WORLD_1")).strip().upper()
+            drone_id = str(stream_payload.get("drone_id", "uav_1")).strip()
+            modality = str(stream_payload.get("modality", "RGB")).strip().upper()
+            if self.perception_adapter:
+                self.perception_adapter.set_active_feed(world_id, drone_id)
+            if hasattr(self, "perception_stream_service") and self.perception_stream_service:
+                self.perception_stream_service.set_active_feed(world_id, drone_id, modality)
+            await self._async_broadcast(json.dumps({
+                "type": "STREAM_SELECTED",
+                "world_id": world_id,
+                "drone_id": drone_id,
+                "modality": modality,
+                "timestamp": time.time(),
+                "payload": stream_payload,
+            }))
+            await self._async_broadcast(json.dumps(data))
+            return
+
+        if cmd_type in ("ai.trigger_perception_scan", "PERCEPTION_SCAN", "TRIGGER_SCAN"):
+            scan_payload = payload if payload else data.get("payload", data)
+            world_id = str(scan_payload.get("world_id", "WORLD_1")).strip().upper()
+            drone_id = str(scan_payload.get("drone_id", "uav_1")).strip()
+            modality = str(scan_payload.get("modality", "RGB")).strip().upper()
+            if hasattr(self, "perception_stream_service") and self.perception_stream_service:
+                self.perception_stream_service.set_active_feed(world_id, drone_id, modality)
+                frame = self.perception_stream_service._fetch_or_generate_frame(world_id, drone_id, modality, "http://10.152.0.191:8080")
+                if frame is not None:
+                    dets = self.perception_stream_service._process_single_frame(frame, world_id, drone_id, modality)
+                    await websocket.send(json.dumps({
+                        "type": "PERCEPTION_SCAN_COMPLETED",
+                        "status": "SUCCESS",
+                        "world_id": world_id,
+                        "drone_id": drone_id,
+                        "targets_detected": len(dets),
+                        "targets": dets,
+                        "timestamp": time.time(),
+                    }))
+            return
 
         # ==========================================================
         # 1. AUTHENTICATION & SESSION COMMANDS
@@ -1177,6 +1240,16 @@ class WebSocketGatewayServer:
 
             elif cmd_type in ("ai.inject_target", "AI_INJECT_TARGET"):
                 res = self.perception_adapter.inject_fused_target(payload.get("target") or payload)
+                if res:
+                    for t in res:
+                        self.mapping_engine.ingest_semantic_observation(
+                            drone_id=getattr(t, "drone_id", "alpha") or "alpha",
+                            latitude=getattr(t, "latitude", 0.0),
+                            longitude=getattr(t, "longitude", 0.0),
+                            semantic_type_str=getattr(t, "class_name", "SURVIVOR") or "SURVIVOR",
+                            confidence=getattr(t, "confidence", 0.90),
+                            metadata=t.to_dict() if hasattr(t, "to_dict") else None,
+                        )
                 return {"injected_count": len(res), "targets": [t.target_id for t in res]}
 
             elif cmd_type in ("ai.clear_targets", "AI_CLEAR_TARGETS"):
@@ -1192,6 +1265,39 @@ class WebSocketGatewayServer:
                 )
                 self.event_bus.emit("ai.state_updated", payload={"tracked_targets": []}, correlation_id=corr_id, state_version=self.state_store.state_version)
                 return {"cleared": True}
+
+            # --- 2D Real-Time Autonomous Mapping Engine Handlers ---
+            elif cmd_type in ("mapping.get_snapshot", "MAPPING_GET_SNAPSHOT"):
+                return {
+                    "snapshot": self.mapping_engine.get_geojson_snapshot(),
+                    "metrics": self.mapping_engine.get_metrics(),
+                }
+
+            elif cmd_type in ("mapping.get_metrics", "MAPPING_GET_METRICS"):
+                return {
+                    "metrics": self.mapping_engine.get_metrics(),
+                }
+
+            elif cmd_type in ("mapping.reset", "MAPPING_RESET"):
+                self.mapping_engine.reset_map()
+                self.event_bus.emit(
+                    "mapping.reset",
+                    payload={"metrics": self.mapping_engine.get_metrics()},
+                    source="mapping_engine",
+                    state_version=self.state_store.state_version,
+                )
+                return {"success": True, "metrics": self.mapping_engine.get_metrics()}
+
+            elif cmd_type in ("mapping.inject_observation", "MAPPING_INJECT_OBSERVATION"):
+                cell = self.mapping_engine.ingest_semantic_observation(
+                    drone_id=str(payload.get("drone_id", "manual")),
+                    latitude=float(payload.get("latitude", 0.0)),
+                    longitude=float(payload.get("longitude", 0.0)),
+                    semantic_type_str=str(payload.get("semantic_type", "OCCUPIED")),
+                    confidence=float(payload.get("confidence", 0.9)),
+                    metadata=payload.get("metadata"),
+                )
+                return {"success": cell is not None, "cell": cell.to_dict() if cell else None}
 
             elif cmd_type in ("alert.acknowledge", "ALERT_ACKNOWLEDGE"):
                 alert_id = payload.get("alert_id")
@@ -1896,6 +2002,33 @@ class WebSocketGatewayServer:
                 source="gateway_sim",
                 state_version=self.state_store.state_version,
             )
+
+            # C. Ingest Pose into Real-Time 2D Autonomous Mapping Engine
+            self.mapping_engine.ingest_drone_pose(
+                drone_id=drone.drone_id,
+                lat=drone.latitude,
+                lon=drone.longitude,
+                altitude_m=drone.altitude,
+                heading_deg=drone.heading,
+                pitch_deg=drone.pitch,
+                roll_deg=drone.roll,
+                speed_mps=drone.speed,
+            )
+
+        # 6. Periodic 2Hz 2D World Model Incremental Delta Broadcast
+        if getattr(self, "_sim_tick_count", 0) % 5 == 0:
+            delta = self.mapping_engine.get_incremental_delta()
+            if delta.get("delta_count", 0) > 0:
+                metrics = self.mapping_engine.get_metrics()
+                self.event_bus.emit(
+                    "mapping.grid_delta",
+                    payload={
+                        "delta": delta,
+                        "metrics": metrics,
+                    },
+                    source="mapping_engine",
+                    state_version=self.state_store.state_version,
+                )
 
     def _run_simulation_loop(self):
         """10Hz background loop for multi-drone kinematics."""
